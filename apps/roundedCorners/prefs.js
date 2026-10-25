@@ -6,13 +6,39 @@ import Adw from 'gi://Adw';
 import Gtk from 'gi://Gtk';
 import Gio from 'gi://Gio';
 
-import { RADIUS_MAX, RADIUS_MIN, normalizeId } from './model.js';
+import { RADIUS_MAX, RADIUS_MIN, WHICH_DEFAULT, WHICH_VALUES, normalizeId } from './model.js';
 
 const N_ = s => s;
 
 export const PAGE = { id: 'rounded-corners', title: N_('Rounded Corners'), icon: 'window-restore-symbolic' };
 
 const KEY_LIST = 'rounded-corners-blacklist';
+const KEY_WHICH = 'rounded-corners-which';
+
+function _whichRow(settings, _, connect) {
+    // Same order as WHICH_VALUES
+    const labels = [_('Top corners only'), _('All four corners')];
+    const row = new Adw.ComboRow({
+        title: _('Rounded corners'),
+        subtitle: _('Top only keeps the bottom edge square'),
+        model: Gtk.StringList.new(labels),
+    });
+    const sync = () => {
+        const i = WHICH_VALUES.indexOf(settings.get_string(KEY_WHICH));
+        const want = i >= 0 ? i : WHICH_VALUES.indexOf(WHICH_DEFAULT);
+        if (row.selected !== want)
+            row.selected = want;
+    };
+    sync();
+    row.connect('notify::selected', () => {
+        const v = WHICH_VALUES[row.selected];
+        if (v && settings.get_string(KEY_WHICH) !== v)
+            settings.set_string(KEY_WHICH, v);
+    });
+    connect(KEY_WHICH, sync);
+    settings.bind('rounded-corners', row, 'sensitive', Gio.SettingsBindFlags.GET);
+    return row;
+}
 
 function _excludedGroup(settings, _, connect) {
     const group = new Adw.PreferencesGroup({
@@ -65,11 +91,12 @@ export function buildPrefs({ settings, window, extension }) {
 
     const main = new Adw.PreferencesGroup({
         title: _('Rounded Corners'),
-        description: _('Round all four corners of app windows, including apps that draw square bottom corners. Maximized, tiled and fullscreen windows stay square.'),
+        description: _('Round the top corners of app windows, or all four. Maximized, tiled and fullscreen windows stay square.'),
     });
     const enabled = new Adw.SwitchRow({ title: _('Round window corners') });
     settings.bind('rounded-corners', enabled, 'active', Gio.SettingsBindFlags.DEFAULT);
     main.add(enabled);
+    main.add(_whichRow(settings, _, connect));
 
     const radius = new Adw.SpinRow({
         title: _('Corner radius'),
