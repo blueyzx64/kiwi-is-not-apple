@@ -9,7 +9,7 @@ locale
 # Generated GTK CSS (no longer written by the extension; see issue #86)
 css/gtk3.css
 css/gtk4.css
-tests/
+# tests/ is tracked: gjs -m unit tests for pure modules
 # Project docs and Claude Code skills are tracked
 !.claude/
 !.claude/**
