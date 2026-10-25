@@ -18,3 +18,4 @@ css/gtk4.css
 !start-workflow.md
 !CLAUDE.md
 advanced/.built-locally
+dist/
