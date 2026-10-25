@@ -20,11 +20,11 @@ import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import { PanelLayout } from '../../coordinators/panelLayout.js';
 import { MENU_CLOSE_ARGS } from '../../lib/compat.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
-import { Keybindings } from '../../lib/keybindings.js';
+import { Keybindings, MODAL_MODES } from '../../lib/keybindings.js';
 import { KiwiSettings } from '../../lib/settings.js';
 import {
-    DEFAULTS, History, TEXT_MIME, checkSize, historyFrom, imageFileName, isBlankText,
-    isPasswordManagerApp, isSecret, makeEntry, orphanFiles, pasteChordFor, pickMime, shouldRecord,
+    DEFAULTS, History, TEXT_MIME, checkDimensions, checkSize, imageDimensions, imageFileName,
+    isBlankText, isPasswordManagerApp, isSecret, looksSecret, makeEntry, mergeLoaded, orphanFiles, pasteChordFor, pickMime, shouldRecord,
 } from './model.js';
 import { ClipboardPopover } from './popover.js';
 import { QuickPaste } from './quickPaste.js';
@@ -72,6 +72,7 @@ export class ClipboardHistory {
         this._prevFocus = null;
         this._indicator = null;
         this._iconCleanup = null;
+        this._loading = false;
         this._ownerSerial = 0;      // bumps on every clipboard owner change
         this._selfToken = 0;
         this._selfHash = null;      // hash of what we just wrote ourselves
@@ -95,7 +96,7 @@ export class ClipboardHistory {
         cleanup.connect(this._selection, 'owner-changed', (_s, type) => this._onOwnerChanged(type));
 
         this._quick = new QuickPaste(cleanup, this, this._);
-        Keybindings.add(cleanup, SHORTCUT_KEY, this._ctx.settings, () => this._onShortcut());
+        Keybindings.add(cleanup, SHORTCUT_KEY, this._ctx.settings, () => this._onShortcut(), { modes: MODAL_MODES });
         cleanup.idle(() => this._warnConflicts(), { name: 'clipboard-conflicts' });
 
         this._ks.watch('clipboard-history-size', () => this._applyCap());
@@ -106,8 +107,14 @@ export class ClipboardHistory {
         this._syncIndicator();
 
         if (this._persist) {
+            // Until the saved history is in, nothing is written: a save now would replace
+            // history.json with only what was copied since enable
+            this._loading = true;
             this._store.prepare().then(() => this._load())
-                .catch(e => console.warn(`${LOG} clipboard store not ready: ${e.message}`));
+                .catch(e => console.warn(`${LOG} clipboard store not ready: ${e.message}`))
+                .finally(() => {
+                    this._loading = false;
+                });
         } else {
             // Persistence is off: remove the files Kiwi saved earlier
             this._store.clearAll();
@@ -124,7 +131,7 @@ export class ClipboardHistory {
             active = null;
         this._cancellable?.cancel();
         // Write what is pending; the write is plain async Gio and touches no Shell state
-        if (this._dirty && this._persist)
+        if (this._dirty && this._persist && !this._loading)
             this._store?.saveIndex(this._history);
         this._dirty = false;
         this._iconCleanup?.dispose();
@@ -203,18 +210,20 @@ export class ClipboardHistory {
     // ---- loading and saving ---------------------------------------------
 
     async _load() {
-        const entries = await this._store.load(this._limits);
+        const { entries, intact } = await this._store.load(this._limits);
         if (!this._enabled)
             return;
-        const live = this._history.items;
-        const ids = new Set(live.map(e => e.id));
-        const merged = [...live, ...entries.filter(e => !ids.has(e.id))];
-        const { history, evicted } = historyFrom(merged, this._limits);
+        // Entries recorded while loading are newer; they win over saved copies of themselves
+        const { history, evicted } = mergeLoaded(this._history.items, entries, this._limits);
         this._history = history;
         this._dropFiles(evicted);
         // Remove image files nothing points to (Kiwi wrote them; nothing else is touched)
-        this._store.sweep(this._history, orphanFiles);
-        this._emitChanged();
+        // Not after a failed load: those files may belong to the index that was moved aside
+        if (intact)
+            this._store.sweep(this._history, orphanFiles);
+        // Write the merged history (copies made during the load, sizes checked on load)
+        this._loading = false;
+        this._touched();
     }
 
     _touched() {
@@ -237,8 +246,8 @@ export class ClipboardHistory {
 
     _saveNow() {
         this._cancelSave();
-        if (!this._dirty || !this._persist)
-            return;
+        if (!this._dirty || !this._persist || this._loading)
+            return;       // still dirty: the save after the load writes it
         this._dirty = false;
         this._store.saveIndex(this._history);
     }
@@ -350,14 +359,23 @@ export class ClipboardHistory {
             const text = new TextDecoder().decode(bytes.toArray());
             if (isBlankText(text))
                 return;
+            // Private keys, tokens, card numbers: not recorded (heuristic, see model.js)
+            if (limits.ignoreSensitive && looksSecret(text))
+                return;
             entry = makeEntry({
                 kind: 'text', hash, mime: TEXT_MIME, size: bytes.get_size(),
                 time: Date.now(), text, app: app.name,
             });
         } else {
+            // Pixel size from the header, before anything decodes it: a small file can still
+            // be 30000 x 30000 pixels, which would stall the Shell on every thumbnail
+            const dim = imageDimensions(bytes.toArray());
+            if (checkDimensions(dim, limits) !== 'ok')
+                return;
             entry = makeEntry({
                 kind: 'image', hash, mime: pick.mime, size: bytes.get_size(), time: Date.now(),
                 file: imageFileName(hash, pick.mime), app: app.name,
+                width: dim.width, height: dim.height,
             });
         }
         this._record(entry, bytes);
@@ -461,7 +479,9 @@ export class ClipboardHistory {
 
     /** gicon for an image entry, made when a row or the preview asks for it. */
     iconFor(entry) {
-        if (entry.kind !== 'image')
+        // Only images whose header size was checked are ever handed to St to decode
+        if (entry.kind !== 'image' ||
+            checkDimensions({ width: entry.width, height: entry.height }, this._limits) !== 'ok')
             return null;
         const mem = this._mem.get(entry.hash);
         if (mem)

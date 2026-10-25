@@ -15,6 +15,8 @@ export const DEFAULTS = Object.freeze({
     maxTotalImageBytes: 256 * MiB,   // all image bytes kept (64 MiB when nothing is saved to disk)
     maxTotalTextBytes: 4 * MiB,      // all text bytes kept; keeps history.json small
     maxPinned: 50,
+    maxImageSide: 8192,              // px, either side; bigger images are not recorded
+    maxImagePixels: 40_000_000,      // width * height
     maxAgeMs: 0,                 // 0 = no expiry for unpinned entries
 });
 
@@ -35,15 +37,19 @@ export const PASSWORD_MANAGER_APPS = Object.freeze([
     'secrets', 'org.gnome.passwordsafe', 'passwordsafe', 'authenticator',
     'com.belmoussaoui.authenticator', 'authy', 'gopass', 'pass', 'passwords', 'psono',
     'strongbox', 'zoho vault', 'roboform', 'myki', 'pwsafe', 'revelation',
+    'com.bitwarden.desktop', 'com.1password.1password', '1password-beta', 'me.proton.pass',
+    'proton.pass', 'proton-pass-desktop', 'org.keepassxc.keepassxc', 'keepassxc-browser',
+    'org.gnome.seahorse', 'com.enpass.enpass', 'org.gnome.secrets', 'io.github.seadve.secrets',
 ]);
 
 const TEXT_MIMES = ['text/plain;charset=utf-8', 'UTF8_STRING', 'text/plain', 'STRING', 'TEXT'];
-const IMAGE_MIMES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/bmp', 'image/svg+xml'];
+// No SVG: a tiny file can take the Shell's renderer arbitrarily long to draw
+const IMAGE_MIMES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/bmp'];
 export const TEXT_MIME = 'text/plain;charset=utf-8';
 
 export const IMAGE_EXT = Object.freeze({
     'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp',
-    'image/gif': 'gif', 'image/bmp': 'bmp', 'image/svg+xml': 'svg',
+    'image/gif': 'gif', 'image/bmp': 'bmp',
 });
 
 /** @returns {string} normalised app key: lowercase, trimmed */
@@ -114,6 +120,164 @@ export function checkSize(kind, size, limits = {}) {
         return 'empty';
     const max = kind === 'image' ? l.maxImageBytes : l.maxTextBytes;
     return size > max ? 'too-large' : 'ok';
+}
+
+/* ------------------------------------------------------- image header */
+
+const u16be = (b, i) => (b[i] << 8) | b[i + 1];
+const u16le = (b, i) => b[i] | (b[i + 1] << 8);
+const u32be = (b, i) => ((b[i] << 24) >>> 0) + ((b[i + 1] << 16) | (b[i + 2] << 8) | b[i + 3]);
+const u32le = (b, i) => ((b[i + 3] << 24) >>> 0) + ((b[i + 2] << 16) | (b[i + 1] << 8) | b[i]);
+const i32le = (b, i) => b[i] | (b[i + 1] << 8) | (b[i + 2] << 16) | (b[i + 3] << 24);
+const ascii = (b, i, n) => String.fromCharCode(...b.subarray(i, i + n));
+
+function _jpegSize(b) {
+    let i = 2;
+    while (i + 9 < b.length) {
+        if (b[i] !== 0xff)
+            return null;
+        const m = b[i + 1];
+        if (m === 0xff) {           // fill byte
+            i++;
+            continue;
+        }
+        if (m === 0xd8 || m === 0x01 || (m >= 0xd0 && m <= 0xd7)) {
+            i += 2;
+            continue;
+        }
+        if (m === 0xda || m === 0xd9)   // start of scan / end: no frame header seen
+            return null;
+        if (m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc)
+            return { width: u16be(b, i + 7), height: u16be(b, i + 5) };
+        i += 2 + u16be(b, i + 2);
+    }
+    return null;
+}
+
+/**
+ * Pixel size from the file header, without decoding (PNG, JPEG, GIF, BMP, WebP).
+ *
+ * @param {Uint8Array} b image bytes
+ * @returns {{width: number, height: number}|null} null when the header is not understood
+ */
+export function imageDimensions(b) {
+    if (!(b instanceof Uint8Array) || b.length < 30)
+        return null;
+    let d = null;
+    if (b[0] === 0x89 && ascii(b, 1, 3) === 'PNG' && ascii(b, 12, 4) === 'IHDR')
+        d = { width: u32be(b, 16), height: u32be(b, 20) };
+    else if (b[0] === 0xff && b[1] === 0xd8)
+        d = _jpegSize(b);
+    else if (ascii(b, 0, 4) === 'GIF8')
+        d = { width: u16le(b, 6), height: u16le(b, 8) };
+    else if (ascii(b, 0, 2) === 'BM')
+        d = u32le(b, 14) === 12
+            ? { width: u16le(b, 18), height: u16le(b, 20) }
+            : { width: Math.abs(i32le(b, 18)), height: Math.abs(i32le(b, 22)) };
+    else if (ascii(b, 0, 4) === 'RIFF' && ascii(b, 8, 4) === 'WEBP') {
+        const chunk = ascii(b, 12, 4);
+        if (chunk === 'VP8 ')
+            d = { width: u16le(b, 26) & 0x3fff, height: u16le(b, 28) & 0x3fff };
+        else if (chunk === 'VP8L' && b[20] === 0x2f) {
+            const bits = u32le(b, 21);
+            d = { width: (bits & 0x3fff) + 1, height: ((bits >>> 14) & 0x3fff) + 1 };
+        } else if (chunk === 'VP8X') {
+            d = {
+                width: (b[24] | (b[25] << 8) | (b[26] << 16)) + 1,
+                height: (b[27] | (b[28] << 8) | (b[29] << 16)) + 1,
+            };
+        }
+    }
+    return d && d.width > 0 && d.height > 0 ? d : null;
+}
+
+/**
+ * Is an image small enough in pixels to decode in the Shell? Unknown size fails closed.
+ *
+ * @returns {'ok'|'too-large'|'unknown'}
+ */
+export function checkDimensions(dim, limits = {}) {
+    const l = { ...DEFAULTS, ...limits };
+    if (!dim || !(dim.width > 0) || !(dim.height > 0))
+        return 'unknown';
+    if (dim.width > l.maxImageSide || dim.height > l.maxImageSide ||
+        dim.width * dim.height > l.maxImagePixels)
+        return 'too-large';
+    return 'ok';
+}
+
+/* ------------------------------------------------------ content secrets */
+
+const PRIVATE_KEY_RE = /-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY(?: BLOCK)?-----/;
+const TOKEN_RES = [
+    /\beyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/,     // JWT
+    /\bgh[pousr]_[A-Za-z0-9]{30,}/,                                        // GitHub
+    /\bgithub_pat_[A-Za-z0-9_]{40,}/,
+    /\bglpat-[A-Za-z0-9_-]{20,}/,                                          // GitLab
+    /\bxox[abpr]-[A-Za-z0-9-]{10,}/,                                       // Slack
+    /\bsk-[A-Za-z0-9_-]{20,}/,                                             // OpenAI and similar
+    /\b[sr]k_live_[A-Za-z0-9]{16,}/,                                       // Stripe
+    /\bAKIA[0-9A-Z]{16}\b/,                                                // AWS access key id
+    /\bAIza[0-9A-Za-z_-]{35}\b/,                                           // Google API key
+];
+
+/** Luhn checksum over a digit string. */
+export function luhnValid(digits) {
+    let sum = 0;
+    for (let i = 0; i < digits.length; i++) {
+        let d = digits.charCodeAt(digits.length - 1 - i) - 48;
+        if (i % 2 === 1) {
+            d *= 2;
+            if (d > 9)
+                d -= 9;
+        }
+        sum += d;
+    }
+    return digits.length > 0 && sum % 10 === 0;
+}
+
+/** Shannon entropy in bits per character. */
+export function shannonEntropy(text) {
+    const counts = new Map();
+    for (const ch of text)
+        counts.set(ch, (counts.get(ch) ?? 0) + 1);
+    const n = [...text].length;
+    let h = 0;
+    for (const c of counts.values())
+        h -= (c / n) * Math.log2(c / n);
+    return h;
+}
+
+function _looksLikeCard(t) {
+    if (!/^[0-9][0-9 -]{11,22}[0-9]$/.test(t))
+        return false;
+    const digits = t.replace(/[ -]/g, '');
+    return digits.length >= 13 && digits.length <= 19 && !/^(\d)\1+$/.test(digits) && luhnValid(digits);
+}
+
+function _looksLikeRandomToken(t) {
+    if (t.length < 24 || t.length > 512 || /\s/.test(t))
+        return false;
+    // URLs, mail addresses and paths are long single words too; they are not secrets
+    if (/^[a-z][a-z0-9+.-]*:/i.test(t) || /^www\./i.test(t) || t.includes('@') || /^[~./]/.test(t) || t.includes('/'))
+        return false;
+    // Random tokens mix lower case, upper case and digits; identifiers and words rarely do
+    if (!/[a-z]/.test(t) || !/[A-Z]/.test(t) || !/[0-9]/.test(t))
+        return false;
+    return shannonEntropy(t) >= 4.0;
+}
+
+/**
+ * Does copied text look like a secret? Private keys, API tokens, JWTs, a card number on its
+ * own, or a long random single-word token. Tuned for few false positives on prose and code.
+ */
+export function looksSecret(text) {
+    if (typeof text !== 'string')
+        return false;
+    if (PRIVATE_KEY_RE.test(text) || TOKEN_RES.some(re => re.test(text)))
+        return true;
+    const t = text.trim();
+    return _looksLikeCard(t) || _looksLikeRandomToken(t);
 }
 
 /** Whitespace-only text is not worth keeping. */
@@ -404,7 +568,7 @@ export function serializeHistory(history) {
     return JSON.stringify({ version: INDEX_VERSION, items: history.items });
 }
 
-const SAFE_FILE = /^[0-9a-f]{64}\.(?:png|jpg|webp|gif|bmp|svg)$/;
+const SAFE_FILE = /^[0-9a-f]{64}\.(?:png|jpg|webp|gif|bmp)$/;
 
 /** True if `name` is a file name the store itself would have written (no paths, no dots). */
 export function isStoreFileName(name) {
@@ -426,18 +590,33 @@ export function imageFileName(hash, mime) {
  * @returns {object[]} entries, newest first
  */
 export function parseHistory(json, limits = {}) {
-    const l = { ...DEFAULTS, ...limits };
+    return parseHistoryChecked(json, limits).entries;
+}
+
+/**
+ * Like parseHistory, but also says whether the file itself was readable as a history index.
+ * `ok: false` (bad JSON, other version, wrong shape) means the caller must not treat the
+ * result as "the history is empty": it keeps the file aside and deletes nothing.
+ *
+ * @returns {{ok: boolean, entries: object[]}}
+ */
+export function parseHistoryChecked(json, limits = {}) {
     let data;
     try {
         data = JSON.parse(json);
     } catch (_e) {
-        return [];
+        return { ok: false, entries: [] };
     }
     if (!data || data.version !== INDEX_VERSION || !Array.isArray(data.items))
-        return [];
+        return { ok: false, entries: [] };
+    return { ok: true, entries: _entriesFrom(data.items, limits) };
+}
+
+function _entriesFrom(items, limits) {
+    const l = { ...DEFAULTS, ...limits };
     const seen = new Set();
     const out = [];
-    for (const raw of data.items) {
+    for (const raw of items) {
         if (!raw || typeof raw !== 'object' || typeof raw.hash !== 'string' || !raw.hash)
             continue;
         const time = Number.isFinite(raw.time) ? raw.time : 0;
@@ -452,6 +631,10 @@ export function parseHistory(json, limits = {}) {
             });
         } else if (raw.kind === 'image' && isStoreFileName(raw.file)) {
             if (checkSize('image', size, l) !== 'ok')
+                continue;
+            // Stored sizes too big to decode are dropped; missing ones are checked by the store
+            const hasDim = raw.width !== undefined || raw.height !== undefined;
+            if (hasDim && checkDimensions({ width: raw.width, height: raw.height }, l) !== 'ok')
                 continue;
             e = makeEntry({
                 kind: 'image', hash: raw.hash, mime: typeof raw.mime === 'string' ? raw.mime : 'image/png',
@@ -468,6 +651,17 @@ export function parseHistory(json, limits = {}) {
         out.push(e);
     }
     return out;
+}
+
+/**
+ * Merge the saved history (loaded late, after enable) with entries recorded meanwhile.
+ * Live entries win over saved copies of themselves (newer time, current pin state).
+ *
+ * @returns {{history: History, evicted: object[]}}
+ */
+export function mergeLoaded(live, saved, opts = {}) {
+    const ids = new Set(live.map(e => e.id));
+    return historyFrom([...live, ...saved.filter(e => !ids.has(e.id))], opts);
 }
 
 /** Build a History from parsed entries (applies the cap; returns evicted too). */

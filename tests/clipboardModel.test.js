@@ -2,7 +2,7 @@
 import {
     DEFAULTS, History, MiB, ageOf, checkSize, classifyText, hasSecretHint, historyFrom,
     imageFileName, isBlankText, isPasswordManagerApp, isSecret, isStoreFileName, makeEntry,
-    orphanFiles, parseHistory, pasteChordFor, pickMime, previewOf, serializeHistory, shouldRecord,
+    mergeLoaded, orphanFiles, parseHistory, pasteChordFor, pickMime, previewOf, serializeHistory, shouldRecord,
 } from '../apps/clipboard/model.js';
 
 let failed = 0;
@@ -298,6 +298,19 @@ test('orphanFiles lists only our own unreferenced files', () => {
     h.add(image(1));
     const o = orphanFiles([`${H64(1)}.png`, `${H64(2)}.png`, 'history.json', 'notes.txt'], h);
     eq(o.join(), `${H64(2)}.png`);
+});
+
+test('mergeLoaded keeps saved history and copies made during the load', () => {
+    const saved = [text('old1'), text('old2'), text('both')];
+    saved[2].pinned = true;
+    const liveBoth = text('both');
+    const live = [text('new'), liveBoth];
+    const { history } = mergeLoaded(live, saved, { maxItems: 25 });
+    eq(history.size, 4);
+    eq(history.items[0].text, 'new');
+    eq(history.items[1].text, 'both', 'live copy is newer than the saved ones');
+    eq(history.get('text:h-both').pinned, false, 'live state wins');
+    eq(history.items.map(e => e.text).includes('old1'), true, 'saved entries kept');
 });
 
 /* ---- paste ---- */
