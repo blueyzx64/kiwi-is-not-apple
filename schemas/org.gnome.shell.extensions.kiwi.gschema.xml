@@ -245,9 +245,9 @@
           <choice value="left"/>
           <choice value="right"/>
         </choices>
-        <default>'system'</default>
+        <default>'left'</default>
         <summary>Panel window controls position</summary>
-        <description>Which side of the top bar holds the window controls. 'system' follows the side of the window button layout set in GNOME.</description>
+        <description>Which side of the top bar holds the window controls. 'left' (default) shows close, minimize and maximize on the left, macOS style. 'system' follows the side of the window button layout set in GNOME.</description>
       </key>
       <key name="remove-titlebar-buttons" type="b">
         <default>true</default>

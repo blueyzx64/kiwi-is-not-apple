@@ -32,7 +32,7 @@ Optionally, real windows lose their own titlebar buttons.
 |---|---|---|
 | `show-window-controls` | b | existing |
 | `window-controls-scope` | s: `all` \| `maximized` \| `fullscreen` | `all` |
-| `window-controls-position` | s: `system` \| `left` \| `right` | `system` |
+| `window-controls-position` | s: `system` \| `left` \| `right` | `left` |
 | `remove-titlebar-buttons` | b | `true` |
 
 `show-window-controls-fullscreen-only` gets migrated to `window-controls-scope=fullscreen`.

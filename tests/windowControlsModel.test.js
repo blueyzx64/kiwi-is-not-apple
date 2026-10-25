@@ -52,6 +52,9 @@ test('forced left on a right layout uses macOS order', () =>
 test('forced right on a left layout uses GNOME order', () =>
     eq(resolvePlacement('right', mac), { buttons: ['minimize', 'maximize', 'close'], side: 'right' }));
 test('unknown position acts like system', () => eq(resolvePlacement('x', mac), mac));
+test('default left on stock GNOME 50 (appmenu:close) shows the trio on the left', () =>
+    eq(resolvePlacement('left', parseButtonLayout('appmenu:close')),
+        { buttons: ['close', 'minimize', 'maximize'], side: 'left' }));
 
 // --- isExcludedWindow
 test('plain window is fine', () => eq(isHelperWindowInfo({ title: 'Docs', appName: 'Files' }), false));

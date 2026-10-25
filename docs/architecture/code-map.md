@@ -285,7 +285,7 @@ The `schema` column gives the line in `schemas/org.gnome.shell.extensions.kiwi.g
 | Key (default) | Owner | Effect |
 |---|---|---|
 | `window-controls-scope` ('all') | `windowControls`, `gtkThemeManager` | which windows get panel buttons: all, maximized, fullscreen. Migrated once from `show-window-controls-fullscreen-only` |
-| `window-controls-position` ('system') | `windowControls` | system (follow WM `button-layout`), left, right |
+| `window-controls-position` ('left') | `windowControls` | system (follow WM `button-layout`), left, right |
 | `remove-titlebar-buttons` (true) | `gtkThemeManager` | picks `hide-titlebar{,-fullscreen,-always}{3,4}.css` through `titlebarHideSheet()` |
 | `liquid-glass` (true) | `liquidGlass`, `glass` | master switch |
 | `liquid-glass-style` ('tinted'), `-blur` (30), `-tint` (55), `-highlight` (true), `-refraction` (false) | `glass` | look of the glass layers |
