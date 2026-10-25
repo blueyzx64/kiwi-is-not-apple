@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // gjs -m tests/glassParams.test.js
-import { POWER_PROFILE_SERVICES, pickPowerProxy, isPowerSaver, followRect, readSnapshot, MIN_TINTED_ALPHA, MIN_TINT_PERCENT, wantsSurface, resolve, tintAlpha, legacySurfaces, worstCaseContrast, tintColor, SETTING_FIELDS }
+import { POWER_PROFILE_SERVICES, pickPowerProxy, isPowerSaver, followRect, readSnapshot, MIN_TINTED_ALPHA, MIN_TINT_PERCENT, wantsSurface, resolve, tintAlpha, legacySurfaces, worstCaseContrast, tintColor, SETTING_FIELDS, fillAlpha, fillClasses, FILL_STEP }
     from '../lib/glassParams.js';
 
 let failed = 0;
@@ -125,6 +125,33 @@ check('hadess fallback', POWER_PROFILE_SERVICES[1][0] === 'net.hadess.PowerProfi
     check('nothing -> null', pickPowerProxy([null, null]) === null);
 }
 check('power-saver semantics', isPowerSaver('power-saver') && !isPowerSaver('balanced') && !isPowerSaver(undefined));
+
+// translucent fill (no blur): classes on the surface actor itself
+{
+    const p = resolve(snap(), env(), 'menus', 'large');
+    const c = fillClasses(p, 'menus');
+    const bucket = c.find(x => /^kiwi-glass-a\d+$/.test(x));
+    check('fill: base classes', c.includes('kiwi-glass-fill') && c.includes('kiwi-glass-menus') && c.includes('kiwi-glass-dark'));
+    check('fill: one alpha bucket on the step', !!bucket && Number(bucket.slice(12)) % FILL_STEP === 0);
+    check('fill: bucket near the alpha', Math.abs(Number(bucket.slice(12)) / 100 - fillAlpha(p)) <= FILL_STEP / 200 + 1e-9);
+    check('fill: highlight follows the setting', c.includes('kiwi-glass-highlight') &&
+        !fillClasses(resolve(snap({ highlight: false }), env(), 'menus'), 'menus').includes('kiwi-glass-highlight'));
+    check('fill: off -> no classes', fillClasses(resolve(snap({ surfaces: [] }), env(), 'menus'), 'menus').length === 0);
+    check('fill: legacy blur -> no classes', fillClasses(resolve(snap({ liquid: false }), env(), 'dock'), 'dock').length === 0);
+    check('fill: null params -> none', fillClasses(null, 'panel').length === 0);
+    const hc = fillClasses(resolve(snap(), env({ highContrast: true }), 'panel'), 'panel');
+    check('fill: high contrast is solid', hc.includes('kiwi-glass-a100') && hc.includes('kiwi-glass-opaque') && !hc.includes('kiwi-glass-highlight'));
+    check('fill: reduced motion -> static', fillClasses(resolve(snap(), env({ reducedMotion: true }), 'panel'), 'panel').includes('kiwi-glass-static'));
+    check('fill: light scheme', fillClasses(resolve(snap(), env({ dark: false }), 'panel'), 'panel').includes('kiwi-glass-light'));
+    const dim = fillClasses(resolve(snap({ style: 'clear' }), env({ dark: false }), 'panel'), 'panel');
+    check('fill: clear over light -> dim veil, no bucket', dim.includes('kiwi-glass-dim') && !dim.some(x => /^kiwi-glass-a\d+$/.test(x)));
+    const lo = fillAlpha(resolve(snap({ blur: 0 }), env(), 'panel'));
+    const hi = fillAlpha(resolve(snap({ blur: 100 }), env(), 'panel'));
+    check('fill: frost (blur slider) raises opacity', hi > lo && hi - lo < 0.2);
+    check('fill: never fully opaque unless high contrast', fillAlpha(resolve(snap({ tint: 100, blur: 100 }), env(), 'menus', 'large')) < 1);
+    const clear = fillClasses(resolve(snap({ style: 'clear', tint: 0, blur: 0 }), env(), 'panel'), 'panel');
+    check('fill: smallest bucket is a5', clear.includes('kiwi-glass-a5'));
+}
 
 if (failed) {
     print(`${failed} failed`);

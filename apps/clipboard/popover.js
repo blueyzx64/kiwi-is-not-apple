@@ -8,14 +8,12 @@ import St from 'gi://St';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import { Glass } from '../../lib/glass.js';
-import { tintColor } from '../../lib/glassParams.js';
 import { ModalSurface } from '../../lib/modalSurface.js';
 import { accelLabel, buildRow, sectionLabel } from './view.js';
 
 const WIDTH = 380;
 const LIST_HEIGHT = 360;
 const MAX_ROWS = 80;
-const GLASS_RADIUS = 18;
 
 export class ClipboardPopover {
     /**
@@ -31,13 +29,12 @@ export class ClipboardPopover {
         this._filter = 'all';
         this._query = '';
         this._glass = null;
-        this._savedStyle = null;
 
         this._build();
         cleanup.connect(menu, 'open-state-changed', (_m, open) => this._onOpen(open));
         cleanup.add(ctl.connectChanged(() => this._menu.isOpen && this._refresh()));
         cleanup.add(() => this._detachGlass());
-        this._attachGlass(cleanup);
+        this._attachGlass();
     }
 
     _build() {
@@ -114,7 +111,6 @@ export class ClipboardPopover {
     }
 
     _onOpen(open) {
-        this._glass?.setVisible(open);
         if (!open)
             return;
         // One Kiwi modal at a time
@@ -158,45 +154,21 @@ export class ClipboardPopover {
         this._hint.text = hint ? _('Quick Paste %s').replace('%s', hint) : '';
     }
 
-    // ---- glass: same recipe as apps/liquidGlass for the Shell's own menus ----
+    // ---- glass: a translucent fill on the rounded menu box itself (lib/glass.js) ----
 
-    _attachGlass(cleanup) {
-        const bp = this._menu.actor;
-        if (!bp?.get_parent())
+    _attachGlass() {
+        const box = this._menu.box;
+        if (!box)
             return;
         try {
-            this._glass = Glass.attach(bp.bin ?? bp, {
-                surface: 'overlays', parent: bp.get_parent(), below: bp, layers: 'blur',
-                role: 'large', radius: GLASS_RADIUS, name: 'kiwi-glass-clipboard-popover',
-            });
+            this._glass = Glass.attach(box, { surface: 'overlays', role: 'large' });
         } catch (e) {
             console.warn(`[Kiwi] clipboard popover glass failed: ${e.message}`);
-            return;
         }
-        this._savedStyle = bp.get_style();
-        this._glass.setVisible(this._menu.isOpen);
-        Glass.watch(cleanup, () => this._styleBubble());
-    }
-
-    _styleBubble() {
-        const bp = this._menu.actor;
-        const params = this._glass?.params;
-        if (!bp)
-            return;
-        if (!params || params.tier === 'off') {
-            bp.set_style(this._savedStyle);
-            return;
-        }
-        const tint = params.tier === 'opaque'
-            ? tintColor({ ...params, dim: false, alpha: 1 }) : tintColor(params);
-        bp.set_style(`${this._savedStyle ?? ''} -arrow-background-color: ${tint};`);
     }
 
     _detachGlass() {
         this._glass?.destroy();
         this._glass = null;
-        const bp = this._menu.actor;
-        if (bp && this._savedStyle !== null)
-            bp.set_style(this._savedStyle);
     }
 }
