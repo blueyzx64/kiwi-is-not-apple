@@ -53,6 +53,14 @@ starts with a summary and a table of contents.
     that they exist, and re-check them against `version-matrix.md` on each
     GNOME bump.
 
+**Version landmines for 48 to 51** (details: `references/version-matrix.md`):
+- 49: `maximize()`/`unmaximize()` take no flags, `get_maximized()` is gone,
+  `Clutter.ClickAction` and the other actions are replaced by `*Gesture`.
+- 50: X11 is gone, and so is the `affectsInputRegion` chrome param (passing it throws).
+- 51: `disable()` must be sync, St `vertical` is gone (use `orientation`),
+  `Shell.GLSLEffect` and `ShaderEffect.set_shader_source` are gone,
+  `menu.open()`/`close()` take `{animate}`, and `ui/pointerWatcher.js` is gone.
+
 ## Decision table: "I need to X" → read
 
 | I need to... | Read |
@@ -135,7 +143,8 @@ packed zip before you submit (see `review-guidelines-and-pitfalls.md`).
   - ShaderEffect source vs snippet: `apps/minimizedToDock.js`
   - menu `close()` params: `apps/windowTitle.js`, `MENU_CLOSE_ARGS`
   - BlurEffect repaint workaround: `apps/blurPaintSignal.js`
-- `.gitignore` contains `.c[a-z]*/`, which also matches `.claude/`. These
-  skills are untracked unless someone force-adds them.
+- `.claude/` and `docs/` are tracked through `!.claude/**` in `.gitignore`, which
+  overrides the `.c[a-z]*/` rule. Keep them out of the extension zip: `pack`
+  only adds `--extra-source` paths.
 - CI packs the extension with `.github/workflows/pack-release.yml`. A new
   top-level folder needs an `--extra-source` there.

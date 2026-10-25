@@ -17,7 +17,10 @@ Manager strip. One switch turns it all off.
   `color-scheme`) → a 1px inner highlight on the top edge → a soft drop shadow.
 - Style: **Tinted** (default, easier to read) or **Clear**.
 - Corner radii are concentric (inner radius = outer − padding). Exact tokens are in the `apple-design` skill and override the canvas mock-ups.
-- Refraction at the edges (GLSL) is **experimental and off by default**.
+- Refraction at the edges (GLSL) is **experimental and off by default**. GNOME 51 removed
+  `Shell.GLSLEffect` and moved `Clutter.ShaderEffect` to Cogl snippets, so refraction needs
+  a per-version path in `lib/compat.js` (see the `gnome-shell-extension` skill's
+  `blur-shaders-and-effects.md`).
 - Performance mode blurs a still copy of the wallpaper instead of the live screen.
   It turns on automatically in Power Saver when the user chose that.
 
@@ -29,6 +32,7 @@ Manager strip. One switch turns it all off.
 
 ## 5. Interactions
 - When Blur my Shell is detected, show a notice in the preferences. Never fight it at runtime.
+  Its master branch now ships its own "Liquid Glass" effect, so the two overlap directly.
 - Every new surface (features 3–8) must take its style from the shared glass helper
   (`lib/glass.js`, see the architecture doc), never its own copy.
 - Accessibility: honour high-contrast. When it is on, use solid surfaces.
