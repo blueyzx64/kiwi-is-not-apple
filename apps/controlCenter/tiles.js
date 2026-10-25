@@ -2,7 +2,7 @@
 // Tiles the Control Center adds to the stock grid.
 //
 // - The Kiwi module: one full-width card with a tile per Kiwi feature (notch, Stage Manager,
-//   auto-hide, window buttons, clipboard, Spotlight, Liquid Glass), each bound to its key.
+//   window buttons, clipboard, Spotlight, Liquid Glass), each bound to its key.
 // - On GNOME 48 there is no stock Do Not Disturb toggle (49 moved it into Quick Settings),
 //   so the Control Center builds one with the same binding GNOME 49 uses.
 

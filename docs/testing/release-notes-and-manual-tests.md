@@ -1,6 +1,6 @@
 # Release notes and manual test list (GNOME 50, Fedora 44)
 
-Brings the 8 planned macOS-style features (window controls, Liquid Glass, auto-hide top bar, clipboard history, Spotlight, Control Center, Stage Manager, notification notch) to **GNOME 50 on Fedora 44 Workstation**, the only supported platform for this release (`metadata.json` shell-version `["50"]`; the 48/49/51 code paths in `lib/compat.js` are kept for later releases), on top of a new foundation (feature registry, shared `lib/` services, `coordinators/`) and a round of tech-debt fixes.
+Brings 7 of the 8 planned macOS-style features (window controls, Liquid Glass, clipboard history, Spotlight, Control Center, Stage Manager, notification notch) to **GNOME 50 on Fedora 44 Workstation**, the only supported platform for this release (`metadata.json` shell-version `["50"]`; the 48/49/51 code paths in `lib/compat.js` are kept for later releases), on top of a new foundation (feature registry, shared `lib/` services, `coordinators/`) and a round of tech-debt fixes.
 
 **Checks run in the cloud:**
 - `make check`: eslint 0 errors / 0 warnings, strict schema compile, `gjs -m` unit tests green.
@@ -18,7 +18,7 @@ Headless runs can't check looks, real input or real apps, so please work through
 - **`advanced/` GTK3 module fixes.** No more 800 ms polling; hover state is recomputed so highlights can't stick; `GTK3_MODULES` is appended to instead of overwritten; the `.so` is installed by temp file plus rename; the prebuilt binary gets a sha256 and x86_64 check; README Wayland note fixed.
 - **Window controls in the top bar.** Close, minimize and maximize move into the panel for any focused window, including dialogs. A layout coordinator places them, scope and position are settings, and Kiwi can remove the apps' own titlebar buttons (GTK3/GTK4).
 - **Liquid Glass.** A shared glass service (blur, tint, rim, highlight) used by the panel, menus, dock and overlays. Styles, sliders, high-contrast, reduced-motion and power-saver handling are included; refraction is experimental. Old `panel-blur`/`dock-blur` keys migrate into it.
-- **Auto-hide top bar.** A pressure-barrier reveal replaces the old "show panel on hover in fullscreen" feature. Menus, overview and a "hold" API keep the bar up when needed.
+- **Removed: auto-hide top bar** (owner decision, UX round 1). The top bar houses the notch, so it always stays on screen. The old "show panel on hover in fullscreen" feature it replaced is gone too. Its settings keys stay in the schema, deprecated and unread.
 - **Clipboard history, Spotlight, Control Center, Stage Manager.**
   - Clipboard: popover plus Quick Paste, saved to disk.
   - Spotlight: apps, files, settings, calculator and unit conversion, clipboard, web search. A Super tap opens it.
@@ -52,10 +52,7 @@ New features default to ON (owner decision); users opt out in prefs.
   - Super+Space is untouched. Spotlight can be turned off, or the tap setting alone, in prefs.
   - Kiwi blocks only the Shell's own `overlay-key` handler and restores it on disable.
   - An empty search shows recent apps only. Recent clipboard rows appear only with `spotlight-recent-clipboard` on (default off). Typing still searches the clipboard.
-- **Auto-hide top bar is ON:**
-  - The bar is hidden until the pointer pushes at the top edge (about 0.15 s dwell), and hides about 0.6 s after leaving.
-  - `panel-hover-fullscreen` migrates to `panel-autohide` plus the fullscreen-only option, so users who had fullscreen hover keep similar behaviour.
-  - Strut fix: turning auto-hide off (or re-showing the bar) restores a correct work-area strut, so maximized windows no longer sit under the bar. The bar re-parks on monitor changes.
+- **Removed: auto-hide top bar and "show panel on hover in fullscreen".** The top bar is always shown with the stock strut, because it houses the notch. A user who had either on gets the normal bar on the next login; no migration runs and the old keys are ignored.
 - **Clipboard history is saved to disk by default**, in `~/.local/share/kiwi/clipboard/` (directory 0700, files 0600), and reloaded on enable. Password-manager secrets are not recorded, and nothing is recorded while locked. Text that looks like a private key, API token, JWT, card number (Luhn check) or long random token is skipped too (heuristics, not a guarantee). Images over 8192 px a side or 40 Mpx, and SVGs, are not stored. **The shortcut is empty by default** (EGO rule); a prefs button sets Super+Shift+V.
 - **Liquid Glass is ON.** With it on, the old `panel-blur`/`dock-blur` keys do nothing; the surfaces list rules. Old values migrate into that list.
 - **Control Center is ON.**
@@ -74,7 +71,7 @@ New features default to ON (owner decision); users opt out in prefs.
 - **Stage Manager shortcut:** new key, empty by default (prefs suggests Ctrl+Super+S only if no known conflict). The binding lives even while Stage Manager is off.
 - **Hide-minimized-windows** is aware of Stage Manager; opening a modal (Spotlight, Quick Paste) closes open menus first.
 - **Panel transparency** now reacts to windows on all workspaces; the 2 s poll is gone.
-- **Prefs:** new pages in this order after the existing ones: Liquid Glass, Window Controls, Auto-hide Top Bar, Control Center, Clipboard, Spotlight, Notch, Stage Manager; Advanced stays last. The old fullscreen-hover row is removed; the username row is back and defers to Control Center.
+- **Prefs:** new pages in this order after the existing ones: Liquid Glass, Window Controls, Control Center, Clipboard, Spotlight, Notch, Stage Manager; Advanced stays last. The old fullscreen-hover row is removed; the username row is back and defers to Control Center.
   - A feature page that fails to build no longer breaks the prefs window.
   - Restore Defaults skips internal keys.
 - **Settings migrations run once:** they run before the features start, and each is recorded in the internal key `migrations-done`. If you reset a new key, the old value is not copied back.
@@ -156,19 +153,10 @@ Run each item on Fedora 44 Workstation, GNOME 50, in a Wayland session (GNOME 50
 - [ ] Open Control Center and the calendar. Expected: tinted bubble and blur only while open (note any corner bleed).
 - [ ] Install Blur my Shell. Expected: the prefs notice shows.
 
-### Auto-hide top bar
-- [ ] Fresh profile. Expected: bar hidden, slides in on a push to the top edge (about 0.15 s) and out 0.6 s after the pointer leaves.
-- [ ] Maximize a window. Expected: full height, no jump as the bar shows and hides; turn the setting off and windows shrink once.
-- [ ] Play fullscreen video and use a GTK4 app (gnome-text-editor). Expected: bar reveals over it and hides again; fullscreen-only mode shows a normal bar off fullscreen.
-- [ ] Open a panel menu (clock, Quick Settings). Expected: bar stays while open, leaves after. Ctrl+Alt+Tab to Top Bar reveals it.
-- [ ] Use the hot corner and push right of it (also RTL). Expected: hot corner still opens the overview; pushing right of it reveals the bar; mirrored in RTL.
-- [ ] Open the overview. Expected: bar shown, search and workspaces not under it; on exit it hides with no layout jump.
-- [ ] Drag a window to the top edge on a Dash to Dock setup. Expected: dock unaffected, bar not revealed.
-- [ ] Multi-monitor with a monitor above primary, one beside, then unplug and replug. Expected: monitor above still reachable; none on the side monitor; rebuilds cleanly.
-- [ ] Turn keep-on-desktop on. Expected: bar stays with no windows and hides when one opens. Reduced motion on: no slide.
-- [ ] Toggle the feature 20x. Expected: no leftover `kiwi-panel-autohide` class, translation or barrier; panel transparency uses the overlay style while auto-hiding.
-- [ ] Before upgrade set `panel-hover-fullscreen=false` in dconf. Expected: `panel-autohide` is false afterward.
-- [ ] Toggle auto-hide on and off, and check the panelBox chrome flags. Expected: restored to the values recorded at enable.
+### Removed: auto-hide top bar
+- [ ] Before upgrading, have auto-hide on (`panel-autohide=true`), then upgrade and log in. Expected: the bar is shown with its normal strut (maximized windows sit below it), no edge push needed, no slide, no *Auto-hide Top Bar* prefs page and no *Hide Top Bar* tile in the Control Center.
+
+### Panel transparency
 - [ ] Two workspaces: maximize a window on ws2 while on ws1, then switch. Expected: panel opaque at once; unmaximize elsewhere and switch, panel transparent.
 - [ ] Move a maximized window between workspaces, and add and remove a workspace. Expected: panel state follows with no stall.
 - [ ] Change wallpaper or color scheme. Expected: foreground contrast updates without a stall.
@@ -255,7 +243,6 @@ Run each item on Fedora 44 Workstation, GNOME 50, in a Wayland session (GNOME 50
 - [ ] Fullscreen video. Expected: normal notify shows nothing; critical shows a pill over the video which keeps playing; volume key shows a pill with no bar.
 - [ ] Play media in Firefox, Spotify and Rhythmbox. Expected: pill shows art, title and bars; pause removes it; click opens the dashboard (prev/play/next); two players means the playing one wins; the panelMedia menu still lists all.
 - [ ] Press volume and brightness keys, hold for repeat, and check a second monitor. Expected: pill with bar and number, smooth repeat, open card returns; the second monitor shows the stock OSD.
-- [ ] Auto-hide on, then send a notification. Expected: bar slides in with the pill and leaves after; no pill when idle.
 - [ ] Turn the notch off, then only Notifications, OSD or Live activities. Expected: stock banners and OSD return at once; each partial toggle reverts only its part; the timeout spin works.
 - [ ] Toggle the notch 20x. Expected: no leftover actors, no double banner, banner position back; Looking Glass shows no kiwi notch actors; no errors.
 - [ ] Set calendar-right off with the notch on, then disable Kiwi. Expected: date menu still goes right; with Kiwi off the banner position and bin alignment are stock.
@@ -287,9 +274,8 @@ Run each item on Fedora 44 Workstation, GNOME 50, in a Wayland session (GNOME 50
 - [ ] Log in and toggle Caps/Num Lock. Expected: indicators show at login and on toggle (no fixed delay).
 - [ ] Battery at or below 20% discharging, then plug in, and start at 15%. Expected: label slides in, slides out when plugged, and shows at start.
 - [ ] Move a fullscreen window to a new workspace and use tiling drag-restore, with and without Stage Manager. Expected: normal when off; paused while Stage Manager is on.
-- [ ] Before upgrading set `panel-hover-fullscreen=false`, upgrade, then reset `panel-autohide` and re-enable Kiwi. Expected: the migration ran once; the reset value is not overwritten.
+- [ ] Before upgrading set `add-username-to-quick-menu=false`, upgrade, then reset `control-center-user-row` and re-enable Kiwi. Expected: the migration ran once; the reset value is not overwritten.
 - [ ] Break one feature's prefs page (for example by removing its file in a test copy), then open prefs. Expected: the other pages still open.
-- [ ] Turn auto-hide on, then off, with a maximized window. Expected: the window shrinks once to the correct work area, not under the bar.
 - [ ] With adaptive dock colours on, change a Dash to Dock colour by hand, then disable Kiwi. Expected: your colour is kept; untouched keys go back to their defaults.
 - [ ] Push a PR. Expected: CI is green on the Ubuntu runner (eslint@9, strict schema check, tests, `make pack`).
 - [ ] Publish a test release. Expected: the zip is attached by the new `gh release upload` step.
@@ -299,7 +285,6 @@ Run each item on Fedora 44 Workstation, GNOME 50, in a Wayland session (GNOME 50
 ### Owner decisions still open
 - **Firefox `Hidden.css` gate:** hiding Firefox's native buttons now needs the per-app styling key (plus window controls and `remove-titlebar-buttons`). Deferred by the owner (Firefox not in use); revisit in a later release.
 - **Defaults that differ from main:** `panel-transparency` true → false, `keyboard-indicator` false → true, `dock-blur` false → true. Kept by the owner.
-- **Auto-hide plus titlebar removal:** both are on by default, so a window has no titlebar buttons and its panel controls sit in a hidden bar until you push the top edge. Kept by the owner for a distraction-free (zen) layout.
 - **Window controls default to the left:** `window-controls-position` now defaults to `left`, so stock GNOME 50 (`appmenu:close`) shows close, minimize and maximize on the left. Position `system` still follows GNOME's layout (close only on stock Fedora).
 - **Clipboard persisted to disk by default** (owner decision, kept): the secret detection is a heuristic, so the metadata wording must not promise more. The shortcut stays empty by default (EGO); the spec asked for `<Super><Shift>v`.
 - **Privacy defaults chosen by the orchestrator, you may override:** `notch-show-clipboard` off, and Spotlight empty-query clipboard off.
@@ -318,7 +303,6 @@ Run each item on Fedora 44 Workstation, GNOME 50, in a Wayland session (GNOME 50
 - **Stage Manager visual details not seen:** the card tilt sign, clone painting and clipping were never looked at on a screen (the headless probe checks opacity only).
 - **Control Center:** small tiles are not 1x1 icon-only, and the footer width is a risk with long names.
 - **Notch deferrals:** "Up next" dashboard panel, timer/recording/charging activities, "toggle changed" confirmations, hardware-notch alignment, a second activity circle, a per-app absorb list.
-- **Auto-hide:** the panel is parked by translation and opacity, not hidden. The overview inset uses a guarded private `_updateWorkAreaBox`.
 - **D1 leftovers:** no prefs "Remove Kiwi GTK changes" button. A dangling gtk.css import after an uninstall is documented, not fully fixed.
 - **Release chores:** run `make pot` (writes `translating/kiwi.pot`) before release; existing `.po` files were not `msgmerge`d. D7's metadata description refresh is still open.
 
@@ -332,7 +316,6 @@ Run each item on Fedora 44 Workstation, GNOME 50, in a Wayland session (GNOME 50
 - **Private Shell APIs used (guarded, with feature detection):**
   - `MessageTray._showNotification`, `_notificationQueue`, `_updateState`, `_bannerBin` (notification router, via `lib/compat.js`).
   - `osdWindowManager._showOsdWindow` (notch OSD).
-  - `Main.overview._overview.controls.layout_manager._updateWorkAreaBox` (auto-hide overview inset).
   - Quick Settings internals (`_backgroundApps`, `_doNotDisturb`) in Control Center, and `AppMenu` privates in window title.
   - Per-version differences go through `lib/compat.js`. Source was read for 48.0, 49.0, 50.0 and main. The 48/49/51 paths are kept but not claimed in this release.
 - **Other EGO-sensitive points:** a virtual keyboard injects Ctrl+V for Quick Paste; Kiwi writes `gtk.css` (Kiwi block only) and Firefox/Thunderbird profile files (only with the styling key on); the `advanced/` native module is not in the zip.
@@ -374,7 +357,7 @@ Result on both of these other versions: **all 7 functional probes PASS, `Kiwi er
 | notch-receives-notification | a notification goes to the notch (notchShown=true), not to a stock banner (stockBannerShown=false) | PASS | PASS |
 | spotlight-open-close | Spotlight opens and closes again | PASS | PASS |
 | quick-settings-columns | Control Center grid has 4 columns (382 px wide) | PASS | PASS |
-| maximize-workarea | a maximized window fills the work area (1280x800 with auto-hide), unmaximizes back to 700x520; window-controls indicator visible while maximized | PASS | PASS |
+| maximize-workarea | a maximized window fills the work area (1280x800 with auto-hide, since removed), unmaximizes back to 700x520; window-controls indicator visible while maximized | PASS | PASS |
 | stage-manager-hide-reveal | of two app windows, the off-stage one has opacity 0; switching swaps them (opacity 255 / 0), none minimized | PASS | PASS |
 | clipboard-history-increments | a copy adds one history entry while recording | PASS | PASS |
 
@@ -387,7 +370,7 @@ Noise in the logs, not counted as Kiwi errors by the harness:
 Worth a look on a real desktop, but they did not fail any probe.
 
 Headless can't cover:
-- **Visual look and animations:** glass blur and tint, the notch spring, the Stage Manager shrink and tilt, auto-hide slides, reduced-motion feel. There is no GPU and nobody looked at the screen.
+- **Visual look and animations:** glass blur and tint, the notch spring, the Stage Manager shrink and tilt, reduced-motion feel. There is no GPU and nobody looked at the screen.
 - **Real input devices and IME:** a physical Super tap, keyboard repeat, touchpad gestures and pressure barriers with a real pointer, IBus composition.
 - **Wayland paste into real apps:** Quick Paste's virtual Ctrl+V into gedit, Firefox or a terminal.
 - **Multi-monitor hardware:** the 1280x800 virtual monitor only; S9's 2-virtual-monitor run is not real hardware.

@@ -42,8 +42,7 @@ the volume and brightness confirmations, the Clipboard dashboard panel and the "
 - "toggle changed" confirmations.
 
 ## 5. Interactions
-- **Auto-hide top bar:** when a notification arrives while the bar is hidden, only the
-  pill slides in, not the whole bar.
+- **Auto-hide top bar:** removed (the bar houses the notch and is always on screen).
 - **Do Not Disturb:** no banners; live activities still show.
 - **Collisions:** `panelMedia.js`, `quickSettingsNotifications.js`, `calendar.js` and the
   OSD all touch this area. See the tech-debt doc for how to resolve them.

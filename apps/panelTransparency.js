@@ -9,15 +9,12 @@ import Meta from 'gi://Meta';
 import GdkPixbuf from 'gi://GdkPixbuf';
 import Clutter from 'gi://Clutter';
 
-import { PanelVisibility } from '../coordinators/panelVisibility.js';
 import { Glass } from '../lib/glass.js';
 import { CleanupRegistry } from '../lib/disposables.js';
 
 Gio._promisify(Gio.File.prototype, 'read_async', 'read_finish');
 Gio._promisify(Gio.InputStream.prototype, 'close_async', 'close_finish');
 Gio._promisify(GdkPixbuf.Pixbuf, 'new_from_stream_at_scale_async', 'new_from_stream_finish');
-
-const visibilityCleanup = new CleanupRegistry();
 
 let settings;
 let enabled = false;
@@ -510,13 +507,6 @@ function updatePanelStyle(alpha = null) {
 }
 
 function checkWindowTouchingPanel() {
-    // Auto-hiding bar: it floats over windows, so it keeps its overlay style and the
-    // "opaque when a window touches it" rule is off (PanelVisibility owns the strut).
-    if (PanelVisibility.autoHiding()) {
-        lastForcedAlpha = null;
-        updatePanelStyle(null);
-        return;
-    }
     if (!settings.get_boolean('panel-transparency') || 
         !settings.get_boolean('panel-opaque-on-window')) {
         // Even if opaque-on-window is disabled, fullscreen should force opaque
@@ -835,9 +825,6 @@ export function enable(_settings) {
     });
     glassReady = true;
 
-    // Re-style when the bar starts or stops auto-hiding (state signal, no polling needed).
-    PanelVisibility.connect(visibilityCleanup, () => checkWindowTouchingPanel());
-
     timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
         checkWindowTouchingPanel();
         timeoutId = null;
@@ -847,7 +834,6 @@ export function enable(_settings) {
 
 export function disable() {
     enabled = false;
-    visibilityCleanup.dispose();
 
     if (timeoutId) {
         GLib.Source.remove(timeoutId);

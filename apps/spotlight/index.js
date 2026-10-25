@@ -10,8 +10,6 @@
 //
 // It does not route through Main.overview search, so skipOverviewOnLogin and
 // focusOnOverviewExit never see it.
-//
-// While open it holds the top bar visible (PanelVisibility.hold).
 
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
@@ -19,8 +17,6 @@ import St from 'gi://St';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
-import { PanelVisibility } from '../../coordinators/panelVisibility.js';
-import { CleanupRegistry } from '../../lib/disposables.js';
 import { Keybindings, MODAL_MODES } from '../../lib/keybindings.js';
 import { KiwiSettings } from '../../lib/settings.js';
 import { ModalSurface } from '../../lib/modalSurface.js';
@@ -55,7 +51,6 @@ export class SpotlightFeature {
         this._externalReady = false;
         this._enabled = false;
         this._loadCancellable = null;
-        this._holds = null;
     }
 
     enable() {
@@ -135,8 +130,6 @@ export class SpotlightFeature {
             onCopy: item => this._copy(item),
             onClose: () => this._modal.close(),
         });
-        this._holds = new CleanupRegistry();
-        PanelVisibility.hold(this._holds, 'spotlight');
         const focus = this._view.build(frame);
         this._settingsProvider.invalidate();
         this._search('');
@@ -144,8 +137,6 @@ export class SpotlightFeature {
     }
 
     _closed() {
-        this._holds?.dispose();
-        this._holds = null;
         this._cancelSearch();
         this._view?.destroy();
         this._view = null;

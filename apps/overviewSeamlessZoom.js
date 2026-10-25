@@ -139,7 +139,7 @@ function applyPatches() {
                 const box = orig.call(this, state, ...args);
                 const monitor = Main.layoutManager.primaryMonitor;
                 if (state === ControlsState.HIDDEN && monitor) {
-                    // The layout's own work-area box: PanelVisibility insets it while the bar auto-hides.
+                    // The layout's own work-area box (falls back to the monitor's work area).
                     const wb = this._workAreaBox;
                     const workArea = Main.layoutManager.getWorkAreaForMonitor(monitor.index);
                     box.set_origin(box.x1 - (wb ? wb.x1 : workArea.x - monitor.x),

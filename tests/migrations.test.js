@@ -52,20 +52,12 @@ test('fresh profile: nothing copied, all ids recorded', () => {
     eq(gs.get_strv('migrations-done').length, ALL_MIGRATIONS.length);
 });
 
-test('panel-hover-fullscreen=false lands in panel-autohide before features start', () => {
-    const gs = fresh();
-    gs.set_boolean('panel-hover-fullscreen', false);
-    runAllMigrations(gs);
-    eq(gs.get_boolean('panel-autohide'), false);
-    eq(userSet(gs, 'panel-autohide'), true);
-});
-
-test('panel-hover-fullscreen=true keeps the fullscreen-only behaviour', () => {
+test('auto-hide was removed: its old keys no longer migrate anywhere', () => {
     const gs = fresh();
     gs.set_boolean('panel-hover-fullscreen', true);
-    runAllMigrations(gs);
-    eq(gs.get_boolean('panel-autohide'), true);
-    eq(gs.get_boolean('panel-autohide-fullscreen-only'), true);
+    eq(runAllMigrations(gs), []);
+    eq(userSet(gs, 'panel-autohide'), false);
+    eq(ALL_MIGRATIONS.some(m => m.to.startsWith('panel-autohide')), false);
 });
 
 test('glass: panel-blur off, dock-blur on -> surfaces from both, written once', () => {
@@ -90,11 +82,11 @@ test('window controls and control center keys migrate', () => {
 
 test('second run is a no-op even after the user resets a new key', () => {
     const gs = fresh();
-    gs.set_boolean('panel-hover-fullscreen', false);
+    gs.set_boolean('add-username-to-quick-menu', false);
     runAllMigrations(gs);
-    gs.reset('panel-autohide');
+    gs.reset('control-center-user-row');
     eq(runAllMigrations(gs), []);
-    eq(userSet(gs, 'panel-autohide'), false);
+    eq(userSet(gs, 'control-center-user-row'), false);
 });
 
 if (failed) {

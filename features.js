@@ -19,7 +19,6 @@ import { enable as batteryPercentageEnable, disable as batteryPercentageDisable 
 import { enable as calendarEnable, disable as calendarDisable } from './apps/calendar.js';
 import { enable as windowTitleEnable, disable as windowTitleDisable } from './apps/windowTitle.js';
 import { WindowControlsFeature } from './apps/windowControls.js';
-import { PanelVisibilityFeature, wantsController } from './coordinators/panelVisibility.js';
 import { enable as panelTransparencyEnable, disable as panelTransparencyDisable } from './apps/panelTransparency.js';
 import { enable as panelStylingEnable, disable as panelStylingDisable, enableMenus as popupStylingEnable, disableMenus as popupStylingDisable } from './apps/panelStyling.js';
 import { enable as hideMinimizedWindowsEnable, disable as hideMinimizedWindowsDisable } from './apps/hideMinimizedWindows.js';
@@ -167,12 +166,6 @@ export const FEATURES = [
         // Super tap / shortcut opens Spotlight; the clipboard provider reads clipboardService() lazily
         id: 'spotlight', setting: 'spotlight',
         cls: SpotlightFeature,
-    },
-    {
-        // Modes always / fullscreen-hover / autohide; runs for the last two. Reacts to its own
-        // keys, and owns Main.layoutManager.panelBox visibility, struts and translation.
-        id: 'panel-autohide', when: ctx => wantsController(ctx.settings),
-        cls: PanelVisibilityFeature,
     },
     {
         id: 'panel-transparency', reapply: true, setting: 'panel-transparency',

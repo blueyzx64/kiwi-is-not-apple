@@ -10,7 +10,6 @@
 //   - MprisWatcher                      media live activity + dashboard (notch-live-activities)
 //   - Main.osdWindowManager._showOsdWindow  volume / brightness OSD (notch-osd)
 //   - PanelLayout.claim 'notch'         room in the centre box
-//   - PanelVisibility.hold 'notch'      keeps an auto-hidden bar up while something shows
 // Every part undoes itself through the CleanupRegistry; stock banners and OSD come back.
 
 import GLib from 'gi://GLib';
@@ -21,7 +20,6 @@ import { CleanupRegistry } from '../../lib/disposables.js';
 import { KiwiSettings } from '../../lib/settings.js';
 import { canDivertOsd, setUnredirectAllowed, requeueBanner, kickTray } from '../../lib/compat.js';
 import { PanelLayout } from '../../coordinators/panelLayout.js';
-import { PanelVisibility } from '../../coordinators/panelVisibility.js';
 import { NotificationRouter } from '../../coordinators/notificationRouter.js';
 import { MprisWatcher } from '../../coordinators/mprisWatcher.js';
 import { clipboardService } from '../clipboard/index.js';
@@ -55,7 +53,6 @@ export class NotchFeature {
         this._state = initialState(nowMs());
         this._alive = false;
         this._overFullscreen = false;
-        this._hold = null;
         this._deadlineToken = 0;
         this._parts = { sink: null, osd: null, media: null };
         this._watch = null;
@@ -100,7 +97,6 @@ export class NotchFeature {
         // Shared inputs
         NotificationRouter.connect(cleanup, () => this._syncExternal());
         cleanup.connect(global.display, 'in-fullscreen-changed', () => this._syncExternal());
-        PanelVisibility.connect(cleanup, () => this._sync());
         this._syncExternal(true);
 
         // The clipboard feature can start or stop after the notch
@@ -141,7 +137,6 @@ export class NotchFeature {
         const critical = this._notifications ? this._criticalNotifications() : [];
         this._alive = false;
         this._deadlineToken = 0;
-        this._release();
         for (const key of ['sink', 'osd', 'media']) {
             this._parts[key]?.dispose();
             this._parts[key] = null;
@@ -274,15 +269,8 @@ export class NotchFeature {
             clipboard: this._clipboardEntries(),
         });
 
-        // Only the pill over a fullscreen window; no bar there. Otherwise keep the bar up.
-        const barHidden = PanelVisibility.autoHiding() && !PanelVisibility.isVisible();
-        const shown = wants || (!fullscreen && !barHidden);
-        this._view.setShown(shown);
-        const wantsHold = wants && !fullscreen;
-        if (wantsHold && !this._hold)
-            this._hold = PanelVisibility.hold(null, 'notch');
-        else if (!wantsHold && this._hold)
-            this._release();
+        // Only the pill over a fullscreen window; no bar there.
+        this._view.setShown(wants || !fullscreen);
         // A pill drawn over a fullscreen window needs the compositor to stop direct scanout
         const overFullscreen = wants && fullscreen;
         if (overFullscreen !== this._overFullscreen) {
@@ -291,11 +279,6 @@ export class NotchFeature {
         }
 
         this._schedule(nextDeadline(state));
-    }
-
-    _release() {
-        this._hold?.release();
-        this._hold = null;
     }
 
     _schedule(deadline) {

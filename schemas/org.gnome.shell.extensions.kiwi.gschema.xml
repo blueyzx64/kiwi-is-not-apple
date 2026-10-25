@@ -69,7 +69,7 @@
       <key name="panel-hover-fullscreen" type="b">
         <default>true</default>
         <summary>Show Panel on Hover in Fullscreen</summary>
-        <description>Deprecated: replaced by panel-autohide and panel-autohide-fullscreen-only. Kept so older settings migrate; it has no effect on its own.</description>
+        <description>Deprecated: the auto-hide top bar this fed was removed. Kept so existing dconf settings stay valid; nothing reads it.</description>
       </key>
       <key name="move-calendar-right" type="b">
         <default>true</default>
@@ -360,33 +360,33 @@
         <description>Switch to performance mode automatically while the Power Saver profile is active.</description>
       </key>
 
-      <!-- Auto-hide top bar (coordinators/panelVisibility.js) -->
+      <!-- Deprecated: the auto-hide top bar was removed. Keys kept so dconf stays valid; unread. -->
       <key name="panel-autohide" type="b">
         <default>true</default>
-        <summary>Auto-hide the top bar</summary>
-        <description>Slide the top bar out of view and bring it back when the pointer pushes against the top edge. Replaces panel-hover-fullscreen.</description>
+        <summary>(Deprecated) Auto-hide the top bar</summary>
+        <description>Deprecated: the auto-hide top bar was removed (the top bar houses the notch). Kept so existing dconf settings stay valid; nothing reads it. Slide the top bar out of view and bring it back when the pointer pushes against the top edge. Replaces panel-hover-fullscreen.</description>
       </key>
       <key name="panel-autohide-fullscreen-only" type="b">
         <default>false</default>
-        <summary>Auto-hide only over fullscreen windows</summary>
-        <description>Keep the top bar (and its space) as usual and hide it only while a fullscreen window is on the primary monitor.</description>
+        <summary>(Deprecated) Auto-hide only over fullscreen windows</summary>
+        <description>Deprecated: the auto-hide top bar was removed (the top bar houses the notch). Kept so existing dconf settings stay valid; nothing reads it. Keep the top bar (and its space) as usual and hide it only while a fullscreen window is on the primary monitor.</description>
       </key>
       <key name="panel-autohide-reveal-delay" type="i">
         <default>150</default>
         <range min="0" max="2000"/>
-        <summary>Reveal delay (ms)</summary>
-        <description>How long the pointer must stay pushed against the top edge before the top bar slides in.</description>
+        <summary>(Deprecated) Reveal delay (ms)</summary>
+        <description>Deprecated: the auto-hide top bar was removed (the top bar houses the notch). Kept so existing dconf settings stay valid; nothing reads it. How long the pointer must stay pushed against the top edge before the top bar slides in.</description>
       </key>
       <key name="panel-autohide-hide-delay" type="i">
         <default>600</default>
         <range min="0" max="5000"/>
-        <summary>Hide delay (ms)</summary>
-        <description>How long after the pointer leaves the top bar, and nothing holds it open, before it slides out.</description>
+        <summary>(Deprecated) Hide delay (ms)</summary>
+        <description>Deprecated: the auto-hide top bar was removed (the top bar houses the notch). Kept so existing dconf settings stay valid; nothing reads it. How long after the pointer leaves the top bar, and nothing holds it open, before it slides out.</description>
       </key>
       <key name="panel-autohide-keep-on-desktop" type="b">
         <default>false</default>
-        <summary>Keep the top bar on an empty desktop</summary>
-        <description>Do not hide the top bar while no window is showing on the primary monitor.</description>
+        <summary>(Deprecated) Keep the top bar on an empty desktop</summary>
+        <description>Deprecated: the auto-hide top bar was removed (the top bar houses the notch). Kept so existing dconf settings stay valid; nothing reads it. Do not hide the top bar while no window is showing on the primary monitor.</description>
       </key>
 
       <key name="migrations-done" type="as">

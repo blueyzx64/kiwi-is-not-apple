@@ -1011,12 +1011,6 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
   background-color: rgba(0, 0, 0, 0.35);
 }
 
-/* feature: autohide */
-/* The revealed bar floats over windows instead of sitting in a strut: give it an edge. */
-#panel.kiwi-panel-autohide {
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
-}
-
 /* feature: control-center */
 /* Every rule is scoped by .kiwi-control-center, a class the feature adds to the Quick
    Settings menu box while it is on. Removing the class restores the stock look.
