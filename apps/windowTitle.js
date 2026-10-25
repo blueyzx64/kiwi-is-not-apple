@@ -13,6 +13,7 @@ import { AppMenu } from 'resource:///org/gnome/shell/ui/appMenu.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
+import { isHelperWindowInfo, windowForActor } from './util/windows.js';
 import { createTileGrid, canTile, canRestore, restoreAllWindows, toggleFullscreen } from './windowTiling.js';
 
 let indicator = null;
@@ -52,16 +53,6 @@ function addAccelLabel(item, accel) {
     });
     label.opacity = ACCEL_OPACITY;
     item.add_child(label);
-}
-
-// The pointer lands on a child of an overview preview (the clone, the icon, the
-// caption), so walk up until an ancestor names the window it stands for.
-function windowForActor(actor) {
-    for (let a = actor; a; a = a.get_parent()) {
-        if (a.metaWindow)
-            return a.metaWindow;
-    }
-    return null;
 }
 
 const WindowTitleIndicator = GObject.registerClass(
@@ -213,22 +204,13 @@ class WindowTitleIndicator extends PanelMenu.Button {
             return;
         }
 
-        // Exclude window titles that start with "com." or "gjs"
-        const normalizedTitle = windowTitle.trim().toLowerCase();
-        if (normalizedTitle.startsWith('com.') || normalizedTitle.startsWith('gjs') || normalizedTitle.includes('@!0,0')) {
+        const app = Shell.WindowTracker.get_default().get_window_app(titleWindow);
+        if (isHelperWindowInfo({ title: windowTitle, appName: app ? app.get_name() : null })) {
             this._clearDisplay();
             return;
         }
 
         windowTitle = windowTitle.trim();
-
-        const app = Shell.WindowTracker.get_default().get_window_app(titleWindow);
-        const appName = app ? app.get_name() : null;
-        const normalizedAppName = appName ? appName.trim().toLowerCase() : '';
-        if (normalizedAppName.startsWith('com.') || normalizedAppName.startsWith('gjs')) {
-            this._clearDisplay();
-            return;
-        }
 
         const dashIndex = Math.max(windowTitle.lastIndexOf(' - '), windowTitle.lastIndexOf(' — '));
         if (dashIndex !== -1) {
@@ -270,17 +252,17 @@ class WindowTitleIndicator extends PanelMenu.Button {
     // real item has to be looked up rather than assumed.
     _newWindowItem() {
         const menu = this._menu;
-        if (menu._newWindowItem.visible)
+        if (menu._newWindowItem?.visible)
             return menu._newWindowItem;
 
-        const appInfo = menu._app && menu._app.appInfo;
+        const appInfo = menu._app?.appInfo;
         if (!appInfo || !appInfo.list_actions().includes('new-window'))
             return null;
 
         // Match on the action's own name so this works in any locale.
         const name = appInfo.get_action_name('new-window');
-        return menu._actionSection._getMenuItems()
-            .find(item => item.label && item.label.text === name) || null;
+        return menu._actionSection?._getMenuItems?.()
+            .find(item => item.label?.text === name) ?? null;
     }
 
     // Ctrl+Q and Ctrl+N are application conventions rather than WM keybindings, so unlike
@@ -288,7 +270,7 @@ class WindowTitleIndicator extends PanelMenu.Button {
     // defaults for GTK apps. Re-checked on every open because _actionSection items are
     // destroyed and rebuilt whenever the focused app changes; addAccelLabel is idempotent.
     _updateAppMenuAccels() {
-        addAccelLabel(this._menu._quitItem, '<Control>Q');
+        addAccelLabel(this._menu?._quitItem, '<Control>Q');
         addAccelLabel(this._newWindowItem(), '<Control>N');
     }
 
@@ -402,7 +384,8 @@ class WindowTitleIndicator extends PanelMenu.Button {
 
         const alignment = Math.max(0, Math.min(1, labelLeft / menuWidth));
         this._menu.actor.setSourceAlignment(alignment);
-        this._menu._arrowAlignment = alignment;
+        if (this._menu._arrowAlignment !== undefined)
+            this._menu._arrowAlignment = alignment;
     }
 
     destroy() {
