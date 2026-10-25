@@ -2,6 +2,8 @@
 // Dynamically adjusts top panel transparency based on window and overview state.
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import { PanelVisibility } from '../coordinators/panelVisibility.js';
+import { CleanupRegistry } from '../lib/disposables.js';
 import GLib from 'gi://GLib';
 import St from 'gi://St';
 import Gio from 'gi://Gio';
@@ -11,6 +13,8 @@ import Clutter from 'gi://Clutter';
 
 import { Glass } from '../lib/glass.js';
 import { CleanupRegistry } from '../lib/disposables.js';
+
+const visibilityCleanup = new CleanupRegistry();
 
 let settings;
 let enabled = false;
@@ -475,6 +479,13 @@ function updatePanelStyle(alpha = null) {
 }
 
 function checkWindowTouchingPanel() {
+    // Auto-hiding bar: it floats over windows, so it keeps its overlay style and the
+    // "opaque when a window touches it" rule is off (PanelVisibility owns the strut).
+    if (PanelVisibility.autoHiding()) {
+        lastForcedAlpha = null;
+        updatePanelStyle(null);
+        return;
+    }
     if (!settings.get_boolean('panel-transparency') || 
         !settings.get_boolean('panel-opaque-on-window')) {
         // Even if opaque-on-window is disabled, fullscreen should force opaque
@@ -756,6 +767,9 @@ export function enable(_settings) {
     });
     glassReady = true;
 
+    // Re-style when the bar starts or stops auto-hiding (state signal, no polling needed).
+    PanelVisibility.connect(visibilityCleanup, () => checkWindowTouchingPanel());
+
     timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
         checkWindowTouchingPanel();
         timeoutId = null;
@@ -771,6 +785,7 @@ export function enable(_settings) {
 
 export function disable() {
     enabled = false;
+    visibilityCleanup.dispose();
 
     if (timeoutId) {
         GLib.Source.remove(timeoutId);
