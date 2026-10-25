@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Kiwi is not Apple 2.0.0\n"
 "Report-Msgid-Bugs-To: https://github.com/kem-a/kiwi-kemma/issues\n"
-"POT-Creation-Date: 2026-10-25 13:00+0000\n"
+"POT-Creation-Date: 2026-10-25 13:23+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -766,8 +766,8 @@ msgid "Clipboard History"
 msgstr ""
 
 #: apps/clipboard/popover.js:54 apps/clipboard/prefs.js:13
-#: apps/spotlight/prefs.js:136 apps/spotlight/providers/clipboard.js:18
-#: apps/spotlight/view.js:22
+#: apps/notch/view.js:420 apps/spotlight/prefs.js:136
+#: apps/spotlight/providers/clipboard.js:18 apps/spotlight/view.js:22
 msgid "Clipboard"
 msgstr ""
 
@@ -809,6 +809,7 @@ msgid "No matches"
 msgstr ""
 
 #: apps/clipboard/popover.js:150 apps/clipboard/quickPaste.js:145
+#: apps/notch/view.js:422
 msgid "Nothing copied yet"
 msgstr ""
 
@@ -940,7 +941,7 @@ msgid "Colour"
 msgstr ""
 
 #: apps/clipboard/quickPaste.js:199 apps/clipboard/view.js:56
-#: apps/spotlight/providers/clipboard.js:17
+#: apps/notch/index.js:433 apps/spotlight/providers/clipboard.js:17
 msgid "Image"
 msgstr ""
 
@@ -1188,6 +1189,10 @@ msgid ""
 "shader."
 msgstr ""
 
+#: apps/notch/index.js:421
+msgid "Copied"
+msgstr ""
+
 #: apps/notch/prefs.js:10 apps/notch/view.js:86
 msgid "Notch"
 msgstr ""
@@ -1207,10 +1212,10 @@ msgid "Show the notch"
 msgstr ""
 
 #: apps/notch/prefs.js:25
-msgid "Turning it off brings back the standard banners and volume pop-up"
+msgid "Moves the clock to the right and shows notifications in Quick Settings"
 msgstr ""
 
-#: apps/notch/prefs.js:36 apps/notch/view.js:400
+#: apps/notch/prefs.js:36 apps/notch/view.js:401
 #: apps/quickSettingsNotifications.js:189
 #: apps/spotlight/providers/settingsCatalog.js:19
 msgid "Notifications"
@@ -1225,7 +1230,7 @@ msgid "Live activities"
 msgstr ""
 
 #: apps/notch/prefs.js:39
-msgid "Show the playing song in the notch"
+msgid "Replaces the top bar media button"
 msgstr ""
 
 #: apps/notch/prefs.js:40
@@ -1246,52 +1251,52 @@ msgid ""
 "dismissed"
 msgstr ""
 
-#: apps/notch/view.js:323
+#: apps/notch/view.js:324
 msgid "Dismiss"
 msgstr ""
 
-#: apps/notch/view.js:366
+#: apps/notch/view.js:367
 msgid "Now Playing"
 msgstr ""
 
-#: apps/notch/view.js:388
+#: apps/notch/view.js:389
 msgid "Previous"
 msgstr ""
 
-#: apps/notch/view.js:389
+#: apps/notch/view.js:390
 msgid "Pause"
 msgstr ""
 
-#: apps/notch/view.js:389
+#: apps/notch/view.js:390
 msgid "Play"
 msgstr ""
 
-#: apps/notch/view.js:392
+#: apps/notch/view.js:393
 msgid "Next"
 msgstr ""
 
-#: apps/notch/view.js:395
+#: apps/notch/view.js:396
 msgid "Nothing is playing"
 msgstr ""
 
-#: apps/notch/view.js:402
+#: apps/notch/view.js:403
 #, javascript-format
 msgid "%d in the message list"
 msgstr ""
 
-#: apps/notch/view.js:402
+#: apps/notch/view.js:403
 msgid "No notifications"
 msgstr ""
 
-#: apps/notch/view.js:406
+#: apps/notch/view.js:407
 msgid "Do Not Disturb: on"
 msgstr ""
 
-#: apps/notch/view.js:406
+#: apps/notch/view.js:407
 msgid "Do Not Disturb: off"
 msgstr ""
 
-#: apps/panelMedia.js:132
+#: apps/panelMedia.js:134
 msgid "Media"
 msgstr ""
 
@@ -1521,7 +1526,7 @@ msgid "Accessibility"
 msgstr ""
 
 #: apps/spotlight/providers/settingsCatalog.js:31
-#: apps/windowControls/prefs.js:53
+#: apps/windowControls/prefs.js:52
 msgid "System"
 msgstr ""
 
@@ -1572,8 +1577,7 @@ msgstr ""
 #: apps/stageManager/prefs.js:89
 msgid ""
 "Other apps wait as live thumbnails in a strip at the edge of the screen. "
-"Click one to switch to it. While it is on, Minimize to Dock, window tiling "
-"by drag and Move Fullscreen Window are paused; their settings are kept."
+"Click one to switch to it."
 msgstr ""
 
 #: apps/stageManager/prefs.js:91
@@ -1592,12 +1596,12 @@ msgstr ""
 msgid "Which screen edge holds the strip"
 msgstr ""
 
-#: apps/stageManager/prefs.js:102 apps/windowControls/prefs.js:53
+#: apps/stageManager/prefs.js:102 apps/windowControls/prefs.js:52
 #: apps/windowTiling.js:319
 msgid "Left"
 msgstr ""
 
-#: apps/stageManager/prefs.js:102 apps/windowControls/prefs.js:53
+#: apps/stageManager/prefs.js:102 apps/windowControls/prefs.js:52
 #: apps/windowTiling.js:320
 msgid "Right"
 msgstr ""
@@ -1622,47 +1626,63 @@ msgstr ""
 msgid "The most thumbnails to list"
 msgstr ""
 
-#: apps/windowControls/prefs.js:35
+#: apps/stageManager/prefs.js:148
+msgid "Paused while Stage Manager is on"
+msgstr ""
+
+#: apps/stageManager/prefs.js:152
+msgid "Minimize to Dock"
+msgstr ""
+
+#: apps/stageManager/prefs.js:153
+msgid "Move Fullscreen to New Workspace"
+msgstr ""
+
+#: apps/stageManager/prefs.js:155
+msgid "Tiling title menu"
+msgstr ""
+
+#: apps/windowControls/prefs.js:34
 msgid "Panel Window Controls"
 msgstr ""
 
-#: apps/windowControls/prefs.js:36
+#: apps/windowControls/prefs.js:35
 msgid "Close, minimize and maximize buttons for the focused window."
 msgstr ""
 
-#: apps/windowControls/prefs.js:40
+#: apps/windowControls/prefs.js:39
 msgid "Show buttons for"
 msgstr ""
 
-#: apps/windowControls/prefs.js:41
+#: apps/windowControls/prefs.js:40
 msgid "Which focused windows get the buttons in the top bar"
 msgstr ""
 
-#: apps/windowControls/prefs.js:44
+#: apps/windowControls/prefs.js:43
 msgid "All windows"
 msgstr ""
 
-#: apps/windowControls/prefs.js:44
+#: apps/windowControls/prefs.js:43
 msgid "Maximized windows"
 msgstr ""
 
-#: apps/windowControls/prefs.js:44
+#: apps/windowControls/prefs.js:43
 msgid "Fullscreen windows"
 msgstr ""
 
-#: apps/windowControls/prefs.js:49
+#: apps/windowControls/prefs.js:48
 msgid "Position"
 msgstr ""
 
-#: apps/windowControls/prefs.js:50
+#: apps/windowControls/prefs.js:49
 msgid "System follows the window button layout of GNOME"
 msgstr ""
 
-#: apps/windowControls/prefs.js:58
+#: apps/windowControls/prefs.js:57
 msgid "Remove titlebar buttons from windows"
 msgstr ""
 
-#: apps/windowControls/prefs.js:59
+#: apps/windowControls/prefs.js:58
 msgid ""
 "Hide the buttons that windows draw themselves while the panel shows them. "
 "Works for GTK 3 and GTK 4 apps; Qt, Electron and server-side decorated "

@@ -2,7 +2,7 @@
 UUID    := kiwi@kemma
 DESTDIR := $(HOME)/.local/share/gnome-shell/extensions/$(UUID)
 DISTDIR := dist
-POT     := po/$(UUID).pot
+POT     := translating/kiwi.pot
 # Optional sources are packed only when they exist (gnome-extensions pack fails on a missing one).
 EXTRA   := icons apps css $(wildcard lib coordinators features.js)
 EXTRA_FLAGS := $(addprefix --extra-source=,$(EXTRA))
@@ -16,10 +16,17 @@ pack:
 	@mkdir -p $(DISTDIR)
 	gnome-extensions pack --force $(EXTRA_FLAGS) --podir=po -o $(DISTDIR) .
 
-# Regenerate the translation template from po/POTFILES.
+# Regenerate the translation template (translating/kiwi.pot) and po/POTFILES from every
+# source file that has translatable strings. Sources are found recursively.
 pot:
-	xgettext --from-code=UTF-8 --language=JavaScript --keyword=_ --keyword=N_ \
-		--files-from=po/POTFILES --output=$(POT) --package-name=$(UUID)
+	@srcs=$$(ls extension.js prefs.js features.js lib/*.js coordinators/*.js 2>/dev/null; find apps -name '*.js' | sort) && \
+	xgettext --from-code=UTF-8 --language=JavaScript \
+		-k_ -kN_ -kgettext -kgettextFunc -k_gettext --add-comments=TRANSLATORS \
+		--package-name="Kiwi is not Apple" --package-version=2.0.0 \
+		--copyright-holder="Arnis Kemlers" \
+		--msgid-bugs-address=https://github.com/kem-a/kiwi-kemma/issues \
+		-o $(POT) $$srcs && \
+	grep '^\#: ' $(POT) | sed 's/^\#: //' | tr ' ' '\n' | sed 's/:.*//' | sort -u > po/POTFILES
 
 # Install the packed zip for the current user (enable it afterwards).
 install: pack

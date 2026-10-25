@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Stage Manager preferences. Adw/Gtk/Gio only (runs in the prefs process, no Shell libs).
-// Contract: PAGE + buildPrefs() returning Adw.PreferencesGroup[]; S10 wires it in.
+// PAGE says where the page goes; buildPrefs() returns the Adw.PreferencesGroup[].
 
 import Adw from 'gi://Adw';
 import Gtk from 'gi://Gtk';

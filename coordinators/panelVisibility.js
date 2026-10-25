@@ -7,7 +7,7 @@
 //                     comes back when the pointer pushes against the top edge
 //   autohide          the bar always hides; no strut, so windows get the full height
 //
-// Public API for other features (frozen, see .swarm/agents/S6.md):
+// Public API for other features (stable):
 //
 //   import { PanelVisibility } from '../coordinators/panelVisibility.js';
 //   const hold = PanelVisibility.hold(cleanup, 'notch');   // requiresVisibility: bar stays up

@@ -10,7 +10,7 @@
 // restore), strip.js (view). Registered in the entry's CleanupRegistry; disable() is empty.
 //
 // The toggle shortcut lives in shortcut.js (its own entry, so it still works while this is off).
-// Control Center and Spotlight toggles belong to S7/S5 and flip the same key.
+// Control Center and Spotlight toggles belong to the Control Center and Spotlight and flip the same key.
 // A top bar icon would vanish when the feature is off, so none is built here.
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
