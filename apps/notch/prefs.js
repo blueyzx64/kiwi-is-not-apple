@@ -22,7 +22,7 @@ export function buildPrefs({ settings, extension }) {
 
     const master = new Adw.SwitchRow({
         title: _('Show the notch'),
-        subtitle: _('Turning it off brings back the standard banners and volume pop-up'),
+        subtitle: _('Moves the clock to the right and shows notifications in Quick Settings'),
     });
     settings.bind('notch', master, 'active', Gio.SettingsBindFlags.DEFAULT);
     group.add(master);
@@ -36,7 +36,7 @@ export function buildPrefs({ settings, extension }) {
     const notifications = part(_('Notifications'),
         _('Show banners in the notch instead of the standard banner'), 'notch-notifications');
     const activities = part(_('Live activities'),
-        _('Show the playing song in the notch'), 'notch-live-activities');
+        _('Replaces the top bar media button'), 'notch-live-activities');
     const osd = part(_('Volume and brightness'),
         _('Show the level in the notch instead of the standard pop-up'), 'notch-osd');
 
