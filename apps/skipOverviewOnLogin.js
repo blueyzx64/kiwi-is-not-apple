@@ -3,38 +3,38 @@
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
-let startupId = 0;
-let originalShow = null;
+import { CleanupRegistry } from '../lib/disposables.js';
+
+let registry = null;
+// Module state on purpose: Kiwi is torn down and re-enabled on lock/unlock, but the
+// shell only starts up once per session. disable() must not reset this.
 let firstLogin = true;
 
+// `_startingUp` is a private LayoutManager flag; if it ever disappears treat it as "done".
+function startingUp() {
+    return Main.layoutManager._startingUp === true;
+}
+
 export function enable() {
-    // Override the overview's show method during startup to prevent any showing
-    if (firstLogin && !originalShow) {
-        originalShow = Main.overview.show;
-        Main.overview.show = function(...args) {
-            if (firstLogin && Main.layoutManager._startingUp) {
-                // Do nothing - completely prevent showing during startup
-                return;
-            }
-            // Call original show method if not during first startup
-            return originalShow.apply(this, args);
-        };
-    }
+    if (registry)
+        return;
+    registry = new CleanupRegistry();
+    const reg = registry;
 
-    // If shell is still starting up, wait for startup-complete
-    if (Main.layoutManager._startingUp) {
-        if (startupId)
-            return; // already connected
+    if (!firstLogin)
+        return;
 
-        startupId = Main.layoutManager.connect('startup-complete', () => {
-            Main.layoutManager.disconnect(startupId);
-            startupId = 0;
+    if (startingUp()) {
+        // Block any show() while the shell is still starting up.
+        const injection = reg.inject(Main.overview, 'show', function (orig, ...args) {
+            if (startingUp())
+                return undefined;
+            return orig.apply(this, args);
+        });
 
-            // Restore original show method after startup
-            if (originalShow) {
-                Main.overview.show = originalShow;
-                originalShow = null;
-            }
+        const startupToken = reg.connect(Main.layoutManager, 'startup-complete', () => {
+            reg.release(startupToken);
+            reg.release(injection);
             firstLogin = false;
 
             // Hide if somehow still visible
@@ -44,24 +44,13 @@ export function enable() {
         return;
     }
 
-    // Otherwise, if already in overview, hide immediately
-    if (Main.overview.visible) {
+    // Startup already finished (e.g. Kiwi enabled later): just close an open overview once.
+    firstLogin = false;
+    if (Main.overview.visible)
         Main.overview.hide();
-        firstLogin = false;
-    }
 }
 
 export function disable() {
-    if (startupId) {
-        Main.layoutManager.disconnect(startupId);
-        startupId = 0;
-    }
-    
-    // Restore original show method if we overrode it
-    if (originalShow) {
-        Main.overview.show = originalShow;
-        originalShow = null;
-    }
-    
-    firstLogin = true;
+    registry?.dispose();
+    registry = null;
 }
