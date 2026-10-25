@@ -24,6 +24,11 @@ import Gtk from 'gi://Gtk';
 import GLib from 'gi://GLib';
 import { ExtensionPreferences, gettext as _ } from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
+import * as windowControlsPrefs from './apps/windowControls/prefs.js';
+
+// Feature prefs modules (see apps/<feature>/prefs.js): PAGE says where, buildPrefs() makes the groups
+const FEATURE_PREFS = [windowControlsPrefs];
+
 const D2D_UUIDS = ['dash-to-dock@micxgx.gmail.com', 'ubuntu-dock@ubuntu.com'];
 const EXTENSION_ACTIVE = 1;
 // The shell's own end of the extensions interface. Prefs runs in the process
@@ -908,32 +913,17 @@ export default class KiwiPreferences extends ExtensionPreferences {
             }
         });
 
-        // Panel window controls with "Only when Fullscreen" sub-option
+        // Panel window controls: master switch here, the rest comes from
+        // apps/windowControls/prefs.js (placed on this page below the switch)
         const panelControlsGroup = new Adw.PreferencesGroup();
         windowControlsPage.add(panelControlsGroup);
 
-        const controlsHasNonDefault = settings.get_boolean('show-window-controls-fullscreen-only');
-        const controlsExpander = new Adw.ExpanderRow({
+        const controlsRow = new Adw.SwitchRow({
             title: _("Show Window Controls on Panel"),
-            subtitle: _("Display close, minimize, maximize buttons in the top panel when window is maximized"),
-            expanded: settings.get_boolean('show-window-controls') && controlsHasNonDefault,
-            show_enable_switch: true,
-            enable_expansion: settings.get_boolean('show-window-controls'),
+            subtitle: _("Display close, minimize, maximize buttons in the top panel for the focused window"),
         });
-        panelControlsGroup.add(controlsExpander);
-
-        controlsExpander.connect('notify::enable-expansion', () => {
-            const v = controlsExpander.enable_expansion;
-            if (settings.get_boolean('show-window-controls') !== v)
-                settings.set_boolean('show-window-controls', v);
-        });
-
-        const fullscreenOnlyRow = new Adw.SwitchRow({
-            title: _("Only when Fullscreen"),
-            subtitle: _("Hide titlebars and show panel controls only for fullscreen windows, not maximized"),
-        });
-        controlsExpander.add_row(fullscreenOnlyRow);
-        settings.bind('show-window-controls-fullscreen-only', fullscreenOnlyRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        panelControlsGroup.add(controlsRow);
+        settings.bind('show-window-controls', controlsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
 
         //
         // Options Page
@@ -1071,6 +1061,18 @@ export default class KiwiPreferences extends ExtensionPreferences {
         recommendedExtensions.forEach((rec) => {
             recommendedExpander.add_row(this._createLinkRow(rec.title, rec.url, rec.author));
         });
+
+        // Feature pages: groups from apps/<feature>/prefs.js, placed before the reset button
+        const pages = { panel: panelPage, dock: dockPage, windowControls: windowControlsPage, advanced: advancedPage };
+        for (const mod of FEATURE_PREFS) {
+            let page = pages[mod.PAGE.into];
+            if (!page) {
+                page = new Adw.PreferencesPage({ title: _(mod.PAGE.title), icon_name: mod.PAGE.icon });
+                window.add(page);
+            }
+            for (const group of mod.buildPrefs({ settings, window, extension: this }))
+                page.add(group);
+        }
 
         const resetGroup = new Adw.PreferencesGroup();
         advancedPage.add(resetGroup);
