@@ -9,7 +9,7 @@
 | Liquid Glass | S3 | done, merged incl. review fixes | feat/liquid-glass |
 | Clipboard | S4 | doing | feat/clipboard |
 | Spotlight | S5 | doing (model first; waits S4 modalSurface) | feat/spotlight |
-| Auto-hide bar | S6 | built; S10 review + integration | feat/autohide |
+| Auto-hide bar | S6 | done, merged | feat/autohide |
 | Control Center | S7 | doing | feat/control-center |
 | Notch | S8 | todo | feat/notch |
 | Stage Manager | S9 | doing (model + strip only) | feat/stage-manager |
