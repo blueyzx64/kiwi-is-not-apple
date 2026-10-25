@@ -53,3 +53,8 @@ All answered by the owner on 2026-10-25. Do not ask the owner again; ask the orc
   - No sync file I/O on the Shell main loop in enable paths; use async Gio.
   - New code reads settings through `KiwiSettings` (lib/settings.js), one path per feature.
   - Per-version checks only through lib/compat.js.
+- Window controls also show for focused DIALOG and MODAL_DIALOG windows (otherwise titlebar
+  removal leaves them with no buttons). Greyed out per capability.
+- Prefs page order (fixed; S10 enforces): General/existing pages first, then new feature pages
+  in this order: Liquid Glass, Window Controls, Auto-hide Top Bar, Control Center, Clipboard,
+  Spotlight, Notch, Stage Manager; Advanced stays last.
