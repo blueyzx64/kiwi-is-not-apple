@@ -40,7 +40,7 @@ helpers.
    layout maths and notch state machines live in `model.js` files with no `gi://` imports.
 5. **Never touch the user's files destructively.** Writing outside the extension's own
    folder needs backup-and-restore that is idempotent and tested. See Phase 0.
-6. **GNOME versions 48–51 only.** Code that differs by version goes behind `lib/compat.js`,
+6. **This release supports GNOME 50 (Fedora 44) only**; 48/49/51 code paths are kept for later. Code that differs by version goes behind `lib/compat.js`,
    never inline.
 
 ## 2. Target layout
@@ -49,7 +49,7 @@ extension.js                 # thin: builds ctx (settings, gettext, coordinators
 features.js                  # FeatureRegistry: key → feature class, dependencies, conflicts
 lib/                         # plumbing, no feature knowledge
   disposables.js             # CleanupRegistry: signals, sources, injections, actors, files
-  compat.js                  # per-version shims (48–51)
+  compat.js                  # per-version shims (48–51 kept; 50 supported now)
   settings.js                # typed getters, key migrations, change-scoped dispatch
   glass.js                   # GlassService: the one blur + tint + highlight implementation
   keybindings.js             # addKeybinding / removeKeybinding with schema keys
@@ -168,7 +168,7 @@ migrations.
 | Pure logic | `gjs -m` unit tests for `model.js` files |
 | Enable/disable leaks | Toggle each feature 20× in a nested shell; watch `journalctl` and Looking Glass actor counts |
 | Lock/unlock | Lock the screen with every feature on; nothing must stay on the lock screen |
-| Versions | Nested shell on GNOME 48, 49, 50, 51 (`--devkit` on 49+) |
+| Versions | GNOME 50 on Fedora 44 (`--devkit` nested shell); 48/49/51 later |
 | Interop | Dash to Dock, Blur my Shell, AppIndicator on and off |
 
 ## 9. Owner decisions (answered)

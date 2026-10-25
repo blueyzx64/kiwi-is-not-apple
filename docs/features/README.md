@@ -23,7 +23,7 @@ Status words: *Merged, untested on Shell* means the code is on the integration b
 
 Owner decisions that apply to all features:
 - **On by default.** Every new feature ships enabled; users opt out in prefs.
-- **GNOME 48–51** only.
+- **This release: GNOME 50 on Fedora 44 Workstation only.** The 48/49/51 code paths in `lib/compat.js` stay for later releases but are not claimed.
 - Testing on a real desktop is done by the owner from each feature's manual test list.
 
 Out of scope (decided):

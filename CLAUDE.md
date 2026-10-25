@@ -1,7 +1,7 @@
 # Kiwi (is not Apple): notes for Claude Code
 
 A GNOME Shell extension (GJS, ES modules) that brings macOS-style features to GNOME.
-Supported shell versions: 48–51 (`metadata.json`).
+Supported: GNOME 50 (Fedora 44) for this release; 48/49/51 code paths kept for later (`metadata.json`).
 
 ## Start here: open only what you need
 | Need | Read |
