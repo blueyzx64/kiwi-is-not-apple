@@ -71,6 +71,7 @@ export const KIWI_TOGGLES = [
     { key: 'clipboard-history', icon: 'edit-paste-symbolic', label: N_('Clipboard') },
     { key: 'spotlight', icon: 'system-search-symbolic', label: N_('Spotlight') },
     { key: 'liquid-glass', icon: 'weather-fog-symbolic', label: N_('Liquid Glass') },
+    { key: 'rounded-corners', icon: 'window-restore-symbolic', label: N_('Rounded Corners') },
 ];
 
 /** Columns of the Kiwi tile module. */
