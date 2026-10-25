@@ -451,6 +451,24 @@
         <description>Turns Stage Manager on or off. Empty means no shortcut; prefs has a button for Ctrl+Super+S.</description>
       </key>
 
+      <!-- Rounded window corners (apps/roundedCorners) -->
+      <key name="rounded-corners" type="b">
+        <default>false</default>
+        <summary>Rounded window corners</summary>
+        <description>Round all four corners of normal and dialog windows. Maximized, tiled and fullscreen windows keep square corners.</description>
+      </key>
+      <key name="rounded-corners-radius" type="i">
+        <default>12</default>
+        <range min="0" max="24"/>
+        <summary>Corner radius</summary>
+        <description>Radius of the rounded window corners, in logical pixels.</description>
+      </key>
+      <key name="rounded-corners-blacklist" type="as">
+        <default>[]</default>
+        <summary>Apps without rounded corners</summary>
+        <description>Windows whose WM_CLASS or app id (for example "org.gnome.Terminal" or "firefox") is listed keep square corners. Not case-sensitive.</description>
+      </key>
+
       <!-- Clipboard history (apps/clipboard) -->
       <key name="clipboard-history" type="b">
         <default>true</default>

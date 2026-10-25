@@ -1,0 +1,165 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Rounded window corners (features.js: `cls: RoundedCorners`, key `rounded-corners`).
+//
+// One KiwiRoundedCornersEffect (effect.js) per window actor, added on enable and for every
+// window created later (display `window-created`). The effect is disabled, not removed, while
+// the window does not qualify (maximized, tiled, fullscreen, excluded app); see model.qualifies.
+// Geometry follows size-changed / position-changed and the maximize and fullscreen notifies.
+// Disable removes every effect and disconnects every signal (per-window owners plus the
+// feature's CleanupRegistry). Clones (overview, Stage Manager strip and flights) paint the
+// source actor's effects, so they get the corners with no extra work.
+
+import Gio from 'gi://Gio';
+import Meta from 'gi://Meta';
+import Shell from 'gi://Shell';
+
+import { KiwiSettings } from '../../lib/settings.js';
+import { EFFECT_NAME, effectClass } from './effect.js';
+import { clampRadius, frameInActor, qualifies } from './model.js';
+
+const TYPES = new Map([
+    [Meta.WindowType.NORMAL, 'normal'],
+    [Meta.WindowType.DIALOG, 'dialog'],
+    [Meta.WindowType.MODAL_DIALOG, 'modal-dialog'],
+]);
+
+const WINDOW_SIGNALS = [
+    'size-changed', 'position-changed', 'notify::maximized-horizontally',
+    'notify::maximized-vertically', 'notify::fullscreen', 'notify::window-type',
+    'notify::title', 'notify::wm-class', 'notify::gtk-application-id',
+];
+
+const SHELL_PID = new Gio.Credentials().get_unix_pid();
+
+export class RoundedCorners {
+    constructor(ctx, cleanup) {
+        this._ctx = ctx;
+        this._cleanup = cleanup;
+        this._windows = new Map();   // Meta.WindowActor -> {win, effect}
+        this._config = { radius: 12, blacklist: [] };
+        this._Effect = null;
+        this._pending = new Map();   // Meta.Window without an actor yet -> stop()
+    }
+
+    enable() {
+        this._Effect = effectClass();
+        if (!this._Effect) {
+            console.warn('[Kiwi] rounded corners need Shell.GLSLEffect (GNOME Shell 48-50)');
+            return;
+        }
+        const ks = new KiwiSettings(this._ctx.settings);
+        ks.attach(this._cleanup);
+        const read = () => {
+            this._config = {
+                radius: clampRadius(ks.int('rounded-corners-radius')),
+                blacklist: ks.strv('rounded-corners-blacklist'),
+            };
+        };
+        read();
+        ks.watch(['rounded-corners-radius', 'rounded-corners-blacklist'], () => {
+            read();
+            this._syncAll();
+        });
+
+        this._cleanup.add(() => {
+            [...this._pending.values()].forEach(stop => stop());
+            this._untrackAll();
+        });
+        this._cleanup.connect(global.display, 'window-created', (_d, win) => this._onCreated(win));
+        for (const actor of global.get_window_actors())
+            this._track(actor);
+    }
+
+    disable() {
+        // Everything is in the cleanup registry, disposed right after this
+    }
+
+    _onCreated(win) {
+        const actor = win.get_compositor_private();
+        if (actor) {
+            this._track(actor);
+            return;
+        }
+        // Not composited yet: wait for its first frame (or its end)
+        if (this._pending.has(win))
+            return;
+        const done = () => {
+            this._pending.delete(win);
+            win.disconnectObject(this._pending);
+        };
+        this._pending.set(win, done);
+        win.connectObject('shown', () => {
+            done();
+            const a = win.get_compositor_private();
+            if (a)
+                this._track(a);
+        }, 'unmanaged', done, this._pending);
+    }
+
+    _track(actor) {
+        if (this._windows.has(actor))
+            return;
+        const win = actor.get_meta_window?.() ?? actor.meta_window;
+        if (!win)
+            return;
+        const effect = new this._Effect();
+        effect.enabled = false;
+        actor.add_effect_with_name(EFFECT_NAME, effect);
+        const rec = { win, effect };
+        this._windows.set(actor, rec);
+        for (const sig of WINDOW_SIGNALS)
+            win.connectObject(sig, () => this._sync(actor), rec);
+        actor.connectObject('destroy', () => this._untrack(actor, true), rec);
+        this._sync(actor);
+    }
+
+    _untrack(actor, destroyed = false) {
+        const rec = this._windows.get(actor);
+        if (!rec)
+            return;
+        this._windows.delete(actor);
+        rec.win.disconnectObject(rec);
+        actor.disconnectObject(rec);
+        if (!destroyed)
+            actor.remove_effect(rec.effect);
+    }
+
+    _untrackAll() {
+        for (const actor of [...this._windows.keys()])
+            this._untrack(actor);
+    }
+
+    _syncAll() {
+        for (const actor of this._windows.keys())
+            this._sync(actor);
+    }
+
+    _info(win) {
+        const app = Shell.WindowTracker.get_default().get_window_app(win);
+        return {
+            type: TYPES.get(win.get_window_type()) ?? 'other',
+            overrideRedirect: win.is_override_redirect(),
+            maximizedH: win.maximized_horizontally,
+            maximizedV: win.maximized_vertically,
+            fullscreen: win.is_fullscreen(),
+            shellOwned: win.get_pid() === SHELL_PID,
+            title: win.get_title(),
+            ids: [
+                win.get_wm_class(), win.get_wm_class_instance(), win.get_gtk_application_id(),
+                win.get_sandboxed_app_id(), app?.get_id(),
+            ],
+        };
+    }
+
+    _sync(actor) {
+        const rec = this._windows.get(actor);
+        if (!rec)
+            return;
+        const { win, effect } = rec;
+        const on = qualifies(this._info(win), this._config);
+        if (on)
+            effect.setGeometry(frameInActor(win.get_frame_rect(), win.get_buffer_rect()), this._config.radius);
+        if (effect.enabled !== on)
+            effect.enabled = on;
+    }
+}

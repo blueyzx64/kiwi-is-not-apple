@@ -93,7 +93,7 @@ test('the Kiwi module is one full-width block after the toggles', () => {
 test('kiwiTiles: the catalogue covers the Kiwi features, never the Control Center', () => {
     const keys = KIWI_TOGGLES.map(t => t.key);
     for (const key of ['notch', 'stage-manager', 'clipboard-history', 'spotlight',
-        'liquid-glass', 'show-window-controls'])
+        'liquid-glass', 'show-window-controls', 'rounded-corners'])
         if (!keys.includes(key))
             throw new Error(`missing ${key}`);
     eq(keys.includes('control-center'), false);

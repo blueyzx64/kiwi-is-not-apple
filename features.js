@@ -50,6 +50,7 @@ import { StageManagerShortcut } from './apps/stageManager/shortcut.js';
 import { Glass } from './lib/glass.js';
 import { ClipboardHistory } from './apps/clipboard/index.js';
 import { SpotlightFeature } from './apps/spotlight/index.js';
+import { RoundedCorners } from './apps/roundedCorners/index.js';
 
 // ctx: { extension, settings (Gio.Settings), gettext, interfaceSettings (Gio.Settings) }
 const bool = (ctx, key) => ctx.settings.get_boolean(key);
@@ -285,6 +286,11 @@ export const FEATURES = [
         // Frosted panel and menus; the dock and wallpaper blur ride on the same service
         id: 'liquid-glass', setting: 'liquid-glass',
         cls: LiquidGlass,
+    },
+    {
+        // macOS-style rounded corners: one shader effect per window actor
+        id: 'rounded-corners', setting: 'rounded-corners',
+        cls: RoundedCorners,
     },
     {
         // Quick Settings restyled as a Control Center; last so it sees the other panel features
