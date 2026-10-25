@@ -121,7 +121,8 @@ class MediaWidget extends St.ScrollView {
         this.vscrollbar_policy = this.hover && this.child.playerCount >= 4
             ? St.PolicyType.ALWAYS : St.PolicyType.EXTERNAL;
         this.visible = hasPlayers;
-        panelButton.visible = hasPlayers;
+        if (panelButton)
+            panelButton.visible = hasPlayers;
     }
 }
 
@@ -160,9 +161,12 @@ export function enable(gettext) {
 
 export function disable() {
     if (panelButton) {
+        // Clear the module reference first: destroying the menu destroys the media widget,
+        // whose last sync would otherwise touch the button being destroyed.
+        const button = panelButton;
+        panelButton = null;
         mediaSlot?.release();
         mediaSlot = null;
-        panelButton.destroy();
-        panelButton = null;
+        button.destroy();
     }
 }

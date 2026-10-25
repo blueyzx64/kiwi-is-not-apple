@@ -65,8 +65,21 @@ export const MprisWatcher = {
      */
     acquire(cleanup, gettext) {
         if (!source) {
-            source = new Source(gettext);
-            source.start();
+            // Share the source only once it has started; a failed start leaves nothing behind
+            // for the next acquire() to reuse.
+            const fresh = new Source(gettext);
+            try {
+                fresh.start();
+            } catch (e) {
+                try {
+                    fresh.destroy();
+                } catch (_e) {
+                    // Nothing more to undo.
+                }
+                throw e;
+            }
+            source = fresh;
+            refs = 0;
         }
         refs++;
         const handle = new Handle(source);

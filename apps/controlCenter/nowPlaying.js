@@ -106,10 +106,14 @@ export class NowPlaying {
     }
 
     _artIcon(player) {
+        // Local files and http(s) URLs (St loads a FileIcon asynchronously through GIO/GVfs);
+        // the app icon is the fallback if the art cannot load.
         const url = player.trackCoverUrl;
-        if (url?.startsWith('file://'))
+        const plain = player.app?.get_icon() ?? new Gio.ThemedIcon({ name: 'audio-x-generic-symbolic' });
+        this._art.fallback_gicon = plain;
+        if (typeof url === 'string' && /^(file|https?):\/\//.test(url))
             return new Gio.FileIcon({ file: Gio.File.new_for_uri(url) });
-        return player.app?.get_icon() ?? new Gio.ThemedIcon({ name: 'audio-x-generic-symbolic' });
+        return plain;
     }
 
     _show(show) {

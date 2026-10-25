@@ -327,6 +327,48 @@ test('confirm preempts a card, which resumes afterwards; off with the osd settin
     eq(kind(state), 'idle');
 });
 
+test('the queue cap never drops a critical notification', () => {
+    const events = [notify('cur', 0, { urgency: URGENCY.CRITICAL })];
+    for (let i = 1; i <= 4; i++)
+        events.push(notify(`c${i}`, i, { urgency: URGENCY.CRITICAL }));
+    events.push(notify('n', 10));
+    // cur is hovered-free critical; newer criticals replace it, all go to the queue
+    const { state } = run(events, { maxPending: 2 });
+    const ids = [state.current.id, ...state.pending.map(n => n.id)];
+    for (const id of ['cur', 'c1', 'c2', 'c3', 'c4'])
+        if (!ids.includes(id))
+            throw new Error(`critical ${id} dropped: ${ids}`);
+    eq(ids.includes('n'), false);
+});
+
+test('the queue cap drops non-critical first, keeping criticals', () => {
+    const { state } = run([
+        notify('a', 0, { urgency: URGENCY.HIGH }),
+        notify('c', 1, { urgency: URGENCY.CRITICAL }),
+        notify('n1', 2), notify('n2', 3),
+    ], { maxPending: 1 });
+    eq(state.current.id, 'c');
+    eq(state.pending.map(n => n.id), ['a']);
+});
+
+test('osd pause only counts the part that covered the card', () => {
+    // osd 0..1500, the card arrives at 1000 under it: 500 ms of overlap
+    let { state } = run([{ type: 'osd', kind: 'volume', now: 0 }, notify('a', 1000)]);
+    ({ state } = step(state, tick(DEFAULT_CONFIG.osdMs)));
+    eq(view(state).notificationId, 'a');
+    eq(nextDeadline(state), 1000 + DEFAULT_CONFIG.normalMs + 500);
+});
+
+test('osd pause on the dashboard only counts from when it opened', () => {
+    let { state } = run([{ type: 'osd', kind: 'volume', now: 0 }, { type: 'click', now: 1200 }]);
+    // click during the osd is ignored, so open after it
+    ({ state } = step(state, tick(DEFAULT_CONFIG.osdMs)));
+    ({ state } = step(state, { type: 'click', now: 1600 }));
+    ({ state } = step(state, { type: 'osd', kind: 'volume', now: 2000 }));
+    ({ state } = step(state, tick(2000 + DEFAULT_CONFIG.osdMs)));
+    eq(nextDeadline(state), 1600 + DEFAULT_CONFIG.dashboardLeaveMs + DEFAULT_CONFIG.osdMs);
+});
+
 print(failed ? `${failed} FAILED` : 'all passed');
 if (failed)
     imports.system.exit(1);

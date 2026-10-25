@@ -574,7 +574,7 @@
         <description>How long a notification stays in the notch. Hovering keeps it open and urgent ones stay until dismissed.</description>
       </key>
       <key name="notch-show-clipboard" type="b">
-        <default>true</default>
+        <default>false</default>
         <summary>Show clipboard in the notch dashboard</summary>
         <description>Show the latest clipboard entries in the notch dashboard, which opens when you click the notch. Turn it off to keep copied text off the screen while sharing it.</description>
       </key>

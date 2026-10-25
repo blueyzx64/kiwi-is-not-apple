@@ -176,6 +176,23 @@ function destroyDndButton() {
 // #region Notification Classes
 const NotificationList = GObject.registerClass(
 class NotificationList extends MessageList.MessageView {
+    constructor(params) {
+        super(params);
+        // MessageView's field initializer builds a stock MprisSource (48-51: _mediaSource), a
+        // second MPRIS watcher with no stop(). Neuter it before its D-Bus proxy is ready: no
+        // players and no NameOwnerChanged subscription. Kiwi's media widget uses MprisWatcher.
+        const source = this._mediaSource;
+        if (source) {
+            try {
+                source._addPlayer = () => {};
+                if (source._proxy)
+                    source._proxy.connectSignal = () => 0;
+            } catch (e) {
+                console.error('[Kiwi] could not stop the stock MPRIS source:', e);
+            }
+        }
+    }
+
     // Prevent media integration; Kiwi has its own media widget
     _setupMpris() {}
 });

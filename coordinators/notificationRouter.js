@@ -170,8 +170,17 @@ function installDiversion() {
             if (sinks.length === 0)
                 removeDiversion();
             requeueBanner(this, notification);
-            kickTray(this);
+            // We are inside _updateState(), which ignores re-entry: kick it once it is done.
+            service?.cleanup.idle(() => kickTray(Main.messageTray), { name: 'banner fallback' });
             return undefined;
+        }
+        // The stock banner plays the sound when it shows (_updateShowingNotification, 48-51,
+        // unconditionally; policy.enableSound is checked inside playSound()). DnD, busy and
+        // fullscreen were already filtered before _showNotification() was called.
+        try {
+            notification.playSound?.();
+        } catch (e) {
+            console.error('[Kiwi] notification sound failed:', e);
         }
         // The tray stays HIDDEN, so give the rest of the queue its turn too.
         if (this._notificationQueue.length > 0) {
