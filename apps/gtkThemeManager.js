@@ -12,7 +12,7 @@
 // is replaced on the next enable and removed on the next disable. Nothing else is safe to do
 // from here: the extension is not running. Manual fix: delete the block between the two
 // "Kiwi (is not Apple) - managed imports" comments in ~/.config/gtk-{3,4}.0/gtk.css.
-// (A "Remove Kiwi GTK changes" button in prefs would call the same cleanup: see the Outbox.)
+// (A "Remove Kiwi GTK changes" button in prefs could call the same cleanup.)
 
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';

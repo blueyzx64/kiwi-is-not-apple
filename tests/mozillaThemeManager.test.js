@@ -99,6 +99,54 @@ test('existing chrome.bak is never overwritten', () => {
     eq(exists(`${root}/profile/user.js`), false);
 });
 
+test('no buttons and no panel controls: no hang, userChrome.css not empty', () => {
+    const root = GLib.dir_make_tmp('kiwi-moz-XXXXXX');
+    GLib.mkdir_with_parents(`${root}/profile`, 0o755);
+    const {m, values} = makeManager(root);
+    values['enable-app-window-buttons'] = false;
+    values['show-window-controls'] = false;
+    run(m.updateCss());
+    eq(read(`${root}/profile/chrome/userChrome.css`), '/* Kiwi */\n');
+    eq(read(`${root}/profile/chrome/.kiwi-managed`).includes('userjs=created'), true);
+});
+
+test('user.js that Kiwi did not create is kept (empty) after removal', () => {
+    const root = GLib.dir_make_tmp('kiwi-moz-XXXXXX');
+    write(`${root}/profile/user.js`, '');
+    const {m} = makeManager(root);
+    run(m.updateCss());
+    eq(read(`${root}/profile/chrome/.kiwi-managed`).includes('userjs=created'), false);
+    run(m.removeCss());
+    eq(exists(`${root}/profile/user.js`), true);
+    eq(read(`${root}/profile/user.js`), '');
+});
+
+test('symlinked user.js survives', () => {
+    const root = GLib.dir_make_tmp('kiwi-moz-XXXXXX');
+    write(`${root}/dot/user.js`, 'user_pref("a", 1);\n');
+    GLib.mkdir_with_parents(`${root}/profile`, 0o755);
+    Gio.File.new_for_path(`${root}/profile/user.js`).make_symbolic_link(`${root}/dot/user.js`, null);
+    const {m} = makeManager(root);
+    run(m.updateCss());
+    eq(Gio.File.new_for_path(`${root}/profile/user.js`).query_info('standard::is-symlink', 0, null).get_is_symlink(), true);
+    eq(read(`${root}/dot/user.js`).includes(LINE), true);
+    run(m.removeCss());
+    eq(Gio.File.new_for_path(`${root}/profile/user.js`).query_info('standard::is-symlink', 0, null).get_is_symlink(), true);
+    eq(read(`${root}/dot/user.js`).trim(), 'user_pref("a", 1);');
+});
+
+test('foreign files in chrome/: marker kept, backup kept', () => {
+    const root = GLib.dir_make_tmp('kiwi-moz-XXXXXX');
+    write(`${root}/profile/chrome/userChrome.css`, 'mine');
+    const {m} = makeManager(root);
+    run(m.updateCss());
+    write(`${root}/profile/chrome/extra.css`, 'x');
+    run(m.removeCss());
+    eq(exists(`${root}/profile/chrome/.kiwi-managed`), true);
+    eq(exists(`${root}/profile/chrome/userChrome.css`), false);
+    eq(exists(`${root}/profile/chrome.bak/userChrome.css`), true);
+});
+
 test('unmarked chrome/ is not touched by removal', () => {
     const root = GLib.dir_make_tmp('kiwi-moz-XXXXXX');
     write(`${root}/profile/chrome/userChrome.css`, 'mine');

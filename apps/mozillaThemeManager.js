@@ -11,6 +11,8 @@ Gio._promisify(Gio.File.prototype, 'load_contents_async', 'load_contents_finish'
 Gio._promisify(Gio.File.prototype, 'replace_contents_bytes_async', 'replace_contents_finish');
 Gio._promisify(Gio.File.prototype, 'query_info_async', 'query_info_finish');
 Gio._promisify(Gio.File.prototype, 'make_directory_async', 'make_directory_finish');
+Gio._promisify(Gio.File.prototype, 'replace_async', 'replace_finish');
+Gio._promisify(Gio.OutputStream.prototype, 'close_async', 'close_finish');
 Gio._promisify(Gio.File.prototype, 'delete_async', 'delete_finish');
 Gio._promisify(Gio.File.prototype, 'move_async', 'move_finish');
 Gio._promisify(Gio.File.prototype, 'enumerate_children_async', 'enumerate_children_finish');
@@ -43,6 +45,16 @@ export function removeKiwiPref(content) {
     }
     const text = out.join('\n');
     return text.trim() ? text : '';
+}
+
+/** True when the marker says Kiwi created the profile's user.js. */
+export function parseUserJsCreated(markerText) {
+    return /^userjs=created$/m.test(markerText);
+}
+
+/** Marker file body. */
+export function markerBody(backupName, userJsCreated) {
+    return `Kiwi managed chrome folder\n${backupName ? `backup=${backupName}\n` : ''}${userJsCreated ? 'userjs=created\n' : ''}`;
 }
 
 /** Backup dir name recorded in the marker body; old markers have none, so chrome.bak. */
@@ -91,9 +103,19 @@ async function makeDirectory(dir) {
     }
 }
 
-function writeFile(file, text) {
-    return file.replace_contents_bytes_async(new GLib.Bytes(new TextEncoder().encode(text)),
-        null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
+/**
+ * Write text atomically. Never hands an empty buffer to GIO (that call hangs and would stall
+ * the job queue). followLinks writes through a symlink instead of replacing it (dotfile setups).
+ */
+async function writeFile(file, text, {followLinks = false} = {}) {
+    const flags = followLinks ? Gio.FileCreateFlags.NONE : Gio.FileCreateFlags.REPLACE_DESTINATION;
+    if (!text) {
+        const stream = await file.replace_async(null, false, flags, GLib.PRIORITY_DEFAULT, null);
+        await stream.close_async(GLib.PRIORITY_DEFAULT, null);
+        return;
+    }
+    await file.replace_contents_bytes_async(new GLib.Bytes(new TextEncoder().encode(text)),
+        null, false, flags, null);
 }
 
 /**
@@ -217,11 +239,18 @@ export class MozillaThemeManager {
                 imports.push(`@import url("file://${hiddenPath}");`);
             }
 
-            const userChromeContent = imports.join('\n') + (imports.length ? '\n' : '');
+            // Marker first: a crash mid-write must not leave a Kiwi dir that looks user-owned.
+            const markerText = await this._readMarker(chromeDir);
+            let userJsCreated = parseUserJsCreated(markerText);
+            await this._markChromeAsKiwiManaged(chromeDir, backupName, userJsCreated);
+
+            const userChromeContent = `/* Kiwi */\n${imports.join('\n')}${imports.length ? '\n' : ''}`;
             await writeFile(Gio.File.new_for_path(GLib.build_filenamev([chromeDir, 'userChrome.css'])), userChromeContent);
 
-            await this._markChromeAsKiwiManaged(chromeDir, backupName);
-            await this._ensureLegacyPref(profile);
+            if (await this._ensureLegacyPref(profile) && !userJsCreated) {
+                userJsCreated = true;
+                await this._markChromeAsKiwiManaged(chromeDir, backupName, true);
+            }
         } catch (e) {
             console.error(`[Kiwi] ${this._config.logPrefix} write failed for profile ${profile}: ${e}`);
         }
@@ -238,9 +267,9 @@ export class MozillaThemeManager {
                 return;
 
             // The user.js line is Kiwi-tagged, so it is safe to drop whatever state chrome/ is in.
-            await this._removeLegacyPref(profile);
-
             const chromeDir = GLib.build_filenamev([profile, 'chrome']);
+            await this._removeLegacyPref(profile, parseUserJsCreated(await this._readMarker(chromeDir)));
+
             const chromeGFile = Gio.File.new_for_path(chromeDir);
 
             // Not ours: leave it alone.
@@ -261,10 +290,19 @@ export class MozillaThemeManager {
         }
     }
 
-    async _markChromeAsKiwiManaged(chromeDirPath, backupName = null) {
+    // Marker text, or '' when missing.
+    async _readMarker(chromeDirPath) {
+        try {
+            return await this._readFileAsync(Gio.File.new_for_path(GLib.build_filenamev([chromeDirPath, KIWI_MARKER_FILENAME])));
+        } catch (_e) {
+            return '';
+        }
+    }
+
+    async _markChromeAsKiwiManaged(chromeDirPath, backupName = null, userJsCreated = false) {
         try {
             const markerPath = GLib.build_filenamev([chromeDirPath, KIWI_MARKER_FILENAME]);
-            const body = `Kiwi managed chrome folder\n${backupName ? `backup=${backupName}\n` : ''}`;
+            const body = markerBody(backupName, userJsCreated);
             await writeFile(Gio.File.new_for_path(markerPath), body);
         } catch (e) {
             console.warn(`[Kiwi] ${this._config.logPrefix} could not write the marker in ${chromeDirPath}: ${e}`);
@@ -309,7 +347,9 @@ export class MozillaThemeManager {
             }
         }
         await enumerator.close_async(GLib.PRIORITY_DEFAULT, null);
-        for (const name of kiwiFiles) {
+        // With foreign files the dir stays, so keep the marker: it is still ours and the backup
+        // can be restored later.
+        for (const name of foreign ? ['userChrome.css'] : kiwiFiles) {
             const f = dirFile.get_child(name);
             try {
                 await f.delete_async(GLib.PRIORITY_DEFAULT, null);
@@ -336,20 +376,24 @@ export class MozillaThemeManager {
         return fileExists(Gio.File.new_for_path(markerPath));
     }
 
+    // Returns true when Kiwi created user.js.
     async _ensureLegacyPref(profileDir) {
         try {
             const file = Gio.File.new_for_path(GLib.build_filenamev([profileDir, 'user.js']));
-            const content = await this._readOptional(file) ?? '';
+            const existing = await this._readOptional(file);
+            const content = existing ?? '';
             const updated = addKiwiPref(content);
             if (updated !== content)
-                await writeFile(file, updated);
+                await writeFile(file, updated, {followLinks: true});
+            return existing === null;
         } catch (e) {
             console.warn(`[Kiwi] ${this._config.logPrefix} could not update user.js: ${e}`);
+            return false;
         }
     }
 
     // Removes only the line Kiwi added (tagged). A pref the user wrote stays.
-    async _removeLegacyPref(profileDir) {
+    async _removeLegacyPref(profileDir, userJsCreated) {
         try {
             const file = Gio.File.new_for_path(GLib.build_filenamev([profileDir, 'user.js']));
             const content = await this._readOptional(file);
@@ -358,11 +402,11 @@ export class MozillaThemeManager {
             const updated = removeKiwiPref(content);
             if (updated === content)
                 return;
-            // Nothing left means Kiwi created the file, so remove it rather than leave it empty.
-            if (!updated.trim())
+            // Delete only a file Kiwi created (the marker says so); otherwise keep it, even empty.
+            if (!updated.trim() && userJsCreated)
                 await file.delete_async(GLib.PRIORITY_DEFAULT, null);
             else
-                await writeFile(file, updated);
+                await writeFile(file, updated, {followLinks: true});
         } catch (e) {
             console.warn(`[Kiwi] ${this._config.logPrefix} could not clean user.js: ${e}`);
         }
