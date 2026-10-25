@@ -3,7 +3,7 @@
 |---|---|---|---|
 | Wave 0 Firefox fix | S1 | done, PR #1 into main; merged here | fix/mozilla-chrome-dataloss |
 | Phase 0 foundation | S1 | done, merged 8ca7637 | feat/foundation |
-| advanced/ fixes + foundation nits | S1 | doing | feat/advanced-fixes |
+| advanced/ fixes + foundation nits | S1 | done, merged | feat/advanced-fixes |
 | Integrator/review | S10 | setup merged; idle until review | feat/integration |
 | Window controls | S2 | doing | feat/window-controls |
 | Liquid Glass | S3 | doing | feat/liquid-glass |
