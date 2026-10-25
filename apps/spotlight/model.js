@@ -430,3 +430,46 @@ export class SearchSession {
         return grouped;
     }
 }
+
+// ---- Super tap while open ---------------------------------------------------------
+
+/** A press and release of Super longer than this is a hold, not a tap. */
+export const SUPER_TAP_MAX_MS = 400;
+
+/**
+ * Decides whether a Super press and release was a bare tap. Anything else seen in between (a key,
+ * a key release, a Shell or mutter keybinding such as Super+Space) taints it, and so does holding
+ * Super too long. Times are in ms (event times or monotonic, as long as they are consistent).
+ */
+export class SuperTapTracker {
+    constructor(maxMs = SUPER_TAP_MAX_MS) {
+        this._maxMs = maxMs;
+        this.reset();
+    }
+
+    reset() {
+        this._down = false;
+        this._tainted = false;
+        this._at = 0;
+    }
+
+    press(time) {
+        this._down = true;
+        this._tainted = false;
+        this._at = time;
+    }
+
+    /** Some other key or keybinding happened. */
+    other() {
+        if (this._down)
+            this._tainted = true;
+    }
+
+    /** @returns {boolean} true for a bare tap */
+    release(time) {
+        const tap = this._down && !this._tainted && time >= this._at &&
+            time - this._at <= this._maxMs;
+        this.reset();
+        return tap;
+    }
+}

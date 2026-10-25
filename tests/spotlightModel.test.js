@@ -2,7 +2,7 @@
 import {
     normalize, scoreToken, scoreFields, scoreItem, rank, groupOf, buildSections,
     buildEmptySections, flatten, moveSelection, jumpGroup, locate, reselect, webSearchUrl,
-    looksLikeUrl, SearchSession, TOP_HIT_MIN_SCORE,
+    looksLikeUrl, SearchSession, TOP_HIT_MIN_SCORE, SuperTapTracker, SUPER_TAP_MAX_MS,
 } from '../apps/spotlight/model.js';
 
 let failed = 0;
@@ -193,6 +193,44 @@ test('looksLikeUrl', () => {
     ok(looksLikeUrl('http://localhost.lan'));
     for (const name of ['main.py', 'notes.md', 'report.pdf', 'archive.tar.gz', 'a.js', 'v1.2', 'config.json'])
         ok(!looksLikeUrl(name), name);
+});
+
+// --- SuperTapTracker
+test('bare quick tap', () => {
+    const t = new SuperTapTracker();
+    t.press(1000);
+    eq(t.release(1100), true);
+});
+test('another key in between is not a tap', () => {
+    const t = new SuperTapTracker();
+    t.press(1000);
+    t.other();
+    eq(t.release(1050), false);
+});
+test('a long hold is not a tap', () => {
+    const t = new SuperTapTracker();
+    t.press(1000);
+    eq(t.release(1000 + SUPER_TAP_MAX_MS + 1), false);
+});
+test('release without press is not a tap', () => eq(new SuperTapTracker().release(5), false));
+test('other() before press does not taint the next tap', () => {
+    const t = new SuperTapTracker();
+    t.other();
+    t.press(10);
+    eq(t.release(20), true);
+});
+test('state resets after release', () => {
+    const t = new SuperTapTracker();
+    t.press(10);
+    t.other();
+    t.release(20);
+    t.press(30);
+    eq(t.release(40), true);
+});
+test('clock going backwards is not a tap', () => {
+    const t = new SuperTapTracker();
+    t.press(100);
+    eq(t.release(50), false);
 });
 
 // --- SearchSession

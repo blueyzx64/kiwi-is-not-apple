@@ -27,7 +27,7 @@ function fail(msg) {
 function normalise(text) {
     return text
         .replace(/[×·]/g, '*')
-        .replace(/[÷:]/g, '/')
+        .replace(/÷/g, '/')
         .replace(/[−–—]/g, '-')
         .replace(/\*\*/g, '^')
         .replace(/π/g, 'pi')
@@ -218,10 +218,10 @@ function checked(x) {
 
 function evaluate(node) {
     switch (node.op) {
-    case 'num': return node.v;
+    case 'num': return checked(node.v);
     case 'const': return CONSTANTS[node.name];
-    case 'neg': return -evaluate(node.a);
-    case 'pct': return evaluate(node.a) / 100;
+    case 'neg': return checked(-evaluate(node.a));
+    case 'pct': return checked(evaluate(node.a) / 100);
     case 'fn': return checked(FUNCTIONS[node.name](evaluate(node.a)));
     case '+': return checked(evaluate(node.a) + evaluate(node.b));
     case '-': return checked(evaluate(node.a) - evaluate(node.b));
@@ -248,6 +248,23 @@ function isTrivial(node) {
     return node.op === 'num' || (node.op === 'neg' && isTrivial(node.a));
 }
 
+const DATE_RE = /^\s*\d{4}-\d{1,2}-\d{1,2}\s*$/;
+const TIME_RE = /^\s*\d{1,2}:\d{2}(?::\d{2})?\s*$/;
+const OPERATOR_RE = /[+\-*/^%×÷−–—·√]|\*\*/;
+const FUNCTION_CALL_RE = /[a-z]\s*\(/i;
+
+/**
+ * True only when the query is unambiguously math: at least one digit and an operator or a
+ * function call. Bare constants ("e", "pi"), implicit products ("2pi"), dates and times are not.
+ */
+export function looksLikeMath(text) {
+    if (typeof text !== 'string' || !/\d/.test(text))
+        return false;
+    if (DATE_RE.test(text) || TIME_RE.test(text))
+        return false;
+    return OPERATOR_RE.test(text) || FUNCTION_CALL_RE.test(text);
+}
+
 /**
  * Evaluate plain arithmetic.
  * @param {string} text
@@ -255,6 +272,8 @@ function isTrivial(node) {
  */
 export function calculate(text) {
     if (typeof text !== 'string' || text.length === 0 || text.length > MAX_INPUT_LENGTH)
+        return null;
+    if (!looksLikeMath(text))
         return null;
     try {
         const tokens = tokenize(text);
@@ -264,9 +283,12 @@ export function calculate(text) {
         if (isTrivial(tree))
             return null;
         const value = evaluate(tree);
+        if (!Number.isFinite(value))
+            return null;
         if (Object.is(value, -0))
             return { value: 0, text: '0' };
-        return { value, text: formatNumber(value) };
+        const shown = formatNumber(value);
+        return shown ? { value, text: shown } : null;
     } catch (e) {
         if (e instanceof CalcError)
             return null;

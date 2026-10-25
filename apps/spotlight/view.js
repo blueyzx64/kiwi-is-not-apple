@@ -6,9 +6,9 @@
 
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
-import * as Util from 'resource:///org/gnome/shell/misc/util.js';
+import { ensureActorVisibleInScrollView } from 'resource:///org/gnome/shell/misc/animationUtils.js';
 
-import { flatten, jumpGroup, locate, moveSelection, reselect } from './model.js';
+import { SuperTapTracker, flatten, jumpGroup, locate, moveSelection, reselect } from './model.js';
 
 const ROW_ICON = 28;
 const TOP_ICON = 40;
@@ -56,8 +56,8 @@ export class SpotlightView {
         this._index = -1;
         this._moved = false;
         this._rows = [];
-        this._superDown = false;
-        this._superTainted = false;
+        this._superTap = new SuperTapTracker();
+        this._signals = [];
         this._ui = null;
     }
 
@@ -92,7 +92,15 @@ export class SpotlightView {
             this._onQuery(entry.get_text());
         });
         text.connect('key-press-event', (_a, event) => this._keyPress(event));
-        text.connect('key-release-event', (_a, event) => this._keyRelease(event));
+
+        // Super tap detection sees every key on the modal (capture phase, before the entry), and
+        // any accelerator mutter or the Shell runs in between (Super+Space never reaches the
+        // stage as a press). The overlay is the grab actor, so the stage itself gets nothing.
+        const overlay = frame.get_parent();
+        if (overlay)
+            this._signals.push([overlay, overlay.connect('captured-event', (_a, event) => this._captured(event))]);
+        this._signals.push([global.display, global.display.connect('accelerator-activated', () => this._superTap.other())]);
+        this._superTap.reset();
         this._ui = { entry, text, list, scroll };
         return text;
     }
@@ -115,6 +123,15 @@ export class SpotlightView {
     }
 
     destroy() {
+        for (const [obj, id] of this._signals) {
+            try {
+                obj.disconnect(id);
+            } catch (_e) {
+                // actor already destroyed with the modal
+            }
+        }
+        this._signals = [];
+        this._superTap.reset();
         this._ui = null;
         this._rows = [];
         this._sections = [];
@@ -205,7 +222,7 @@ export class SpotlightView {
         });
         const row = this._rows[this._index];
         if (row && scroll)
-            Util.ensureActorVisibleInScrollView(this._ui.scroll, row);
+            ensureActorVisibleInScrollView(this._ui.scroll, row);
     }
 
     // ---- keys
@@ -213,12 +230,11 @@ export class SpotlightView {
     _keyPress(event) {
         const sym = event.get_key_symbol();
         const ctrl = (event.get_state() & Clutter.ModifierType.CONTROL_MASK) !== 0;
-        if (sym === Clutter.KEY_Super_L || sym === Clutter.KEY_Super_R) {
-            this._superDown = true;
-            this._superTainted = false;
+        // The signal runs before ClutterText's own handler, which is where the input method
+        // filters keys. While there is preedit text (IBus composing), Return commits it and the
+        // arrows move in the candidate list, so leave those keys alone.
+        if (this._ui.text.has_preedit?.())
             return Clutter.EVENT_PROPAGATE;
-        }
-        this._superTainted = true;
 
         switch (sym) {
         case Clutter.KEY_Down:
@@ -253,14 +269,22 @@ export class SpotlightView {
         }
     }
 
-    _keyRelease(event) {
-        const sym = event.get_key_symbol();
-        if (sym !== Clutter.KEY_Super_L && sym !== Clutter.KEY_Super_R)
+    _captured(event) {
+        const type = event.type();
+        if (type !== Clutter.EventType.KEY_PRESS && type !== Clutter.EventType.KEY_RELEASE)
             return Clutter.EVENT_PROPAGATE;
-        const tap = this._superDown && !this._superTainted;
-        this._superDown = false;
-        if (tap) {
-            // A Super tap toggles Spotlight (the overlay-key signal is not delivered in a popup grab)
+        const sym = event.get_key_symbol();
+        const isSuper = sym === Clutter.KEY_Super_L || sym === Clutter.KEY_Super_R;
+        if (!isSuper) {
+            this._superTap.other();
+            return Clutter.EVENT_PROPAGATE;
+        }
+        if (type === Clutter.EventType.KEY_PRESS) {
+            this._superTap.press(event.get_time());
+            return Clutter.EVENT_PROPAGATE;
+        }
+        if (this._superTap.release(event.get_time())) {
+            // A Super tap closes Spotlight (overlay-key is not delivered in a popup grab)
             this._onClose();
             return Clutter.EVENT_STOP;
         }
