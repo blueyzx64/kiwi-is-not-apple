@@ -1,5 +1,5 @@
 <!-- Row 1: install & reach -->
-![Install on GNOME Extensions](https://img.shields.io/badge/Install_on-GNOME_Extensions-blue?logo=gnome)![EGO Downloads](https://img.shields.io/gnome-extensions/dt/kiwi@kemma?logo=gnome&label=EGO%20downloads)![Shell 48–51](https://img.shields.io/badge/GNOME_Shell-48%E2%80%9351-informational?logo=gnome)![License](https://img.shields.io/github/license/kem-a/kiwi-kemma)![Latest release](https://img.shields.io/github/v/release/kem-a/kiwi-kemma?semver)![Stars](https://img.shields.io/github/stars/kem-a/kiwi-kemma?style=social)
+![Install on GNOME Extensions](https://img.shields.io/badge/Install_on-GNOME_Extensions-blue?logo=gnome)![EGO Downloads](https://img.shields.io/gnome-extensions/dt/kiwi@kemma?logo=gnome&label=EGO%20downloads)![GNOME 50](https://img.shields.io/badge/GNOME_Shell-50-informational?logo=gnome)![License](https://img.shields.io/github/license/kem-a/kiwi-kemma)![Latest release](https://img.shields.io/github/v/release/kem-a/kiwi-kemma?semver)![Stars](https://img.shields.io/github/stars/kem-a/kiwi-kemma?style=social)
 
 # <img width="48" height="48" alt="kiwi_logo" src="https://github.com/user-attachments/assets/f7820666-899a-46b8-b022-d5349bb1731b" /> Kiwi (is not Apple)
 
@@ -79,7 +79,7 @@ All of these are on by default and can be turned off in Kiwi's preferences.
 
 ## Install from source
 
-Requirements: GNOME Shell 48–51, `git`, `make`, `gettext`, and `gnome-extensions` (comes with GNOME Shell).
+Requirements: GNOME Shell 50 (tested target: Fedora 44 Workstation), `git`, `make`, `gettext`, and `gnome-extensions` (comes with GNOME Shell).
 
 1. Back up your current Kiwi settings, so you can roll back:
    ```sh

@@ -109,3 +109,7 @@ All answered by the owner on 2026-10-25. Do not ask the owner again; ask the orc
 - Real Shell test roots: 51.1 (/tmp/x2/arch, arch2: `/tmp/x2/run-real.sh N`) and 48.1 (/tmp/x2/arch48:
   `/tmp/x2/run-real48.sh N`). Both take `KIWI_SRC=` and `KIWI_ONLY="feature …"`. They print PROBE PASS/FAIL,
   and print INVALID RUN when the Shell or the probe never came up. Verify a fix on both.
+- **Scope change (owner, 2026-10-25):** support and test **only Fedora 44 Workstation with GNOME 50** for this
+  release. `metadata.json` shell-version is ["50"]. Other versions come later: keep the 48/49/51 code paths
+  in lib/compat.js (harmless, ready), but don't claim them. Tests and verification run on a GNOME 50 root
+  (Fedora 44 if it can be built, else Arch archive GNOME 50.x).

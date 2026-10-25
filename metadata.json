@@ -3,10 +3,7 @@
   "name": "Kiwi (is not Apple)",
   "settings-schema": "org.gnome.shell.extensions.kiwi",
   "shell-version": [
-    "48",
-    "49",
-    "50",
-    "51"
+    "50"
   ],
   "url": "https://github.com/kem-a/kiwi-kemma",
   "uuid": "kiwi@kemma",
