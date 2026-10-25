@@ -34,15 +34,21 @@ const label = (text, styleClass, opts = {}) => {
     return l;
 };
 
-const icon = (gicon, size, styleClass = 'kiwi-notch-icon') =>
-    new St.Icon({ gicon, icon_size: size, style_class: styleClass, y_align: Clutter.ActorAlign.CENTER });
+const icon = (gicon, size, styleClass = 'kiwi-notch-icon', fallback = null) =>
+    new St.Icon({
+        gicon, icon_size: size, style_class: styleClass, y_align: Clutter.ActorAlign.CENTER,
+        // Shown if gicon cannot load (a remote cover art URL without GVfs, a missing file)
+        fallback_gicon: fallback,
+    });
 
 function themed(name) {
     return new Gio.ThemedIcon({ name });
 }
 
+// Cover art: local files and http(s) URLs. St loads a FileIcon asynchronously through GIO
+// (GVfs handles http/https), so nothing is downloaded on the main loop here.
 function artIcon(url) {
-    if (typeof url === 'string' && url.startsWith('file://'))
+    if (typeof url === 'string' && /^(file|https?):\/\//.test(url))
         return new Gio.FileIcon({ file: Gio.File.new_for_uri(url) });
     return null;
 }
@@ -58,6 +64,7 @@ export class NotchView {
         this._cleanup = cleanup;
         this._h = handlers;
         this._ = gettext;
+        this._destroyed = false;
         this._signature = null;
         this._kind = null;
         this._page = null;
@@ -76,6 +83,7 @@ export class NotchView {
         cleanup.add(() => this.placeholder.destroy());
 
         this._island = new St.Widget({
+            name: 'kiwi-notch',
             style_class: 'kiwi-notch',
             layout_manager: new Clutter.BinLayout(),
             reactive: true,
@@ -87,6 +95,8 @@ export class NotchView {
         this._island.set_accessible_name?.(gettext('Notch'));
         Main.layoutManager.addTopChrome(this._island);
         cleanup.add(() => {
+            this._destroyed = true;
+            this._page = null;
             Main.layoutManager.removeChrome(this._island);
             this._island.destroy();
         });
@@ -119,7 +129,7 @@ export class NotchView {
                 below: this._island,
                 layers: 'blur',
                 radius: 32,
-                name: 'kiwi-notch',
+                name: 'kiwi-notch-glass',
             });
             this._glass.setVisible(false);
             this._cleanup.add(() => {
@@ -136,6 +146,8 @@ export class NotchView {
     }
 
     _place(size, animate) {
+        if (this._destroyed)
+            return;
         this._size = size;
         const monitor = this._monitor();
         if (!monitor)
@@ -159,6 +171,8 @@ export class NotchView {
 
     /** @param {boolean} show the island is on screen at all (bar visible, not hidden by fullscreen) */
     setShown(show) {
+        if (this._destroyed)
+            return;
         this._island.visible = show;
         this._glass?.setVisible(show && this._glassShown);
     }
@@ -168,6 +182,8 @@ export class NotchView {
      * @param {object} ctx {notification, media, dnd, count}
      */
     render(vm, ctx) {
+        if (this._destroyed)
+            return;
         const n = ctx.notification;
         const mediaPlain = ctx.media ? { ...ctx.media, appIcon: undefined } : null; // icons are not JSON
         const signature = JSON.stringify([
@@ -186,10 +202,24 @@ export class NotchView {
         this._glass?.setVisible(this._island.visible && this._glassShown);
         this._place(vm.size, true);
 
-        this._page?.destroy();
-        this._barTimer && this._cleanup.release(this._barTimer);
+        const old = this._page;
+        this._page = null;
+        old?.destroy();
+        if (this._barTimer)
+            this._cleanup.release(this._barTimer);
         this._barTimer = 0;
-        const page = this._build(vm, ctx);
+        let page;
+        try {
+            page = this._build(vm, ctx);
+        } catch (e) {
+            // Never leave a half-built page behind; draw an empty pill and retry next time.
+            console.error('[Kiwi] notch page failed:', e);
+            if (this._barTimer)
+                this._cleanup.release(this._barTimer);
+            this._barTimer = 0;
+            this._signature = null;
+            page = new St.Widget({ x_expand: true, y_expand: true });
+        }
         this._page = page;
         this._island.add_child(page);
         if (Glass.motion && kindChanged) {
@@ -230,7 +260,8 @@ export class NotchView {
     _activityPage(data, ctx) {
         const row = this._row('kiwi-notch-activity');
         const art = artIcon(data.art);
-        row.add_child(icon(art ?? ctx.media?.appIcon ?? themed('audio-x-generic-symbolic'), 20, 'kiwi-notch-art'));
+        const plain = ctx.media?.appIcon ?? themed('audio-x-generic-symbolic');
+        row.add_child(icon(art ?? plain, 20, 'kiwi-notch-art', art ? plain : null));
         row.add_child(label(data.title, 'kiwi-notch-title', { x_expand: true }));
         row.add_child(this._bars(data.playing));
         return row;
@@ -305,7 +336,7 @@ export class NotchView {
     _cardPage(id, notification, badge) {
         const card = new St.BoxLayout({
             style_class: 'kiwi-notch-card',
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             x_expand: true, y_expand: true,
         });
         if (!notification)
@@ -364,12 +395,14 @@ export class NotchView {
     _dashboardPage(ctx) {
         const page = new St.BoxLayout({ style_class: 'kiwi-notch-dashboard', x_expand: true, y_expand: true });
 
-        const media = new St.BoxLayout({ style_class: 'kiwi-notch-panel', vertical: true, x_expand: true });
+        const media = new St.BoxLayout({ style_class: 'kiwi-notch-panel', orientation: Clutter.Orientation.VERTICAL, x_expand: true });
         media.add_child(label(this._('Now Playing'), 'kiwi-notch-meta'));
         if (ctx.media) {
             const head = new St.BoxLayout({ style_class: 'kiwi-notch-nowplaying' });
-            head.add_child(icon(artIcon(ctx.media.art) ?? ctx.media.appIcon ?? themed('audio-x-generic-symbolic'), 48, 'kiwi-notch-art-large'));
-            const text = new St.BoxLayout({ vertical: true, x_expand: true, y_align: Clutter.ActorAlign.CENTER });
+            const art = artIcon(ctx.media.art);
+            const plain = ctx.media.appIcon ?? themed('audio-x-generic-symbolic');
+            head.add_child(icon(art ?? plain, 48, 'kiwi-notch-art-large', art ? plain : null));
+            const text = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, x_expand: true, y_align: Clutter.ActorAlign.CENTER });
             text.add_child(label(ctx.media.title, 'kiwi-notch-card-title'));
             text.add_child(label(ctx.media.artist, 'kiwi-notch-meta'));
             head.add_child(text);
@@ -398,7 +431,7 @@ export class NotchView {
         }
         page.add_child(media);
 
-        const notifications = new St.BoxLayout({ style_class: 'kiwi-notch-panel', vertical: true, x_expand: true });
+        const notifications = new St.BoxLayout({ style_class: 'kiwi-notch-panel', orientation: Clutter.Orientation.VERTICAL, x_expand: true });
         notifications.add_child(label(this._('Notifications'), 'kiwi-notch-meta'));
         notifications.add_child(label(
             ctx.count > 0 ? this._('%d in the message list').format(ctx.count) : this._('No notifications'),
@@ -417,7 +450,7 @@ export class NotchView {
 
         // Clipboard history (null while the clipboard feature is off: no panel)
         if (ctx.clipboard) {
-            const clip = new St.BoxLayout({ style_class: 'kiwi-notch-panel', vertical: true, x_expand: true });
+            const clip = new St.BoxLayout({ style_class: 'kiwi-notch-panel', orientation: Clutter.Orientation.VERTICAL, x_expand: true });
             clip.add_child(label(this._('Clipboard'), 'kiwi-notch-meta'));
             if (!ctx.clipboard.length)
                 clip.add_child(label(this._('Nothing copied yet'), 'kiwi-notch-title'));

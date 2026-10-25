@@ -82,6 +82,7 @@ function startShowing(s, entry, cfg) {
     s.current = {
         ...entry,
         until: ms === null ? null : s.now + ms,
+        shownAt: s.now,
         hovered: false,
         remaining: null,
     };
@@ -97,9 +98,17 @@ function promote(s, cfg) {
     startShowing(s, entry, cfg);
 }
 
+// Drop the lowest-urgency, oldest entries (they stay in the message list). Critical ones are
+// never dropped: if only critical ones are left, the queue grows past the cap.
 function capPending(s, cfg) {
-    while (s.pending.length > cfg.maxPending)
-        s.pending.pop();    // the lowest urgency, oldest; it stays in the message list
+    while (s.pending.length > cfg.maxPending) {
+        let i = s.pending.length - 1;
+        while (i >= 0 && isCritical(s.pending[i]))
+            i--;
+        if (i < 0)
+            break;
+        s.pending.splice(i, 1);
+    }
 }
 
 function admits(s, ev, cfg) {
@@ -161,13 +170,15 @@ function dropCurrent(s, cfg) {
 
 function onTick(s, ev, cfg) {
     if (s.osd && s.now >= s.osd.until) {
-        // Whatever sat underneath had its clock stopped for the osd's whole life.
-        const paused = s.osd.until - s.osd.startedAt;
+        // Whatever sat underneath had its clock stopped while the osd covered it: only the part
+        // of the osd's life that overlapped it counts.
+        const { startedAt, until } = s.osd;
+        const overlap = since => Math.max(0, until - Math.max(startedAt, since ?? startedAt));
         s.osd = null;
         if (s.current && s.current.until !== null)
-            s.current = { ...s.current, until: s.current.until + paused };
+            s.current = { ...s.current, until: s.current.until + overlap(s.current.shownAt) };
         if (s.dashboard && s.dashboard.until !== null)
-            s.dashboard = { until: s.dashboard.until + paused };
+            s.dashboard = { ...s.dashboard, until: s.dashboard.until + overlap(s.dashboard.openedAt) };
     }
     if (s.osd)
         return;
@@ -198,7 +209,7 @@ function onHover(s, ev, cfg) {
         s.current = cur;
     }
     if (s.dashboard)
-        s.dashboard = { until: hover ? null : s.now + cfg.dashboardLeaveMs };
+        s.dashboard = { ...s.dashboard, until: hover ? null : s.now + cfg.dashboardLeaveMs };
 }
 
 function onClick(s, ev, cfg, effects) {
@@ -215,7 +226,7 @@ function onClick(s, ev, cfg, effects) {
         return;
     }
     // Opening the dashboard sends what is waiting back to the queue.
-    s.dashboard = { until: s.hover ? null : s.now + cfg.dashboardLeaveMs };
+    s.dashboard = { until: s.hover ? null : s.now + cfg.dashboardLeaveMs, openedAt: s.now };
 }
 
 function onOsd(s, ev, cfg) {

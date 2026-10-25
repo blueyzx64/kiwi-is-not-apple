@@ -19,7 +19,7 @@ import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
 
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { KiwiSettings } from '../../lib/settings.js';
-import { canDivertOsd, setUnredirectAllowed, requeueBanner } from '../../lib/compat.js';
+import { canDivertOsd, setUnredirectAllowed, requeueBanner, kickTray } from '../../lib/compat.js';
 import { PanelLayout } from '../../coordinators/panelLayout.js';
 import { PanelVisibility } from '../../coordinators/panelVisibility.js';
 import { NotificationRouter } from '../../coordinators/notificationRouter.js';
@@ -54,7 +54,7 @@ export class NotchFeature {
         this._overFullscreen = false;
         this._hold = null;
         this._deadlineToken = 0;
-        this._parts = null;
+        this._parts = { sink: null, osd: null, media: null };
         this._watch = null;
     }
 
@@ -62,6 +62,7 @@ export class NotchFeature {
         const { settings, gettext } = this._ctx;
         const cleanup = this._cleanup;
         this._alive = true;
+        cleanup.add(() => this._teardown());
 
         const ks = this._ks = new KiwiSettings(settings);
         ks.attach(cleanup);
@@ -69,6 +70,7 @@ export class NotchFeature {
         this._notifications = new Map();       // id -> Notification
         this._notificationIds = new WeakMap();  // Notification -> id
         this._notificationSignals = new Map();  // Notification -> handler id
+        this._shown = new Set();                // ids that have been on screen
         this._nextId = 1;
         cleanup.add(() => this._forgetNotifications());
 
@@ -105,31 +107,45 @@ export class NotchFeature {
         this._syncClipboard();
 
         // The three features can be switched one by one
-        this._sink = null;
-        this._mpris = null;
-        this._osd = null;
-        this._applyParts();
-        ks.watch(['notch-notifications', 'notch-live-activities', 'notch-osd'], () => {
-            this._applyParts();
+        // Each part has its own registry, so switching one never touches the others.
+        this._applySink();
+        this._applyOsd();
+        this._applyMedia();
+        const part = (key, apply) => ks.watch(key, () => {
+            apply();
             this._dispatch({ type: 'set', patch: {} });
         });
+        part('notch-notifications', () => this._applySink());
+        part('notch-osd', () => this._applyOsd());
+        part('notch-live-activities', () => this._applyMedia());
         // The timeout is read from settings on every event; nothing to rebuild.
         ks.watch('notch-timeout', () => this._dispatch({ type: 'set', patch: {} }));
 
         // Runs first on dispose (newest first): stop reacting, then give everything back
-        cleanup.add(() => {
-            this._requeueCritical();
-            this._alive = false;
-            this._deadlineToken = 0;
-            this._release();
-            this._parts?.dispose();
-            this._parts = null;
-            this._watch = null;
-            if (this._overFullscreen)
-                setUnredirectAllowed(true);
-            this._overFullscreen = false;
-        });
+        cleanup.add(() => this._teardown());
         this._sync();
+    }
+
+    // Idempotent. Registered twice: last in enable() (runs first on a normal dispose) and first
+    // (runs last), so a throw half-way through enable() still restores banners, OSD and holds.
+    _teardown() {
+        if (!this._alive && !this._parts.sink && !this._parts.osd && !this._parts.media)
+            return;
+        // Collect sticky cards first, give the banners back to the stock tray, then queue
+        // them there; queued while the sink still existed they would be diverted again.
+        const critical = this._notifications ? this._criticalNotifications() : [];
+        this._alive = false;
+        this._deadlineToken = 0;
+        this._release();
+        for (const key of ['sink', 'osd', 'media']) {
+            this._parts[key]?.dispose();
+            this._parts[key] = null;
+        }
+        this._requeue(critical);
+        this._watch = null;
+        if (this._overFullscreen)
+            setUnredirectAllowed(true);
+        this._overFullscreen = false;
     }
 
     disable() {
@@ -161,10 +177,13 @@ export class NotchFeature {
         if (ev.type === 'tick' && before !== undefined && state.current?.id !== before &&
             !state.pending.some(n => n.id === before))
             this._expire(before);
-        // Queued cards pruned by the queue cap or by DnD / fullscreen never get their turn
+        // Queued cards pruned by the queue cap or by DnD / fullscreen never get their turn.
+        // Only ones that were already on screen expire; never-shown ones keep their place in
+        // the message list as the stock tray would.
         if (ev.type !== 'notify-removed') {
             for (const id of pendingBefore) {
-                if (id !== state.current?.id && !state.pending.some(n => n.id === id))
+                if (id !== state.current?.id && !state.pending.some(n => n.id === id) &&
+                    this._shown.has(id))
                     this._expire(id);
             }
         }
@@ -239,6 +258,8 @@ export class NotchFeature {
 
         const media = this._bestPlayer();
         const notification = vm.notificationId === null ? null : this._notifications.get(vm.notificationId) ?? null;
+        if (notification)
+            this._shown.add(vm.notificationId);
         this._view.render(vm, {
             notification,
             media: media ? { ...mediaInfo(media), appIcon: media.app?.get_icon() ?? null } : null,
@@ -296,6 +317,7 @@ export class NotchFeature {
             this._notificationSignals.set(notification, notification.connect('destroy', () => {
                 this._notificationSignals.delete(notification);
                 this._notifications.delete(id);
+                this._shown.delete(id);
                 this._dispatch({ type: 'notify-removed', id });
             }));
         }
@@ -323,29 +345,47 @@ export class NotchFeature {
     // ---- parts that can be switched on and off ----------------------------------------------
 
     // A critical card is sticky; if the notch stops taking banners it must not vanish with it.
-    _requeueCritical() {
+    _criticalNotifications() {
         const { current, pending } = this._state;
+        const list = [];
         for (const entry of [current, ...pending]) {
             if (!entry || entry.urgency < URGENCY.CRITICAL)
                 continue;
             const notification = this._notifications.get(entry.id);
             if (notification)
-                requeueBanner(Main.messageTray, notification);
+                list.push(notification);
         }
+        return list;
     }
 
-    _applyParts() {
-        if (!this._ks.bool('notch-notifications'))
-            this._requeueCritical();
-        this._parts?.dispose();
-        this._parts = new CleanupRegistry();
-        const parts = this._parts;
-        const cfg = this._config();
+    // Call only after the banner sink is released, so the stock tray takes them.
+    _requeue(notifications) {
+        if (!notifications.length)
+            return;
+        // Oldest last, so the head of the queue ends up as the one that was on screen
+        for (const notification of [...notifications].reverse())
+            requeueBanner(Main.messageTray, notification);
+        kickTray(Main.messageTray);
+    }
 
-        if (cfg.notifications)
+    // Replace one part's registry; returns the fresh one
+    _renew(key) {
+        this._parts[key]?.dispose();
+        this._parts[key] = new CleanupRegistry();
+        return this._parts[key];
+    }
+
+    _applySink() {
+        const critical = this._ks.bool('notch-notifications') ? [] : this._criticalNotifications();
+        const parts = this._renew('sink');
+        if (this._ks.bool('notch-notifications'))
             NotificationRouter.setBannerSink(parts, { present: n => this._present(n) });
+        this._requeue(critical);
+    }
 
-        if (cfg.osd && canDivertOsd(Main.osdWindowManager)) {
+    _applyOsd() {
+        const parts = this._renew('osd');
+        if (this._ks.bool('notch-osd') && canDivertOsd(Main.osdWindowManager)) {
             const self = this;
             parts.inject(Main.osdWindowManager, '_showOsdWindow',
                 function (orig, monitorIndex, icon, label, level, maxLevel) {
@@ -367,8 +407,12 @@ export class NotchFeature {
                     return undefined;
                 });
         }
+    }
 
-        if (cfg.activities) {
+    _applyMedia() {
+        const parts = this._renew('media');
+        this._watch = null;
+        if (this._ks.bool('notch-live-activities')) {
             this._watch = MprisWatcher.acquire(parts, this._ctx.gettext);
             this._playerSignals = new Map();
             const track = player => {
