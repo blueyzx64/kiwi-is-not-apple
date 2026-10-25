@@ -20,5 +20,5 @@
 | Dock (D5) | D5 | built; R6 review | debt/dock |
 | CSS debt (D6) | D6 | built; R5 review | debt/css-debt |
 | Build/CI (D7) | D7 | done, merged | debt/build-ci |
-| Docs (D8) | D8 | doing | debt/docs |
+| Docs (D8) | D8 | pass 1 merged; pass 2 at end | debt/docs |
 | Reviewer 2 | R1 | reviewing S4 | - |
