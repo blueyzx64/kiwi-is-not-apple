@@ -122,3 +122,17 @@ Attach in `enable()` and add `cleanup.add(() => h.destroy())`. Check `Glass.moti
 ## apps/util/windows.js (frozen from D4, debt/window-utils)
 - `isHelperWindowInfo({title, appName})->bool` (same rule as windowControls `isExcludedWindow`),
   `isUserWindow(win, appName=null)->bool`, `windowForActor(actor)->?Meta.Window`. No gi imports.
+
+## Notch coordinators (frozen from S8, feat/notch; not merged yet)
+- `NotificationRouter`:
+  - `setBannerSink(cleanup, {present(n)})->{release}` and `pinBanners(cleanup)->{release}`.
+  - `connect(cleanup, fn({count, dnd}))` fires on change only.
+  - `state()`, `setDnd(bool)`, `isDiverting()`.
+  - It is the single owner of banner routing and of DnD state.
+- `MprisWatcher.acquire(cleanup, gettext)->{players, on('player-added'|'player-removed', fn), release()}`:
+  refcounted, the only MPRIS watcher. Player and Source live in lib/mpris.js.
+  The Control Center Now Playing tile moves to it after the notch merges.
+- `apps/notch/stateMachine.js`: `initialState, step, view, nextDeadline, wantsBar, URGENCY, SIZES, DEFAULT_CONFIG`.
+- lib/compat.js adds: `takeQueuedBanner, kickTray, canDivertBanners, canDivertOsd`.
+- ModalSurface delta (S4): options `offsetTop` (px, position 'top') and `onCapturedKey(event, modal)` (capture phase).
+  The open fade is on the overlay. `open()` logs why it failed.
