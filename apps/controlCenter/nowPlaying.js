@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The Now Playing tile: art, title, artist, play/pause and next for one MPRIS player.
-// Players come from apps/mediaPlayback.js (Kiwi's MPRIS source). It is imported on demand,
-// so a problem there costs the tile and nothing else.
+// Players come from the shared MprisWatcher (one D-Bus watcher for the whole extension).
 
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import St from 'gi://St';
 
 import { Glass } from '../../lib/glass.js';
+import { MprisWatcher } from '../../coordinators/mprisWatcher.js';
 
 const ART_SIZE = 48;
 const FADE_MS = 150;
@@ -16,7 +16,7 @@ export class NowPlaying {
     constructor({ gettext, cleanup }) {
         this._gettext = gettext;
         this._cleanup = cleanup;
-        this._source = null;
+        this._watch = null;
         this._players = [];
         this._tokens = new Map();   // player -> token of its 'changed' handler
         this._destroyed = false;
@@ -62,20 +62,12 @@ export class NowPlaying {
     }
 
     async start() {
-        let module;
-        try {
-            module = await import('../mediaPlayback.js');
-        } catch (e) {
-            console.error('[Kiwi] Control Center: Now Playing unavailable:', e);
+        if (this._destroyed || this._watch)
             return;
-        }
-        if (this._destroyed)
-            return;
-
-        this._source = new module.Source(this._gettext);
-        this._source.connect('player-added', (_s, player) => this._add(player));
-        this._source.connect('player-removed', (_s, player) => this._remove(player));
-        this._source.start();
+        this._watch = MprisWatcher.acquire(this._cleanup, this._gettext);
+        this._watch.on('player-added', player => this._add(player));
+        this._watch.on('player-removed', player => this._remove(player));
+        this._watch.players.forEach(player => this._add(player));
     }
 
     _add(player) {
@@ -139,8 +131,8 @@ export class NowPlaying {
             player.disconnect(token);
         this._tokens.clear();
         this._players = [];
-        this._source?.destroy();
-        this._source = null;
+        this._watch?.release();
+        this._watch = null;
         this.actor.destroy();
     }
 }

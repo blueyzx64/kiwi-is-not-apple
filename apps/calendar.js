@@ -2,10 +2,11 @@
 // Repositions the calendar and customizes notification widgets in the top panel.
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
+import { NotificationRouter } from '../coordinators/notificationRouter.js';
+import { CleanupRegistry } from '../lib/disposables.js';
 
 // State holders so we can fully restore on disable
 let dateMenu;
@@ -14,12 +15,11 @@ let originalParent;
 let originalParentIndex;
 let originalMenuBoxStyle;
 let hiddenMessageList = null; // date menu message list hidden while enabled
-let originalBannerBinProps; // { x_align, y_align, x_expand }
+const routerCleanup = new CleanupRegistry(); // banner position pin and the shared notification state
 
 // Notification indicator state
 let notificationIndicator = null;
 let notificationIndicatorParent = null;
-let notificationSignals = [];
 let indicatorInsertTimeoutId = null; // timeout id for delayed indicator insertion
 let kiwiExtension = null;
 let kiwiSettings = null;
@@ -109,14 +109,6 @@ function cleanupNotificationIndicator() {
     indicatorStyleSignalId = 0;
     kiwiSettings = null;
     kiwiExtension = null;
-    notificationSignals.forEach(signal => {
-        if (signal.obj === 'interval') {
-            GLib.Source.remove(signal.id);
-        } else {
-            signal.obj.disconnect(signal.id);
-        }
-    });
-    notificationSignals = [];
 
     if (notificationIndicator) {
         notificationIndicator.destroy();
@@ -125,50 +117,10 @@ function cleanupNotificationIndicator() {
     notificationIndicatorParent = null;
 }
 
-// Sources come and go over a session. Following them keeps the indicator live
-// for sources created after us, and drops each source's handles while it is
-// still alive — a source is disposed right after 'source-removed', so handles
-// kept until disable() were being disconnected from a dead object.
-function connectSource(source) {
-    const addedId = source.connect('notification-added', () => updateNotificationIndicator());
-    notificationSignals.push({ obj: source, id: addedId });
-    const removedId = source.connect('notification-removed', () => updateNotificationIndicator());
-    notificationSignals.push({ obj: source, id: removedId });
-}
-
-function disconnectSource(source) {
-    notificationSignals = notificationSignals.filter(signal => {
-        if (signal.obj !== source)
-            return true;
-        source.disconnect(signal.id);
-        return false;
-    });
-}
-
+// The dot follows the shared notification state (sources, queued banners), so it needs no
+// polling and no per-source handlers of its own.
 function connectNotificationSignals() {
-    notificationSignals = [];
-    // Monitor message tray sources for new notifications
-    const sourceAddedId = Main.messageTray.connect('source-added', (_tray, source) => {
-        connectSource(source);
-        updateNotificationIndicator();
-    });
-    notificationSignals.push({ obj: Main.messageTray, id: sourceAddedId });
-
-    const sourceRemovedId = Main.messageTray.connect('source-removed', (_tray, source) => {
-        disconnectSource(source);
-        updateNotificationIndicator();
-    });
-    notificationSignals.push({ obj: Main.messageTray, id: sourceRemovedId });
-
-    for (const source of Main.messageTray._sources.values())
-        connectSource(source);
-
-    // Fallback periodic check
-    const checkInterval = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 5000, () => {
-        updateNotificationIndicator();
-        return GLib.SOURCE_CONTINUE; // Keep the timeout running
-    });
-    notificationSignals.push({ obj: 'interval', id: checkInterval });
+    NotificationRouter.connect(routerCleanup, () => updateNotificationIndicator());
 }
 
 function updateNotificationIndicator() {
@@ -214,18 +166,10 @@ export function enable(extension) {
         dateMenu.menu.box.style = `min-width: ${Math.max(300, natW + 20)}px;`;
     }
 
-    // Adjust notification banner alignment without destroying the actor.
-    // Apply in both modes so banners appear top-right regardless of whether
-    // the GNOME notification panel is kept.
-    const bin = Main.messageTray._bannerBin;
-    originalBannerBinProps = originalBannerBinProps || {
-        x_align: bin.x_align,
-        y_align: bin.y_align,
-        x_expand: bin.x_expand,
-    };
-    bin.set_x_expand(true);
-    bin.set_x_align(Clutter.ActorAlign.END);
-    bin.set_y_align(Clutter.ActorAlign.START);
+    // Banner position belongs to NotificationRouter (the notch may take the banners over).
+    // Pin them top-right in both modes so they appear there whether or not the GNOME
+    // notification panel is kept.
+    NotificationRouter.pinBanners(routerCleanup);
 
     // Set up notification indicator on QuickSettings
     setupNotificationIndicator();
@@ -258,32 +202,15 @@ export function disable() {
         originalParent.insert_child_at_index(dateMenu.container, insertIndex);
     }
 
-    // Restore banner bin alignment
-    if (originalBannerBinProps) {
-        const bin = Main.messageTray._bannerBin;
-        bin.set_x_expand(originalBannerBinProps.x_expand);
-        bin.set_x_align(originalBannerBinProps.x_align);
-        bin.set_y_align(originalBannerBinProps.y_align);
-        originalBannerBinProps = null;
-    }
-
     // Clean up notification indicator
     cleanupNotificationIndicator();
+    routerCleanup.dispose();
 
     enabled = false;
 }
 
 function checkForNotifications() {
-    // Check the message tray's notification sources directly. Count notifications
-    // that are still present (not necessarily unacknowledged) since acknowledged
-    // notifications can still be in the notification panel.
-    for (const source of Main.messageTray._sources.values()) {
-        if (source.notifications.length > 0)
-            return true;
-    }
-
-    // Check if there are any notification actors still visible in the system
-    // This catches notifications that are in the notification panel
-    return Main.messageTray._notificationQueue.length > 0;
+    // Notifications still present count (not only unacknowledged ones): acknowledged ones
+    // stay in the notification panel. The count includes banners still queued.
+    return NotificationRouter.state().count > 0;
 }
-

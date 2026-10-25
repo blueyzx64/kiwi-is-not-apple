@@ -7,7 +7,9 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import GObject from 'gi://GObject';
 
-import { MediaItem, Source } from './mediaPlayback.js';
+import { MediaItem } from './mediaPlayback.js';
+import { MprisWatcher } from '../coordinators/mprisWatcher.js';
+import { CleanupRegistry } from '../lib/disposables.js';
 
 const MAX_VISIBLE_PLAYERS = 3;
 
@@ -23,8 +25,18 @@ class MediaList extends St.BoxLayout {
         this._items = new Map();
         this.connect('destroy', this._onDestroy.bind(this));
 
-        this._source = new Source(gettext);
-        this._source.connectObject('player-removed', (_source, player) => {
+        // The player source is shared with the notch; this list only subscribes to it.
+        this._cleanup = new CleanupRegistry();
+        this._watch = MprisWatcher.acquire(this._cleanup, gettext);
+        const add = player => {
+            if (this._items.has(player))
+                return;
+            const item = new MediaItem(player, requestRedraw);
+            this._items.set(player, item);
+            this.add_child(item);
+            this.emit('changed');
+        };
+        this._watch.on('player-removed', player => {
             const item = this._items.get(player);
             if (!item)
                 return;
@@ -32,16 +44,10 @@ class MediaList extends St.BoxLayout {
             this.remove_child(item);
             item.destroy();
             this.emit('changed');
-        }, this);
-        this._source.connectObject('player-added', (_source, player) => {
-            if (this._items.has(player))
-                return;
-            const item = new MediaItem(player, requestRedraw);
-            this._items.set(player, item);
-            this.add_child(item);
-            this.emit('changed');
-        }, this);
-        this._source.start();
+        });
+        this._watch.on('player-added', add);
+        // Players the shared source found before this list existed
+        this._watch.players.forEach(add);
     }
 
     get playerCount() {
@@ -49,12 +55,11 @@ class MediaList extends St.BoxLayout {
     }
 
     _onDestroy() {
-        this._source.disconnectObject(this);
         for (const item of this._items.values())
             item.destroy();
         this._items.clear();
-        this._source.destroy();
-        this._source = null;
+        this._cleanup.dispose();
+        this._watch = null;
     }
 }
 
