@@ -3,6 +3,7 @@ import {
     parseButtonLayout, resolvePlacement, shouldShow,
     titlebarHideSheet, resolveIcon, MIGRATIONS, createJobQueue,
     stripControlButtons, ownsButtonLayout, planMinimize, planMaximize, centerIn, sameRect,
+    appButtonsLayout, appButtonsMacos,
 } from '../apps/windowControls/model.js';
 import { ButtonLayoutOwner, restoreStaleButtonLayout, SAVED_KEY } from '../apps/windowControls/buttonLayout.js';
 import { isHelperWindowInfo } from '../apps/util/windows.js';
@@ -262,6 +263,136 @@ test('migration: idempotent, new key wins', () => {
     const gs = fakeGs({ 'show-window-controls-fullscreen-only': true, 'window-controls-scope': 'maximized' });
     eq(runMigrations(gs, MIGRATIONS), []);
     eq(gs.user['window-controls-scope'], 'maximized');
+});
+
+// --- app buttons while the top-bar controls are off (UX round 2, #8)
+const AB = (orig, position, set) => appButtonsLayout(orig, { position, set });
+test('app buttons: stock appmenu:close, all combinations', () => {
+    eq(AB('appmenu:close', 'right', 'all'), 'appmenu:minimize,maximize,close');
+    eq(AB('appmenu:close', 'left', 'all'), 'close,minimize,maximize:appmenu');
+    eq(AB('appmenu:close', 'right', 'close'), 'appmenu:close');
+    eq(AB('appmenu:close', 'left', 'close'), 'close:appmenu');
+});
+test('app buttons: defaults are right + all', () =>
+    eq(appButtonsLayout('appmenu:close'), 'appmenu:minimize,maximize,close'));
+test('app buttons: a left (macOS) original, all combinations', () => {
+    eq(AB('close,minimize,maximize:appmenu', 'left', 'all'), 'close,minimize,maximize:appmenu');
+    eq(AB('close,minimize,maximize:appmenu', 'right', 'all'), 'appmenu:minimize,maximize,close');
+    eq(AB('close,minimize,maximize:appmenu', 'left', 'close'), 'close:appmenu');
+    eq(AB('close,minimize,maximize:appmenu', 'right', 'close'), 'appmenu:close');
+});
+test('app buttons: other items kept in place on the same side', () => {
+    eq(AB('icon,appmenu:spacer,close', 'right', 'all'), 'icon,appmenu:spacer,minimize,maximize,close');
+    eq(AB('close,spacer:icon', 'left', 'all'), 'close,minimize,maximize,spacer:icon');
+});
+test('app buttons: other items mirrored when the side flips', () => {
+    eq(AB('icon,appmenu:spacer,close', 'left', 'all'), 'close,minimize,maximize,spacer:appmenu,icon');
+    eq(AB('close,spacer:icon', 'right', 'all'), 'icon:spacer,minimize,maximize,close');
+});
+test('app buttons: stripped or empty originals', () => {
+    eq(AB('appmenu:', 'right', 'all'), 'appmenu:minimize,maximize,close');
+    eq(AB('appmenu:', 'left', 'all'), 'close,minimize,maximize:appmenu');
+    eq(AB('', 'right', 'all'), ':minimize,maximize,close');
+    eq(AB(':', 'left', 'all'), 'close,minimize,maximize:');
+    eq(AB(null, 'left', 'close'), 'close:');
+});
+test('app buttons: user button order and duplicates replaced by the full set', () =>
+    eq(AB('maximize,close,close:appmenu', 'left', 'all'), 'close,minimize,maximize:appmenu'));
+test('app buttons: idempotent on its own output', () => {
+    for (const orig of ['appmenu:close', 'close,minimize,maximize:', 'icon:spacer,close', ''])
+        for (const pos of ['right', 'left'])
+            for (const set of ['all', 'close']) {
+                const once = AB(orig, pos, set);
+                eq(AB(once, pos, set), once);
+            }
+});
+test('app buttons: unknown position falls back to right', () =>
+    eq(AB('appmenu:close', 'middle', 'all'), 'appmenu:minimize,maximize,close'));
+test('appButtonsMacos: controls on, apps keep buttons -> enable-app-window-buttons', () => {
+    eq(appButtonsMacos({ showOnPanel: true, scope: 'maximized', enableAppButtons: true, style: 'gnome' }), true);
+    eq(appButtonsMacos({ showOnPanel: true, scope: 'fullscreen', enableAppButtons: false, style: 'macos' }), false);
+    eq(appButtonsMacos({ showOnPanel: true, remove: false, scope: 'all', enableAppButtons: true, style: 'gnome' }), true);
+});
+test('appButtonsMacos: controls on with the layout owned -> app-buttons-style (no change on toggle)', () => {
+    for (const style of ['gnome', 'macos'])
+        for (const enableAppButtons of [true, false])
+            eq(appButtonsMacos({ showOnPanel: true, remove: true, scope: 'all', enableAppButtons, style }),
+                appButtonsMacos({ showOnPanel: false, enableAppButtons, style }));
+});
+test('appButtonsMacos: controls off follow app-buttons-style', () => {
+    eq(appButtonsMacos({ showOnPanel: false, enableAppButtons: true, style: 'gnome' }), false);
+    eq(appButtonsMacos({ showOnPanel: false, enableAppButtons: false, style: 'macos' }), true);
+});
+test('owner with the app-buttons transform: take, reapply, restore exactly', () => {
+    const kiwi = fakeSettings({ [SAVED_KEY]: '' });
+    const wm = fakeSettings({ 'button-layout': 'appmenu:close' });
+    let position = 'right';
+    const o = new ButtonLayoutOwner(kiwi, wm, () => {}, orig => appButtonsLayout(orig, { position }));
+    o.sync(true);
+    eq(wm.values['button-layout'], 'appmenu:minimize,maximize,close');
+    eq(kiwi.values[SAVED_KEY], 'appmenu:close');
+    position = 'left';
+    o.reapply();
+    eq(wm.values['button-layout'], 'close,minimize,maximize:appmenu');
+    eq(kiwi.values[SAVED_KEY], 'appmenu:close');
+    o.release();
+    eq(wm.values['button-layout'], 'appmenu:close');
+    eq(kiwi.values[SAVED_KEY], '');
+    eq(wm.nHandlers, 0);
+});
+test('owner handover: panel controls -> app buttons -> panel controls keeps the original', () => {
+    const kiwi = fakeSettings({ [SAVED_KEY]: '' });
+    const wm = fakeSettings({ 'button-layout': 'icon:close' });
+    const panel = new ButtonLayoutOwner(kiwi, wm);
+    panel.sync(true);
+    eq(wm.values['button-layout'], 'icon:');
+    panel.release(); // the registry stops the old owner first
+    const apps = new ButtonLayoutOwner(kiwi, wm, () => {}, orig => appButtonsLayout(orig));
+    apps.sync(true);
+    eq(wm.values['button-layout'], 'icon:minimize,maximize,close');
+    apps.release();
+    panel.sync(true);
+    eq(wm.values['button-layout'], 'icon:');
+    panel.release();
+    eq(wm.values['button-layout'], 'icon:close');
+    eq(kiwi.values[SAVED_KEY], '');
+});
+test('owner reapply while not owning does nothing', () => {
+    const wm = fakeSettings({ 'button-layout': 'appmenu:close' });
+    new ButtonLayoutOwner(fakeSettings({ [SAVED_KEY]: '' }), wm, () => {}, () => 'x:y').reapply();
+    eq(wm.values['button-layout'], 'appmenu:close');
+});
+function fakeGs2(user, defaults = { 'enable-app-window-buttons': true, 'show-window-controls': true }) {
+    const types = { 'show-window-controls': 'b', 'enable-app-window-buttons': 'b', 'app-buttons-style': 's' };
+    const gs = {
+        user: { ...user },
+        settings_schema: { has_key: k => k in types },
+        get_user_value: k => (k in gs.user ? { v: gs.user[k] } : null),
+        get_value: k => ({ get_type_string: () => types[k] }),
+        get_boolean: k => (k in gs.user ? gs.user[k] : defaults[k]),
+        set_string: (k, v) => { gs.user[k] = v; return true; },
+    };
+    return gs;
+}
+test('migration: controls already off + macOS app buttons (default) -> style macos', () => {
+    const gs = fakeGs2({ 'show-window-controls': false });
+    eq(runMigrations(gs, MIGRATIONS), ['app-buttons-style']);
+    eq(gs.user['app-buttons-style'], 'macos');
+});
+test('migration: controls off, macOS app buttons turned off -> style gnome', () => {
+    const gs = fakeGs2({ 'show-window-controls': false, 'enable-app-window-buttons': false });
+    runMigrations(gs, MIGRATIONS);
+    eq(gs.user['app-buttons-style'], 'gnome');
+});
+test('migration: controls never touched -> style stays default', () => {
+    const gs = fakeGs2({ 'enable-app-window-buttons': true });
+    eq(runMigrations(gs, MIGRATIONS), []);
+    eq(gs.user['app-buttons-style'], undefined);
+});
+test('migration: app-buttons-style set by the user wins', () => {
+    const gs = fakeGs2({ 'show-window-controls': false, 'app-buttons-style': 'gnome' });
+    eq(runMigrations(gs, MIGRATIONS), []);
+    eq(gs.user['app-buttons-style'], 'gnome');
 });
 
 try {

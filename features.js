@@ -19,6 +19,7 @@ import { enable as batteryPercentageEnable, disable as batteryPercentageDisable 
 import { enable as calendarEnable, disable as calendarDisable } from './apps/calendar.js';
 import { enable as windowTitleEnable, disable as windowTitleDisable } from './apps/windowTitle.js';
 import { WindowControlsFeature } from './apps/windowControls.js';
+import { AppButtonsFeature } from './apps/windowControls/appButtons.js';
 import { enable as panelTransparencyEnable, disable as panelTransparencyDisable } from './apps/panelTransparency.js';
 import { enable as panelStylingEnable, disable as panelStylingDisable, enableMenus as popupStylingEnable, disableMenus as popupStylingDisable } from './apps/panelStyling.js';
 import { enable as hideMinimizedWindowsEnable, disable as hideMinimizedWindowsDisable } from './apps/hideMinimizedWindows.js';
@@ -157,6 +158,13 @@ export const FEATURES = [
         // so no restartOn keys are needed. Reacts to its own settings keys.
         id: 'window-controls', setting: 'show-window-controls',
         cls: WindowControlsFeature,
+    },
+    {
+        // The mirror of window-controls: the apps' own buttons while the top-bar ones are off.
+        // Both own button-layout; the registry stops the one going off before starting the other.
+        id: 'app-buttons', when: ctx => !bool(ctx, 'show-window-controls'),
+        keys: ['show-window-controls'],
+        cls: AppButtonsFeature,
     },
     {
         // Local clipboard history; its panel icon claims a slot through PanelLayout
