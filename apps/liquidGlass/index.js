@@ -111,7 +111,7 @@ export class LiquidGlass {
             // The panel is transparent in the overview and solid over fullscreen windows
             reg.connect(Main.overview, 'showing', () => sync(true)),
             reg.connect(Main.overview, 'hiding', () => sync(false)),
-            reg.connect(Main.layoutManager, 'in-fullscreen-changed', () => sync()),
+            reg.connect(global.display, 'in-fullscreen-changed', () => sync()),
         ];
         sync();
         this._panel = { handle, tokens };
