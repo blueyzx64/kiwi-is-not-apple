@@ -3,9 +3,9 @@
 // This module removes system DND elements to avoid duplicate UI elements when Kiwi's own DND elements
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import * as Config from 'resource:///org/gnome/shell/misc/config.js';
+import { SHELL_HAS_SYSTEM_DND } from '../lib/compat.js';
 
-export const SHELL_HAS_SYSTEM_DND = parseInt(Config.PACKAGE_VERSION) >= 49;
+export { SHELL_HAS_SYSTEM_DND };
 
 const DND_ICON_NAMES = new Set([
     'weather-clear-night-symbolic',

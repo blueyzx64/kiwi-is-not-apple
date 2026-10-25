@@ -7,7 +7,7 @@ import Meta from 'gi://Meta';
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import * as Config from 'resource:///org/gnome/shell/misc/config.js';
+import { maximizeWindow, unmaximizeWindow } from '../lib/compat.js';
 
 const GLYPH_W = 26;
 const GLYPH_H = 18;
@@ -46,18 +46,7 @@ const MOVING_GRAB_OPS = [
 
 let _grabOpBeginId = null;
 
-// Mutter 49 dropped the MetaMaximizeFlags argument from maximize()/unmaximize();
-// 48 still requires it. The flags enum is only read on the shells that want it.
-const MAXIMIZE_ARGS = parseInt(Config.PACKAGE_VERSION) >= 49
-    ? [] : [Meta.MaximizeFlags.BOTH];
-
-export function maximizeWindow(win) {
-    win.maximize(...MAXIMIZE_ARGS);
-}
-
-export function unmaximizeWindow(win) {
-    win.unmaximize(...MAXIMIZE_ARGS);
-}
+export { maximizeWindow, unmaximizeWindow };
 
 export function isMaximized(win) {
     return !!win && win.maximized_horizontally && win.maximized_vertically;

@@ -32,6 +32,8 @@ class BatteryPercentage {
     }
 
     _initBatteryProxy() {
+        // Cancelled by destroy(), so a slow D-Bus answer never lands on a destroyed label
+        this._cancellable = new Gio.Cancellable();
         // Try to detect the correct battery object path dynamically using UPower.
         // This avoids hardcoding BAT1 which can be BAT0 on some machines.
         const upowerProxy = new Gio.DBusProxy({
@@ -42,14 +44,23 @@ class BatteryPercentage {
             g_flags: Gio.DBusProxyFlags.NONE,
         });
 
-        upowerProxy.init_async(GLib.PRIORITY_DEFAULT, null, (proxy, res) => {
+        const cancellable = this._cancellable;
+        upowerProxy.init_async(GLib.PRIORITY_DEFAULT, cancellable, (proxy, res) => {
             try {
                 proxy.init_finish(res);
+            } catch (e) {
+                if (!cancellable.is_cancelled())
+                    this._initDeviceProxy(FALLBACK_BATTERY_PATH);
+                return;
+            }
 
-                // Enumerate devices and look for battery device paths
+            // Enumerate devices without blocking the compositor, and look for battery paths
+            proxy.call('EnumerateDevices', null, Gio.DBusCallFlags.NONE, -1, cancellable, (_proxy, callRes) => {
+                if (cancellable.is_cancelled())
+                    return;
                 let devices = [];
                 try {
-                    devices = proxy.call_sync('EnumerateDevices', null, Gio.DBusCallFlags.NONE, -1, null).deep_unpack()[0];
+                    devices = proxy.call_finish(callRes).deep_unpack()[0];
                 } catch (e) {
                     // Enumeration failed; use the fallback path
                 }
@@ -59,10 +70,7 @@ class BatteryPercentage {
                     ?? devices.find(p => /battery/i.test(p))
                     ?? FALLBACK_BATTERY_PATH;
                 this._initDeviceProxy(batteryPath);
-            } catch (e) {
-                // If anything goes wrong enumerating devices, fall back to the original hardcoded path
-                this._initDeviceProxy(FALLBACK_BATTERY_PATH);
-            }
+            });
         });
     }
 
@@ -75,9 +83,12 @@ class BatteryPercentage {
             g_flags: Gio.DBusProxyFlags.NONE,
         });
 
-        this._batteryProxy.init_async(GLib.PRIORITY_DEFAULT, null, (deviceProxy, deviceRes) => {
+        const cancellable = this._cancellable;
+        this._batteryProxy.init_async(GLib.PRIORITY_DEFAULT, cancellable, (deviceProxy, deviceRes) => {
             try {
                 deviceProxy.init_finish(deviceRes);
+                if (cancellable.is_cancelled())
+                    return;
                 // Update the battery percentage after initialization
                 this._updateBatteryPercentage();
                 // Connect to the properties-changed signal to update on changes
@@ -141,6 +152,8 @@ class BatteryPercentage {
     }
 
     destroy() {
+        this._cancellable?.cancel();
+        this._cancellable = null;
         if (this._propertiesChangedId && this._batteryProxy) {
             this._batteryProxy.disconnect(this._propertiesChangedId);
             this._propertiesChangedId = null;
