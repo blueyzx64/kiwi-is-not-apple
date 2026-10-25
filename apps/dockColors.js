@@ -29,7 +29,7 @@ import Shell from 'gi://Shell';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
-import { parseSaved, resolveOriginals, staleRestores } from './dockColorsModel.js';
+import { captureOriginals, parseSaved, restorePlan } from './dockColorsModel.js';
 import { dashOf, dockSettings, disconnectAll, prefersDark, watchDocks } from './dockUtils.js';
 
 // What is behind the dock, which the indicator and separator read against
@@ -85,7 +85,8 @@ let screenshot;
 let globalSignals = [];      // [object, id], for disconnectAll
 let windowSignals = [];      // [object, id], torn down and rebuilt per workspace
 const sources = {};
-let savedColors = null;
+let savedColors = null;       // { key: { value, user } }, see dockColorsModel.js
+let written = {};            // key -> the colour Kiwi last wrote this session
 let docks = [];              // [{ container, destroyId }]
 let mode = null;             // 'light' | 'dark' behind the dock, once measured
 let scheme = null;           // 'light' | 'dark' session
@@ -280,8 +281,13 @@ function _apply(luminance) {
         return;
 
     mode = wanted;
-    d2d.set_string(DOT_KEY, DOT_COLOR[mode]);
+    _write(DOT_KEY, DOT_COLOR[mode]);
     docks.forEach(({ container }) => _styleContainer(container));
+}
+
+function _write(key, value) {
+    written[key] = value;
+    d2d.set_string(key, value);
 }
 
 function _syncScheme() {
@@ -290,7 +296,7 @@ function _syncScheme() {
         return;
 
     scheme = wanted;
-    d2d.set_string(PILL_KEY, PILL_COLOR[scheme]);
+    _write(PILL_KEY, PILL_COLOR[scheme]);
     docks.forEach(({ container }) => _styleContainer(container));
 }
 
@@ -346,6 +352,31 @@ function _disconnectWindowSignals() {
 
 /* ------------------------------------------------------------- entry points */
 
+function _readKeys(dock) {
+    return {
+        current: Object.fromEntries(SAVED_KEYS.map(key => [key, dock.get_string(key)])),
+        userSet: Object.fromEntries(SAVED_KEYS.map(key => [key, dock.get_user_value(key) !== null])),
+    };
+}
+
+/**
+ * Give the colours back: reset() a key that was at its default, write a user
+ * value back, and leave any key the user changed while Kiwi held it.
+ *
+ * @param {Gio.Settings} dock Dash-to-Dock's settings
+ * @param {object} originals the record
+ * @param {Function} isKiwis (key, value) -> whether Kiwi wrote that value
+ */
+function _restore(dock, originals, isKiwis) {
+    const { current, userSet } = _readKeys(dock);
+    for (const [key, step] of Object.entries(restorePlan(current, userSet, originals, isKiwis))) {
+        if (step.action === 'reset')
+            dock.reset(key);
+        else
+            dock.set_string(key, step.value);
+    }
+}
+
 /**
  * Put the user's Dash-to-Dock colours back if a previous session died while Kiwi
  * had them overwritten and the feature is not running now to do it itself. Call
@@ -364,9 +395,8 @@ export function restoreStaleColors(settings) {
     if (!dock)
         return;
 
-    const current = Object.fromEntries(SAVED_KEYS.map(key => [key, dock.get_string(key)]));
-    for (const [key, value] of Object.entries(staleRestores(current, saved, KIWI_VALUES)))
-        dock.set_string(key, value);
+    // Kiwi's last write is not known after a crash; any Kiwi colour counts as ours
+    _restore(dock, saved, (key, value) => KIWI_VALUES[key]?.includes(value) ?? false);
     settings.set_string(SAVED_SETTING, '');
 }
 
@@ -386,11 +416,12 @@ export function enable(settings) {
     enabled = true;
 
     kiwiSettings = settings?.settings_schema?.has_key(SAVED_SETTING) ? settings : null;
-    const current = Object.fromEntries(SAVED_KEYS.map(key => [key, d2d.get_string(key)]));
+    const { current, userSet } = _readKeys(d2d);
     // A record left over from a session that died before disable() still holds the
     // user's real colours; what is in the keys now may be ours
-    savedColors = resolveOriginals(current,
+    savedColors = captureOriginals(current, userSet,
         parseSaved(kiwiSettings?.get_string(SAVED_SETTING)), KIWI_VALUES);
+    written = {};
     kiwiSettings?.set_string(SAVED_SETTING, JSON.stringify(savedColors));
     screenshot = new Shell.Screenshot();
     bgSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.background' });
@@ -453,9 +484,10 @@ export function disable() {
     docks = [];
 
     // Nothing was saved when enable() never got as far as taking the dock over
-    for (const [key, value] of Object.entries(savedColors ?? {}))
-        d2d.set_string(key, value);
+    if (savedColors)
+        _restore(d2d, savedColors, (key, value) => written[key] === value);
     savedColors = null;
+    written = {};
     kiwiSettings?.set_string(SAVED_SETTING, '');
     kiwiSettings = null;
 
