@@ -9,7 +9,6 @@ locale
 # Generated GTK CSS (no longer written by the extension; see issue #86)
 css/gtk3.css
 css/gtk4.css
-tests/
 # Project docs and Claude Code skills are tracked
 !.claude/
 !.claude/**
