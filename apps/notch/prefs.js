@@ -48,7 +48,10 @@ export function buildPrefs({ settings, extension }) {
     settings.bind('notch-timeout', timeout, 'value', Gio.SettingsBindFlags.DEFAULT);
     group.add(timeout);
 
-    const rows = [notifications, activities, osd, timeout];
+    const clipboard = part(_('Show clipboard in the dashboard'),
+        _('Turn off to keep copied text off the screen while sharing it'), 'notch-show-clipboard');
+
+    const rows = [notifications, activities, osd, timeout, clipboard];
     const sync = () => rows.forEach(row => (row.sensitive = settings.get_boolean('notch')));
     const id = settings.connect('changed::notch', sync);
     sync();
