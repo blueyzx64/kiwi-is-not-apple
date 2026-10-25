@@ -6,6 +6,8 @@ import Gio from 'gi://Gio';
 import Gtk from 'gi://Gtk';
 import GObject from 'gi://GObject';
 
+const N_ = s => s;
+
 export const PAGE = { id: 'autohide', title: N_('Auto-hide Top Bar'), icon: 'view-fullscreen-symbolic' };
 
 /**
