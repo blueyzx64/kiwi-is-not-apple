@@ -10,6 +10,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Shell from 'gi://Shell';
 import St from 'gi://St';
+import { ngettext as ngettextFromExtension } from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { ModalSurface } from '../lib/modalSurface.js';
 import {
@@ -71,6 +72,7 @@ let recentKey = '';           // fingerprint of the list the piles were built fr
 let folderMonitor = null;     // Gio.FileMonitor on the Downloads folder
 let behindFolder = false;     // cards stick out of the folder rather than lie on it
 let gettextFunc = message => message;
+let ngettextFunc = (singular, plural, n) => (n === 1 ? singular : plural);
 const sources = { dockSearch: 0, refresh: 0 };
 // A re-place has to land on a frame boundary, not whenever the main loop next
 // goes idle, so it is a compositor later and stays out of the table above
@@ -193,11 +195,15 @@ function _fileIcon(info, size) {
         height: size * scaleFactor(),
     });
 
-    const thumbnail = info.get_attribute_byte_string('thumbnail::path');
-    const [format, imageWidth, imageHeight] = thumbnail
-        ? GdkPixbuf.Pixbuf.get_file_info(thumbnail) : [null, 0, 0];
+    const addGenericIcon = () => {
+        box.add_child(new St.Icon({
+            style_class: 'kiwi-fan-file-icon',
+            gicon: info.get_icon(),
+            icon_size: size,
+        }));
+    };
 
-    if (format) {
+    const addThumbnail = (thumbnail, imageWidth, imageHeight) => {
         // The texture cache fills whatever box it is given, so the box has to
         // have the picture's shape already. Reading the header - which is all
         // get_file_info does - is what tells us that before it is loaded.
@@ -228,13 +234,39 @@ function _fileIcon(info, size) {
                     ? Clutter.OffscreenRedirect.ALWAYS : 0;
         });
         box.add_child(frame);
-    } else {
-        box.add_child(new St.Icon({
-            style_class: 'kiwi-fan-file-icon',
-            gicon: info.get_icon(),
-            icon_size: size,
-        }));
+    };
+
+    const thumbnail = info.get_attribute_byte_string('thumbnail::path');
+    if (!thumbnail) {
+        addGenericIcon();
+        return box;
     }
+
+    // The header is read off the main loop; the generic icon holds the place
+    // until it says whether this is a picture. A row closed meanwhile cancels it.
+    const cancellable = new Gio.Cancellable();
+    box.connect('destroy', () => cancellable.cancel());
+    const placeholder = new St.Icon({
+        style_class: 'kiwi-fan-file-icon',
+        gicon: info.get_icon(),
+        icon_size: size,
+    });
+    box.add_child(placeholder);
+    GdkPixbuf.Pixbuf.get_file_info_async(thumbnail, cancellable, (_obj, res) => {
+        let format = null, imageWidth = 0, imageHeight = 0;
+        try {
+            [format, imageWidth, imageHeight] = GdkPixbuf.Pixbuf.get_file_info_finish(res);
+        } catch (e) {
+            if (cancellable.is_cancelled())
+                return;
+        }
+        if (cancellable.is_cancelled())
+            return;
+        if (format && imageWidth > 0 && imageHeight > 0) {
+            placeholder.destroy();
+            addThumbnail(thumbnail, imageWidth, imageHeight);
+        }
+    });
 
     return box;
 }
@@ -454,7 +486,7 @@ function _showFan(info) {
     const rest = recentCount - shown.length;
     let text = gettextFunc('Open in Files');
     if (rest > 0)
-        text = gettextFunc('%d More in Files').replace('%d', rest);
+        text = ngettextFunc('%d More in Files', '%d More in Files', rest).replace('%d', rest);
     else if (shown.length === 0)
         text = gettextFunc('Empty');
 
@@ -1028,8 +1060,9 @@ function _watchDocks() {
 
 /* ----------------------------------------------------------- entry points */
 
-export function enable(gettext, settings) {
+export function enable(gettext, settings, ngettext = ngettextFromExtension) {
     gettextFunc = gettext;
+    ngettextFunc = ngettext;
     if (enabled)
         return;
     enabled = true;
@@ -1097,4 +1130,5 @@ export function disable() {
     recentKey = '';
 
     gettextFunc = message => message;
+    ngettextFunc = (singular, plural, n) => (n === 1 ? singular : plural);
 }
