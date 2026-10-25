@@ -22,7 +22,7 @@ _Frozen: lib/ + features.js (S1), prefs builder, panelLayout (S2), lib/glass.js 
 - `raw, has(key)`, getters `bool/int/double/string/strv/enum`, setters `setBool/setInt/setDouble/setString/setStrv`.
 - `watch(keys|'*', fn(key))->unwatch`; `attach(registry)` once.
 - `migrate(list)` / `export runMigrations(gs, [{from, to, map?}])`: copies only if `from` is
-  user-set and `to` is not. Never resets `from`. Idempotent. **No `settings-version` key**
+  user-set and `to` is not, and only once per migration id (recorded in `migrations-done`). Never resets `from`. **No `settings-version` key**
   (this replaces the earlier orchestrator note).
 ### lib/compat.js: the only place that compares Shell versions
 - `SHELL_MAJOR, atLeast(n), SHELL_HAS_SYSTEM_DND` (49+), `maximizeWindow(win)`, `unmaximizeWindow(win)`,
