@@ -83,6 +83,8 @@ export default class KiwiExtension extends Extension {
             settings: this._settings,
             gettext: this.gettext.bind(this),
             interfaceSettings: this._interfaceSettings,
+            // Read-only lookup of other running features: features.instance('stage-manager')
+            features: { instance: id => this._features?.instance(id) ?? null },
         });
     }
 

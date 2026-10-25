@@ -5,7 +5,7 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
-import {createJobQueue} from './windowControls/model.js';
+import {createJobQueue, appButtonsMacos} from './windowControls/model.js';
 
 Gio._promisify(Gio.File.prototype, 'load_contents_async', 'load_contents_finish');
 Gio._promisify(Gio.File.prototype, 'replace_contents_bytes_async', 'replace_contents_finish');
@@ -229,7 +229,7 @@ export class MozillaThemeManager {
     enable() {
         this._settings = this._extension.getSettings();
         this._settingsChangedId = this._settings.connect('changed', (_settings, key) => {
-            if (key === this._config.settingsKey || key === 'enable-app-window-buttons' || key === 'button-type' || key === 'button-size' || key === 'show-window-controls' || key === 'remove-titlebar-buttons') {
+            if (key === this._config.settingsKey || key === 'enable-app-window-buttons' || key === 'button-type' || key === 'button-size' || key === 'show-window-controls' || key === 'remove-titlebar-buttons' || key === 'app-buttons-style' || key === 'window-controls-scope') {
                 this.updateCss();
             }
         });
@@ -255,7 +255,13 @@ export class MozillaThemeManager {
             return Promise.resolve();
         const snapshot = {
             enableStyling: settings.get_boolean(this._config.settingsKey),
-            enableAppButtons: settings.get_boolean('enable-app-window-buttons'),
+            enableAppButtons: appButtonsMacos({
+                showOnPanel: settings.get_boolean('show-window-controls'),
+                remove: settings.get_boolean('remove-titlebar-buttons'),
+                scope: settings.get_string('window-controls-scope'),
+                enableAppButtons: settings.get_boolean('enable-app-window-buttons'),
+                style: settings.get_string('app-buttons-style'),
+            }),
             // Hide the native buttons only while the panel shows them and removal is wanted
             showControlsOnPanel: settings.get_boolean('show-window-controls') &&
                 settings.get_boolean('remove-titlebar-buttons'),
