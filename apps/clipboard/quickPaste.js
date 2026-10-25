@@ -9,7 +9,7 @@ import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 
 import { ModalSurface } from '../../lib/modalSurface.js';
-import { ageText, buildRow, longPreview, sectionLabel, sizeText } from './view.js';
+import { addRow, ageText, longPreview, sectionLabel, sizeText } from './view.js';
 
 const WIDTH = 780;
 const HEIGHT = 460;
@@ -126,12 +126,12 @@ export class QuickPaste {
         const now = Date.now();
         const shownPinned = all.filter(e => e.pinned);
         const shownRecent = all.filter(e => !e.pinned);
-        const add = rows => rows.forEach(e => ui.list.add_child(buildRow(e, ctl, _, {
+        const add = rows => rows.forEach(e => addRow(ui.list, e, ctl, _, {
             tile: 30, now, onActivate: en => {
                 this._selected = en.id;
                 this._paste();
             },
-        })));
+        }));
         if (shownPinned.length) {
             ui.list.add_child(sectionLabel(_('Pinned')));
             add(shownPinned);
@@ -193,7 +193,10 @@ export class QuickPaste {
             const label = new St.Label({ text: longPreview(entry), style_class: 'kiwi-qp-text' });
             label.clutter_text.set_line_wrap(true);
             label.clutter_text.set_ellipsize(0);          // Pango.EllipsizeMode.NONE
-            sv.set_child(label);
+            // A ScrollView child must be StScrollable (GNOME 46+): wrap the label in a box
+            const box = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, x_expand: true });
+            box.add_child(label);
+            sv.set_child(box);
             ui.previewBox.add_child(sv);
         }
         const kind = { text: _('Text'), link: _('Link'), color: _('Colour'), image: _('Image') }[entry.type];
