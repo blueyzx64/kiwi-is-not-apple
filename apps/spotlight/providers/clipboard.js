@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Clipboard rows from the clipboard feature's history (through ClipboardPort). Text entries
+// Clipboard rows from the clipboard feature's history (clipboardService(), null while that
+// feature is off, so the group then simply does not exist). Text entries
 // are matched on their text; images only show in the empty-query list.
 
 import { rank } from '../model.js';
-import { ClipboardPort } from '../clipboardPort.js';
+import { clipboardService } from '../../clipboard/index.js';
 
 const MAX_SCAN = 200;
 const MAX_RESULTS = 6;
@@ -27,14 +28,14 @@ export class ClipboardProvider {
     }
 
     get available() {
-        return !!ClipboardPort.source;
+        return !!clipboardService();
     }
 
     searchSync(query) {
-        const source = ClipboardPort.source;
+        const source = clipboardService();
         if (!source)
             return [];
-        const items = source.items().slice(0, MAX_SCAN)
+        const items = source.latest(MAX_SCAN)
             .filter(e => e.kind === 'text' && typeof e.text === 'string')
             .map(e => toItem(e, this._));
         // Newest first is the tie-break; rank() is stable
@@ -42,13 +43,13 @@ export class ClipboardProvider {
     }
 
     recent(limit = 4) {
-        const source = ClipboardPort.source;
-        return source ? source.items().slice(0, limit).map(e => toItem(e, this._)) : [];
+        const source = clipboardService();
+        return source ? source.latest(limit).map(e => toItem(e, this._)) : [];
     }
 
     /** Copy (never paste: Spotlight is not a paste target). */
     activate(item) {
-        ClipboardPort.source?.copy(item.entry);
+        clipboardService()?.copy(item.entry);
         return true;
     }
 }
