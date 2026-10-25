@@ -2,7 +2,8 @@
 
 ## 1. Summary
 Keeps a history of what was copied (text, links, colours, images). It has a top-bar
-popover and a keyboard-driven **Quick Paste** window (Super+Shift+V).
+popover and a keyboard-driven **Quick Paste** window. There is no default shortcut (GNOME
+extension rules forbid one); the prefs row has a *Use Super+Shift+V* button.
 
 ## 2. Locked decisions
 - It is a must-have.
@@ -22,7 +23,7 @@ popover and a keyboard-driven **Quick Paste** window (Super+Shift+V).
   show nothing.
 
 ## 4. Settings (proposed)
-`clipboard-history` b · `clipboard-shortcut` as=`['<Super><Shift>v']` · `clipboard-panel-icon` b ·
+`clipboard-history` b · `clipboard-shortcut` as=`[]` (empty by default; the prefs button *Use Super+Shift+V* sets `['<Super><Shift>v']`) · `clipboard-panel-icon` b ·
 `clipboard-history-size` i=25 · `clipboard-images` b=true · `clipboard-persist` b=**true** ·
 `clipboard-ignore-sensitive` b=true
 
