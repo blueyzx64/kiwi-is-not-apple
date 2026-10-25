@@ -206,3 +206,27 @@ export function hasMonitorAbove(primary, others) {
     return others.some(m => m.y + m.height === primary.y &&
         m.x < primary.x + primary.width && m.x + m.width > primary.x);
 }
+
+const CHROME_KEYS = ['affectsStruts', 'trackFullscreen', 'affectsInputRegion'];
+
+/**
+ * Pick the chrome flags recorded for `actor` out of the layout manager's tracking list.
+ * Only keys the record really has are returned (50 dropped affectsInputRegion, and
+ * Params.parse() throws on unknown keys). Falls back to `fallback` when the actor is untracked.
+ *
+ * @param {object[]} records e.g. Main.layoutManager._trackedActors
+ * @param {object} actor
+ * @param {object} fallback
+ * @returns {object}
+ */
+export function chromeFlagsFor(records, actor, fallback) {
+    const rec = Array.isArray(records) ? records.find(r => r?.actor === actor) : null;
+    if (!rec)
+        return { ...fallback };
+    const out = {};
+    for (const k of CHROME_KEYS) {
+        if (typeof rec[k] === 'boolean')
+            out[k] = rec[k];
+    }
+    return { ...fallback, ...out };
+}
