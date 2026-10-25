@@ -54,7 +54,7 @@ class AddUsernameToQuickMenu extends St.Widget {
 
     _startSlideIn() {
         // Get the full width of the label
-        let [, naturalWidth] = this._usernameLabel.get_preferred_width(-1);
+        const [, naturalWidth] = this._usernameLabel.get_preferred_width(-1);
 
         // Set the container's width to the label's width
         this.set_width(naturalWidth);
@@ -75,7 +75,7 @@ class AddUsernameToQuickMenu extends St.Widget {
 
     animateOut(callback) {
         // Get the full width of the label
-        let [, naturalWidth] = this._usernameLabel.get_preferred_width(-1);
+        const [, naturalWidth] = this._usernameLabel.get_preferred_width(-1);
 
         // Stop any existing animations
         this._usernameLabel.remove_all_transitions();

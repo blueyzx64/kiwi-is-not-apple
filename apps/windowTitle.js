@@ -153,7 +153,7 @@ class WindowTitleIndicator extends PanelMenu.Button {
     }
 
     _onFocusedWindowChanged() {
-        let window = global.display.focus_window;
+        const window = global.display.focus_window;
 
         // The overview takes the input focus, leaving no focus window at all. Keep
         // the last one instead of blanking the panel; 'hidden' re-syncs from the
