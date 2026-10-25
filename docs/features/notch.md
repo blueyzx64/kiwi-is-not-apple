@@ -21,6 +21,9 @@ live activities and quick confirmations, and opens a dashboard on click. Canvas 
 | Dashboard | 640×200, radius 36 | Now Playing · Up next · Clipboard |
 
 - Motion: grows with a spring (≈ 0.45 s, slight overshoot) and shrinks with ease-out.
+- Ears: two 10px concave fillets flare the notch into the screen's top edge at its top-left and
+  top-right, like a MacBook notch. They follow the island through every width (snap constraints)
+  and stay while it is expanded, so the card also flows out of the top edge.
 - Hover keeps a notification open. With several queued, show the newest and a "+2" badge.
 - On screens with a real hardware notch, align to it (future).
 

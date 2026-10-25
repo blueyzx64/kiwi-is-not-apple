@@ -475,9 +475,18 @@
 
       <!-- Rounded window corners (apps/roundedCorners) -->
       <key name="rounded-corners" type="b">
-        <default>false</default>
+        <default>true</default>
         <summary>Rounded window corners</summary>
-        <description>Round all four corners of normal and dialog windows. Maximized, tiled and fullscreen windows keep square corners.</description>
+        <description>Round the corners of normal and dialog windows (see rounded-corners-which). Maximized, tiled and fullscreen windows keep square corners.</description>
+      </key>
+      <key name="rounded-corners-which" type="s">
+        <choices>
+          <choice value="top"/>
+          <choice value="all"/>
+        </choices>
+        <default>'top'</default>
+        <summary>Which corners are rounded</summary>
+        <description>'top' rounds the top-left and top-right corners and keeps the bottom ones square; 'all' rounds all four.</description>
       </key>
       <key name="rounded-corners-radius" type="i">
         <default>12</default>

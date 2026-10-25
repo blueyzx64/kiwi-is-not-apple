@@ -2,9 +2,11 @@
 // The per-window corner mask: a Shell.GLSLEffect (an OffscreenEffect) on the MetaWindowActor.
 //
 // The actor (window, CSD shadow margins, SSD shadow, subsurfaces) is rendered into the effect's
-// texture, then drawn through this fragment snippet. Only the four corner quadrants around the window's *frame* rect are touched (the area beyond
-// the arc centres, inside and outside the frame); everything else, including the shadow along
-// the straight edges, passes through unchanged.
+// texture, then drawn through this fragment snippet. Only the corner quadrants around the
+// window's *frame* rect that the corner mask selects are touched (the area beyond the arc
+// centres, inside and outside the frame); everything else, including the shadow along the
+// straight edges and the corners left square ('top' mode keeps the bottom ones), passes through
+// unchanged.
 //
 // In a corner quadrant, a pixel near or outside the rounded-rect boundary is not cut to
 // transparent, which would leave a square notch in the shadow and the 1px CSD outline standing
@@ -37,6 +39,7 @@ uniform vec2 kiwi_tex;
 uniform vec4 kiwi_frame;
 uniform float kiwi_radius;
 uniform float kiwi_aa;
+uniform vec4 kiwi_corners;
 
 vec4 kiwi_raw(vec2 px) {
     if (px.x < 0.0 || px.y < 0.0 || px.x > kiwi_tex.x || px.y > kiwi_tex.y)
@@ -56,13 +59,17 @@ vec4 kiwi_lin(vec2 px, vec2 axis) {
 // d.x and d.y both non-zero means p is in one of the four corner quadrants, inside or outside
 // the frame. probe: a point just inside the arc on the corner's diagonal; transparent there
 // means the app already rounds this corner at least as much, so it is left alone.
+// kiwi_corners: which corners are rounded, 1 or 0 for top-left, top-right, bottom-right,
+// bottom-left (texture y grows downwards, like the frame rect).
 const CODE = `
 vec2 p = cogl_tex_coord_in[0].xy * kiwi_tex;
 float r = kiwi_radius;
 vec2 c = clamp(p, kiwi_frame.xy + vec2(r), kiwi_frame.zw - vec2(r));
 vec2 d = p - c;
-if (r > 0.0 && d.x != 0.0 && d.y != 0.0) {
-    vec2 sg = sign(d);
+vec2 sg = sign(d);
+float on = sg.y < 0.0 ? (sg.x < 0.0 ? kiwi_corners.x : kiwi_corners.y)
+                      : (sg.x > 0.0 ? kiwi_corners.z : kiwi_corners.w);
+if (r > 0.0 && d.x != 0.0 && d.y != 0.0 && on > 0.5) {
     vec2 probe = c + sg * (r * 0.7071 - 0.5 * kiwi_aa);
     float dist = length(d) - r;
     float band = 3.0 * kiwi_aa;
@@ -98,9 +105,11 @@ export function effectClass() {
                 frame: this.get_uniform_location('kiwi_frame'),
                 radius: this.get_uniform_location('kiwi_radius'),
                 aa: this.get_uniform_location('kiwi_aa'),
+                corners: this.get_uniform_location('kiwi_corners'),
             };
             this._frame = null;   // frame in actor-local logical px
             this._radius = 0;
+            this._corners = [1, 1, 1, 1];
             this._key = '';       // texture size and scale the uniforms were computed for
         }
 
@@ -111,14 +120,17 @@ export function effectClass() {
         /**
          * @param {{x: number, y: number, width: number, height: number}} frame actor-local
          * @param {number} radius logical px
+         * @param {number[]} corners model.cornerMask(): 1 or 0 for TL, TR, BR, BL
          */
-        setGeometry(frame, radius) {
+        setGeometry(frame, radius, corners) {
             const same = this._frame && this._radius === radius &&
+                corners.every((v, i) => this._corners[i] === v) &&
                 ['x', 'y', 'width', 'height'].every(k => this._frame[k] === frame[k]);
             if (same)
                 return;
             this._frame = frame;
             this._radius = radius;
+            this._corners = [...corners];
             this._key = '';
             this.queue_repaint();
         }
@@ -149,6 +161,7 @@ export function effectClass() {
             this.set_uniform_float(this._loc.frame, 4, g.frame);
             this.set_uniform_float(this._loc.radius, 1, [g.radius]);
             this.set_uniform_float(this._loc.aa, 1, [g.aa]);
+            this.set_uniform_float(this._loc.corners, 4, this._corners);
         }
 
         vfunc_paint_target(node, paintContext) {
