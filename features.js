@@ -48,6 +48,7 @@ import { ControlCenter } from './apps/controlCenter/index.js';
 import { StageManager } from './apps/stageManager/index.js';
 import { Glass } from './lib/glass.js';
 import { ClipboardHistory } from './apps/clipboard/index.js';
+import { SpotlightFeature } from './apps/spotlight/index.js';
 
 // ctx: { extension, settings (Gio.Settings), gettext, interfaceSettings (Gio.Settings) }
 const bool = (ctx, key) => ctx.settings.get_boolean(key);
@@ -149,6 +150,11 @@ export const FEATURES = [
         // Local clipboard history; its panel icon claims a slot through PanelLayout
         id: 'clipboard-history', setting: 'clipboard-history',
         cls: ClipboardHistory,
+    },
+    {
+        // Super tap / shortcut opens Spotlight; the clipboard provider reads clipboardService() lazily
+        id: 'spotlight', setting: 'spotlight',
+        cls: SpotlightFeature,
     },
     {
         // Modes always / fullscreen-hover / autohide; runs for the last two. Reacts to its own

@@ -15,6 +15,11 @@ apps/liquidGlass/prefs.js
 apps/mediaPlayback.js
 apps/panelMedia.js
 apps/quickSettingsNotifications.js
+apps/spotlight/index.js
+apps/spotlight/prefs.js
+apps/spotlight/providers/clipboard.js
+apps/spotlight/providers/settingsCatalog.js
+apps/spotlight/view.js
 apps/stageManager/prefs.js
 apps/windowControls/prefs.js
 apps/windowTiling.js
