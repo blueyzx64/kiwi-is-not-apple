@@ -160,6 +160,7 @@ export class PanelVisibilityFeature {
         this._barriers = [];
         this._pressure = null;
         this._desktopQueued = 0;
+        this._dead = false;
 
         const box = this._box;
         // The public chrome API has no getter, so read the layout manager's tracking record
@@ -224,6 +225,8 @@ export class PanelVisibilityFeature {
 
         controller = this;
         cleanup.add(() => {
+            // Runs first on dispose: from here on no handler may touch the bar again.
+            this._dead = true;
             if (controller === this)
                 controller = null;
             emit();
@@ -266,7 +269,7 @@ export class PanelVisibilityFeature {
 
     // -- the state machine loop -------------------------------------------------------------
     _dispatch(event) {
-        if (!this._s)
+        if (!this._s || this._dead)
             return;
         const { state, effects } = step(this._s, event, this._cfg);
         this._s = state;
@@ -537,7 +540,7 @@ export class PanelVisibilityFeature {
     }
 
     _trackMenu(menu) {
-        if (!menu || this._menus.has(menu) || typeof menu.connect !== 'function')
+        if (this._dead || !menu || this._menus.has(menu) || typeof menu.connect !== 'function')
             return;
         this._menus.add(menu);
         const id = `menu:${this._menuSeq++}`;
