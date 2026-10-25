@@ -1320,36 +1320,47 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
 }
 
 /* feature: stage-manager */
-/* Strip pill. With glass on, lib/glass.js gives this actor its translucent fill (classes
-   .kiwi-glass-*); this is the fallback tint for when glass is off, and the pill radius. */
+/* No slab behind the strip: only the cards. Each window sits on a rounded translucent mat with a
+   soft shadow (concentric: mat 12px, the window's own corners inside). No glass, no blur. */
 .kiwi-stage-strip {
-    border-radius: 22px;
-    background-color: rgba(30, 30, 30, 0.28);
+    background-color: transparent;
 }
 
 .kiwi-stage-card {
-    border-radius: 12px;
+    border-radius: 14px;
     padding: 0;
     background-color: transparent;
-    border: 1px solid transparent;
-    transition-duration: 120ms;
+    border: none;
 }
 
-.kiwi-stage-card:hover,
-.kiwi-stage-card:focus {
+.kiwi-stage-thumb {
+    border-radius: 12px;
     background-color: rgba(255, 255, 255, 0.10);
-    border-color: rgba(255, 255, 255, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.32);
 }
 
-.kiwi-stage-badge {
-    border-radius: 9px;
-    background-color: rgba(0, 0, 0, 0.35);
-    padding: 2px;
+.kiwi-stage-card:hover .kiwi-stage-thumb,
+.kiwi-stage-card:focus .kiwi-stage-thumb {
+    background-color: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.30);
+}
+
+.kiwi-stage-card:focus .kiwi-stage-thumb {
+    border: 2px solid -st-accent-color;
 }
 
 .kiwi-stage-icon-tile {
-    border-radius: 10px;
-    background-color: rgba(255, 255, 255, 0.12);
+    background-color: rgba(40, 40, 44, 0.55);
+}
+
+.kiwi-stage-badge {
+    background-color: transparent;
+    padding: 0;
+}
+
+.kiwi-stage-badge-icon {
+    icon-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
 }
 
 /* feature: clipboard

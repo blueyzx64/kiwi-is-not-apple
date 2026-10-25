@@ -17,7 +17,8 @@ export const DEFAULTS = Object.freeze({
     padTop: 24,
     padBottom: 24,
     minScale: 0.55,       // cards shrink to this at most, then the strip stops listing more
-    rotation: 24,         // degrees, see cardTilt()
+    rotation: 0,          // degrees, see cardTilt(); a Y-rotated clone resamples and blurs
+    matPad: 5,            // px around a thumbnail inside its rounded card mat (scaled with the card)
     badge: 34,
     stackMax: 3,
     edgeZone: 2,
@@ -70,6 +71,34 @@ export function cropThumb(frame, buffer, boxW, boxH) {
         cloneW: buffer.width * s,
         cloneH: buffer.height * s,
     };
+}
+
+/**
+ * Where a window clone goes so that the window's frame fills `rect` (keeping the aspect ratio,
+ * centred). The clone has the buffer's size, pivot (0, 0) and a uniform scale.
+ * @param {rect} frame  Meta.Window.get_frame_rect()
+ * @param {rect} buffer Meta.Window.get_buffer_rect()
+ * @param {rect} rect   where the frame should be drawn
+ * @returns {{x: number, y: number, scale: number}|null} null for an empty frame or rect
+ */
+export function placeClone(frame, buffer, rect) {
+    if (!(frame.width > 0) || !(frame.height > 0) || !(rect.width > 0) || !(rect.height > 0))
+        return null;
+    const scale = Math.min(rect.width / frame.width, rect.height / frame.height);
+    const fx = rect.x + (rect.width - frame.width * scale) / 2;
+    const fy = rect.y + (rect.height - frame.height * scale) / 2;
+    return { x: fx + (buffer.x - frame.x) * scale, y: fy + (buffer.y - frame.y) * scale, scale };
+}
+
+/**
+ * A small rect centred on a point: where a window shrinks to when it has no card to land on.
+ * @param {{x: number, y: number}} point
+ * @param {rect} frame keeps its aspect ratio
+ * @param {number} width
+ */
+export function pointRect(point, frame, width = 24) {
+    const h = frame.width > 0 ? width * frame.height / frame.width : width;
+    return { x: point.x - width / 2, y: point.y - h / 2, width, height: h };
 }
 
 /**
@@ -401,6 +430,15 @@ export class StageModel {
             .filter(st => st.id !== this._current)
             .slice(0, this._recent)
             .map(st => this._view(st));
+    }
+
+    /**
+     * Is this window parked in the strip: in a stage that has a card (not the current one)?
+     * @param {string|number} id
+     * @param {number} [stripLimit] cards the strip really shows
+     */
+    inStrip(id, stripLimit = Infinity) {
+        return this.strip().slice(0, Math.max(0, stripLimit)).some(st => st.windows.includes(id));
     }
 
     /** Every stage, most recent first (current included). */
