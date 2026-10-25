@@ -26,3 +26,15 @@ list. Report per §9.
 | D7 | build-ci | .github/workflows/*, new Makefile, README.md (badge/install text only), metadata.json description (propose only, Outbox) | 2.11: CI job eslint + schema strict + tests/run.sh + gnome-extensions pack on PRs; replace archived upload-release-asset; Makefile pack/pot/install/test/lint; README badge 48–51 |
 | D8 | docs | docs/architecture/code-map.md, docs/features/README.md status column | code-map rows for everything merged so far (lib/, coordinators/, apps/windowControls/, apps/liquidGlass/, apps/autohide/, panelHover removed); features README status for merged features; nothing else |
 | R1 | reviewer 2 | none (read-only) | Second EGO/correctness reviewer. Same checklist as S10 (`.swarm/agents/S10.md`). Reviews whatever the orchestrator sends; never edits branches |
+
+## Wave F (orchestrator, more parallel work)
+Busy right now, so do not edit: notch files (S8: coordinators/notificationRouter.js,
+coordinators/mprisWatcher.js, lib/mpris.js, apps/notch/, calendar.js, quickSettingsNotifications.js,
+panelMedia.js, mediaPlayback.js), spotlight integration (S10: features.js, prefs.js, schema,
+stylesheet.css, po/), S9 (apps/stageManager/, windowControls*), D1 (mozillaThemeManager.js, gtkThemeManager.js).
+
+| ID | Card | Owns | Rows (§2) |
+|---|---|---|---|
+| D9 | small-modules | apps/downloadsStack.js (keep S4's ModalSurface hook), apps/lockIcon.js, apps/batteryPercentage.js | 2.11 '%d More in Files' via ngettext; 2.10 sync Pixbuf.get_file_info → async; 2.1 lockIcon hard-coded uuid lookup → pass ext/dir; 2.4 fixed startup delays → readiness signals where a public one exists; 2.5 battery label `<=` threshold with an edge flag (comments say 25%: use the schema/const) |
+| D10 | window-move | apps/moveFullscreenWindow.js, apps/windowTiling.js | 2.2 guard `_workspaceAnimation.movingWindow`; do not change the global `slow_down_factor` (2.10), or restore it exactly and only while animating; 2.3 guards; keep Stage Manager pause semantics |
+| L1 | lint | any JS file NOT in the busy list above | Fix eslint warnings (quotes, camelcase, prefer-const, consistent-return) with no logic change. One commit per file group. The count must go down and errors stay 0 |
