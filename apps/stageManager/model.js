@@ -12,13 +12,13 @@
 export const DEFAULTS = Object.freeze({
     stripWidth: 200,
     thumbW: 180,
-    thumbH: 116,
-    gap: 22,
+    thumbH: 130,
+    gap: 18,
     padTop: 24,
     padBottom: 24,
     minScale: 0.55,       // cards shrink to this at most, then the strip stops listing more
     rotation: 0,          // degrees, see cardTilt(); a Y-rotated clone resamples and blurs
-    matPad: 5,            // px around a thumbnail inside its rounded card mat (scaled with the card)
+    cardPad: 14,          // px between the card's edge and the window inside it (scaled with the card)
     badge: 34,
     stackMax: 3,
     edgeZone: 2,
