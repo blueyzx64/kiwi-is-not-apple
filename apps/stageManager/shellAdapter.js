@@ -40,17 +40,17 @@ export class WindowSource {
             this._track(win);
     }
 
-    /** Windows that belong on a stage: normal, on the active workspace, not minimized. */
+    /** Windows that belong on a stage: normal, on the active workspace. Minimized ones are listed too. */
     windows() {
         const ws = global.workspace_manager.get_active_workspace();
         const out = [];
         for (const win of this._tracked.keys()) {
-            if (win.get_window_type() !== Meta.WindowType.NORMAL || win.skip_taskbar || win.minimized)
+            if (win.get_window_type() !== Meta.WindowType.NORMAL || win.skip_taskbar)
                 continue;
             if (!win.located_on_workspace(ws) || !win.get_compositor_private())
                 continue;
             const app = this._tracker.get_window_app(win);
-            out.push({ id: win.get_stable_sequence(), appId: app?.get_id() ?? null, app, win });
+            out.push({ id: win.get_stable_sequence(), appId: app?.get_id() ?? null, app, win, minimized: win.minimized });
         }
         out.sort((a, b) => a.id - b.id);
         return out;

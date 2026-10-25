@@ -87,6 +87,12 @@ export class StageStrip {
         this._rebuild();
     }
 
+    /** Where windows shrink toward: the middle of the pill, or null when there is none. */
+    anchor() {
+        const p = this._pill;
+        return p ? { x: p.x + p.width / 2, y: p.y + p.height / 2 } : null;
+    }
+
     /** Cheap path for window moves: only re-decide whether the strip is shown. */
     setStageRects(rects) {
         this._state.stageRects = rects;

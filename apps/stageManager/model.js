@@ -317,6 +317,11 @@ export class StageModel {
         return this._view(this._stageById(key));
     }
 
+    /** Nothing is on the stage (e.g. the last window was sent to the strip). */
+    unfocus() {
+        this._current = null;
+    }
+
     get current() {
         const st = this._current ? this._stageById(this._current) : null;
         return st ? this._view(st) : null;

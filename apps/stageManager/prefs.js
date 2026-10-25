@@ -25,7 +25,7 @@ export function buildPrefs({ settings, window, extension }) {
 
     const main = new Adw.PreferencesGroup({
         title: _('Stage Manager'),
-        description: _('Other apps wait as live thumbnails in a strip at the edge of the screen. Click one to switch to it.'),
+        description: _('Other apps wait as live thumbnails in a strip at the edge of the screen. Click one to switch to it. While it is on, Minimize to Dock, window tiling by drag and Move Fullscreen Window are paused; their settings are kept.'),
     });
     const enabled = new Adw.SwitchRow({ title: _('Show the Stage Manager strip') });
     settings.bind('stage-manager', enabled, 'active', Gio.SettingsBindFlags.DEFAULT);

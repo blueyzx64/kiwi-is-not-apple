@@ -358,6 +358,23 @@ test('split survives a re-sync', () => {
     m.sync(SET);
     eq(m.stageOf(2).id, 'win:2');
 });
+test('unfocus clears the current stage and shows everything in the strip', () => {
+    const m = new StageModel();
+    m.sync(SET);
+    m.focus(1);
+    m.unfocus();
+    eq(m.current, null);
+    eq(m.strip().length, 4);
+    eq(m.visibility().show, []);
+});
+test('split of the only window of the current stage keeps it current', () => {
+    const m = new StageModel();
+    m.sync(SET);
+    m.focus(3);
+    m.split(3);
+    eq(m.current.windows, [3]);
+    eq(m.stages().length, 4);
+});
 test('views are copies', () => {
     const m = new StageModel();
     m.sync(SET);

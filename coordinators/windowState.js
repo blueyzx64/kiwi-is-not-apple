@@ -19,8 +19,9 @@
 //   - minimizedToDock must skip a window that is `staged`: no icon geometry, no dock thumbnail.
 //   - hideMinimizedWindows hides a window from the overview and alt-tab only when
 //     WindowState.hiddenFromSwitcher(win); a staged window stays visible there.
-//   - windowControls: minimize on a staged-capable window calls Stage Manager, see WindowState.stageActive.
-//   - moveFullscreenWindow and windowTiling pause while WindowState.stageActive is true.
+//   - windowControls asks WindowState.interceptMinimize(win) before win.minimize().
+//   - moveFullscreenWindow and the tiling drag-restore are paused by the feature registry
+//     (Stage Manager's conflictsWith), not by checking the flag; stageActive is for new code.
 //
 // No gi imports: runs under `gjs -m` in tests. A window is any object; if it has
 // connect/disconnect, its flags are dropped on 'unmanaged' by track().
@@ -33,6 +34,7 @@ export class WindowStateRegistry {
         this._unmanaged = new Map();  // window -> signal id
         this._listeners = new Set();
         this._stageActive = false;
+        this._interceptor = null;
     }
 
     /** Set or clear a flag. Returns true when it changed. */
@@ -127,6 +129,29 @@ export class WindowStateRegistry {
         this._emit(null, 'stageActive', on);
     }
 
+    // ---- minimize hook ------------------------------------------------------------------
+
+    /**
+     * Stage Manager registers a function(win) -> bool here. A caller that is about to minimize
+     * a window on the user's behalf (the panel window controls) asks interceptMinimize(win) first
+     * and skips win.minimize() when it returns true. Pass null to remove it.
+     */
+    setMinimizeInterceptor(fn) {
+        this._interceptor = typeof fn === 'function' ? fn : null;
+    }
+
+    /** True when Stage Manager took over this minimize (the window went to the strip). */
+    interceptMinimize(win) {
+        if (!this._interceptor || !this._stageActive)
+            return false;
+        try {
+            return !!this._interceptor(win);
+        } catch (e) {
+            console.error(`[Kiwi] windowState minimize interceptor: ${e.message}`);
+            return false;
+        }
+    }
+
     // ---- change signal ------------------------------------------------------------------
 
     /**
@@ -150,6 +175,7 @@ export class WindowStateRegistry {
         for (const win of [...this._flags.keys()])
             this.clear(win);
         this.setStageActive(false);
+        this._interceptor = null;
     }
 
     // ---- internals ----------------------------------------------------------------------

@@ -3,7 +3,7 @@
       <key name="stage-manager" type="b">
         <default>true</default>
         <summary>Stage Manager</summary>
-        <description>Show the other apps as live, stacked thumbnails in a strip at the screen edge. Click one to switch to it. While Stage Manager is on, Minimize to Dock is paused (its setting is kept).</description>
+        <description>Show the other apps as live, stacked thumbnails in a strip at the screen edge. Click one to switch to it. While Stage Manager is on, Minimize to Dock, window tiling by drag and Move Fullscreen Window are paused (their settings are kept).</description>
       </key>
       <key name="stage-manager-side" type="s">
         <default>'left'</default>
