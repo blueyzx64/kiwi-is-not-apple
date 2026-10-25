@@ -1286,6 +1286,13 @@ export default class KiwiPreferences extends ExtensionPreferences {
             { key: 'transparent-move', title: _('Transparent Move'), subtitle: _('Move window with transparency') },
         ]);
 
+        const gesturesGroup = new Adw.PreferencesGroup({ title: _('Gestures') });
+        settingsPage.add(gesturesGroup);
+        this._addSwitchRows(settings, gesturesGroup, [
+            { key: 'overview-gestures-workspace-only', title: _('Swipe Up to Workspaces Only'), subtitle: _('Swiping up opens the workspace overview and never the app grid. The apps button and Super+A still show it') },
+            { key: 'disable-hot-corner', title: _('Disable Hot Corner'), subtitle: _('Pointing at the top-left corner does not open the overview') },
+        ]);
+
         //
         // Advanced Page
         //
