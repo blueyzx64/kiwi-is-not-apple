@@ -11,7 +11,7 @@
 | Spotlight | S5 | done, merged | feat/spotlight |
 | Auto-hide bar | S6 | done, merged | feat/autohide |
 | Control Center | S7 | merged; Now Playing → MprisWatcher after notch | feat/control-center |
-| Notch | S8 | R8 APPROVE; S10 integrating; S8 small follow-up | feat/notch |
+| Notch | S8 | done, merged | feat/notch |
 | Stage Manager | S9 | done, merged incl. shortcut | feat/stage-manager |
 | User files (D1) | D1 | done, merged | debt/user-files |
 | Panel transparency (D2) | D2 | done, merged | debt/panel-transparency |
@@ -29,4 +29,4 @@
 | Audit merged CC/SM/clipboard/spotlight (A2) | A2 | doing | - |
 | Shell smoke harness (X1) | X1 | doing | - |
 | PR notes + manual test list (P1) | P1 | draft 1 committed; refresh at end | - |
-| Now Playing -> MprisWatcher | S8 | doing inside notch fixes | feat/notch |
+| Now Playing -> MprisWatcher | S8 | done, merged | feat/notch |
