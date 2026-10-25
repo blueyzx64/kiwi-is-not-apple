@@ -254,10 +254,37 @@
         <summary>Remove titlebar buttons from windows</summary>
         <description>While the panel shows window controls for all windows, remove the close, minimize and maximize buttons from every app's own titlebar. Kiwi sets the GNOME window button layout (org.gnome.desktop.wm.preferences button-layout) to one without them, which GTK 3, GTK 4/libadwaita, Chromium/Electron and server-side frames honour, and restores the saved original when the controls or this option are turned off or Kiwi is disabled. With the maximized or fullscreen scope the layout is left alone and GTK CSS in the user's gtk.css hides the buttons of GTK windows in those states.</description>
       </key>
+      <key name="app-buttons-position" type="s">
+        <choices>
+          <choice value="right"/>
+          <choice value="left"/>
+        </choices>
+        <default>'right'</default>
+        <summary>App titlebar buttons position (top-bar controls off)</summary>
+        <description>While show-window-controls is off, Kiwi sets the GNOME window button layout so every app shows its own close, minimize and maximize buttons on this side: 'right' (appmenu:minimize,maximize,close, the GNOME side) or 'left' (close,minimize,maximize:appmenu, the macOS side). Other layout entries are kept. The user's layout is saved in saved-button-layout and written back when the top-bar controls are turned on or Kiwi is disabled.</description>
+      </key>
+      <key name="app-buttons-style" type="s">
+        <choices>
+          <choice value="gnome"/>
+          <choice value="macos"/>
+        </choices>
+        <default>'gnome'</default>
+        <summary>App titlebar buttons style (top-bar controls off)</summary>
+        <description>While show-window-controls is off: 'gnome' leaves the apps' buttons in the stock libadwaita/GTK look, 'macos' applies Kiwi's traffic-light GTK CSS (button-type, button-size). Takes the place of enable-app-window-buttons for the apps while the controls are off; that key still decides with the controls on.</description>
+      </key>
+      <key name="app-buttons-set" type="s">
+        <choices>
+          <choice value="all"/>
+          <choice value="close"/>
+        </choices>
+        <default>'all'</default>
+        <summary>App titlebar buttons set (top-bar controls off)</summary>
+        <description>Which buttons the apps show while show-window-controls is off: 'all' (close, minimize and maximize) or 'close' only (the stock Fedora layout).</description>
+      </key>
       <key name="saved-button-layout" type="s">
         <default>''</default>
         <summary>Saved window button layout (internal)</summary>
-        <description>The user's org.gnome.desktop.wm.preferences button-layout, saved while Kiwi replaces it. Empty when Kiwi does not own the layout. A non-empty value found when Kiwi starts without needing it is written back once (crash recovery).</description>
+        <description>The user's org.gnome.desktop.wm.preferences button-layout, saved while Kiwi replaces it (top-bar controls on: without buttons; off: app-buttons-position). Empty when Kiwi does not own the layout. A non-empty value found when Kiwi starts without needing it is written back once (crash recovery).</description>
       </key>
 
       <!-- ========================================================= -->

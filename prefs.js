@@ -1179,7 +1179,7 @@ export default class KiwiPreferences extends ExtensionPreferences {
         // long as the feature is on, whatever the sub-options are set to.
         const buttonsExpander = new Adw.ExpanderRow({
             title: _('Enable macOS Window Buttons'),
-            subtitle: _('Replace window control buttons in application windows with macOS style'),
+            subtitle: _('macOS style for the top-bar controls, and for app windows that keep their buttons beside them. Otherwise apps follow the Style row below'),
             expanded: settings.get_boolean('enable-app-window-buttons'),
             show_enable_switch: true,
             enable_expansion: settings.get_boolean('enable-app-window-buttons'),
