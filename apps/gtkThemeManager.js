@@ -19,7 +19,7 @@ import GLib from 'gi://GLib';
 
 import { CleanupRegistry } from '../lib/disposables.js';
 import { KiwiSettings } from '../lib/settings.js';
-import { titlebarHideSheet, createJobQueue } from './windowControls/model.js';
+import { titlebarHideSheet, createJobQueue, appButtonsMacos } from './windowControls/model.js';
 
 const MARKER_BEGIN = '/* Kiwi (is not Apple) - managed imports: begin */';
 const MARKER_END = '/* Kiwi (is not Apple) - managed imports: end */';
@@ -132,7 +132,14 @@ class GtkThemeManager {
     // Stylesheets to pull in for a given GTK major version ('3' or '4').
     _stylesheetsFor(version) {
         const ks = this._ks;
-        const enableAppButtons = ks.bool('enable-app-window-buttons');
+        // app-buttons-style decides whenever the apps' buttons depend on it (appButtonsMacos)
+        const enableAppButtons = appButtonsMacos({
+            showOnPanel: ks.bool('show-window-controls'),
+            remove: ks.bool('remove-titlebar-buttons'),
+            scope: ks.string('window-controls-scope'),
+            enableAppButtons: ks.bool('enable-app-window-buttons'),
+            style: ks.string('app-buttons-style'),
+        });
         const buttonType = ks.string('button-type');
         const buttonSize = ks.string('button-size');
         const appFixes = ks.bool('popup-menu-styling');
@@ -218,7 +225,7 @@ class GtkThemeManager {
         ks.attach(this._cleanup);
         ks.watch([
             'enable-app-window-buttons', 'button-type', 'button-size', 'show-window-controls',
-            'window-controls-scope', 'remove-titlebar-buttons', 'popup-menu-styling',
+            'window-controls-scope', 'remove-titlebar-buttons', 'popup-menu-styling', 'app-buttons-style',
         ], () => this.updateGtkCss());
 
         this.updateGtkCss();

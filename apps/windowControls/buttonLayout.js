@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Owns org.gnome.desktop.wm.preferences button-layout while the panel shows the window
-// controls for every window, so no app keeps its own titlebar buttons: GTK 3, GTK 4 and
-// libadwaita, Chromium/Electron (GTK titlebar) and Mutter's server-side frames all follow it.
+// Owns org.gnome.desktop.wm.preferences button-layout, so every titlebar follows Kiwi: GTK 3,
+// GTK 4 and libadwaita, Chromium/Electron (GTK titlebar) and Mutter's server-side frames.
+// Two users, never at the same time (the feature registry stops one before starting the other):
+// - the panel window controls, for every window: the layout without its buttons;
+// - AppButtonsFeature (appButtons.js), while the top-bar controls are off: the apps' own
+//   buttons on the chosen side (appButtonsLayout).
 //
 // Crash safety: the user's value is saved in the Kiwi key `saved-button-layout` before the
 // layout is replaced, and cleared after it is written back. A non-empty saved value when Kiwi
@@ -31,11 +34,14 @@ export class ButtonLayoutOwner {
      * @param {object} kiwiSettings Gio.Settings of Kiwi (get_string / set_string)
      * @param {object} wmSettings Gio.Settings of org.gnome.desktop.wm.preferences
      * @param {() => void} [onOriginalChanged] the user changed the layout while Kiwi owns it
+     * @param {(original: string) => string} [transform] the layout Kiwi sets for a given
+     *   original; default: the original without its buttons (top-bar controls)
      */
-    constructor(kiwiSettings, wmSettings, onOriginalChanged = () => {}) {
+    constructor(kiwiSettings, wmSettings, onOriginalChanged = () => {}, transform = stripControlButtons) {
         this._kiwi = kiwiSettings;
         this._wm = wmSettings;
         this._onOriginalChanged = onOriginalChanged;
+        this._transform = transform;
         this._owning = false;
         this._forced = null;
         this._changedId = 0;
@@ -71,10 +77,19 @@ export class ButtonLayoutOwner {
             this._kiwi.set_string(SAVED_KEY, saved);
         }
         this._owning = true;
-        this._forced = stripControlButtons(saved);
+        this._forced = this._transform(saved);
         if (live !== this._forced)
             this._wm.set_string(WM_KEY, this._forced);
         this._changedId = this._wm.connect(`changed::${WM_KEY}`, () => this._onChanged());
+    }
+
+    /** The transform's inputs changed (e.g. a Kiwi setting): set the layout again. */
+    reapply() {
+        if (!this._owning)
+            return;
+        this._forced = this._transform(this.original);
+        if (this._wm.get_string(WM_KEY) !== this._forced)
+            this._wm.set_string(WM_KEY, this._forced);
     }
 
     // Someone else (Tweaks, gsettings) wrote the layout while Kiwi owns it: that is the user's
@@ -84,7 +99,7 @@ export class ButtonLayoutOwner {
         if (!this._owning || live === this._forced)
             return;
         this._kiwi.set_string(SAVED_KEY, live);
-        this._forced = stripControlButtons(live);
+        this._forced = this._transform(live);
         if (live !== this._forced)
             this._wm.set_string(WM_KEY, this._forced);
         this._onOriginalChanged();

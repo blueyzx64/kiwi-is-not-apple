@@ -34,10 +34,11 @@ import * as spotlightPrefs from './apps/spotlight/prefs.js';
 import * as notchPrefs from './apps/notch/prefs.js';
 import * as stageManagerPrefs from './apps/stageManager/prefs.js';
 import * as roundedCornersPrefs from './apps/roundedCorners/prefs.js';
+import * as showDesktopPrefs from './apps/showDesktop/prefs.js';
 
 // Feature prefs modules (see apps/<feature>/prefs.js): PAGE says where, buildPrefs() makes the groups
 // New pages appear in this order, after Options and before Advanced (Liquid Glass first).
-const FEATURE_PREFS = [liquidGlassPrefs, windowControlsPrefs, controlCenterPrefs, clipboardPrefs, spotlightPrefs, notchPrefs, stageManagerPrefs, roundedCornersPrefs];
+const FEATURE_PREFS = [liquidGlassPrefs, windowControlsPrefs, controlCenterPrefs, clipboardPrefs, spotlightPrefs, notchPrefs, stageManagerPrefs, roundedCornersPrefs, showDesktopPrefs];
 
 const D2D_UUIDS = ['dash-to-dock@micxgx.gmail.com', 'ubuntu-dock@ubuntu.com'];
 const EXTENSION_ACTIVE = 1;
@@ -1179,7 +1180,7 @@ export default class KiwiPreferences extends ExtensionPreferences {
         // long as the feature is on, whatever the sub-options are set to.
         const buttonsExpander = new Adw.ExpanderRow({
             title: _('Enable macOS Window Buttons'),
-            subtitle: _('Replace window control buttons in application windows with macOS style'),
+            subtitle: _('macOS style for the top-bar controls, and for app windows that keep their buttons beside them. Otherwise apps follow the Style row below'),
             expanded: settings.get_boolean('enable-app-window-buttons'),
             show_enable_switch: true,
             enable_expansion: settings.get_boolean('enable-app-window-buttons'),
@@ -1284,6 +1285,13 @@ export default class KiwiPreferences extends ExtensionPreferences {
             { key: 'reduce-window-animations', title: _('Reduce App Animations'), subtitle: _('Mimic macOS window opening and closing with a subtle scale and fade') },
             { key: 'focus-new-windows', title: _('Focus New Windows'), subtitle: _('Automatically focus new windows instead of showing window-ready alerts. Requires extension reload') },
             { key: 'transparent-move', title: _('Transparent Move'), subtitle: _('Move window with transparency') },
+        ]);
+
+        const gesturesGroup = new Adw.PreferencesGroup({ title: _('Gestures') });
+        settingsPage.add(gesturesGroup);
+        this._addSwitchRows(settings, gesturesGroup, [
+            { key: 'overview-gestures-workspace-only', title: _('Swipe Up to Workspaces Only'), subtitle: _('Swiping up opens the workspace overview and never the app grid. The apps button and Super+A still show it') },
+            { key: 'disable-hot-corner', title: _('Disable Hot Corner'), subtitle: _('Pointing at the top-left corner does not open the overview') },
         ]);
 
         //

@@ -12,12 +12,23 @@
 //            that one id, then connect our own handler. If no handler is found we do nothing
 //            and the stock behaviour stays; Spotlight is then reachable by its optional shortcut.
 //   stop():  disconnect ours, unblock exactly the id we blocked.
+//
+// Closing with Super while Spotlight is open: the modal runs in Shell.ActionMode.POPUP, and the
+// Shell allows 'overlay-key' only in NORMAL | OVERVIEW (js/ui/main.js _sessionUpdated). mutter
+// still swallows the bare Super release then (process_special_modifier_key in keybindings.c
+// returns STOP), but its filter-keybinding check drops the signal, so neither the stage nor
+// our handler would see the tap. allowInModal() adds POPUP for as long as Spotlight is open, and
+// restoreModes() puts back exactly the modes it found. Super+<key> combos are untouched: mutter
+// clears its "Super only" state on the other key and emits nothing.
+//
 // Other extensions' overlay-key handlers are not touched. The overview itself is untouched:
 // hot corner, touchpad gesture, Super+A and the Activities button keep working, and a Super
 // tap while the overview is open still closes it.
 
 import Gio from 'gi://Gio';
 import GObject from 'gi://GObject';
+
+import Shell from 'gi://Shell';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
@@ -30,6 +41,7 @@ export class OverlayKeyTakeover {
         this._handlerId = 0;
         this._blockedId = 0;
         this._a11y = null;
+        this._savedModes = null;   // overlay-key action modes before allowInModal(), or null
     }
 
     get active() {
@@ -69,7 +81,25 @@ export class OverlayKeyTakeover {
         this._handlerId = ours;
     }
 
+    /** While the Spotlight modal (POPUP mode) is up, let mutter deliver the Super tap to us. */
+    allowInModal() {
+        if (!this.active || this._savedModes !== null || typeof Main.wm?.allowKeybinding !== 'function')
+            return;
+        const current = Main.wm._allowedKeybindings?.['overlay-key'];
+        const before = Number.isInteger(current) ? current : Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW;
+        this._savedModes = before;
+        Main.wm.allowKeybinding('overlay-key', before | Shell.ActionMode.POPUP);
+    }
+
+    restoreModes() {
+        if (this._savedModes === null)
+            return;
+        Main.wm.allowKeybinding('overlay-key', this._savedModes);
+        this._savedModes = null;
+    }
+
     stop() {
+        this.restoreModes();
         if (!this.active)
             return;
         const display = global.display;

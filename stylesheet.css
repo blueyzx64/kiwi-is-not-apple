@@ -2221,6 +2221,12 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
     background: transparent;
 }
 
+/* The concave fillets beside the island's top corners; view.js paints them with Cairo in the
+   island's own background colour, so the actor itself draws nothing. */
+.kiwi-notch-ear {
+    background: transparent;
+}
+
 .kiwi-notch-row {
     spacing: 8px;
     padding: 0 14px;

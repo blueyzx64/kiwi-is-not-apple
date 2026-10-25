@@ -79,6 +79,7 @@ export const KIWI_TOGGLES = [
     { key: 'spotlight', icon: 'system-search-symbolic', label: N_('Spotlight') },
     { key: 'liquid-glass', icon: 'weather-fog-symbolic', label: N_('Liquid Glass') },
     { key: 'rounded-corners', icon: 'window-restore-symbolic', label: N_('Rounded Corners') },
+    { key: 'show-desktop-button', icon: 'kiwi-show-desktop-symbolic', label: N_('Show Desktop') },
 ];
 
 /** Columns of the Kiwi tile module. */
