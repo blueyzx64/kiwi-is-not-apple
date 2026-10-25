@@ -107,10 +107,20 @@ class FullscreenWorkspaceManager {
         settings.slow_down_factor = FULLSCREEN_ANIMATION_SLOWDOWN;
 
         this._slowdownResetId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, resetDelay, () => {
-            St.Settings.get().slow_down_factor = this._originalSlowDownFactor;
+            this._restoreSlowdown();
             this._slowdownResetId = 0;
             return GLib.SOURCE_REMOVE;
         });
+    }
+
+    /**
+     * Put the slow-down factor back, but only if it is still the value we set.
+     * Something else (a user, another extension) may have changed it meanwhile.
+     */
+    _restoreSlowdown() {
+        const settings = St.Settings.get();
+        if (settings.slow_down_factor === FULLSCREEN_ANIMATION_SLOWDOWN)
+            settings.slow_down_factor = this._originalSlowDownFactor;
     }
 
     /**
@@ -123,11 +133,20 @@ class FullscreenWorkspaceManager {
      * copy slide in. The animation is also slowed for a smoother transition.
      */
     _activateWorkspaceWithSlowAnimation(targetWs, movingWindow) {
-        this._raiseSlowdown(SLOWDOWN_RESET_DELAY);
+        // Private Shell API: pin only if the animation object still has the property
+        // (guards against upstream renames). Without the pin, fall back to a plain switch.
+        const animation = Main.wm?._workspaceAnimation;
+        const canPin = !!movingWindow && !!animation && 'movingWindow' in animation;
 
-        if (movingWindow) {
+        // Slow down only when an animation will actually play with the pinned window
+        if (canPin)
+            this._raiseSlowdown(SLOWDOWN_RESET_DELAY);
+
+        if (canPin) {
             // Pin the window so it stays fixed while the background slides
-            Main.wm._workspaceAnimation.movingWindow = movingWindow;
+            animation.movingWindow = movingWindow;
+            targetWs.activate_with_focus(movingWindow, global.get_current_time());
+        } else if (movingWindow) {
             targetWs.activate_with_focus(movingWindow, global.get_current_time());
         } else {
             targetWs.activate(global.get_current_time());
@@ -1020,7 +1039,7 @@ class FullscreenWorkspaceManager {
         if (this._slowdownResetId !== 0) {
             GLib.Source.remove(this._slowdownResetId);
             this._slowdownResetId = 0;
-            St.Settings.get().slow_down_factor = this._originalSlowDownFactor;
+            this._restoreSlowdown();
         }
 
         // Cancel all pending isolation timeouts
