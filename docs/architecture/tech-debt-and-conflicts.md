@@ -315,7 +315,7 @@ Items likely to be flagged next:
 | Med | No lint (no ESLint/gjs config), no `glib-compile-schemas --strict --dry-run`, no tests | Add an `eslint` job based on the gjs.guide ruleset and a schema check on PRs | ✔ |
 | Low | `pack-release.yml` uses `actions/upload-release-asset@v1` (archived) and installs the whole `gnome-shell` package for `gnome-extensions` | `softprops/action-gh-release`; a smaller dependency | ✔ |
 | Low | No local Makefile or zip script; translations need manual `xgettext` (no pot regeneration script); `'%d More in Files'` is not plural-aware (`downloadsStack.js:455`) | Add `make pack/pot/install`; use `ngettext` | ✔ |
-| Low | README badge "48–50" vs metadata 48–51 (`README.md:2`); `metadata.json` description lists features but not the dock or media changes | Sync | ✔ |
+| Low | README badge "48–50" vs metadata 48–51 (`README.md:2`); `metadata.json` description lists features but not the dock or media changes | Sync | ✔ Resolved: badge and `metadata.json` both say GNOME 50 (this release supports only GNOME 50 on Fedora 44) |
 | Low | `advanced/*.sh` messages refer to a non-existent "kiwi-kemma/extras" directory; install says "restart computer", uninstall says "log out" | Fix the text | ✔ |
 
 ---
