@@ -35,5 +35,17 @@ test('after missing falls back', () => eq(targetIndex(keys, { after: ['x'], fall
 test('unnamed children never match', () => eq(targetIndex([null, null], { before: ['x'] }), 2));
 test('empty box', () => eq(targetIndex([], { before: ['x'] }), 0));
 
+test('right box: lock first, media right after it, whatever the enable order', () => {
+    const lock = { first: true };
+    const media = { after: ['lock-indicator'], fallback: 'first' };
+    // media enabled first, no lock yet: leftmost
+    eq(targetIndex(['a11y', 'quickSettings'], media), 0);
+    // lock arrives: it goes first, media (re-placed) sits right behind it
+    eq(targetIndex(['kiwi-media', 'a11y', 'quickSettings'], lock), 0);
+    eq(targetIndex(['lock-indicator', 'a11y', 'quickSettings'], media), 1);
+    // lock enabled first, media later: same result
+    eq(targetIndex(['lock-indicator', 'a11y', 'quickSettings'], media), 1);
+});
+
 if (failed)
     throw new Error(`${failed} failed`);
