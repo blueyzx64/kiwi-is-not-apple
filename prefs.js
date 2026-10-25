@@ -1254,8 +1254,8 @@ export default class KiwiPreferences extends ExtensionPreferences {
         windowControlsPage.add(panelControlsGroup);
 
         const controlsRow = new Adw.SwitchRow({
-            title: _('Show Window Controls on Panel'),
-            subtitle: _('Display close, minimize, maximize buttons in the top panel for the focused window'),
+            title: _('Window controls in top bar (removes them from app windows)'),
+            subtitle: _('Close, minimize and maximize for the focused window. Turn off to give every app its own titlebar buttons back'),
         });
         panelControlsGroup.add(controlsRow);
         settings.bind('show-window-controls', controlsRow, 'active', Gio.SettingsBindFlags.DEFAULT);

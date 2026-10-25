@@ -2,7 +2,9 @@
 import {
     parseButtonLayout, resolvePlacement, shouldShow,
     titlebarHideSheet, resolveIcon, MIGRATIONS, createJobQueue,
+    stripControlButtons, ownsButtonLayout, planMinimize, planMaximize, centerIn, sameRect,
 } from '../apps/windowControls/model.js';
+import { ButtonLayoutOwner, restoreStaleButtonLayout, SAVED_KEY } from '../apps/windowControls/buttonLayout.js';
 import { isHelperWindowInfo } from '../apps/util/windows.js';
 import { runMigrations } from '../lib/settings.js';
 
@@ -76,9 +78,124 @@ test('maximized scope: fullscreen shows', () => eq(shouldShow({ ...base, scope: 
 test('fullscreen scope: maximized hides', () => eq(shouldShow({ ...base, scope: 'fullscreen', maximized: true }), false));
 test('fullscreen scope: fullscreen shows', () => eq(shouldShow({ ...base, scope: 'fullscreen', fullscreen: true }), true));
 
+// --- stripControlButtons / ownsButtonLayout
+test('strip stock GNOME layout', () => eq(stripControlButtons('appmenu:close'), 'appmenu:'));
+test('strip right trio', () => eq(stripControlButtons(':minimize,maximize,close'), ':'));
+test('strip keeps icon/spacer and sides', () =>
+    eq(stripControlButtons('close,icon,minimize:spacer,maximize,appmenu'), 'icon:spacer,appmenu'));
+test('strip empty/null', () => eq(stripControlButtons(null), ':'));
+test('owns layout only for scope all + remove', () => {
+    eq(ownsButtonLayout({ showOnPanel: true, remove: true, scope: 'all' }), true);
+    eq(ownsButtonLayout({ showOnPanel: true, remove: false, scope: 'all' }), false);
+    eq(ownsButtonLayout({ showOnPanel: false, remove: true, scope: 'all' }), false);
+    eq(ownsButtonLayout({ showOnPanel: true, remove: true, scope: 'maximized' }), false);
+    eq(ownsButtonLayout({ showOnPanel: true, remove: true, scope: 'fullscreen' }), false);
+});
+
+// --- planMinimize / planMaximize (forced minimize & maximize)
+test('normal window minimizes itself', () =>
+    eq(planMinimize([{ canMinimize: true }]), { action: 'minimize', index: 0 }));
+test('modal dialog goes down with its parent', () =>
+    eq(planMinimize([{ canMinimize: false }, { canMinimize: true }]), { action: 'minimize', index: 1 }));
+test('nested dialogs reach the first minimizable ancestor', () =>
+    eq(planMinimize([{ canMinimize: false }, { canMinimize: false }, { canMinimize: true }]),
+        { action: 'minimize', index: 2 }));
+test('nothing minimizable: lower', () => eq(planMinimize([{ canMinimize: false }]), { action: 'lower' }));
+test('empty chain: lower', () => eq(planMinimize([]), { action: 'lower' }));
+const mx = o => planMaximize({ fullscreen: false, maximized: false, filled: false, resizable: true, ...o });
+test('maximize resizable', () => eq(mx({}), 'maximize'));
+test('fixed size is centred', () => eq(mx({ resizable: false }), 'center'));
+test('maximized unmaximizes', () => eq(mx({ maximized: true, resizable: false }), 'unmaximize'));
+test('fullscreen leaves fullscreen first', () => eq(mx({ fullscreen: true, maximized: true }), 'unfullscreen'));
+test('filled window goes back', () => eq(mx({ filled: true }), 'unfill'));
+test('centerIn', () => eq(centerIn({ x: 0, y: 32, width: 1280, height: 768 }, 400, 300),
+    { x: 440, y: 266, width: 400, height: 300 }));
+test('centerIn clamps to the area', () => eq(centerIn({ x: 0, y: 0, width: 100, height: 100 }, 400, 50),
+    { x: 0, y: 25, width: 100, height: 50 }));
+test('sameRect slack', () => {
+    eq(sameRect({ x: 0, y: 0, width: 10, height: 10 }, { x: 1, y: 2, width: 9, height: 11 }), true);
+    eq(sameRect({ x: 0, y: 0, width: 10, height: 10 }, { x: 5, y: 0, width: 10, height: 10 }), false);
+    eq(sameRect(null, { x: 0, y: 0, width: 1, height: 1 }), false);
+});
+
+// --- ButtonLayoutOwner (fake settings)
+function fakeSettings(values) {
+    const handlers = new Map();
+    let next = 1;
+    return {
+        values,
+        get_string: k => values[k],
+        set_string(k, v) {
+            values[k] = v;
+            for (const [, h] of handlers) {
+                if (h.sig === `changed::${k}`)
+                    h.fn();
+            }
+        },
+        connect(sig, fn) {
+            handlers.set(next, { sig, fn });
+            return next++;
+        },
+        disconnect: id => handlers.delete(id),
+        get nHandlers() {
+            return handlers.size;
+        },
+    };
+}
+test('owner saves, strips and restores exactly', () => {
+    const kiwi = fakeSettings({ [SAVED_KEY]: '' });
+    const wm = fakeSettings({ 'button-layout': 'appmenu:minimize,close' });
+    const o = new ButtonLayoutOwner(kiwi, wm);
+    o.sync(true);
+    eq(wm.values['button-layout'], 'appmenu:');
+    eq(kiwi.values[SAVED_KEY], 'appmenu:minimize,close');
+    eq(o.original, 'appmenu:minimize,close');
+    o.sync(false);
+    eq(wm.values['button-layout'], 'appmenu:minimize,close');
+    eq(kiwi.values[SAVED_KEY], '');
+    eq(wm.nHandlers, 0);
+    eq(o.original, 'appmenu:minimize,close');
+});
+test('owner: user change while owned becomes the new original', () => {
+    const kiwi = fakeSettings({ [SAVED_KEY]: '' });
+    const wm = fakeSettings({ 'button-layout': 'appmenu:close' });
+    let notified = 0;
+    const o = new ButtonLayoutOwner(kiwi, wm, () => notified++);
+    o.sync(true);
+    wm.set_string('button-layout', 'close,minimize,maximize:');
+    eq(wm.values['button-layout'], ':');
+    eq(o.original, 'close,minimize,maximize:');
+    eq(notified, 1);
+    o.release();
+    eq(wm.values['button-layout'], 'close,minimize,maximize:');
+});
+test('owner: release when not owning is a no-op', () => {
+    const kiwi = fakeSettings({ [SAVED_KEY]: '' });
+    const wm = fakeSettings({ 'button-layout': 'appmenu:close' });
+    new ButtonLayoutOwner(kiwi, wm).release();
+    eq(wm.values['button-layout'], 'appmenu:close');
+});
+test('stale saved layout is restored once', () => {
+    const kiwi = fakeSettings({ [SAVED_KEY]: 'appmenu:close' });
+    const wm = fakeSettings({ 'button-layout': 'appmenu:' });
+    eq(restoreStaleButtonLayout(kiwi, wm), true);
+    eq(wm.values['button-layout'], 'appmenu:close');
+    eq(kiwi.values[SAVED_KEY], '');
+    eq(restoreStaleButtonLayout(kiwi, wm), false);
+});
+test('owner after a crash keeps the saved original, not the stripped live value', () => {
+    const kiwi = fakeSettings({ [SAVED_KEY]: 'appmenu:close' });
+    const wm = fakeSettings({ 'button-layout': 'appmenu:' });
+    const o = new ButtonLayoutOwner(kiwi, wm);
+    o.sync(true);
+    eq(o.original, 'appmenu:close');
+    o.sync(false);
+    eq(wm.values['button-layout'], 'appmenu:close');
+});
+
 // --- titlebarHideSheet
 const sheet = (o) => titlebarHideSheet({ showOnPanel: true, remove: true, scope: 'all', gtkVersion: '4', ...o });
-test('all -> always sheet', () => eq(sheet({}), 'hide-titlebar-always4.css'));
+test('all -> no sheet (the button-layout does it, live)', () => eq(sheet({}), null));
 test('maximized -> classic sheet', () => eq(sheet({ scope: 'maximized', gtkVersion: '3' }), 'hide-titlebar3.css'));
 test('fullscreen -> fullscreen sheet', () => eq(sheet({ scope: 'fullscreen' }), 'hide-titlebar-fullscreen4.css'));
 test('remove off -> none', () => eq(sheet({ remove: false }), null));
