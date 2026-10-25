@@ -16,7 +16,7 @@ Manager strip. One switch turns it all off.
 - Layers, from the back: blur of what is behind → tint (light or dark, following
   `color-scheme`) → a 1px inner highlight on the top edge → a soft drop shadow.
 - Style: **Tinted** (default, easier to read) or **Clear**.
-- Corner radii (concentric): panel popovers 22, tiles 16, rows 10, buttons pill or 8.
+- Corner radii are concentric (inner radius = outer − padding). Exact tokens are in the `apple-design` skill and override the canvas mock-ups.
 - Refraction at the edges (GLSL) is **experimental and off by default**.
 - Performance mode blurs a still copy of the wallpaper instead of the live screen.
   It turns on automatically in Power Saver when the user chose that.
