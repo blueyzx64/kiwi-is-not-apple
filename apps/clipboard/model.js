@@ -653,6 +653,17 @@ function _entriesFrom(items, limits) {
     return out;
 }
 
+/**
+ * Merge the saved history (loaded late, after enable) with entries recorded meanwhile.
+ * Live entries win over saved copies of themselves (newer time, current pin state).
+ *
+ * @returns {{history: History, evicted: object[]}}
+ */
+export function mergeLoaded(live, saved, opts = {}) {
+    const ids = new Set(live.map(e => e.id));
+    return historyFrom([...live, ...saved.filter(e => !ids.has(e.id))], opts);
+}
+
 /** Build a History from parsed entries (applies the cap; returns evicted too). */
 export function historyFrom(entries, opts = {}) {
     const h = new History(opts);
