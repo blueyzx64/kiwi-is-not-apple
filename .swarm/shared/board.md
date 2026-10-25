@@ -11,7 +11,7 @@
 | Spotlight | S5 | done, merged | feat/spotlight |
 | Auto-hide bar | S6 | done, merged | feat/autohide |
 | Control Center | S7 | merged; Now Playing → MprisWatcher after notch | feat/control-center |
-| Notch | S8 | R8 CHANGES; S8 fixing | feat/notch |
+| Notch | S8 | fixed; R8 re-check | feat/notch |
 | Stage Manager | S9 | merged; shortcut after clipboard (keybindings) | feat/stage-manager |
 | User files (D1) | D1 | done, merged | debt/user-files |
 | Panel transparency (D2) | D2 | done, merged | debt/panel-transparency |
@@ -23,10 +23,10 @@
 | Docs (D8) | D8 | pass 1 merged; pass 2 at end | debt/docs |
 | Reviewer 2 | R1 | reviewing S4 | - |
 | Audit fixes (autohide restore, glass contrast/menu destroy) | S6, S3 | done, merged | feat/autohide-fix, feat/liquid-glass-fix2 |
-| Small modules (D9) | D9 | doing | debt/small-modules |
+| Small modules (D9) | D9 | built; R10 review | debt/small-modules |
 | Window move (D10) | D10 | done, merged | debt/window-move |
 | Lint (L1) | L1 | pass 1 merged (104→101); pass 2 at end | debt/lint |
 | Audit merged CC/SM/clipboard/spotlight (A2) | A2 | doing | - |
 | Shell smoke harness (X1) | X1 | doing | - |
-| PR notes + manual test list (P1) | P1 | doing | - |
+| PR notes + manual test list (P1) | P1 | draft 1 committed; refresh at end | - |
 | Now Playing -> MprisWatcher | S8 | doing inside notch fixes | feat/notch |
