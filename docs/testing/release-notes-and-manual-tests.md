@@ -2,7 +2,13 @@
 
 Brings the 8 planned macOS-style features (window controls, Liquid Glass, auto-hide top bar, clipboard history, Spotlight, Control Center, Stage Manager, notification notch) to GNOME 48–51, on top of a new foundation (feature registry, shared `lib/` services, `coordinators/`) and a round of tech-debt fixes.
 
-**Checks run in the cloud:** `make check` (eslint 0 errors / 0 warnings, strict schema compile, 25 `gjs -m` unit-test files green), `make pack`, prefs pages smoke-built under Xvfb, and `make smoke` (headless GNOME Shell **46** with container-only shims, 10 enable/disable cycles: 0 Kiwi CRITICALs; the only remaining errors come from the Shell-46 shim). **No GNOME Shell 48–51 session was run.** Please work through the manual test list below on real 48 and 51 at least.
+**Checks run in the cloud:**
+- `make check`: eslint 0 errors / 0 warnings, strict schema compile, `gjs -m` unit tests green.
+- `make pack`, and the prefs pages smoke-built under Xvfb.
+- `make smoke`: headless Shell 46 with shims.
+- **Headless real GNOME Shell 48.1 and 51.1** (Arch chroot): 20 enable/disable cycles each, 7 functional probes PASS on both, 0 Kiwi errors. See section 4d.
+
+Headless runs can't check looks, real input, real apps or GNOME 49/50, so please still work through the manual list on real 48 and 51 at least.
 
 ## 1. Summary
 
@@ -42,10 +48,12 @@ New features default to ON (owner decision); users opt out in prefs.
   - The overview stays on the hot corner, gesture, Super+A and the Activities button.
   - Super+Space is untouched. Spotlight can be turned off, or the tap setting alone, in prefs.
   - Kiwi blocks only the Shell's own `overlay-key` handler and restores it on disable.
+  - An empty search shows recent apps only. Recent clipboard rows appear only with `spotlight-recent-clipboard` on (default off). Typing still searches the clipboard.
 - **Auto-hide top bar is ON:**
   - The bar is hidden until the pointer pushes at the top edge (about 0.15 s dwell), and hides about 0.6 s after leaving.
   - `panel-hover-fullscreen` migrates to `panel-autohide` plus the fullscreen-only option, so users who had fullscreen hover keep similar behaviour.
-- **Clipboard history is saved to disk by default**, in `~/.local/share/kiwi/clipboard/` (directory 0700, files 0600), and reloaded on enable. Password-manager secrets are not recorded, and nothing is recorded while locked. **The shortcut is empty by default** (EGO rule); a prefs button sets Super+Shift+V.
+  - Strut fix: turning auto-hide off (or re-showing the bar) restores a correct work-area strut, so maximized windows no longer sit under the bar. The bar re-parks on monitor changes.
+- **Clipboard history is saved to disk by default**, in `~/.local/share/kiwi/clipboard/` (directory 0700, files 0600), and reloaded on enable. Password-manager secrets are not recorded, and nothing is recorded while locked. Text that looks like a private key, API token, JWT, card number (Luhn check) or long random token is skipped too (heuristics, not a guarantee). Images over 8192 px a side or 40 Mpx, and SVGs, are not stored. **The shortcut is empty by default** (EGO rule); a prefs button sets Super+Shift+V.
 - **Liquid Glass is ON.** With it on, the old `panel-blur`/`dock-blur` keys do nothing; the surfaces list rules. Old values migrate into that list.
 - **Control Center is ON.**
   - The Quick Settings grid becomes 4 columns with a new order, a user row (avatar, name, battery with time left) and a Now Playing tile.
@@ -54,16 +62,23 @@ New features default to ON (owner decision); users opt out in prefs.
 - **Stage Manager is ON and wins over minimize-to-dock.**
   - While it is on, `minimize-to-dock`, `move-window-to-new-workspace` and `tiling-title-menu` are paused. Their saved values are kept.
   - Windows are hidden (opacity 0), never minimized.
+  - Always-on-top, sticky and picture-in-picture windows are exempt, as are windows on other monitors. Dialogs follow their owner's stage. The strip reveal uses a pressure barrier.
+  - Lock/unlock restarts the stage order (windows are kept).
 - **Notch replaces stock banners and the stock OSD** on the primary monitor. History stays in the calendar menu. Do Not Disturb still rules. Turning the notch off restores stock banners.
 - **Media is shown once:** with the notch on, the notch live activity replaces the panel media button (the Control Center Now Playing tile stays).
 - **Notch forces the calendar-right layout** (clock on the right, notifications in Quick Settings); the move-calendar-right row is greyed with "On while the notch is on".
-- **Clipboard in the notch:** a "Copied" pill and a Clipboard dashboard panel (switch: "Show clipboard in the dashboard"). Critical notifications are requeued; transient ones expire.
+- **Clipboard in the notch:** a "Copied" pill, and a Clipboard dashboard panel that is **off by default** (`notch-show-clipboard=false`, switch "Show clipboard in the dashboard"; screen-share privacy). Notification bodies are markup-escaped like stock banners. Critical notifications are requeued; transient ones expire.
 - **Stage Manager shortcut:** new key, empty by default (prefs suggests Ctrl+Super+S only if no known conflict). The binding lives even while Stage Manager is off.
 - **Hide-minimized-windows** is aware of Stage Manager; opening a modal (Spotlight, Quick Paste) closes open menus first.
 - **Panel transparency** now reacts to windows on all workspaces; the 2 s poll is gone.
-- **Prefs:** new pages in this order after the existing ones: Liquid Glass, Window Controls, Auto-hide Top Bar, Control Center, Clipboard, Spotlight, Notch, Stage Manager; Advanced stays last. The old fullscreen-hover row and the username row are removed.
+- **Prefs:** new pages in this order after the existing ones: Liquid Glass, Window Controls, Auto-hide Top Bar, Control Center, Clipboard, Spotlight, Notch, Stage Manager; Advanced stays last. The old fullscreen-hover row is removed; the username row is back and defers to Control Center.
+  - A feature page that fails to build no longer breaks the prefs window.
+  - Restore Defaults skips internal keys.
+- **Settings migrations run once:** they run before the features start, and each is recorded in the internal key `migrations-done`. If you reset a new key, the old value is not copied back.
+- **Feature registry:** a feature whose enable fails no longer keeps the features it overrides paused.
+- **Reduced motion is detected on GNOME 50/51** (the a11y key is an enum; it was read wrongly before).
 - **Minimize-to-dock snapshots:** snapshots are cleared on disable except while locked. After disable and re-enable, a minimized window's tile may fall back to its icon (accepted).
-- **Dock colours:** Dash to Dock original colours are saved in `dock-colors-saved` and restored on the next enable after a crash.
+- **Dock colours:** Dash to Dock original colours are saved in `dock-colors-saved` and restored on disable and after a crash. Keys that were at their default are `reset()`; a colour you change while Kiwi runs is left alone. Launchpad removes only its own id from `favorite-apps`.
 - **Window title:** a whitespace-only title now clears the label instead of showing a blank one.
 
 ## 3. Manual test list for GNOME 48 to 51
@@ -90,6 +105,9 @@ Run each item on 48, 49, 50 and 51 where possible, on Wayland and X11 where note
 - [ ] Turn Firefox styling off. Expected: Kiwi does not write into the profile at all, including `Hidden.css`.
 - [ ] Lock and unlock. Expected: no profile churn errors in the journal.
 - [ ] Kill the Shell and check `~/.config/gtk-3.0/gtk.css`, then re-enable. Expected: Kiwi block cleaned up on re-enable.
+- [ ] Make `gtk.css` and `user.js` symlinks (dotfiles), then enable and disable. Expected: both are still symlinks with the targets edited in place.
+- [ ] Edit `userChrome.css` outside the Kiwi block, then relogin and disable. Expected: your edits survive.
+- [ ] Use two Firefox installs, then switch the default profile. Expected: both profiles styled; the old one is cleaned on disable.
 
 ### `advanced/` GTK3 module
 - [ ] Run `./install-extra.sh`, then log out and in. Expected: `systemctl --user show-environment | grep GTK3_MODULES` keeps any other modules.
@@ -149,7 +167,10 @@ Run each item on 48, 49, 50 and 51 where possible, on Wayland and X11 where note
 - [ ] Enable the feature. Expected: top-bar icon shows. Click "Use Super+Shift+V" in prefs, then press it. Expected: Quick Paste opens; copied text from 3 apps appears with app names.
 - [ ] Copy the same text twice. Expected: one row, moved to the top. Pin one, copy 30 others. Expected: pinned stays; the 25-entry cap holds.
 - [ ] Paste from Quick Paste into gedit, Firefox and a terminal. Expected: text lands in the previous window; the terminal gets Ctrl+Shift+V.
-- [ ] Copy a screenshot to the clipboard. Expected: thumbnail shows and pastes into an image editor; an image over 5 MB is skipped.
+- [ ] Copy a screenshot to the clipboard. Expected: thumbnail shows and pastes into an image editor; images over 8192 px a side or 40 Mpx, and SVGs, are skipped.
+- [ ] Copy a test PEM private-key block, a test card number and a long random token. Expected: none are recorded.
+- [ ] Copy during a slow load (big history), then check `history.json`. Expected: nothing lost; the loaded and new entries are merged.
+- [ ] While an input method is composing in Quick Paste, press the arrow keys. Expected: the arrows go to the IME, not the list.
 - [ ] Copy from KeePassXC and Bitwarden. Expected: not recorded (check `~/.local/share/kiwi/clipboard/history.json`).
 - [ ] Copy, lock, unlock. Expected: history is back; copies made while locked are not recorded; `ls -l` shows directory 700, files 600.
 - [ ] Log out and in. Expected: history is back. Turn persist off. Expected: files deleted, history stays for the session only.
@@ -168,11 +189,16 @@ Run each item on 48, 49, 50 and 51 where possible, on Wayland and X11 where note
 - [ ] Type "5 km in miles", "72 f to c", "2^10", "1/0", "sqrt(-1)". Expected: conversions and 1024 shown; the last two give no result.
 - [ ] Type "wifi", then "liquid glass" and Enter. Expected: Liquid Glass toggles and the subtitle flips; the "stage manager" row shows only if its key exists.
 - [ ] Type a file name and press Enter; slow or kill a search provider. Expected: file opens; other groups still appear within 1.8 s.
-- [ ] Open with an empty query. Expected: recent apps and recent clipboard; no clipboard group when the clipboard feature is off.
+- [ ] Open with an empty query. Expected: recent apps only. Turn on "Show recent clipboard when the search is empty". Expected: the recent clipboard group appears. Typing still finds clipboard entries.
 - [ ] Use the web row, a custom engine, and "gnome.org". Expected: browser opens with the engine; "gnome.org" gives an Open row.
 - [ ] Open Spotlight and lock (Super+L); also open it with the Downloads fan up. Expected: no modal after unlock and the keyboard works; only one overlay stays.
 - [ ] Turn on reduced motion and text scale 1.5, and try two monitors. Expected: no fade, no clipping, shows on the primary monitor.
 - [ ] Open Spotlight, then press the Quick Paste shortcut. Expected: only one stays open.
+- [ ] Enable another extension that handles Super (for example Dash to Dock "Super key" options). Expected: a Super tap opens Spotlight; with Kiwi disabled, the other extension's Super behaviour works. The blocked handler id is in the debug log.
+- [ ] With Spotlight open, press Super+Space, Super+Left and a long Super hold, then a bare Super tap. Expected: it stays open for the first three and closes on the bare tap.
+- [ ] Compose with IBus (for example Pinyin) in the field and press Return. Expected: the text is committed and no result opens.
+- [ ] Tap Super while dragging a window by its title bar. Expected: Spotlight does not open.
+- [ ] Type `e`, `pi`, `10:30`, `2024-10-25`. Expected: no calculator Top hit.
 
 ### Control Center
 - [ ] Open Quick Settings. Expected: blocks for Wi-Fi/Bluetooth, DND/Stage Manager/Liquid Glass, brightness, volume, toggles, with the footer last.
@@ -202,6 +228,13 @@ Run each item on 48, 49, 50 and 51 where possible, on Wayland and X11 where note
 - [ ] Minimize a staged window from the panel, then toggle Kiwi off. Expected: it goes to the strip and the next app takes the stage; on disable all windows return and that one is minimized.
 - [ ] Toggle stage-manager 20x and lock/unlock. Expected: no window stuck invisible; sizes and places unchanged.
 - [ ] Check conflicts. Expected: with Stage Manager on, minimize-to-dock, move-window-to-new-workspace and tiling-title-menu are paused with saved values kept; alt-tab to a hidden window switches to its stage.
+- [ ] Open a dialog (for example Save As) from a staged app. Expected: focus goes to the owner's stage; the dialog is not a separate card.
+- [ ] Use an always-on-top window, a sticky window and a picture-in-picture video. Expected: they are never hidden by stage switches.
+- [ ] With two monitors, open windows on the second monitor. Expected: they stay untouched; the strip works on the primary.
+- [ ] Minimize the only window of the only stage. Expected: it really minimizes, and a minimized window shows as an icon tile.
+- [ ] Push the pointer at the strip edge with strip auto-hide on. Expected: the strip reveals on pressure, not on a plain edge touch.
+- [ ] Open the overview with staged windows on several workspaces, then close it. Expected: all are shown in the overview and re-hidden after.
+- [ ] Lock, then unlock. Expected: windows are kept; the stage order starts fresh.
 
 ### Notch
 - [ ] Log in fresh with the notch on. Expected: black 190x32 pill at top centre, clock at right, no overlap.
@@ -220,6 +253,8 @@ Run each item on 48, 49, 50 and 51 where possible, on Wayland and X11 where note
 - [ ] Copy text with the clipboard feature on. Expected: a "Copied" pill appears; the dashboard shows a Clipboard panel with the latest entries.
 - [ ] Send a critical notification, then others, then dismiss it. Expected: the critical card is requeued rather than lost; transient notifications expire on their own.
 - [ ] With the notch on, check the panel. Expected: no separate panel media button (media only in the notch); move-calendar-right is greyed "On while the notch is on".
+- [ ] Open the dashboard with default settings, then turn on "Show clipboard in the dashboard". Expected: no Clipboard panel by default; it appears when on and goes at once when off. Clicking an evicted entry gives no error.
+- [ ] Run `notify-send 'T' '<b>bold</b> <script>x</script> & <a href="https://x">l</a>'`. Expected: bold shown, the rest escaped as text, no blank card; an app without the markup flag shows the tags literally.
 
 ### Stage Manager shortcut
 - [ ] Set a Stage Manager shortcut in prefs (try the Ctrl+Super+S suggestion). Expected: it toggles Stage Manager; the field is empty by default.
@@ -242,34 +277,46 @@ Run each item on 48, 49, 50 and 51 where possible, on Wayland and X11 where note
 - [ ] Log in and toggle Caps/Num Lock. Expected: indicators show at login and on toggle (no fixed delay).
 - [ ] Battery at or below 20% discharging, then plug in, and start at 15%. Expected: label slides in, slides out when plugged, and shows at start.
 - [ ] Move a fullscreen window to a new workspace and use tiling drag-restore, with and without Stage Manager. Expected: normal when off; paused while Stage Manager is on.
+- [ ] Before upgrading set `panel-hover-fullscreen=false`, upgrade, then reset `panel-autohide` and re-enable Kiwi. Expected: the migration ran once; the reset value is not overwritten.
+- [ ] Break one feature's prefs page (for example by removing its file in a test copy), then open prefs. Expected: the other pages still open.
+- [ ] Turn auto-hide on, then off, with a maximized window. Expected: the window shrinks once to the correct work area, not under the bar.
+- [ ] With adaptive dock colours on, change a Dash to Dock colour by hand, then disable Kiwi. Expected: your colour is kept; untouched keys go back to their defaults.
 - [ ] Push a PR. Expected: CI is green on the Ubuntu runner (eslint@9, strict schema check, tests, `make pack`).
 - [ ] Publish a test release. Expected: the zip is attached by the new `gh release upload` step.
 
 ## 4. Known limits / needs your decision
 
-- **Server-side-decorated windows keep their own buttons.** Kiwi doesn't write the system `button-layout` key. Qt and Electron windows are the usual case. Documented limit.
-- **Firefox styling gate:** `Hidden.css` (hiding Firefox's native buttons) now also needs the per-app styling key. This is an orchestrator default; the owner needs to confirm.
-- **Super-tap takeover is an untested assumption.** It blocks the oldest `overlay-key` handler on the display (assumed to be the Shell's overview handler). S5 read the 51.1 source; 48 to 50 were not read. If the handler isn't found, Kiwi warns and the stock behaviour stays. While Spotlight is open, Kiwi handles Super release itself because the modal mode doesn't pass `overlay-key`.
-- **Clipboard shortcut default is empty** (EGO forbids default clipboard shortcuts). The spec asked for `<Super><Shift>v`; the owner may override. `metadata.json` now declares clipboard access. D7's proposal to refresh the rest of the description (drop "panel on hover in fullscreen", list the new features) is still open for you.
-- **Quick Paste uses a virtual-keyboard Ctrl+V** (Ctrl+Shift+V for terminals), against the skill note. The spec wins by decision. Whether it pastes into the right window is untested.
-- **Liquid Glass refraction is experimental.** A shader can only see its own texture, so refraction forces the still wallpaper-copy path and cannot bend the live backdrop. The 51 shader snippet facts were not verified against a real Shell 51. Blur rects are square, so rounded corners can bleed slightly. Tinted style floors alpha at 0.62 for the 4.5:1 contrast, but a slider below 55 can break it by user choice. Reduced motion drops fades, not blur (a deliberate deviation from the design reference).
-- **Shell-version coverage:** facts for 48 to 51 were checked from source reads of the GNOME gitlab (48.0, 49.0, 50.0, main) but no run on those versions. Verification was on Shell 46 typelibs only.
-- **Stage Manager details unseen on a real Shell:** whether the clone of an opacity-0 window paints, tilt sign, clone clip, overview with hidden windows. Chrome root is pill-sized only (not the whole strip). 
-- **Control Center:** small tiles are not 1x1 icon-only (stock toggles keep labels); the footer width has a risk with avatar, name, battery and 4 buttons in 4 columns. Now Playing uses the shared MPRIS watcher.
-- **Notch deferrals (per decisions):** the "Up next" dashboard panel (MPRIS has no reliable queue API), timer/recording/charging live activities, and "toggle changed" confirmations. S8's earlier notes also list hardware-notch alignment, a second activity circle and a per-app absorb list as not done.
-- **Auto-hide:** the panel is parked by translation and opacity, not hidden, so Ctrl+Alt+Tab still finds it. The overview inset injects a private `_updateWorkAreaBox`, guarded and to be checked on 48 to 51.
-- **Crash leftovers:** Dash to Dock colours stay changed if Kiwi is switched off after a crash before the next enable (restore only runs in enable).
-- **Order differences in the new registry** (no known effect): stop runs in reverse registration order; the registry catches errors per feature where old code aborted the whole refresh.
-- **Open leftovers from D1 and D2:** a prefs "Remove Kiwi GTK changes" button needs a shared cleanup helper that D1 did not export; D1 asks the orchestrator whether it is wanted. A dangling gtk.css import after an uninstall or crash is documented, not fully fixed.
-- **Release chores:** `make pot` writes `translating/kiwi.pot`; run it before release (CI doesn't). Lint is at 0 warnings, 0 errors. Existing `.po` files were not `msgmerge`d.
+### Owner decisions still open
+- **Firefox `Hidden.css` gate:** hiding Firefox's native buttons now needs the per-app styling key (plus window controls and `remove-titlebar-buttons`). This is an orchestrator default; please confirm.
+- **Defaults that differ from main:** `panel-transparency` true → false, `keyboard-indicator` false → true, `dock-blur` false → true. Confirm or revert.
+- **Auto-hide plus titlebar removal:** both are on by default, so a window has no titlebar buttons and its panel controls sit in a hidden bar until you push the top edge. Decide whether one default should change.
+- **`button-layout` default shows close only:** with window-controls position `system`, Kiwi follows GNOME's default `appmenu:close`, so the panel shows only a close button. Positions `left`/`right` show all three. Decide whether the default position should change.
+- **Clipboard persisted to disk by default** (owner decision, kept): the secret detection is a heuristic, so the metadata wording must not promise more. The shortcut stays empty by default (EGO); the spec asked for `<Super><Shift>v`.
+- **Privacy defaults chosen by the orchestrator, you may override:** `notch-show-clipboard` off, and Spotlight empty-query clipboard off.
+
+### Known limits
+- **Server-side-decorated windows keep their own buttons.** Kiwi doesn't write the system `button-layout` key (Qt, Electron).
+- **Super-tap takeover:** Kiwi blocks the oldest `overlay-key` handler (assumed to be the Shell's). A Spotlight open/close probe passed on headless 48.1 and 51.1, but the probe did not press a real Super key.
+- **Quick Paste uses a virtual-keyboard Ctrl+V** (Ctrl+Shift+V for terminals). Pasting into a real app window has not been tested.
+- **Liquid Glass refraction is experimental.**
+  - It forces the still wallpaper-copy path and cannot bend the live backdrop.
+  - Blur rects are square, so rounded corners can bleed slightly.
+  - Below tint 55, text can drop under 4.5:1 contrast (user choice).
+  - Reduced motion drops fades, not blur.
+- **Stage Manager visual details not seen:** the card tilt sign, clone painting and clipping were never looked at on a screen (the headless probe checks opacity only).
+- **Control Center:** small tiles are not 1x1 icon-only, and the footer width is a risk with long names.
+- **Notch deferrals:** "Up next" dashboard panel, timer/recording/charging activities, "toggle changed" confirmations, hardware-notch alignment, a second activity circle, a per-app absorb list.
+- **Auto-hide:** the panel is parked by translation and opacity, not hidden. The overview inset uses a guarded private `_updateWorkAreaBox`.
+- **D1 leftovers:** no prefs "Remove Kiwi GTK changes" button. A dangling gtk.css import after an uninstall is documented, not fully fixed.
+- **Release chores:** run `make pot` (writes `translating/kiwi.pot`) before release; existing `.po` files were not `msgmerge`d. D7's metadata description refresh is still open.
 
 ## 4b. EGO submission notes
 
-- **Version coverage:** `metadata.json` lists shell-version 48, 49, 50, 51. None of them has been run with these features. The owner must test at least 48 and 51 (oldest and newest) before uploading to extensions.gnome.org.
+- **Version coverage:** `metadata.json` lists shell-version 48, 49, 50, 51. Only headless 48.1 and 51.1 were run (section 4d); 49 and 50 were not run at all. The owner must test at least 48 and 51 on a real desktop before uploading to extensions.gnome.org.
 - **`overlay-key` handler block (Spotlight):** Kiwi finds the oldest `overlay-key` handler on the display (assumed to be the Shell's overview handler) with `signal_handler_find` and blocks only that id, then connects its own. Disable disconnects its own handler and unblocks that id. If not found, it warns and stock behaviour stays. Other extensions' handlers are untouched; the blocked handler id is logged at debug level. The assumption was read from the 51.1 source only.
-- **Dash to Dock settings writes:** the adaptive-colours feature writes Dash to Dock colour keys. Originals are saved to the Kiwi key `dock-colors-saved`, restored on disable, and restored on the next enable after a crash (`restoreStaleColors`). If the Kiwi key is missing it falls back to memory only.
-- **`favorite-apps` write (Launchpad):** `launchpadApp.js` inserts a synthetic Launchpad desktop id into the shell's `favorite-apps` after the first favourite, and removes it on disable ("favorites cleaned").
-- **Clipboard:** history is persisted to disk by default (`~/.local/share/kiwi/clipboard/`, dir 0700, files 0600). The `metadata.json` description declares clipboard access and local storage. The shortcut default is empty (EGO rule). Password-manager entries are skipped and nothing is recorded while locked. One sync `mkdir_with_parents` in enable is a documented exception.
+- **Dash to Dock settings writes:** the adaptive-colours feature writes Dash to Dock colour keys. Originals are saved to the Kiwi key `dock-colors-saved`, restored on disable, and restored on the next enable after a crash (`restoreStaleColors`). Keys that were at their default are `reset()`, and keys the user changed while Kiwi ran are left alone.
+- **`favorite-apps` write (Launchpad):** `launchpadApp.js` inserts a synthetic Launchpad desktop id into the shell's `favorite-apps` after the first favourite. On disable it removes only its own id, and resets the key when it was the default before and is the default again.
+- **Clipboard:** history is persisted to disk by default (`~/.local/share/kiwi/clipboard/`, dir 0700, files 0600). The `metadata.json` description declares clipboard access and local storage. The shortcut default is empty (EGO rule). Password-manager entries and secret-looking text (heuristics) are skipped, and nothing is recorded while locked. The metadata wording must not promise complete secret detection. One sync `mkdir_with_parents` in enable is a documented exception.
 - **Private Shell APIs used (guarded, with feature detection):**
   - `MessageTray._showNotification`, `_notificationQueue`, `_updateState`, `_bannerBin` (notification router, via `lib/compat.js`).
   - `osdWindowManager._showOsdWindow` (notch OSD).
@@ -283,18 +330,57 @@ Run each item on 48, 49, 50 and 51 where possible, on Wayland and X11 where note
 
 `make smoke` runs `tools/smoke/run-headless.sh`: a headless GNOME Shell (`--headless --wayland --virtual-monitor 1280x800`) with Kiwi enabled in a temp HOME with a private session bus, then disable/enable 10 times (argument sets the count). It never touches your real profile. Exit 0 means no Kiwi-related errors, 1 means errors, 2 means setup failure. It needs `gnome-shell`, `dbus-run-session`, `gsettings`, `glib-compile-schemas`, `gdbus`, `python3`. In the cloud container use `KIWI_SMOKE_SHELL_VERSION=46 KIWI_SMOKE_SHIM=1 make smoke`. Container result: 0 Kiwi CRITICALs; the remaining JS errors come from a Shell-46-only shim. That result is indicative only and not proof for 48 to 51; on your machine run it on 48 and 51 first.
 
+## 4d. Real GNOME Shell testing
+
+Headless real GNOME Shell sessions ran in an Arch Linux chroot (`gnome-shell --headless --wayland --virtual-monitor 1280x800`, surfaceless renderer, no GPU):
+- **GNOME Shell 51.1** (mutter 51.1). Run `/tmp/x2/runs/20261025-185207-kiwi-is-not-apple-arch`.
+- **GNOME Shell 48.1** (mutter 48.2). Run `/tmp/x2/runs/20261025-185207-kiwi-is-not-apple-arch48`.
+
+Each run did the following:
+- Enabled Kiwi with default settings and read the feature status, panel boxes and Kiwi chrome actors.
+- Launched a GTK app and sent a notification.
+- Flipped settings, then toggled Kiwi 20 times.
+- Scanned the Shell log.
+
+Result on both versions: **all 7 functional probes PASS, `Kiwi errors: 0`.**
+
+| Probe | What it checks | 51.1 | 48.1 |
+|---|---|---|---|
+| overview-hidden | the overview is not shown after login with Kiwi on | PASS | PASS |
+| notch-receives-notification | a notification goes to the notch (notchShown=true), not to a stock banner (stockBannerShown=false) | PASS | PASS |
+| spotlight-open-close | Spotlight opens and closes again | PASS | PASS |
+| quick-settings-columns | Control Center grid has 4 columns (382 px wide) | PASS | PASS |
+| maximize-workarea | a maximized window fills the work area (1280x800 with auto-hide), unmaximizes back to 700x520; window-controls indicator visible while maximized | PASS | PASS |
+| stage-manager-hide-reveal | of two app windows, the off-stage one has opacity 0; switching swaps them (opacity 255 / 0), none minimized | PASS | PASS |
+| clipboard-history-increments | a copy adds one history entry while recording | PASS | PASS |
+
+Noise in the logs, not counted as Kiwi errors by the harness:
+- Clutter "needs an allocation" warnings name `kiwi-glass-quickSettings` and `kiwi-glass-spotlight`.
+- Two `clutter_actor_allocate` NaN assertions with no actor named appear on both versions.
+- Shell warnings come from the fake login user ("Could not get a proxy for user 0").
+- One probe-harness eval had a SyntaxError in the probe's own code.
+
+Worth a look on a real desktop, but they did not fail any probe.
+
+Headless can't cover:
+- **Visual look and animations:** glass blur and tint, the notch spring, the Stage Manager shrink and tilt, auto-hide slides, reduced-motion feel. There is no GPU and nobody looked at the screen.
+- **Real input devices and IME:** a physical Super tap, keyboard repeat, touchpad gestures and pressure barriers with a real pointer, IBus composition.
+- **Wayland paste into real apps:** Quick Paste's virtual Ctrl+V into gedit, Firefox or a terminal.
+- **Multi-monitor hardware:** the 1280x800 virtual monitor only; S9's 2-virtual-monitor run is not real hardware.
+- **Specific apps and extensions:** Firefox and Thunderbird profile styling, Dash to Dock (dock blur, colours, Launchpad), third-party Quick Settings extensions, password managers.
+- **Lock screen and suspend:** a real session lock, suspend/resume, login.
+- **GNOME 49 and 50:** not run at all. X11 was not run either (both runs are Wayland).
+
 ## 5. Not tested
 
-**No GNOME Shell 48–51 ran in the cloud.** Nothing in this branch has been run on a real GNOME Shell 48, 49, 50 or 51, on Wayland or X11. The only Shell run was a headless GNOME Shell 46 smoke test (`make smoke`, enable/disable only, with container shims). What was run:
-- Pure-logic unit tests with `gjs -m` (via `bash tests/run.sh`).
-- eslint (0 errors, 0 warnings).
-- Strict schema compiles (`glib-compile-schemas --strict --dry-run`).
-- Packaging checks with `gnome-extensions pack`.
-- Prefs smoke tests under Xvfb on libadwaita.
-- A gcc build and Xvfb hover smoke test of the `advanced/` module (no valgrind run).
-- One D-Bus fake-provider test for Spotlight.
-- `make smoke` in the container against Shell 46 with a shim (0 Kiwi CRITICALs; remaining errors are shim-only): a load/toggle check, not a feature check.
+Real GNOME Shell **48.1 and 51.1 ran headless only** (section 4d). Nobody has used these features on a real desktop with a screen, GPU, real input and real apps. **GNOME 49 and 50 were not run at all**, and X11 was not run on any version.
 
-The container only has GNOME Shell 46 typelibs, which is older than the 48 to 51 floor, so even those checks are not proof that any feature works on a supported Shell. CI results are not yet known. Every item in section 3 is for you to run on a real machine.
+Also run in the cloud:
+- Pure-logic unit tests with `gjs -m` (`bash tests/run.sh`).
+- eslint (0 errors, 0 warnings) and strict schema compiles.
+- `gnome-extensions pack`, and prefs smoke tests under Xvfb on libadwaita.
+- A gcc build and Xvfb hover smoke test of the `advanced/` module (no valgrind).
+- A D-Bus fake-provider test for Spotlight.
+- `make smoke` against Shell 46 with shims.
 
-
+Everything in the section 4d "can't cover" list, and every item in section 3, is for you to run on a real machine on 48 and 51 at least, and on 49 and 50 if you can. CI results on the PR are not confirmed in this document.
