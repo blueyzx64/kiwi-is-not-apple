@@ -34,7 +34,7 @@ import * as Layout from 'resource:///org/gnome/shell/ui/layout.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import {
-    DEFAULTS, cardTilt, clonePose, edgeBarrier, fitCount, overlaps, stackLayers, stripLayout, stripShown,
+    DEFAULTS, balancedFit, cardTilt, clonePose, edgeBarrier, fitCount, overlaps, stackLayers, stripLayout, stripShown,
 } from './model.js';
 
 const PILL_PAD = 14;
@@ -341,13 +341,14 @@ export class StageStrip {
     }
 
     /**
-     * Where a stack layer draws its window's frame inside the card: the box, aspect kept, then
+     * Where a stack layer draws its window's frame inside the card: balanced in the box (true
+     * aspect, similar weight for tall, wide and normal windows), centred, then
      * the layer's shrink and offset (back layers peek out toward the screen edge).
      */
     _layerRect(frame, box, layer, scale) {
-        const k = Math.min(box.width / frame.width, box.height / frame.height) * layer.scale;
-        const width = frame.width * k;
-        const height = frame.height * k;
+        const fit = balancedFit(frame.width, frame.height, box.width, box.height);
+        const width = fit.width * layer.scale;
+        const height = fit.height * layer.scale;
         return {
             x: box.x + (box.width - width) / 2 + layer.dx * scale,
             y: box.y + (box.height - height) / 2 + layer.dy * scale,

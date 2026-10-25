@@ -74,6 +74,27 @@ export function cropThumb(frame, buffer, boxW, boxH) {
 }
 
 /**
+ * Size of a window in a strip slot: true aspect ratio, similar visual weight for every window.
+ * The window is scaled toward `area` (a share of the slot), then shrunk to fit the slot's
+ * max width and height. A tall window ends up as tall as the slot, a wide one as wide, and a
+ * normal one in between; none becomes a sliver.
+ * @param {number} w  window width
+ * @param {number} h  window height
+ * @param {number} maxW  slot width
+ * @param {number} maxH  slot height
+ * @param {number} [fill]  share of the slot's area to aim for (0..1)
+ * @returns {{width: number, height: number, scale: number}} scale: from window to slot pixels
+ */
+export function balancedFit(w, h, maxW, maxH, fill = 0.6) {
+    if (!(w > 0) || !(h > 0) || !(maxW > 0) || !(maxH > 0))
+        return { width: 0, height: 0, scale: 0 };
+    const target = Math.max(0, Math.min(1, fill)) * maxW * maxH;
+    let scale = Math.sqrt(target / (w * h));
+    scale = Math.min(scale, maxW / w, maxH / h);
+    return { width: w * scale, height: h * scale, scale };
+}
+
+/**
  * Pose of a window clone (the clone has the buffer's size) whose frame is drawn in `rect`
  * (centred, aspect kept), turned about the frame's centre. The pivot is the frame centre, so
  * position does not depend on scale or rotation and a flight can tween x, y, scale and angle.
