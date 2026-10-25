@@ -1,8 +1,8 @@
-// Run: gjs -m tests/autohideModel.test.js
+// Run: gjs -m tests/panelVisibilityModel.test.js
 import {
     initialState, step, visible, wantsStrut, modeFromSettings, edgeSegments, hasMonitorAbove,
     MIGRATIONS,
-} from '../apps/autohide/model.js';
+} from '../coordinators/panelVisibilityModel.js';
 import { runMigrations } from '../lib/settings.js';
 
 let failed = 0;
@@ -75,7 +75,7 @@ test('leaving the edge cancels the pending reveal', () => {
 });
 
 test('pointer inside keeps the bar, leaving re-arms the hide timer', () => {
-    let s = run(initialState(), { type: 'edge-pressure' }, { revealDelay: 0, hideDelay: 600 }).state;
+    const s = run(initialState(), { type: 'edge-pressure' }, { revealDelay: 0, hideDelay: 600 }).state;
     let r = run(s, { type: 'pointer', inside: true });
     eq(r.effects, [{ type: 'cancel', name: 'hide' }]);
     r = run(r.state, { type: 'hide-timer' });
