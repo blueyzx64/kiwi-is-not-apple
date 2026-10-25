@@ -65,8 +65,8 @@ test('pickMime: images off, unknown types', () => {
 });
 test('checkSize limits', () => {
     eq(checkSize('text', 0), 'empty');
-    eq(checkSize('text', MiB), 'ok');
-    eq(checkSize('text', MiB + 1), 'too-large');
+    eq(checkSize('text', 256 * 1024), 'ok');
+    eq(checkSize('text', 256 * 1024 + 1), 'too-large');
     eq(checkSize('image', 5 * MiB), 'ok');
     eq(checkSize('image', 5 * MiB + 1), 'too-large');
     eq(checkSize('image', 10, { images: false }), 'disabled');
@@ -189,6 +189,54 @@ test('view filters and search', () => {
     eq(h.view({ query: 'WORLD' }).recent.length, 1);
     eq(h.view({ query: 'firefox' }).recent.length, 1);
     eq(h.view({ filter: 'all' }).recent.length, 3);
+});
+
+/* ---- byte budget ---- */
+const img = (n, size, extra = {}) => ({ ...image(n), size, ...extra });
+test('image budget evicts the oldest unpinned images', () => {
+    const h = new History({ maxItems: 50, maxTotalImageBytes: 3000 });
+    for (let i = 1; i <= 3; i++) h.add(img(i, 1000));
+    const r = h.add(img(4, 1000));
+    eq(r.status, 'added');
+    eq(r.evicted.length, 1);
+    eq(r.evicted[0].hash, H64(1));
+    eq(h.size, 3);
+});
+test('budget never evicts pinned; new image refused if only pinned remain', () => {
+    const h = new History({ maxItems: 50, maxTotalImageBytes: 2000 });
+    h.add(img(1, 1000)); h.add(img(2, 1000));
+    h.togglePin(`image:${H64(1)}`); h.togglePin(`image:${H64(2)}`);
+    const r = h.add(img(3, 1000));
+    eq(r.status, 'refused');
+    eq(h.size, 2);
+});
+test('text and image budgets are separate', () => {
+    const h = new History({ maxItems: 50, maxTotalImageBytes: 1000, maxTotalTextBytes: 10 });
+    h.add(img(1, 1000));
+    h.add(text('12345678'));
+    eq(h.size, 2);
+    h.add(text('abcdefgh'));
+    eq(h.size, 2, 'oldest text evicted, image kept');
+    eq(h.items.some(e => e.kind === 'image'), true);
+});
+test('pin cap by count', () => {
+    const h = new History({ maxPinned: 2, maxTotalImageBytes: 1500 });
+    ['a', 'b', 'c'].forEach(s => h.add(text(s)));
+    eq(h.togglePin('text:h-a'), true);
+    eq(h.togglePin('text:h-b'), true);
+    eq(h.togglePin('text:h-c'), null, 'count cap');
+    eq(h.togglePin('text:h-a'), false, 'unpin always works');
+});
+test('configure shrinks the budget live', () => {
+    const h = new History({ maxItems: 50 });
+    for (let i = 1; i <= 4; i++) h.add(img(i, 1000));
+    eq(h.configure({ maxTotalImageBytes: 2000 }).length, 2);
+});
+test('historyFrom applies budgets to loaded entries', () => {
+    const es = [1, 2, 3].map(i => img(i, 1000));
+    const { history, evicted } = historyFrom(es, { maxTotalImageBytes: 2000 });
+    eq(history.size, 2);
+    eq(evicted.length, 1);
 });
 
 /* ---- persistence ---- */

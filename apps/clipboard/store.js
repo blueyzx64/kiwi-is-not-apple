@@ -11,7 +11,7 @@ import GLib from 'gi://GLib';
 import { isStoreFileName, parseHistory, serializeHistory } from './model.js';
 
 Gio._promisify(Gio.File.prototype, 'load_contents_async', 'load_contents_finish');
-Gio._promisify(Gio.File.prototype, 'make_directory_async', 'make_directory_finish');
+Gio._promisify(Gio.File.prototype, 'query_info_async', 'query_info_finish');
 Gio._promisify(Gio.File.prototype, 'delete_async', 'delete_finish');
 Gio._promisify(Gio.File.prototype, 'replace_contents_bytes_async', 'replace_contents_finish');
 Gio._promisify(Gio.File.prototype, 'set_attributes_async', 'set_attributes_finish');
@@ -20,7 +20,7 @@ Gio._promisify(Gio.FileEnumerator.prototype, 'next_files_async', 'next_files_fin
 
 const LOG = '[Kiwi]';
 const INDEX = 'history.json';
-const MAX_INDEX_BYTES = 64 * 1024 * 1024;     // refuse to parse a runaway file
+const MAX_INDEX_BYTES = 8 * 1024 * 1024;      // refuse to parse a runaway file (text budget is 4 MiB)
 
 export function defaultDir() {
     return GLib.build_filenamev([GLib.get_user_data_dir(), 'kiwi', 'clipboard']);
@@ -53,32 +53,37 @@ export class ClipboardStore {
         return this._queue;
     }
 
-    async _ensureDir(dir) {
-        try {
-            await dir.make_directory_async(GLib.PRIORITY_DEFAULT, null);
-        } catch (e) {
-            if (e.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.EXISTS))
-                return;
-            if (!e.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_FOUND))
-                throw e;
-            await this._ensureDir(dir.get_parent());
-            await this._ensureDir(dir);
-            return;
-        }
-        // Created by us: owner only (but leave the XDG data dir itself at its default)
-        if (dir.get_path() === GLib.get_user_data_dir())
-            return;
-        const info = new Gio.FileInfo();
-        info.set_attribute_uint32('unix::mode', 0o700);
-        await dir.set_attributes_async(info, Gio.FileQueryInfoFlags.NONE, GLib.PRIORITY_DEFAULT, null);
-    }
-
-    _ensure() {
-        this._ready ??= this._ensureDir(this._images).catch(e => {
+    /**
+     * Create the folders (0700, atomically: one small sync call, allowed in enable) and
+     * repair the mode of Kiwi's own folders when an older run left them wider.
+     *
+     * @returns {Promise<void>} resolves when the mode repair is done
+     */
+    prepare() {
+        this._ready ??= (async () => {
+            const path = this._images.get_path();
+            if (GLib.mkdir_with_parents(path, 0o700) !== 0)
+                throw new Error(`cannot create ${path}`);
+            // kiwi/, kiwi/clipboard/ and images/ are Kiwi's own; the XDG data dir is not
+            const own = [this._images, this._dir, this._dir.get_parent()];
+            for (const dir of own) {
+                const info = await dir.query_info_async(
+                    'unix::mode', Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, GLib.PRIORITY_DEFAULT, null);
+                if ((info.get_attribute_uint32('unix::mode') & 0o777) === 0o700)
+                    continue;
+                const fix = new Gio.FileInfo();
+                fix.set_attribute_uint32('unix::mode', 0o700);
+                await dir.set_attributes_async(fix, Gio.FileQueryInfoFlags.NONE, GLib.PRIORITY_DEFAULT, null);
+            }
+        })().catch(e => {
             this._ready = null;
             throw e;
         });
         return this._ready;
+    }
+
+    _ensure() {
+        return this.prepare();
     }
 
     /**
@@ -92,11 +97,32 @@ export class ClipboardStore {
             const [bytes] = await this._index.load_contents_async(null);
             if (!bytes || bytes.length > MAX_INDEX_BYTES)
                 return [];
-            return parseHistory(new TextDecoder().decode(bytes), limits);
+            const entries = parseHistory(new TextDecoder().decode(bytes), limits);
+            // An image whose file is gone (or unreadable) is dropped, not shown broken
+            const keep = [];
+            for (const e of entries) {
+                if (e.kind === 'image' && !await this._hasFile(e.file))
+                    continue;
+                keep.push(e);
+            }
+            return keep;
         } catch (e) {
             if (!e.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_FOUND))
                 console.warn(`${LOG} clipboard history not loaded: ${e.message}`);
             return [];
+        }
+    }
+
+    async _hasFile(name) {
+        const file = this.imageFile(name);
+        if (!file)
+            return false;
+        try {
+            await file.query_info_async('standard::size', Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS,
+                GLib.PRIORITY_DEFAULT, null);
+            return true;
+        } catch (_e) {
+            return false;
         }
     }
 

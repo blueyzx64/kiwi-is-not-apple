@@ -37,6 +37,8 @@ const SHORTCUT_KEY = 'clipboard-shortcut';
 const SAVE_DELAY_MS = 600;
 const PASTE_DELAY_MS = 160;
 const KEY_GAP_US = 1000;
+const MiB = 1024 * 1024;
+const RAM_IMAGE_BUDGET = 64 * MiB;
 
 let active = null;
 
@@ -68,9 +70,10 @@ export class ClipboardHistory {
         this._saveToken = 0;
         this._dirty = false;
         this._prevFocus = null;
-        this._vdev = null;
         this._indicator = null;
         this._iconCleanup = null;
+        this._ownerSerial = 0;      // bumps on every clipboard owner change
+        this._selfHash = null;      // hash of what we just wrote ourselves
     }
 
     // ---- lifecycle -------------------------------------------------------
@@ -81,7 +84,7 @@ export class ClipboardHistory {
         this._ks = new KiwiSettings(this._ctx.settings);
         this._ks.attach(cleanup);
         this._store = new ClipboardStore();
-        this._history = new History({ maxItems: this._ks.int('clipboard-history-size') });
+        this._history = new History(this._limits);
         this._clipboard = St.Clipboard.get_default();
         this._selection = global.display.get_selection();
         this._cancellable = new Gio.Cancellable();
@@ -101,8 +104,13 @@ export class ClipboardHistory {
             'clipboard-excluded-apps', SHORTCUT_KEY], () => this._emitChanged());
         this._syncIndicator();
 
-        if (this._ks.bool('clipboard-persist'))
-            this._load();
+        if (this._persist) {
+            this._store.prepare().then(() => this._load())
+                .catch(e => console.warn(`${LOG} clipboard store not ready: ${e.message}`));
+        } else {
+            // Persistence is off: remove the files Kiwi saved earlier
+            this._store.clearAll();
+        }
     }
 
     disable() {
@@ -125,7 +133,6 @@ export class ClipboardHistory {
         this._mem.clear();
         this._changed.clear();
         this._copied.clear();
-        this._vdev = null;
         this._prevFocus = null;
         this._selection = null;
         this._clipboard = null;
@@ -140,6 +147,7 @@ export class ClipboardHistory {
     get _limits() {
         return {
             ...DEFAULTS,
+            maxTotalImageBytes: this._persist ? DEFAULTS.maxTotalImageBytes : RAM_IMAGE_BUDGET,
             maxItems: this._ks.int('clipboard-history-size'),
             images: this._ks.bool('clipboard-images'),
             ignoreSensitive: this._ks.bool('clipboard-ignore-sensitive'),
@@ -159,14 +167,16 @@ export class ClipboardHistory {
     }
 
     _applyCap() {
-        const evicted = this._history.setMaxItems(this._ks.int('clipboard-history-size'));
+        const evicted = this._history.configure(this._limits);
         this._dropFiles(evicted);
         this._touched();
     }
 
     _onPersistChanged() {
+        this._dropFiles(this._history.configure(this._limits));
         if (this._persist) {
             // Turned on: write what we hold, images included
+            this._store.prepare().catch(e => console.warn(`${LOG} clipboard store not ready: ${e.message}`));
             for (const e of this._history.items) {
                 const bytes = this._mem.get(e.hash);
                 if (e.kind === 'image' && bytes)
@@ -198,7 +208,7 @@ export class ClipboardHistory {
         const live = this._history.items;
         const ids = new Set(live.map(e => e.id));
         const merged = [...live, ...entries.filter(e => !ids.has(e.id))];
-        const { history, evicted } = historyFrom(merged, { maxItems: this._history.maxItems });
+        const { history, evicted } = historyFrom(merged, this._limits);
         this._history = history;
         this._dropFiles(evicted);
         // Remove image files nothing points to (Kiwi wrote them; nothing else is touched)
@@ -250,7 +260,10 @@ export class ClipboardHistory {
     }
 
     _onOwnerChanged(type) {
-        if (type !== Meta.SelectionType.SELECTION_CLIPBOARD || !this._canRecord())
+        if (type !== Meta.SelectionType.SELECTION_CLIPBOARD)
+            return;
+        this._ownerSerial++;
+        if (!this._canRecord())
             return;
         // Who copied: the focused window now. The read happens a moment later.
         const win = global.display.focus_window;
@@ -295,7 +308,16 @@ export class ClipboardHistory {
             [app.id, app.name].some(a => isPasswordManagerApp(a, extra));
     }
 
+    /** Still the same copy, still allowed, still not a secret? Checked after every await. */
+    _stillValid(serial, app) {
+        if (!this._enabled || serial !== this._ownerSerial || !this._canRecord())
+            return false;
+        const mimes = this._clipboard.get_mimetypes(St.ClipboardType.CLIPBOARD) ?? [];
+        return !this._isSecretSource(mimes, app);
+    }
+
     async _readOnce(app) {
+        const serial = this._ownerSerial;
         if (!this._canRecord())
             return;
         const limits = this._limits;
@@ -306,24 +328,30 @@ export class ClipboardHistory {
         if (!pick)
             return;
 
-        let entry = null;
-        let bytes = null;
+        const cap = pick.kind === 'image' ? limits.maxImageBytes : limits.maxTextBytes;
+        const bytes = await this._transfer(pick.mime, cap);
+        if (!bytes || !this._stillValid(serial, app))
+            return;
+        if (checkSize(pick.kind, bytes.get_size(), limits) !== 'ok')
+            return;
+        const hash = sha256(bytes);
+        if (this._selfHash === hash) {
+            // Our own write (popover click or paste): not a new copy
+            this._selfHash = null;
+            return;
+        }
+        this._selfHash = null;
+
+        let entry;
         if (pick.kind === 'text') {
-            const text = await this._getText();
-            if (!this._canRecord() || isBlankText(text))
-                return;
-            bytes = new GLib.Bytes(new TextEncoder().encode(text));
-            if (checkSize('text', bytes.get_size(), limits) !== 'ok')
+            const text = new TextDecoder().decode(bytes.toArray());
+            if (isBlankText(text))
                 return;
             entry = makeEntry({
-                kind: 'text', hash: sha256(bytes), mime: TEXT_MIME, size: bytes.get_size(),
+                kind: 'text', hash, mime: TEXT_MIME, size: bytes.get_size(),
                 time: Date.now(), text, app: app.name,
             });
         } else {
-            bytes = await this._getImage(pick.mime, limits.maxImageBytes);
-            if (!this._canRecord() || !bytes || checkSize('image', bytes.get_size(), limits) !== 'ok')
-                return;
-            const hash = sha256(bytes);
             entry = makeEntry({
                 kind: 'image', hash, mime: pick.mime, size: bytes.get_size(), time: Date.now(),
                 file: imageFileName(hash, pick.mime), app: app.name,
@@ -332,30 +360,30 @@ export class ClipboardHistory {
         this._record(entry, bytes);
     }
 
-    _getText() {
-        return new Promise(resolve =>
-            this._clipboard.get_text(St.ClipboardType.CLIPBOARD, (_c, text) => resolve(text ?? '')));
-    }
-
-    async _getImage(mime, cap) {
+    /**
+     * Read one mime type, at most `cap` bytes. Fails closed: null on any error, on empty data
+     * and when the data is larger than the cap. No uncapped fallback.
+     */
+    async _transfer(mime, cap) {
         try {
             const out = Gio.MemoryOutputStream.new_resizable();
-            // One byte over the cap tells "too big" from "exactly the cap" without reading it all
+            // One byte over the cap tells "too big" from "exactly the cap"
             await this._selection.transfer_async(
                 Meta.SelectionType.SELECTION_CLIPBOARD, mime, cap + 1, out, this._cancellable);
             out.close(null);
-            return out.steal_as_bytes();
+            const bytes = out.steal_as_bytes();
+            return bytes.get_size() > 0 && bytes.get_size() <= cap ? bytes : null;
         } catch (e) {
-            if (!this._enabled)
-                return null;
-            console.debug(`${LOG} selection transfer failed (${e.message}); using St.Clipboard`);
+            if (this._enabled)
+                console.debug(`${LOG} clipboard transfer skipped: ${e.message}`);
+            return null;
         }
-        return new Promise(resolve =>
-            this._clipboard.get_content(St.ClipboardType.CLIPBOARD, mime, (_c, b) => resolve(b)));
     }
 
     _record(entry, bytes) {
         const result = this._history.add(entry);
+        if (result.status === 'refused')
+            return;       // pinned entries already use the byte budget
         if (result.status === 'added' && entry.kind === 'image') {
             if (this._persist)
                 this._store.writeImage(entry.file, bytes);
@@ -440,13 +468,16 @@ export class ClipboardHistory {
     }
 
     async _setClipboard(entry) {
+        this._selfHash = entry.hash;      // the owner-changed that follows is ours
         if (entry.kind === 'text') {
             this._clipboard.set_text(St.ClipboardType.CLIPBOARD, entry.text);
             return true;
         }
         const bytes = this._mem.get(entry.hash) ?? await this._store.readImage(entry.file);
-        if (!bytes || !this._enabled)
+        if (!bytes || !this._enabled) {
+            this._selfHash = null;
             return false;
+        }
         this._clipboard.set_content(St.ClipboardType.CLIPBOARD, entry.mime, bytes);
         return true;
     }
@@ -498,25 +529,24 @@ export class ClipboardHistory {
     }
 
     _device() {
-        if (!this._vdev) {
-            const backend = global.stage.context?.get_backend?.() ?? Clutter.get_default_backend();
-            this._vdev = backend.get_default_seat()
-                .create_virtual_device(Clutter.InputDeviceType.KEYBOARD_DEVICE);
-        }
-        return this._vdev;
+        const backend = global.stage.context?.get_backend?.() ?? Clutter.get_default_backend();
+        return backend.get_default_seat().create_virtual_device(Clutter.InputDeviceType.KEYBOARD_DEVICE);
     }
 
     _sendPaste(prev) {
-        if (!this._enabled)
+        // Only into the window that had focus, only unlocked, only if it still has focus
+        if (!this._enabled || this._isLocked() || !prev)
             return;
+        let dev;
         try {
-            if (prev && global.display.focus_window !== prev && !prev.minimized)
-                prev.activate(global.get_current_time());
-            const chord = pasteChordFor((prev ?? global.display.focus_window)?.get_wm_class());
+            if (!prev.get_compositor_private() || global.display.focus_window !== prev)
+                return;
+            const chord = pasteChordFor(prev.get_wm_class());
             const keys = chord === 'ctrl-shift-v'
                 ? [Clutter.KEY_Control_L, Clutter.KEY_Shift_L, Clutter.KEY_V]
                 : [Clutter.KEY_Control_L, Clutter.KEY_v];
-            const dev = this._device();
+            // One device per paste; the local reference is dropped after the key-up
+            dev = this._device();
             let t = GLib.get_monotonic_time();
             for (const k of keys)
                 dev.notify_keyval(t += KEY_GAP_US, k, Clutter.KeyState.PRESSED);
