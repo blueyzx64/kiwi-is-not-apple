@@ -29,6 +29,7 @@ import Shell from 'gi://Shell';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
+import { parseSaved, resolveOriginals, staleRestores } from './dockColorsModel.js';
 import { dashOf, dockSettings, disconnectAll, prefersDark, watchDocks } from './dockUtils.js';
 
 // What is behind the dock, which the indicator and separator read against
@@ -57,6 +58,14 @@ const DOT_COLOR = { light: 'rgb(28,28,28)', dark: 'rgb(250,250,251)' };
 // in step.
 const PILL_COLOR = { light: 'rgb(120,120,120)', dark: 'rgb(28,28,28)' };
 
+// Kiwi's own record of the user's colours (JSON, key -> value) while Kiwi has them
+// overwritten, so a shell crash cannot leave the Kiwi colours behind as the user's.
+const SAVED_SETTING = 'dock-colors-saved';
+const KIWI_VALUES = {
+    [DOT_KEY]: Object.values(DOT_COLOR),
+    [PILL_KEY]: Object.values(PILL_COLOR),
+};
+
 const BAND = 4;           // thickness of the sampled strip, logical pixels
 const GAP = 6;            // clearance from the dock edge for the fallback strip
 const SHADOW = 24;        // dropped either side of the dock, where its shadow falls
@@ -70,11 +79,12 @@ const LIGHT_LEAVE = 0.5;
 
 let enabled = false;
 let d2d;
+let kiwiSettings = null;     // Gio.Settings holding SAVED_SETTING, or null
 let bgSettings;
 let screenshot;
 let globalSignals = [];      // [object, id], for disconnectAll
 let windowSignals = [];      // [object, id], torn down and rebuilt per workspace
-let sources = {};
+const sources = {};
 let savedColors = null;
 let docks = [];              // [{ container, destroyId }]
 let mode = null;             // 'light' | 'dark' behind the dock, once measured
@@ -336,7 +346,35 @@ function _disconnectWindowSignals() {
 
 /* ------------------------------------------------------------- entry points */
 
-export function enable() {
+/**
+ * Put the user's Dash-to-Dock colours back if a previous session died while Kiwi
+ * had them overwritten and the feature is not running now to do it itself. Call
+ * once before features start. Sync; a no-op without a record. The record is kept
+ * while Dash-to-Dock's settings are not available yet.
+ *
+ * @param {Gio.Settings} settings Kiwi's settings
+ */
+export function restoreStaleColors(settings) {
+    if (!settings?.settings_schema?.has_key(SAVED_SETTING))
+        return;
+    const saved = parseSaved(settings.get_string(SAVED_SETTING));
+    if (!saved)
+        return;
+    const dock = dockSettings();
+    if (!dock)
+        return;
+
+    const current = Object.fromEntries(SAVED_KEYS.map(key => [key, dock.get_string(key)]));
+    for (const [key, value] of Object.entries(staleRestores(current, saved, KIWI_VALUES)))
+        dock.set_string(key, value);
+    settings.set_string(SAVED_SETTING, '');
+}
+
+/**
+ * @param {Gio.Settings} [settings] Kiwi's settings; without them the originals are
+ *   only kept in memory
+ */
+export function enable(settings) {
     // Settings changes re-run the whole apply pass; don't stack signals or
     // capture the colours we already wrote as the user's own
     if (enabled)
@@ -347,7 +385,13 @@ export function enable() {
         return;
     enabled = true;
 
-    savedColors = Object.fromEntries(SAVED_KEYS.map(key => [key, d2d.get_string(key)]));
+    kiwiSettings = settings?.settings_schema?.has_key(SAVED_SETTING) ? settings : null;
+    const current = Object.fromEntries(SAVED_KEYS.map(key => [key, d2d.get_string(key)]));
+    // A record left over from a session that died before disable() still holds the
+    // user's real colours; what is in the keys now may be ours
+    savedColors = resolveOriginals(current,
+        parseSaved(kiwiSettings?.get_string(SAVED_SETTING)), KIWI_VALUES);
+    kiwiSettings?.set_string(SAVED_SETTING, JSON.stringify(savedColors));
     screenshot = new Shell.Screenshot();
     bgSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.background' });
 
@@ -412,6 +456,8 @@ export function disable() {
     for (const [key, value] of Object.entries(savedColors ?? {}))
         d2d.set_string(key, value);
     savedColors = null;
+    kiwiSettings?.set_string(SAVED_SETTING, '');
+    kiwiSettings = null;
 
     d2d = null;
     bgSettings = null;
