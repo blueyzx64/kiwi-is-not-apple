@@ -49,7 +49,12 @@ let _grabOpBeginId = null;
 export { maximizeWindow, unmaximizeWindow };
 
 export function isMaximized(win) {
-    return !!win && win.maximized_horizontally && win.maximized_vertically;
+    if (!win)
+        return false;
+    // is_maximized() is the stable API (Mutter 48-51); the property pair is the fallback.
+    if (typeof win.is_maximized === 'function')
+        return !!win.is_maximized();
+    return !!(win.maximized_horizontally && win.maximized_vertically);
 }
 
 // Mutter's allows_resize() returns false while a window is maximized or fullscreen, and
