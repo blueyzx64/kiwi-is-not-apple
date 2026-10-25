@@ -6,7 +6,7 @@
 // What the notch shows (kind of view(state)):
 //   idle           190x32   nothing
 //   live-activity  250x32   a persistent activity (media), lowest priority above idle
-//   osd            270x32   a volume / brightness confirmation, 1.5 s, preempts everything
+//   osd            270x32   a volume / brightness / "Copied" confirmation, 1.5 s, preempts everything
 //   compact        290x32   a one-line notification (feedback, low urgency, fullscreen)
 //   expanded       430x140  a notification card, or 640x200 for the dashboard
 //
@@ -297,6 +297,7 @@ export function step(state, ev, config = {}) {
         onActivity(s, ev, cfg);
         break;
     case 'osd':
+    case 'confirm': // "Copied" and the like: an osd without a level
         onOsd(s, ev, cfg);
         break;
     case 'hover':
