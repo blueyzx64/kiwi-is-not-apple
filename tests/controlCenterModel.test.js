@@ -1,6 +1,7 @@
 // Run: gjs -m tests/controlCenterModel.test.js
 import {
-    COLUMNS, MORE_HEADER_ID, planLayout, place, restoreOrder, batteryTime, BATTERY_STATE,
+    COLUMNS, MORE_HEADER_ID, DISPLAY_HEADER_ID, SOUND_HEADER_ID, SPACER_PREFIX,
+    planLayout, place, restoreOrder, batteryTime, BATTERY_STATE,
     KIWI_COLUMNS, KIWI_TOGGLES, kiwiTiles,
 } from '../apps/controlCenter/model.js';
 
@@ -25,69 +26,97 @@ const c = (id, key, visible = true) => e(id, key, visible, 1, true);
 const ids = plan => plan.map(p => p.id);
 const byId = (plan, id) => plan.find(p => p.id === id);
 
+const top = plan => plan.filter(p => p.group === 'top' && p.visible);
+const cells = plan => plan.filter(p => p.visible).map(p => [p.id, p.span]);
+
 test('stock items are grouped in block order, whatever the stock order', () => {
     const plan = planLayout([
         e('sys', 'system', true, 2), e('vol', 'volume-out', true, 2), e('bt', 'bluetooth'),
-        e('dark', 'dark-style'), e('wifi', 'wifi'), e('br', 'brightness', true, 2),
+        e('dnd', 'dnd'), e('wifi', 'wifi'), e('br', 'brightness', true, 2),
     ]);
-    eq(ids(plan).filter(i => i !== MORE_HEADER_ID), ['wifi', 'bt', 'dark', 'br', 'vol', 'sys']);
+    eq(ids(plan.filter(p => p.visible)),
+        ['wifi', 'dnd', 'bt', SPACER_PREFIX + '0', DISPLAY_HEADER_ID, 'br', SOUND_HEADER_ID, 'vol', 'sys']);
 });
 
-test('connectivity with wifi, bluetooth and vpn: a 2x2 block (vpn widened to fill)', () => {
-    const plan = planLayout([e('wifi', 'wifi'), e('bt', 'bluetooth'), e('vpn', 'vpn')]);
-    eq(plan.slice(0, 3).map(p => p.span), [2, 2, 4]);
+test('top block: the connectivity stack on the left, DND and squares on the right', () => {
+    const plan = planLayout([
+        e('wifi', 'wifi'), e('bt', 'bluetooth'), e('vpn', 'vpn'), e('dnd', 'dnd'),
+        c('dark', 'dark-style'), c('night', 'night-light'), c('air', 'airplane'), c('rot', 'rotation'),
+    ]);
+    eq(cells(top(plan)),
+        [['wifi', 2], ['dnd', 2], ['bt', 2], ['dark', 1], ['night', 1], ['vpn', 2], ['air', 1], ['rot', 1]]);
 });
 
-test('a hidden vpn does not leave a hole', () => {
-    const plan = planLayout([e('wifi', 'wifi'), e('bt', 'bluetooth'), e('vpn', 'vpn', false)]);
-    eq(plan.slice(0, 2).map(p => p.span), [2, 2]);
+test('the connectivity stack is one module: joined edges inside, none outside', () => {
+    const plan = planLayout([e('wifi', 'wifi'), e('bt', 'bluetooth'), e('vpn', 'vpn'), e('dnd', 'dnd')]);
+    const j = id => [byId(plan, id).joinPrev, byId(plan, id).joinNext];
+    eq([j('wifi'), j('bt'), j('vpn'), j('dnd')], [[false, true], [true, true], [true, false], [false, false]]);
 });
 
-test('focus row: dnd 2 + dark style and night light as 1x1 squares', () => {
-    const plan = planLayout([e('dnd', 'dnd'), c('dark', 'dark-style'), c('night', 'night-light')]);
-    eq(plan.slice(0, 3).map(p => [p.id, p.span, p.compact]),
-        [['dnd', 2, false], ['dark', 1, true], ['night', 1, true]]);
+test('a hidden vpn does not leave a hole or a dangling join', () => {
+    const plan = planLayout([e('wifi', 'wifi'), e('bt', 'bluetooth'), e('vpn', 'vpn', false), e('dnd', 'dnd')]);
+    eq(cells(top(plan)), [['wifi', 2], ['dnd', 2], ['bt', 2], [SPACER_PREFIX + '0', 2]]);
+    eq(byId(plan, 'bt').joinNext, false);
 });
 
-test('a widened compact square gets its label back', () => {
+test('the right half runs out: blank spacers keep the stack in its column', () => {
+    const plan = planLayout([e('wifi', 'wifi'), e('bt', 'bluetooth'), e('wired', 'wired')]);
+    eq(cells(top(plan)), [['wifi', 2], [SPACER_PREFIX + '0', 2], ['wired', 2], [SPACER_PREFIX + '1', 2],
+        ['bt', 2], [SPACER_PREFIX + '2', 2]]);
+});
+
+test('no connectivity: one row, DND and two squares', () => {
+    const plan = planLayout([e('dnd', 'dnd'), c('dark', 'dark-style'), c('night', 'night-light'), c('air', 'airplane')]);
+    eq(cells(top(plan)), [['dnd', 2], ['dark', 1], ['night', 1]]);
+    eq(byId(plan, 'air').group, 'toggles');
+});
+
+test('squares pair up in the right half even when a labelled toggle ranks between them', () => {
+    const plan = planLayout([
+        e('wifi', 'wifi'), e('bt', 'bluetooth'), e('vpn', 'vpn'), e('dnd', 'dnd'),
+        c('air', 'airplane'), e('power', 'power-saver'), c('rot', 'rotation'),
+    ]);
+    eq(cells(top(plan)), [['wifi', 2], ['dnd', 2], ['bt', 2], ['air', 1], ['rot', 1], ['vpn', 2], ['power', 2]]);
+});
+
+test('a square with no square partner gets its label back', () => {
     const plan = planLayout([e('dnd', 'dnd'), c('dark', 'dark-style')]);
-    eq(plan.slice(0, 2).map(p => [p.span, p.compact]), [[2, false], [2, false]]);
+    eq(cells(top(plan)), [['dnd', 2], ['dark', 2]]);
+    eq(byId(plan, 'dark').compact, false);
 });
 
 test('a secondary toggle the shell cannot compact stays a labelled half tile', () => {
     const plan = planLayout([e('dnd', 'dnd'), e('dark', 'dark-style'), c('night', 'night-light')]);
-    eq(plan.slice(0, 3).map(p => [p.id, p.span, p.compact]),
-        [['dnd', 2, false], ['dark', 2, false], ['night', 4, false]]);
+    eq(cells(top(plan)), [['dnd', 2], ['dark', 2]]);
+    eq([byId(plan, 'night').group, byId(plan, 'night').span, byId(plan, 'night').compact], ['toggles', 1, true]);
 });
 
-test('a lone visible tile takes the full row', () => {
-    const plan = planLayout([e('dnd', 'dnd')]);
-    eq(byId(plan, 'dnd').span, COLUMNS);
+test('display and sound: a caption joined to the sliders', () => {
+    const plan = planLayout([e('br', 'brightness', true, 2), e('out', 'volume-out', true, 2), e('in', 'volume-in', true, 2)]);
+    const j = id => [byId(plan, id).span, byId(plan, id).joinPrev, byId(plan, id).joinNext];
+    eq([j(DISPLAY_HEADER_ID), j('br'), j(SOUND_HEADER_ID), j('out'), j('in')],
+        [[4, false, true], [4, true, false], [4, false, true], [4, true, true], [4, true, false]]);
 });
 
-test('labelled toggles come first, then the squares fill whole rows', () => {
+test('no slider visible: no caption', () => {
+    const plan = planLayout([e('br', 'brightness', false, 2)]);
+    eq([byId(plan, DISPLAY_HEADER_ID).visible, byId(plan, SOUND_HEADER_ID).visible], [false, false]);
+});
+
+test('leftover toggles: labelled first, then squares; a lone labelled tile is widened', () => {
     const plan = planLayout([
         c('air', 'airplane'), e('power', 'power-saver'), c('rot', 'rotation'),
         e('kbd', 'backlight'), c('loc', 'location'), c('cam', 'camera'), c('tb', 'thunderbolt'),
     ]);
     const toggles = plan.filter(p => p.group === 'toggles');
-    eq(toggles.map(p => p.id), ['kbd', 'power', 'air', 'rot', 'loc', 'cam', 'tb']);
-    eq(toggles.map(p => p.span), [2, 2, 1, 1, 1, 1, 4]);
-    eq(toggles.map(p => p.compact), [false, false, true, true, true, true, false]);
-});
-
-test('every row of a group adds up to COLUMNS', () => {
-    const plan = planLayout([
-        c('a', 'airplane'), e('c', 'power-saver'), c('d', 'rotation'), c('f', 'location'),
-    ]);
-    const spans = plan.filter(p => p.group === 'toggles').map(p => p.span);
-    eq(spans, [2, 1, 1, 4]);
+    eq(toggles.map(p => p.id), ['power', 'kbd', 'air', 'rot', 'loc', 'cam', 'tb']);
+    eq(toggles.map(p => p.span), [2, 2, 1, 1, 1, 1, 1]);
+    eq(planLayout([e('power', 'power-saver')]).find(p => p.id === 'power').span, COLUMNS);
 });
 
 test('the Kiwi module is one full-width block after the toggles', () => {
     const plan = planLayout([e('k', 'kiwi-toggles'), c('air', 'airplane'), e('sys', 'system', true, 2)]);
-    eq(plan.filter(p => p.id !== MORE_HEADER_ID).map(p => [p.id, p.span]),
-        [['air', 4], ['k', 4], ['sys', 4]]);
+    eq(cells(plan), [['air', 1], ['k', 4], ['sys', 4]]);
 });
 
 test('kiwiTiles: the catalogue covers the Kiwi features, never the Control Center', () => {
@@ -117,7 +146,7 @@ test('unknown items go to extras after the stock toggles, with the header', () =
         e('x', null, true, 1), e('dark', 'dark-style'), e('notif', 'notifications', true, 2),
         e('bg', 'background-apps', true, 2),
     ]);
-    eq(ids(plan), ['dark', 'bg', MORE_HEADER_ID, 'x', 'notif']);
+    eq(ids(plan.filter(p => p.visible)), ['dark', 'bg', MORE_HEADER_ID, 'x', 'notif']);
     eq(byId(plan, MORE_HEADER_ID).visible, true);
 });
 
@@ -134,7 +163,7 @@ test('an extra with stock span 2 (full width) stays full width', () => {
 
 test('order is stable for equal rank (volume out before volume in; same-key keeps stock order)', () => {
     const plan = planLayout([e('b1', 'brightness', true, 2), e('b2', 'brightness', true, 2)]);
-    eq(ids(plan).slice(0, 2), ['b1', 'b2']);
+    eq(ids(plan.filter(p => p.group === 'display')), [DISPLAY_HEADER_ID, 'b1', 'b2']);
 });
 
 test('planLayout does not mutate its input', () => {

@@ -182,6 +182,45 @@ export function hideLegacyDndButton(qs) {
 
 const COMPACT_CLASS = 'kiwi-cc-compact';
 
+/** Layout classes the plan puts on grid items (stylesheet.css: margins and module joins). */
+export const ITEM_CLASS = 'kiwi-cc-item';
+export const JOIN_PREV_CLASS = 'kiwi-cc-join-prev';
+export const JOIN_NEXT_CLASS = 'kiwi-cc-join-next';
+const LAYOUT_CLASSES = [ITEM_CLASS, JOIN_PREV_CLASS, JOIN_NEXT_CLASS];
+
+/**
+ * Put exactly `wanted` (a subset of the layout classes) on `actor`. `saved` remembers every
+ * actor that got one, so restoreLayoutClasses() can take them all off on teardown.
+ *
+ * @param {St.Widget} actor
+ * @param {string[]} wanted
+ * @param {Set<St.Widget>} saved
+ */
+export function setLayoutClasses(actor, wanted, saved) {
+    if (!actor.add_style_class_name)
+        return;
+    for (const name of LAYOUT_CLASSES) {
+        if (wanted.includes(name))
+            actor.add_style_class_name(name);
+        else
+            actor.remove_style_class_name(name);
+    }
+    saved.add(actor);
+}
+
+/** Undo setLayoutClasses() for every actor in `saved` that still exists. */
+export function restoreLayoutClasses(saved) {
+    for (const actor of saved) {
+        try {
+            for (const name of LAYOUT_CLASSES)
+                actor.remove_style_class_name(name);
+        } catch (_e) {
+            // Destroyed with its grid
+        }
+    }
+    saved.clear();
+}
+
 /**
  * True for a plain QuickToggle (no menu arrow): it can become a 1x1 icon-only square.
  * QuickMenuToggle is a sibling class, so it is never compactable.

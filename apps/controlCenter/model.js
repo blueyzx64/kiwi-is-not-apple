@@ -7,52 +7,60 @@
 
 export const COLUMNS = 4;
 
-/** Block order, top to bottom. */
+/**
+ * Block order, top to bottom. 'top' is the macOS top block: the connectivity stack in the
+ * left half, Do Not Disturb and a few secondary squares in the right half. The secondary
+ * squares that do not fit there go to 'toggles', one compact row under the media.
+ */
 export const GROUPS = [
-    'connectivity', 'focus', 'display', 'sound', 'media', 'toggles', 'kiwi',
+    'top', 'display', 'sound', 'media', 'toggles', 'kiwi',
     'background', 'extras', 'notifications', 'system',
 ];
 
 export const MORE_HEADER_ID = 'kiwi:more-header';
+/** Captions of the Display and Sound modules (they join the sliders under them). */
+export const DISPLAY_HEADER_ID = 'kiwi:display-header';
+export const SOUND_HEADER_ID = 'kiwi:sound-header';
+/** Blank half cells that keep the right column of the top block in step with the left. */
+export const SPACER_PREFIX = 'kiwi:spacer-';
 
-// key -> [group, rank inside the group, span in 4 columns, compact]
-// A compact item is a secondary on/off toggle: when the shell says it can be (a plain
-// QuickToggle, no menu), it becomes a 1x1 icon-only square, like the small tiles of macOS.
-// Otherwise it keeps a 2-column labelled tile.
+// key -> [role, rank]
+//   conn       a row of the connectivity stack (left half of the top block)
+//   focus      Do Not Disturb, first in the right half
+//   secondary  an on/off toggle: a 1x1 icon-only square when the shell can make it one
+//              (a plain QuickToggle), a labelled half tile otherwise
+//   display / sound   sliders, joined under their caption
+//   other roles are full-width blocks of the same name
 const STOCK = {
-    'wifi': ['connectivity', 0, 2],
-    'bluetooth': ['connectivity', 1, 2],
-    'vpn': ['connectivity', 2, 2],
-    'wired': ['connectivity', 3, 2],
-    'modem': ['connectivity', 4, 2],
-    'bt-tether': ['connectivity', 5, 2],
+    'wifi': ['conn', 0],
+    'wired': ['conn', 1],
+    'bluetooth': ['conn', 2],
+    'vpn': ['conn', 3],
+    'modem': ['conn', 4],
+    'bt-tether': ['conn', 5],
 
-    'dnd': ['focus', 0, 2],
-    'dark-style': ['focus', 1, 1, true],
-    'night-light': ['focus', 2, 1, true],
+    'dnd': ['focus', 0],
 
-    'brightness': ['display', 0, 4],
+    'dark-style': ['secondary', 0],
+    'night-light': ['secondary', 1],
+    'airplane': ['secondary', 2],
+    'power-saver': ['secondary', 3],
+    'backlight': ['secondary', 4],
+    'rotation': ['secondary', 5],
+    'location': ['secondary', 6],
+    'camera': ['secondary', 7],
+    'remote-access': ['secondary', 8],
+    'thunderbolt': ['secondary', 9],
+    'unsafe': ['secondary', 10],
 
-    'volume-out': ['sound', 0, 4],
-    'volume-in': ['sound', 1, 4],
-
-    'now-playing': ['media', 0, 4],
-
-    'backlight': ['toggles', 0, 2],
-    'power-saver': ['toggles', 1, 2],
-    'remote-access': ['toggles', 2, 2],
-    'airplane': ['toggles', 3, 1, true],
-    'rotation': ['toggles', 4, 1, true],
-    'location': ['toggles', 5, 1, true],
-    'camera': ['toggles', 6, 1, true],
-    'thunderbolt': ['toggles', 7, 1, true],
-    'unsafe': ['toggles', 8, 1, true],
-
-    'kiwi-toggles': ['kiwi', 0, 4],
-
-    'background-apps': ['background', 0, 4],
-    'notifications': ['notifications', 0, 4],
-    'system': ['system', 0, 4],
+    'brightness': ['display', 0],
+    'volume-out': ['sound', 0],
+    'volume-in': ['sound', 1],
+    'now-playing': ['media', 0],
+    'kiwi-toggles': ['kiwi', 0],
+    'background-apps': ['background', 0],
+    'notifications': ['notifications', 0],
+    'system': ['system', 0],
 };
 
 /**
@@ -75,7 +83,7 @@ export const KIWI_TOGGLES = [
 ];
 
 /** Columns of the Kiwi tile module. */
-export const KIWI_COLUMNS = 4;
+export const KIWI_COLUMNS = 8;
 
 /**
  * The Kiwi tiles to build, given which keys the schema has, with their cell in the
@@ -95,79 +103,159 @@ export function isKnownKey(key) {
 }
 
 /**
- * Where one item goes. Unknown items (other extensions' toggles) land in "extras" and keep
- * their stock look: a stock span of 1 of 2 columns becomes 2 of 4.
+ * Where one item goes, before the top block is shared out. Unknown items (other
+ * extensions' toggles) land in "extras" and keep their stock look: a stock span of 1 of 2
+ * columns becomes 2 of 4.
  *
  * @param {{key: ?string, stockSpan?: number, compactable?: boolean}} entry
- * @returns {{group: string, rank: number, span: number, compact: boolean}}
+ * @returns {{role: string, rank: number, span: number, compact: boolean}}
  */
 export function place(entry) {
     if (entry.key && Object.hasOwn(STOCK, entry.key)) {
-        const [group, rank, span, compact = false] = STOCK[entry.key];
-        if (compact && !entry.compactable)
-            return { group, rank, span: 2, compact: false };
-        return { group, rank, span, compact };
+        const [role, rank] = STOCK[entry.key];
+        if (role === 'conn' || role === 'focus')
+            return { role, rank, span: 2, compact: false };
+        if (role === 'secondary') {
+            return entry.compactable
+                ? { role, rank, span: 1, compact: true }
+                : { role, rank, span: 2, compact: false };
+        }
+        return { role, rank, span: COLUMNS, compact: false };
     }
     const span = Math.min(COLUMNS, Math.max(1, (entry.stockSpan ?? 1) * 2));
-    return { group: 'extras', rank: 0, span, compact: false };
+    return { role: 'extras', rank: 0, span, compact: false };
+}
+
+const byRank = (a, b) => a.rank - b.rank || a.index - b.index;
+
+/** Mark a run of items as one module: rounded outer corners, joined edges inside. */
+function join(run) {
+    run.forEach((item, i) => {
+        item.joinPrev = i > 0;
+        item.joinNext = i < run.length - 1;
+    });
 }
 
 /**
- * Order and spans for the whole grid.
+ * Take one row two cells wide out of `pool` (in rank order): the first two squares side by
+ * side; else the first labelled half tile; else the last square alone, its label back (a
+ * lone icon-only half tile reads as a bug).
  *
- * Inside a group the labelled tiles come first and the compact (icon-only) ones after them,
- * so the squares fill the free half of a row. Visible items of one group are packed into
- * rows of COLUMNS; a row that would end short gets its last item widened, so no block
- * shares a row with the next one. A compact square that is widened gets its label back
- * (a wide icon-only tile reads as a bug). Hidden items keep their place in the order (they
- * may appear later) and are not counted.
- * The "More" header comes before the extras and is visible only when an extra is.
+ * @returns {object[]} the row
+ */
+function takeHalfRow(pool) {
+    const squares = pool.filter(i => i.compact);
+    const labelled = pool.find(i => !i.compact);
+    let row;
+    if (squares.length >= 2) {
+        row = squares.slice(0, 2);
+    } else if (labelled) {
+        row = [labelled];
+    } else {
+        row = squares;
+        row[0].span = 2;
+        row[0].compact = false;
+    }
+    for (const item of row)
+        pool.splice(pool.indexOf(item), 1);
+    return row;
+}
+
+/**
+ * Order, spans and module joins for the whole grid.
+ *
+ * - Top block: the connectivity toggles are one stack in the left half (one row each).
+ *   The right half takes Do Not Disturb, then rows of two secondary squares, as many rows
+ *   as the stack has (at least one). Blank spacers fill the right half if it runs out.
+ *   With no connectivity at all the block is one row: Do Not Disturb and two squares.
+ * - Display and Sound: a caption joined to its sliders.
+ * - The secondary toggles left over: labelled half tiles first, then squares, packed in
+ *   rows of COLUMNS. A labelled tile alone at the end of a row is widened.
+ * - Everything else is full width, in GROUPS order. The "More" header heads the extras.
+ * Hidden items keep a place at the end of their block (they may appear later) and are not
+ * counted.
  *
  * @param {{id: string, key: ?string, stockSpan?: number, visible: boolean,
  *   compactable?: boolean}[]} entries
- * @returns {{id: string, group: string, span: number, visible: boolean, compact: boolean}[]}
+ * @returns {{id: string, group: string, span: number, visible: boolean, compact: boolean,
+ *   joinPrev: boolean, joinNext: boolean}[]}
  */
 export function planLayout(entries) {
     const items = entries.map((entry, index) => ({
-        id: entry.id,
-        index,
-        visible: entry.visible,
+        id: entry.id, index, visible: entry.visible, joinPrev: false, joinNext: false,
         ...place(entry),
     }));
+    const shown = role => items.filter(i => i.role === role && i.visible).sort(byRank);
+    const hidden = role => items.filter(i => i.role === role && !i.visible);
+    const out = [];
+    const emit = (group, list) => list.forEach(item => out.push({ ...item, group }));
 
-    const extrasVisible = items.some(i => i.group === 'extras' && i.visible);
-    items.push({
-        id: MORE_HEADER_ID, index: -1, visible: extrasVisible,
-        group: 'extras', rank: -1, span: COLUMNS, compact: false,
-    });
+    // ---- top block
+    const conn = shown('conn');
+    const focus = shown('focus');
+    const pool = shown('secondary');
+    const top = [];
+    if (conn.length) {
+        join(conn);
+        const right = focus.map(item => [item]);
+        while (right.length < conn.length && pool.length)
+            right.push(takeHalfRow(pool));
+        let spacers = 0;
+        conn.forEach((item, r) => {
+            top.push(item);
+            top.push(...right[r] ?? [{ id: `${SPACER_PREFIX}${spacers++}`, visible: true, span: 2 }]);
+        });
+        // Do Not Disturb never drops out of the block, even beside a one-row stack
+        right.slice(conn.length).forEach(row => top.push(...row));
+    } else if (focus.length) {
+        top.push(...focus);
+        if (pool.length)
+            top.push(...takeHalfRow(pool));
+    }
+    emit('top', [...top, ...hidden('conn'), ...hidden('focus')]);
 
-    items.sort((a, b) =>
-        GROUPS.indexOf(a.group) - GROUPS.indexOf(b.group) ||
-        Number(a.compact) - Number(b.compact) ||
-        a.rank - b.rank || a.index - b.index);
-
-    for (const group of GROUPS) {
-        let row = [];
-        let used = 0;
-        const close = () => {
-            if (row.length && used < COLUMNS) {
-                const last = row[row.length - 1];
-                last.span += COLUMNS - used;
-                last.compact = false;
-            }
-            row = [];
-            used = 0;
-        };
-        for (const item of items.filter(i => i.group === group && i.visible)) {
-            if (used + item.span > COLUMNS)
-                close();
-            row.push(item);
-            used += item.span;
-        }
-        close();
+    // ---- display, sound: caption + sliders
+    for (const [group, headerId] of [['display', DISPLAY_HEADER_ID], ['sound', SOUND_HEADER_ID]]) {
+        const sliders = shown(group);
+        const header = { id: headerId, visible: sliders.length > 0, span: COLUMNS };
+        join([header, ...sliders]);
+        emit(group, [header, ...sliders, ...hidden(group)]);
     }
 
-    return items.map(({ id, group, span, visible, compact }) => ({ id, group, span, visible, compact }));
+    emit('media', [...shown('media'), ...hidden('media')]);
+
+    // ---- leftover secondary toggles: labelled first, then squares
+    const labelled = pool.filter(i => !i.compact);
+    const squares = pool.filter(i => i.compact);
+    const toggles = [...labelled, ...squares];
+    let col = 0;
+    toggles.forEach((item, i) => {
+        if (col + item.span > COLUMNS)
+            col = 0;
+        col += item.span;
+        const next = toggles[i + 1];
+        const rowEnds = !next || col + next.span > COLUMNS;
+        if (rowEnds && !item.compact && col < COLUMNS)
+            item.span += COLUMNS - col;
+        if (rowEnds)
+            col = 0;
+    });
+    emit('toggles', [...toggles, ...hidden('secondary')]);
+
+    for (const group of ['kiwi', 'background'])
+        emit(group, [...shown(group), ...hidden(group)]);
+
+    const extras = items.filter(i => i.role === 'extras');
+    emit('extras', [
+        { id: MORE_HEADER_ID, visible: extras.some(i => i.visible), span: COLUMNS },
+        ...extras.filter(i => i.visible), ...extras.filter(i => !i.visible),
+    ]);
+
+    for (const group of ['notifications', 'system'])
+        emit(group, [...shown(group), ...hidden(group)]);
+
+    return out.map(({ id, group, span, visible, compact = false, joinPrev = false, joinNext = false }) =>
+        ({ id, group, span, visible, compact, joinPrev, joinNext }));
 }
 
 /**

@@ -15,7 +15,7 @@ import { QuickToggle } from 'resource:///org/gnome/shell/ui/quickSettings.js';
 
 import { kiwiTiles } from './model.js';
 
-const ICON_SIZE = 18;
+const ICON_SIZE = 16;
 
 function _icon(name, extensionDir) {
     // Kiwi's own icons ship in icons/ (the Shell's icon theme does not know them)
@@ -31,43 +31,29 @@ function _icon(name, extensionDir) {
 }
 
 /**
- * One Kiwi feature tile: a rounded square with the icon, its short name under it. The
- * button is checked while the feature's key is on, and toggles the key both ways. It never
- * calls the feature: the feature registry reacts to the key.
+ * One Kiwi feature tile: an icon in a small circle, filled with the accent while the
+ * feature's key is on. The button toggles the key both ways and never calls the feature:
+ * the feature registry reacts to the key. Its name shows in the module header on hover or
+ * keyboard focus (`onHint`).
  */
-function _createTile({ settings, tile, gettext, extensionDir }) {
-    const box = new St.BoxLayout({
-        orientation: Clutter.Orientation.VERTICAL,
-        x_expand: true,
-        style_class: 'kiwi-cc-kiwi-tile-box',
-    });
-    const square = new St.Bin({
-        style_class: 'kiwi-cc-kiwi-tile-square',
+function _createTile({ settings, tile, gettext, extensionDir, onHint }) {
+    const name = gettext(tile.label);
+    const button = new St.Button({
+        style_class: 'kiwi-cc-kiwi-tile',
+        accessible_name: name,
+        accessible_role: Atk.Role.TOGGLE_BUTTON,
+        can_focus: true,
+        track_hover: true,
+        toggle_mode: true,
         x_align: Clutter.ActorAlign.CENTER,
         child: _icon(tile.icon, extensionDir),
     });
-    const label = new St.Label({
-        style_class: 'kiwi-cc-kiwi-tile-label',
-        text: gettext(tile.label),
-        x_align: Clutter.ActorAlign.CENTER,
-    });
-    label.clutter_text.line_wrap = true;
-    label.clutter_text.ellipsize = Pango.EllipsizeMode.END;
-    label.clutter_text.line_alignment = Pango.Alignment.CENTER;
-    box.add_child(square);
-    box.add_child(label);
-
-    const button = new St.Button({
-        style_class: 'kiwi-cc-kiwi-tile',
-        accessible_name: gettext(tile.label),
-        accessible_role: Atk.Role.TOGGLE_BUTTON,
-        can_focus: true,
-        toggle_mode: true,
-        x_expand: true,
-        child: box,
-    });
-    button.label_actor = label;
     settings.bind(tile.key, button, 'checked', Gio.SettingsBindFlags.DEFAULT);
+    const hint = () => onHint(button.hover || button.has_key_focus() ? button : null, name);
+    button.connect('notify::hover', hint);
+    button.connect('key-focus-in', hint);
+    button.connect('key-focus-out', hint);
+    button.connect('notify::checked', hint);
     button.connect('destroy', () => {
         try {
             Gio.Settings.unbind(button, 'checked');
@@ -79,8 +65,10 @@ function _createTile({ settings, tile, gettext, extensionDir }) {
 }
 
 /**
- * The "Kiwi" module: a full-width rounded card with one tile per Kiwi feature that can be
- * switched on and off (see KIWI_TOGGLES). Null when the schema has none of the keys.
+ * The "Kiwi" module: a full-width rounded card, a caption and one row of icon circles, one
+ * per Kiwi feature that can be switched on and off (see KIWI_TOGGLES). The caption names
+ * the feature under the pointer, so the row itself needs no labels. Null when the schema
+ * has none of the keys.
  *
  * @param {object} opts
  * @param {Gio.Settings} opts.settings Kiwi settings
@@ -94,25 +82,45 @@ export function createKiwiModule({ settings, gettext, extensionDir }) {
     if (!tiles.length)
         return null;
 
+    const head = new St.BoxLayout({ style_class: 'kiwi-cc-kiwi-head', x_expand: true });
+    head.add_child(new St.Label({ style_class: 'kiwi-cc-module-title', text: 'Kiwi', x_expand: true }));
+    const hintLabel = new St.Label({
+        style_class: 'kiwi-cc-kiwi-hint',
+        y_align: Clutter.ActorAlign.CENTER,
+    });
+    hintLabel.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+    head.add_child(hintLabel);
+    let hinted = null;
+    const onHint = (button, name) => {
+        if (!button && hinted && (hinted.hover || hinted.has_key_focus()))
+            return;
+        hinted = button;
+        hintLabel.text = button
+            ? `${name} · ${button.checked ? gettext('On') : gettext('Off')}`
+            : '';
+    };
+
     const layout = new Clutter.GridLayout({
         column_homogeneous: true,
-        column_spacing: 4,
-        row_spacing: 10,
+        column_spacing: 2,
+        row_spacing: 8,
     });
     const grid = new St.Widget({
         style_class: 'kiwi-cc-kiwi-grid',
         layout_manager: layout,
         x_expand: true,
     });
-    for (const tile of tiles)
-        layout.attach(_createTile({ settings, tile, gettext, extensionDir }), tile.column, tile.row, 1, 1);
+    for (const tile of tiles) {
+        layout.attach(_createTile({ settings, tile, gettext, extensionDir, onHint }),
+            tile.column, tile.row, 1, 1);
+    }
 
     const module = new St.BoxLayout({
         style_class: 'kiwi-cc-module kiwi-cc-kiwi',
         orientation: Clutter.Orientation.VERTICAL,
         x_expand: true,
     });
-    module.add_child(new St.Label({ style_class: 'kiwi-cc-module-title', text: 'Kiwi' }));
+    module.add_child(head);
     module.add_child(grid);
     return module;
 }

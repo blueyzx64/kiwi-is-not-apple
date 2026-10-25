@@ -1014,157 +1014,222 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
 /* feature: control-center */
 /* Every rule is scoped by .kiwi-control-center, a class the feature adds to the Quick
    Settings menu box while it is on. Removing the class restores the stock look.
-   Shape: every tile and module is a rounded square (radius 14-16px), never a pill.
-   Colour (.kiwi-cc-calm, off under high contrast): neutral translucent fills; the accent
-   only marks what is on, on the icon badge, never on a whole wide tile. */
+   macOS layout: one compact 330px panel, 12px padding, modules are rounded squares
+   (radius 14px, concentric with the 26px panel). The accent is only the small circle
+   behind an active icon. Type: 14px semibold titles, 12px secondary text (the floor).
+   Rows are spaced by item margins, not the grid's row spacing, so a module made of several
+   grid items (the connectivity stack, Display, Sound) can join without a gap:
+     .kiwi-cc-item       every planned item, 8px under it
+     .kiwi-cc-join-next  the item below belongs to the same module: no gap, square bottom
+     .kiwi-cc-join-prev  continues the module above: square top
+   Colours live under .kiwi-cc-calm (off under high contrast, where the stock solid tiles
+   stay) and .kiwi-cc-light (light style). */
 
-/* Grid: 4 columns, a half-width stock tile is span 2 */
-.quick-settings.kiwi-control-center .quick-settings-grid {
-    spacing-rows: 10px;
-    spacing-columns: 10px;
+.quick-settings.kiwi-control-center {
+    padding: 12px;
+    border-radius: 26px;
 }
 
-/* Tiles: one height, rounded squares */
+.quick-settings.kiwi-control-center .quick-settings-grid {
+    width: 306px;
+    spacing-rows: 0;
+    spacing-columns: 8px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-item {
+    margin-bottom: 8px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-item.kiwi-cc-join-next,
+.quick-settings.kiwi-control-center .quick-settings-system-item.kiwi-cc-item {
+    margin-bottom: 0;
+}
+
+/* ---- tiles: one shape for every toggle ---- */
 .quick-settings.kiwi-control-center .quick-toggle,
 .quick-settings.kiwi-control-center .quick-toggle-has-menu {
-    border-radius: 14px;
-    min-height: 3.273em;
-}
-
-.quick-settings.kiwi-control-center .quick-toggle-menu-button {
+    min-width: 0;
+    max-width: none;
+    min-height: 48px;
     border-radius: 14px;
 }
 
-.quick-settings.kiwi-control-center .quick-toggle-has-menu .quick-toggle:ltr,
-.quick-settings.kiwi-control-center .quick-toggle-has-menu .quick-toggle-menu-button:rtl {
-    border-radius: 14px 0 0 14px;
+.quick-settings.kiwi-control-center .quick-toggle-has-menu .quick-toggle,
+.quick-settings.kiwi-control-center .quick-toggle-has-menu .quick-toggle-menu-button {
+    min-height: 0;
+    border-radius: 12px;
 }
 
-.quick-settings.kiwi-control-center .quick-toggle-has-menu .quick-toggle:rtl,
-.quick-settings.kiwi-control-center .quick-toggle-has-menu .quick-toggle-menu-button:ltr {
-    border-radius: 0 14px 14px 0;
+.quick-settings.kiwi-control-center .quick-toggle-has-menu .quick-toggle-menu-button {
+    padding: 6px 8px;
 }
 
-.quick-settings.kiwi-control-center .quick-toggle-has-menu .quick-toggle:last-child {
-    border-radius: 14px;
+.quick-settings.kiwi-control-center .quick-toggle-has-menu .quick-toggle-menu-button StIcon {
+    icon-size: 12px;
+}
+
+.quick-settings.kiwi-control-center .quick-toggle-has-menu .quick-toggle-separator {
+    width: 0;
+}
+
+/* A module made of several items: square where they meet */
+.quick-settings.kiwi-control-center .kiwi-cc-join-next,
+.quick-settings.kiwi-control-center .kiwi-cc-join-next .quick-toggle {
+    border-radius: 14px 14px 0 0;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-join-prev,
+.quick-settings.kiwi-control-center .kiwi-cc-join-prev .quick-toggle {
+    border-radius: 0 0 14px 14px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-join-prev.kiwi-cc-join-next,
+.quick-settings.kiwi-control-center .kiwi-cc-join-prev.kiwi-cc-join-next .quick-toggle {
+    border-radius: 0;
 }
 
 .quick-settings.kiwi-control-center .quick-toggle > StBoxLayout {
-    spacing: 10px;
+    spacing: 9px;
 }
 
 .quick-settings.kiwi-control-center .quick-toggle:ltr > StBoxLayout {
     padding-left: 9px;
+    padding-right: 4px;
 }
 
 .quick-settings.kiwi-control-center .quick-toggle:rtl > StBoxLayout {
     padding-right: 9px;
+    padding-left: 4px;
 }
 
-/* The icon sits in a small rounded badge; the badge, not the tile, shows "on" */
+/* The icon sits in a 30px circle; the circle, not the tile, shows "on" */
 .quick-settings.kiwi-control-center .quick-toggle .quick-toggle-icon {
     icon-size: 16px;
     padding: 7px;
-    border-radius: 10px;
+    border-radius: 999px;
 }
 
-/* Secondary toggles made icon-only by the feature (1x1) */
-.quick-settings.kiwi-control-center .quick-toggle.kiwi-cc-compact {
-    min-width: 0;
-    max-width: auto;
+.quick-settings.kiwi-control-center .quick-toggle .quick-toggle-title {
+    font-size: 10.5pt;
+    font-weight: 600;
 }
 
+.quick-settings.kiwi-control-center .quick-toggle .quick-toggle-subtitle {
+    font-size: 9pt;
+    font-weight: normal;
+}
+
+/* Secondary toggles made icon-only by the feature (1x1): the circle alone, centred */
 .quick-settings.kiwi-control-center .quick-toggle.kiwi-cc-compact > StBoxLayout {
     padding: 0;
 }
 
-/* Sections */
+/* ---- captions and sections ---- */
+.quick-settings.kiwi-control-center .kiwi-cc-caption {
+    font-size: 10.5pt;
+    font-weight: 600;
+    padding: 10px 14px 0 14px;
+    border-radius: 14px 14px 0 0;
+}
+
 .quick-settings.kiwi-control-center .kiwi-cc-section-title {
-    font-size: 0.9em;
+    font-size: 9pt;
     font-weight: 600;
     padding: 4px 6px 0 6px;
 }
 
-/* Modules: sliders, Now Playing and the Kiwi tiles are rounded cards */
+/* ---- sliders: a thick rounded track, like the Display and Sound modules ---- */
 .quick-settings.kiwi-control-center .quick-slider {
-    border-radius: 16px;
-    padding: 4px 6px;
+    padding: 6px 12px 12px 8px;
+    border-radius: 14px;
+}
+
+.quick-settings.kiwi-control-center .quick-slider > StBoxLayout {
+    spacing: 4px;
+}
+
+.quick-settings.kiwi-control-center .quick-slider .icon-button {
+    padding: 4px;
+    border-radius: 999px;
+}
+
+.quick-settings.kiwi-control-center .quick-slider .icon-button StIcon {
+    icon-size: 16px;
 }
 
 .quick-settings.kiwi-control-center .quick-slider .slider-bin {
-    padding: 8px 6px;
-    border-radius: 12px;
+    padding: 0;
+    border-radius: 999px;
 }
 
+.quick-settings.kiwi-control-center .quick-slider .slider {
+    -barlevel-height: 20px;
+    -slider-handle-radius: 10px;
+    -barlevel-overdrive-separator-width: 0;
+}
+
+/* ---- modules: Now Playing and the Kiwi row ---- */
 .quick-settings.kiwi-control-center .kiwi-cc-module {
-    border-radius: 16px;
-    padding: 8px 6px 10px 6px;
+    border-radius: 14px;
+    padding: 10px 12px 12px 12px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-kiwi-head {
+    padding-bottom: 8px;
+    spacing: 8px;
 }
 
 .quick-settings.kiwi-control-center .kiwi-cc-module-title {
-    font-size: 0.8em;
+    font-size: 10.5pt;
     font-weight: 600;
-    padding: 0 6px 8px 6px;
 }
 
-/* Kiwi feature tiles: a rounded square with the icon, the short name under it */
+.quick-settings.kiwi-control-center .kiwi-cc-kiwi-hint {
+    font-size: 9pt;
+}
+
 .quick-settings.kiwi-control-center .kiwi-cc-kiwi-tile {
+    width: 30px;
+    height: 30px;
     padding: 0;
-    border-radius: 12px;
+    border-radius: 999px;
 }
 
-.quick-settings.kiwi-control-center .kiwi-cc-kiwi-tile-box {
-    spacing: 5px;
-}
-
-.quick-settings.kiwi-control-center .kiwi-cc-kiwi-tile-square {
-    width: 40px;
-    height: 40px;
-    border-radius: 13px;
-}
-
-.quick-settings.kiwi-control-center .kiwi-cc-kiwi-tile-label {
-    font-size: 0.75em;
-    font-weight: 500;
-}
-
-.quick-settings.kiwi-control-center .kiwi-cc-kiwi-tile:focus .kiwi-cc-kiwi-tile-square {
+.quick-settings.kiwi-control-center .kiwi-cc-kiwi-tile:focus {
     box-shadow: inset 0 0 0 2px st-transparentize(-st-accent-color, 0.2);
 }
 
-/* Now Playing: a light, single-line card. max-width keeps a long title from widening
-   the whole menu. */
+/* max-width keeps a long title from widening the whole menu */
 .quick-settings.kiwi-control-center .kiwi-cc-now-playing {
     min-width: 0;
-    max-width: 22em;
+    max-width: none;
     min-height: 0;
-    padding: 8px 8px 8px 10px;
+    padding: 8px 8px 8px 8px;
     spacing: 10px;
-    border-radius: 16px;
+    border-radius: 14px;
 }
 
 .quick-settings.kiwi-control-center .kiwi-cc-np-art {
     border-radius: 8px;
 }
 
-/* No cover and no app icon: a small note in a 36px tinted square */
+/* No cover and no app icon: a small note in a 36px rounded square */
 .quick-settings.kiwi-control-center .kiwi-cc-np-art-symbolic {
     padding: 8px;
-    background-color: rgba(128, 128, 128, 0.22);
 }
 
 .quick-settings.kiwi-control-center .kiwi-cc-np-title {
-    font-size: 0.95em;
+    font-size: 10.5pt;
     font-weight: 600;
 }
 
 .quick-settings.kiwi-control-center .kiwi-cc-np-artist {
-    font-size: 0.85em;
+    font-size: 9pt;
 }
 
 .quick-settings.kiwi-control-center .kiwi-cc-np-button {
     padding: 7px;
-    border-radius: 10px;
+    border-radius: 999px;
     background-color: transparent;
 }
 
@@ -1172,42 +1237,48 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
     icon-size: 16px;
 }
 
-.quick-settings.kiwi-control-center .kiwi-cc-np-button:hover {
-    background-color: rgba(128, 128, 128, 0.25);
+/* ---- footer: one quiet line of small icons ---- */
+.quick-settings.kiwi-control-center .quick-settings-system-item {
+    padding-top: 2px;
 }
 
-/* Footer: user, battery and the icon buttons in one tidy row of rounded squares */
 .quick-settings.kiwi-control-center .quick-settings-system-item > StBoxLayout {
-    spacing: 8px;
+    spacing: 2px;
 }
 
 .quick-settings.kiwi-control-center .quick-settings-system-item .icon-button {
-    padding: 9px;
-    border-radius: 12px;
+    padding: 7px;
+    border-radius: 999px;
+    background-color: transparent;
+}
+
+.quick-settings.kiwi-control-center .quick-settings-system-item .icon-button StIcon {
+    icon-size: 16px;
 }
 
 .quick-settings.kiwi-control-center .quick-settings-system-item .power-item {
     min-width: 0;
-    max-width: 6.5em;
-    border-radius: 12px;
+    max-width: 9em;
+    min-height: 0;
+    border-radius: 999px;
+    background-color: transparent;
+}
+
+.quick-settings.kiwi-control-center .quick-settings-system-item .power-item .quick-toggle-icon {
+    padding: 0;
+    background-color: transparent;
+}
+
+.quick-settings.kiwi-control-center .quick-settings-system-item .power-item > StBoxLayout {
+    padding-left: 6px;
 }
 
 .quick-settings.kiwi-control-center .kiwi-cc-user {
-    spacing: 8px;
-    padding-right: 4px;
+    padding: 0 4px;
 }
 
 .quick-settings.kiwi-control-center .kiwi-cc-user .user-icon {
-    icon-size: 32px;
-}
-
-.quick-settings.kiwi-control-center .kiwi-cc-user .user-icon StIcon {
-    padding: 6px;
-}
-
-.quick-settings.kiwi-control-center .kiwi-cc-user-name {
-    font-weight: 600;
-    max-width: 4.5em;
+    icon-size: 24px;
 }
 
 /* Top bar: battery percentage that stays on */
@@ -1215,32 +1286,27 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
     padding-left: 2px;
 }
 
-/* Calm palette (not under high contrast, where the stock solid tiles stay) */
+/* ---- calm palette, dark style ---- */
 .quick-settings.kiwi-cc-calm .quick-toggle,
 .quick-settings.kiwi-cc-calm .quick-toggle:checked,
-.quick-settings.kiwi-cc-calm .quick-toggle-has-menu .quick-toggle-menu-button,
-.quick-settings.kiwi-cc-calm .quick-toggle-has-menu .quick-toggle-menu-button:checked,
+.quick-settings.kiwi-cc-calm .quick-toggle-has-menu,
 .quick-settings.kiwi-cc-calm .quick-slider,
+.quick-settings.kiwi-cc-calm .kiwi-cc-caption,
 .quick-settings.kiwi-cc-calm .kiwi-cc-module,
-.quick-settings.kiwi-cc-calm .kiwi-cc-now-playing,
-.quick-settings.kiwi-cc-calm .quick-settings-system-item .icon-button,
-.quick-settings.kiwi-cc-calm .quick-settings-system-item .power-item {
-    background-color: rgba(128, 128, 128, 0.16);
+.quick-settings.kiwi-cc-calm .kiwi-cc-now-playing {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.08);
     box-shadow: none;
 }
 
 .quick-settings.kiwi-cc-calm .quick-toggle:hover,
-.quick-settings.kiwi-cc-calm .quick-toggle:checked:hover,
-.quick-settings.kiwi-cc-calm .quick-toggle-has-menu .quick-toggle-menu-button:hover,
-.quick-settings.kiwi-cc-calm .quick-toggle-has-menu .quick-toggle-menu-button:checked:hover,
-.quick-settings.kiwi-cc-calm .quick-settings-system-item .icon-button:hover {
-    background-color: rgba(128, 128, 128, 0.24);
+.quick-settings.kiwi-cc-calm .quick-toggle:checked:hover {
+    background-color: rgba(255, 255, 255, 0.13);
 }
 
 .quick-settings.kiwi-cc-calm .quick-toggle:active,
-.quick-settings.kiwi-cc-calm .quick-toggle:checked:active,
-.quick-settings.kiwi-cc-calm .quick-settings-system-item .icon-button:active {
-    background-color: rgba(128, 128, 128, 0.32);
+.quick-settings.kiwi-cc-calm .quick-toggle:checked:active {
+    background-color: rgba(255, 255, 255, 0.18);
 }
 
 .quick-settings.kiwi-cc-calm .quick-toggle:focus,
@@ -1248,69 +1314,369 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
     box-shadow: inset 0 0 0 2px st-transparentize(-st-accent-color, 0.3);
 }
 
-/* Inside a menu toggle the tile is the container: its two halves stay flat */
+/* Inside a menu toggle the outer box is the tile: its halves stay flat until hovered */
 .quick-settings.kiwi-cc-calm .quick-toggle-has-menu .quick-toggle,
-.quick-settings.kiwi-cc-calm .quick-toggle-has-menu .quick-toggle:checked {
-    background-color: transparent;
-}
-
-.quick-settings.kiwi-cc-calm .quick-toggle-has-menu {
-    background-color: rgba(128, 128, 128, 0.16);
-}
-
+.quick-settings.kiwi-cc-calm .quick-toggle-has-menu .quick-toggle:checked,
 .quick-settings.kiwi-cc-calm .quick-toggle-has-menu .quick-toggle-menu-button,
 .quick-settings.kiwi-cc-calm .quick-toggle-has-menu .quick-toggle-menu-button:checked {
+    color: #ffffff;
     background-color: transparent;
+}
+
+.quick-settings.kiwi-cc-calm .quick-toggle-has-menu .quick-toggle:hover,
+.quick-settings.kiwi-cc-calm .quick-toggle-has-menu .quick-toggle-menu-button:hover,
+.quick-settings.kiwi-cc-calm .quick-toggle-has-menu .quick-toggle-menu-button:checked:hover {
+    background-color: rgba(255, 255, 255, 0.07);
 }
 
 .quick-settings.kiwi-cc-calm .quick-toggle-has-menu .quick-toggle-separator {
-    background-color: rgba(128, 128, 128, 0.22);
-}
-
-.quick-settings.kiwi-cc-calm .quick-toggle .quick-toggle-icon,
-.quick-settings.kiwi-cc-calm .kiwi-cc-kiwi-tile-square {
-    background-color: rgba(128, 128, 128, 0.22);
-}
-
-/* On: a softened accent, on the badge only */
-.quick-settings.kiwi-cc-calm .quick-toggle:checked .quick-toggle-icon,
-.quick-settings.kiwi-cc-calm .kiwi-cc-kiwi-tile:checked .kiwi-cc-kiwi-tile-square {
-    color: -st-accent-fg-color;
-    background-color: st-transparentize(-st-accent-color, 0.2);
-}
-
-.quick-settings.kiwi-cc-calm .kiwi-cc-kiwi-tile:hover .kiwi-cc-kiwi-tile-square {
-    background-color: rgba(128, 128, 128, 0.32);
-}
-
-.quick-settings.kiwi-cc-calm .kiwi-cc-kiwi-tile:checked:hover .kiwi-cc-kiwi-tile-square {
-    background-color: -st-accent-color;
-}
-
-.quick-settings.kiwi-cc-calm .kiwi-cc-kiwi-tile-label,
-.quick-settings.kiwi-cc-calm .kiwi-cc-module-title,
-.quick-settings.kiwi-cc-calm .kiwi-cc-np-artist,
-.quick-settings.kiwi-cc-calm .quick-toggle .quick-toggle-subtitle {
-    color: rgba(255, 255, 255, 0.62);
-}
-
-.quick-settings.kiwi-cc-calm .kiwi-cc-np-title {
-    color: #ffffff;
-}
-
-.quick-settings.kiwi-cc-calm .kiwi-cc-np-art,
-.quick-settings.kiwi-cc-calm .kiwi-cc-np-button {
-    color: rgba(255, 255, 255, 0.85);
-}
-
-/* Sliders inside their card: the bin itself stays flat */
-.quick-settings.kiwi-cc-calm .quick-slider .slider-bin,
-.quick-settings.kiwi-cc-calm .quick-slider .icon-button {
     background-color: transparent;
 }
 
-.quick-settings.kiwi-cc-calm .quick-slider .slider-bin:hover {
-    background-color: rgba(128, 128, 128, 0.12);
+.quick-settings.kiwi-cc-calm .quick-toggle .quick-toggle-icon,
+.quick-settings.kiwi-cc-calm .kiwi-cc-kiwi-tile {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+/* On: the accent, on the circle only */
+.quick-settings.kiwi-cc-calm .quick-toggle:checked .quick-toggle-icon,
+.quick-settings.kiwi-cc-calm .kiwi-cc-kiwi-tile:checked {
+    color: -st-accent-fg-color;
+    background-color: -st-accent-color;
+}
+
+.quick-settings.kiwi-cc-calm .kiwi-cc-kiwi-tile:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.quick-settings.kiwi-cc-calm .kiwi-cc-kiwi-tile:checked:hover {
+    background-color: st-lighten(-st-accent-color, 6%);
+}
+
+.quick-settings.kiwi-cc-calm .quick-toggle .quick-toggle-subtitle,
+.quick-settings.kiwi-cc-calm .kiwi-cc-kiwi-hint,
+.quick-settings.kiwi-cc-calm .kiwi-cc-np-artist,
+.quick-settings.kiwi-cc-calm .kiwi-cc-section-title {
+    color: rgba(255, 255, 255, 0.62);
+}
+
+.quick-settings.kiwi-cc-calm .kiwi-cc-np-art-symbolic {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.quick-settings.kiwi-cc-calm .kiwi-cc-np-button,
+.quick-settings.kiwi-cc-calm .quick-settings-system-item .icon-button,
+.quick-settings.kiwi-cc-calm .quick-settings-system-item .power-item {
+    color: rgba(255, 255, 255, 0.85);
+    background-color: transparent;
+}
+
+.quick-settings.kiwi-cc-calm .kiwi-cc-np-button:hover,
+.quick-settings.kiwi-cc-calm .quick-settings-system-item .icon-button:hover,
+.quick-settings.kiwi-cc-calm .quick-settings-system-item .power-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Sliders: white fill on a faint track, white knob (the macOS look) */
+.quick-settings.kiwi-cc-calm .quick-slider .slider-bin,
+.quick-settings.kiwi-cc-calm .quick-slider .icon-button {
+    color: rgba(255, 255, 255, 0.85);
+    background-color: transparent;
+}
+
+.quick-settings.kiwi-cc-calm .quick-slider .slider {
+    color: #ffffff;
+    -barlevel-background-color: rgba(255, 255, 255, 0.14);
+    -barlevel-active-background-color: rgba(255, 255, 255, 0.92);
+}
+
+/* ---- calm palette, light style ---- */
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle:checked,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle-has-menu,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-slider,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .kiwi-cc-caption,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .kiwi-cc-module,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .kiwi-cc-now-playing {
+    color: #1d1d1f;
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle:hover,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle:checked:hover {
+    background-color: rgba(0, 0, 0, 0.09);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle:active,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle:checked:active {
+    background-color: rgba(0, 0, 0, 0.13);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle-has-menu .quick-toggle,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle-has-menu .quick-toggle:checked,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle-has-menu .quick-toggle-menu-button,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle-has-menu .quick-toggle-menu-button:checked {
+    color: #1d1d1f;
+    background-color: transparent;
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle-has-menu .quick-toggle:hover,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle-has-menu .quick-toggle-menu-button:hover,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle-has-menu .quick-toggle-menu-button:checked:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle .quick-toggle-icon,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .kiwi-cc-kiwi-tile {
+    color: #1d1d1f;
+    background-color: rgba(0, 0, 0, 0.08);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle:checked .quick-toggle-icon,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .kiwi-cc-kiwi-tile:checked {
+    color: -st-accent-fg-color;
+    background-color: -st-accent-color;
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .kiwi-cc-kiwi-tile:hover {
+    background-color: rgba(0, 0, 0, 0.14);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .kiwi-cc-kiwi-tile:checked:hover {
+    background-color: st-darken(-st-accent-color, 6%);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle .quick-toggle-subtitle,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .kiwi-cc-kiwi-hint,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .kiwi-cc-np-artist,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .kiwi-cc-section-title {
+    color: rgba(0, 0, 0, 0.58);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .kiwi-cc-np-art-symbolic {
+    background-color: rgba(0, 0, 0, 0.08);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .kiwi-cc-np-button,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-settings-system-item .icon-button,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-settings-system-item .power-item,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-slider .slider-bin,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-slider .icon-button {
+    color: rgba(0, 0, 0, 0.75);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .kiwi-cc-np-button:hover,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-settings-system-item .icon-button:hover,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-settings-system-item .power-item:hover {
+    background-color: rgba(0, 0, 0, 0.07);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-slider .slider {
+    color: #ffffff;
+    -barlevel-background-color: rgba(0, 0, 0, 0.12);
+    -barlevel-active-background-color: #ffffff;
+}
+
+/* feature: calendar (apps/calendar.js): the date menu as a macOS-like calendar card
+   Scoped by .kiwi-datemenu on the date menu box while the feature is on. A clean month
+   grid, a two-line header, today in an accent circle, events as a plain list. World clocks
+   and weather are hidden by the feature. Colours under .kiwi-datemenu-calm (off under high
+   contrast) and .kiwi-datemenu-light. Type: 14px titles, 12px secondary text minimum. */
+
+.kiwi-datemenu #calendarArea {
+    padding: 8px;
+}
+
+.kiwi-datemenu .datemenu-calendar-column {
+    spacing: 6px;
+}
+
+.kiwi-datemenu .datemenu-today-button {
+    padding: 4px 8px 2px 8px;
+    border-radius: 12px;
+    background-color: transparent;
+    box-shadow: none;
+}
+
+.kiwi-datemenu .datemenu-today-button .day-label {
+    font-size: 9pt;
+    font-weight: 600;
+}
+
+.kiwi-datemenu .datemenu-today-button .date-label {
+    font-size: 13pt;
+    font-weight: 700;
+}
+
+.kiwi-datemenu .calendar {
+    padding: 0;
+    background-color: transparent;
+    box-shadow: none;
+}
+
+.kiwi-datemenu .calendar .calendar-month-label {
+    font-size: 10.5pt;
+    font-weight: 600;
+    padding: 4px 0;
+    background-color: transparent;
+}
+
+.kiwi-datemenu .calendar .pager-button {
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    background-color: transparent;
+}
+
+.kiwi-datemenu .calendar .calendar-change-month-back StIcon,
+.kiwi-datemenu .calendar .calendar-change-month-forward StIcon {
+    icon-size: 14px;
+}
+
+.kiwi-datemenu .calendar .calendar-day-heading {
+    font-size: 9pt;
+    font-weight: 600;
+    margin: 4px 2px 2px 2px;
+    padding: 0;
+    background-color: transparent;
+}
+
+.kiwi-datemenu .calendar .calendar-day {
+    width: 34px;
+    height: 34px;
+    margin: 1px;
+    font-size: 10.5pt;
+    font-weight: normal;
+    border-radius: 999px;
+    background-color: transparent;
+    box-shadow: none;
+}
+
+.kiwi-datemenu .events-button {
+    padding: 10px 12px;
+    border-radius: 12px;
+    border-width: 0;
+    box-shadow: none;
+}
+
+.kiwi-datemenu .events-button .events-title {
+    font-size: 9pt;
+    font-weight: 600;
+    padding-bottom: 4px;
+}
+
+.kiwi-datemenu .events-button .event-summary {
+    font-size: 10.5pt;
+    font-weight: 600;
+}
+
+.kiwi-datemenu .events-button .event-time,
+.kiwi-datemenu .events-button .event-placeholder {
+    font-size: 9pt;
+    font-style: normal;
+}
+
+/* The notification list (only when "Keep notification panel" is on): quiet cards */
+.kiwi-datemenu .message {
+    border-radius: 12px;
+    box-shadow: none;
+}
+
+/* dark */
+.kiwi-datemenu-calm .datemenu-today-button .day-label,
+.kiwi-datemenu-calm .calendar .calendar-day-heading,
+.kiwi-datemenu-calm .events-button .events-title,
+.kiwi-datemenu-calm .events-button .event-time,
+.kiwi-datemenu-calm .events-button .event-placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.kiwi-datemenu-calm .datemenu-today-button .date-label,
+.kiwi-datemenu-calm .calendar .calendar-month-label,
+.kiwi-datemenu-calm .calendar .calendar-day {
+    color: #ffffff;
+}
+
+.kiwi-datemenu-calm .calendar .calendar-day.calendar-weekend {
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.kiwi-datemenu-calm .calendar .calendar-day.calendar-other-month {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.kiwi-datemenu-calm .calendar .calendar-day:hover,
+.kiwi-datemenu-calm .calendar .pager-button:hover,
+.kiwi-datemenu-calm .datemenu-today-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.kiwi-datemenu-calm .calendar .calendar-day:selected {
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+.kiwi-datemenu-calm .events-button,
+.kiwi-datemenu-calm .message {
+    background-color: rgba(255, 255, 255, 0.07);
+}
+
+.kiwi-datemenu-calm .events-button:hover {
+    background-color: rgba(255, 255, 255, 0.11);
+}
+
+/* light */
+.kiwi-datemenu-calm.kiwi-datemenu-light .datemenu-today-button .day-label,
+.kiwi-datemenu-calm.kiwi-datemenu-light .calendar .calendar-day-heading,
+.kiwi-datemenu-calm.kiwi-datemenu-light .events-button .events-title,
+.kiwi-datemenu-calm.kiwi-datemenu-light .events-button .event-time,
+.kiwi-datemenu-calm.kiwi-datemenu-light .events-button .event-placeholder {
+    color: rgba(0, 0, 0, 0.55);
+}
+
+.kiwi-datemenu-calm.kiwi-datemenu-light .datemenu-today-button .date-label,
+.kiwi-datemenu-calm.kiwi-datemenu-light .calendar .calendar-month-label,
+.kiwi-datemenu-calm.kiwi-datemenu-light .calendar .calendar-day {
+    color: #1d1d1f;
+}
+
+.kiwi-datemenu-calm.kiwi-datemenu-light .calendar .calendar-day.calendar-weekend {
+    color: rgba(0, 0, 0, 0.65);
+}
+
+.kiwi-datemenu-calm.kiwi-datemenu-light .calendar .calendar-day.calendar-other-month {
+    color: rgba(0, 0, 0, 0.28);
+}
+
+.kiwi-datemenu-calm.kiwi-datemenu-light .calendar .calendar-day:hover,
+.kiwi-datemenu-calm.kiwi-datemenu-light .calendar .pager-button:hover,
+.kiwi-datemenu-calm.kiwi-datemenu-light .datemenu-today-button:hover {
+    background-color: rgba(0, 0, 0, 0.06);
+}
+
+.kiwi-datemenu-calm.kiwi-datemenu-light .calendar .calendar-day:selected {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.kiwi-datemenu-calm.kiwi-datemenu-light .events-button,
+.kiwi-datemenu-calm.kiwi-datemenu-light .message {
+    background-color: rgba(0, 0, 0, 0.045);
+}
+
+.kiwi-datemenu-calm.kiwi-datemenu-light .events-button:hover {
+    background-color: rgba(0, 0, 0, 0.08);
+}
+
+/* Today: the accent circle, whatever the style, hover or selection */
+.kiwi-datemenu .calendar .calendar-day.calendar-today,
+.kiwi-datemenu .calendar .calendar-day.calendar-today:hover,
+.kiwi-datemenu .calendar .calendar-day.calendar-today:selected,
+.kiwi-datemenu-calm.kiwi-datemenu-light .calendar .calendar-day.calendar-today,
+.kiwi-datemenu-calm.kiwi-datemenu-light .calendar .calendar-day.calendar-today:hover,
+.kiwi-datemenu-calm.kiwi-datemenu-light .calendar .calendar-day.calendar-today:selected {
+    font-weight: 700;
+    color: -st-accent-fg-color;
+    background-color: -st-accent-color;
 }
 
 /* feature: stage-manager */
@@ -1396,21 +1762,21 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
 
 /* ---- shared rows ---- */
 .kiwi-clip-section {
-  font-size: 11px;
-  font-weight: bold;
-  color: rgba(128, 128, 128, 0.95);
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(128, 128, 128, 1);
   padding: 8px 10px 2px 10px;
 }
 
 .kiwi-clip-row {
-  border-radius: 12px;
+  border-radius: 10px;
   padding: 0;
   margin: 1px 0;
 }
 
 .kiwi-clip-row:hover,
 .kiwi-clip-row:focus {
-  background-color: rgba(128, 128, 128, 0.18);
+  background-color: rgba(128, 128, 128, 0.16);
 }
 
 .kiwi-clip-row:selected,
@@ -1429,15 +1795,17 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
 }
 
 .kiwi-clip-title {
-  font-size: 13px;
+  font-size: 14px;
 }
 
-.kiwi-clip-sub {
-  font-size: 11px;
-  color: rgba(128, 128, 128, 0.95);
+.kiwi-clip-sub,
+.kiwi-clip-time {
+  font-size: 12px;
+  color: rgba(128, 128, 128, 1);
 }
 
-.kiwi-clip-row:selected .kiwi-clip-sub {
+.kiwi-clip-row:selected .kiwi-clip-sub,
+.kiwi-clip-row:selected .kiwi-clip-time {
   color: -st-accent-fg-color;
 }
 
@@ -1470,35 +1838,29 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
 
 .kiwi-clip-empty {
   padding: 28px 12px;
-  color: rgba(128, 128, 128, 0.95);
+  color: rgba(128, 128, 128, 1);
 }
 
-/* ---- panel popover ---- */
+/* ---- panel popover: minimal, one line per entry ---- */
 .kiwi-clip-popover-item {
   padding: 0;
 }
 
 .kiwi-clip-popover {
-  padding: 10px;
-  spacing: 8px;
+  padding: 6px;
+  spacing: 6px;
 }
 
-.kiwi-clip-head {
-  spacing: 8px;
-  padding: 0 4px;
+.kiwi-clip-search {
+  border-radius: 8px;
+  padding: 5px 8px;
+  min-height: 0;
+  font-size: 14px;
+  background-color: rgba(128, 128, 128, 0.16);
+  border: none;
+  box-shadow: none;
 }
 
-.kiwi-clip-heading {
-  font-weight: bold;
-  font-size: 15px;
-}
-
-.kiwi-clip-count {
-  font-size: 11px;
-  color: rgba(128, 128, 128, 0.95);
-}
-
-.kiwi-clip-search,
 .kiwi-qp-search {
   border-radius: 10px;
   padding: 6px 10px;
@@ -1509,46 +1871,134 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
 
 .kiwi-clip-search:focus,
 .kiwi-qp-search:focus {
-  box-shadow: inset 0 0 0 2px -st-accent-color;
+  box-shadow: inset 0 0 0 2px st-transparentize(-st-accent-color, 0.4);
+}
+
+.kiwi-clip-search-icon {
+  icon-size: 14px;
+  padding-right: 6px;
+  color: rgba(128, 128, 128, 1);
 }
 
 .kiwi-clip-filters {
-  spacing: 4px;
+  spacing: 2px;
+  padding: 0 2px;
 }
 
 .kiwi-clip-filter {
-  border-radius: 99px;
-  padding: 3px 12px;
+  border-radius: 6px;
+  padding: 1px 8px;
   font-size: 12px;
-  background-color: rgba(128, 128, 128, 0.14);
+  color: rgba(128, 128, 128, 1);
+  background-color: transparent;
+}
+
+.kiwi-clip-filter:hover {
+  background-color: rgba(128, 128, 128, 0.12);
 }
 
 .kiwi-clip-filter:checked {
-  background-color: -st-accent-color;
-  color: -st-accent-fg-color;
+  font-weight: 600;
+  color: inherit;
+  background-color: rgba(128, 128, 128, 0.2);
+}
+
+.kiwi-clip-scroll {
+  max-height: 340px;
+}
+
+.kiwi-clip-row-compact .kiwi-clip-row-box {
+  spacing: 8px;
+  padding: 5px 8px;
+}
+
+.kiwi-clip-row-compact .kiwi-clip-tile {
+  border-radius: 6px;
+}
+
+.kiwi-clip-time {
+  padding-left: 6px;
+}
+
+.kiwi-clip-empty {
+  spacing: 4px;
+  padding: 32px 12px 30px 12px;
+}
+
+.kiwi-clip-empty-icon {
+  icon-size: 28px;
+  padding-bottom: 6px;
+  color: rgba(128, 128, 128, 0.8);
+}
+
+.kiwi-clip-empty-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.kiwi-clip-empty-hint {
+  font-size: 12px;
+  color: rgba(128, 128, 128, 1);
 }
 
 .kiwi-clip-foot {
   spacing: 8px;
-  padding: 4px 4px 0 4px;
+  padding: 6px 4px 0 6px;
+  border-top: 1px solid rgba(128, 128, 128, 0.18);
+}
+
+.kiwi-clip-recording .toggle-switch {
+  width: 36px;
+  height: 20px;
 }
 
 .kiwi-clip-recording-label,
 .kiwi-clip-hint {
-  font-size: 11px;
-  color: rgba(128, 128, 128, 0.95);
+  font-size: 12px;
+  color: rgba(128, 128, 128, 1);
 }
 
 .kiwi-clip-clear {
-  border-radius: 99px;
-  padding: 3px 12px;
+  border-radius: 6px;
+  padding: 2px 8px;
   font-size: 12px;
-  background-color: rgba(128, 128, 128, 0.18);
+  background-color: transparent;
 }
 
 .kiwi-clip-clear:hover,
 .kiwi-clip-clear:focus {
-  background-color: rgba(128, 128, 128, 0.32);
+  background-color: rgba(128, 128, 128, 0.18);
+}
+
+/* Secondary text: a fixed shade per style for contrast (4.5:1 on the popover fill) */
+.kiwi-clip-popover .kiwi-clip-time,
+.kiwi-clip-popover .kiwi-clip-section,
+.kiwi-clip-popover .kiwi-clip-filter,
+.kiwi-clip-popover .kiwi-clip-empty-hint,
+.kiwi-clip-popover .kiwi-clip-recording-label,
+.kiwi-clip-popover .kiwi-clip-search-icon {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.kiwi-clip-popover.kiwi-clip-light .kiwi-clip-time,
+.kiwi-clip-popover.kiwi-clip-light .kiwi-clip-section,
+.kiwi-clip-popover.kiwi-clip-light .kiwi-clip-filter,
+.kiwi-clip-popover.kiwi-clip-light .kiwi-clip-empty-hint,
+.kiwi-clip-popover.kiwi-clip-light .kiwi-clip-recording-label,
+.kiwi-clip-popover.kiwi-clip-light .kiwi-clip-search-icon {
+  color: rgba(0, 0, 0, 0.56);
+}
+
+.kiwi-clip-popover .kiwi-clip-filter:checked {
+  color: #ffffff;
+}
+
+.kiwi-clip-popover.kiwi-clip-light .kiwi-clip-filter:checked {
+  color: #1d1d1f;
+}
+
+.kiwi-clip-popover .kiwi-clip-row:selected .kiwi-clip-time {
+  color: -st-accent-fg-color;
 }
 
 /* ---- Quick Paste ---- */
@@ -1577,7 +2027,7 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
 }
 
 .kiwi-qp-text {
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .kiwi-qp-swatch {
@@ -1592,7 +2042,7 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
 
 .kiwi-qp-meta,
 .kiwi-qp-hints {
-  font-size: 11px;
+  font-size: 12px;
   color: rgba(128, 128, 128, 0.95);
 }
 
