@@ -25,7 +25,13 @@ jobs:
         name: Pack extension and set asset name
         run: |
           set -euo pipefail
-          gnome-extensions pack --extra-source=icons --extra-source=apps --extra-source=prefs.css --podir=po .
+          # lib/, coordinators/ and features.js arrive with the new-features work;
+          # gnome-extensions pack fails on a missing source, so add only what exists.
+          extra=(--extra-source=icons --extra-source=apps --extra-source=css)
+          for src in lib coordinators features.js; do
+            if [ -e "$src" ]; then extra+=("--extra-source=$src"); fi
+          done
+          gnome-extensions pack "${extra[@]}" --podir=po .
           # find the generated shell-extension zip (kiwi@kemma.shell-extension.zip)
           zipfile=$(ls -1 *shell-extension.zip | head -n1)
           if [ -z "$zipfile" ]; then
@@ -50,11 +56,8 @@ jobs:
 
       - name: Upload pack to release
         if: github.event_name == 'release'
-        uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ${{ steps.pack.outputs.asset }}
-          asset_name: ${{ steps.pack.outputs.asset }}
-          asset_content_type: application/zip
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.release.tag_name }}
+          ASSET: ${{ steps.pack.outputs.asset }}
+        run: gh release upload "$TAG" "$ASSET" --clobber

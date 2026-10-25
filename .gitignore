@@ -1,11 +1,21 @@
-# samples folder of knowledge
+*ns.md
+*JavaScript.md
+.vscode
 samples
-.venv/
+.c[a-z]*/
 *.log
-stylesheet-test.css
-stylesheet-backup.css
-locale/
-*.png
-.github/*.md
-.vscode/
-.claude/
+locale
+*.compiled
+# Generated GTK CSS (no longer written by the extension; see issue #86)
+css/gtk3.css
+css/gtk4.css
+# tests/ is tracked: gjs -m unit tests for pure modules
+# Project docs and Claude Code skills are tracked
+!.claude/
+!.claude/**
+!docs/**
+!.swarm/**
+!start-workflow.md
+!CLAUDE.md
+advanced/.built-locally
+dist/

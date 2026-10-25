@@ -16,231 +16,75 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import Gio from 'gi://Gio';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
-import { enable as addUsernameEnable, disable as addUsernameDisable } from './apps/addUsernameToQuickMenu.js';
-import { enable as moveFullscreenEnable, disable as moveFullscreenDisable } from './apps/moveFullscreenWindow.js';
-import { enable as focusLaunchedWindowEnable, disable as focusLaunchedWindowDisable } from './apps/focusLaunchedWindow.js';
-import { enable as lockIconEnable, disable as lockIconDisable } from './apps/lockIcon.js';
-import { enable as transparentMoveEnable, disable as transparentMoveDisable } from './apps/transparentMove.js';
-import { enable as batteryPercentageEnable, disable as batteryPercentageDisable } from './apps/batteryPercentage.js';
-import { enable as calendarEnable, disable as calendarDisable } from './apps/calendar.js';
-import { enable as windowTitleEnable, disable as windowTitleDisable } from './apps/windowTitle.js';
-import { enable as windowControlsEnable, disable as windowControlsDisable } from './apps/windowControls.js';
-import { enable as panelHoverEnable, disable as panelHoverDisable } from './apps/panelHover.js';
-import { enable as panelTransparencyEnable, disable as panelTransparencyDisable } from './apps/panelTransparency.js';
-import { enable as hideMinimizedWindowsEnable, disable as hideMinimizedWindowsDisable } from './apps/hideMinimizedWindows.js';
-import { enable as gtkThemeManagerEnable, disable as gtkThemeManagerDisable } from './apps/gtkThemeManager.js';
-import { enable as firefoxThemeManagerEnable, disable as firefoxThemeManagerDisable } from './apps/firefoxThemeManager.js';
-import { enable as thunderbirdThemeManagerEnable, disable as thunderbirdThemeManagerDisable } from './apps/thunderbirdThemeManager.js';
-import { enable as hideActivitiesButtonEnable, disable as hideActivitiesButtonDisable } from './apps/hideActivitiesButton.js';
-import { enable as overviewWallpaperEnable, disable as overviewWallpaperDisable, refresh as overviewWallpaperRefresh } from './apps/overviewWallpaper.js';
-import { enable as skipOverviewEnable, disable as skipOverviewDisable } from './apps/skipOverviewOnLogin.js';
-import { enable as quickSettingsNotificationsEnable, disable as quickSettingsNotificationsDisable } from './apps/quickSettingsNotifications.js';
-import { enable as quickSettingsMediaEnable, disable as quickSettingsMediaDisable } from './apps/quickSettingsMedia.js';
-import { enable as keyboardIndicatorEnable, disable as keyboardIndicatorDisable } from './apps/keyboardIndicator.js';
-import { enable as launchpadAppEnable, disable as launchpadAppDisable } from './apps/launchpadApp.js';
-import { enable as dockBlurEnable, disable as dockBlurDisable } from './apps/dockBlur.js';
+import { CleanupRegistry } from './lib/disposables.js';
+import { FeatureRegistry } from './lib/featureRegistry.js';
+import { runAllMigrations } from './lib/migrations.js';
+import { FEATURES } from './features.js';
+import { Glass } from './lib/glass.js';
+import { isDockExtension, resetDockSettings } from './apps/dockUtils.js';
+import { restoreStaleColors } from './apps/dockColors.js';
+
+// Keys Kiwi writes itself at run time. No `when` or restartOn reads them, and a write made
+// during a refresh would re-enter the registry, so they do not trigger a pass.
+const KEYS_THAT_NEVER_AFFECT_FEATURES = new Set(['dock-colors-saved', 'clipboard-recording', 'migrations-done']);
 
 export default class KiwiExtension extends Extension {
-    constructor(metadata) {
-        super(metadata);
-    }
-
-    _getGettextFunc() {
-        return typeof this.gettext === 'function' ? this.gettext.bind(this) : (message) => message;
-    }
-
-    _on_settings_changed(key) {
-        const gettextFunc = this._getGettextFunc();
-        // Re-apply keyboard indicator module on any of its keys changing
-        if (key === 'keyboard-indicator' || key === 'hide-keyboard-indicator') {
-            if (this._settings.get_boolean('keyboard-indicator')) {
-                keyboardIndicatorDisable();
-                keyboardIndicatorEnable(this._settings);
-            } else {
-                keyboardIndicatorDisable();
-            }
-        }
-
-        if ((key === 'button-type' || key === 'enable-app-window-buttons') && this._settings.get_boolean('show-window-controls')) {
-            windowControlsDisable();
-            windowControlsEnable(this);
-        }
-
-    // GTK theme updates are handled by gtkThemeManager module
-        // No need to handle 'enable-app-window-buttons' or 'button-type' here for GTK updates
-
-        if (this._settings.get_boolean('move-window-to-new-workspace')) {
-            moveFullscreenEnable();
-        } else {
-            moveFullscreenDisable();
-        }
-
-        if (this._settings.get_boolean('add-username-to-quick-menu')) {
-            addUsernameEnable();
-        } else {
-            addUsernameDisable();
-        }
-
-        if (this._settings.get_boolean('lock-icon')) {
-            lockIconEnable();
-        } else {
-            lockIconDisable();
-        }
-
-        if (this._settings.get_boolean('transparent-move')) {
-            transparentMoveEnable();
-        } else {
-            transparentMoveDisable();
-        }
-
-        if (this._settings.get_boolean('battery-percentage')) {
-            batteryPercentageEnable();
-        } else {
-            batteryPercentageDisable();
-        }
-
-         if (this._settings.get_boolean('move-calendar-right')) {
-            calendarEnable();
-            quickSettingsNotificationsEnable(gettextFunc, this._settings);
-            quickSettingsMediaEnable(gettextFunc);
-        } else {
-            calendarDisable();
-            quickSettingsNotificationsDisable();
-            quickSettingsMediaDisable();
-        }
-
-        if (this._settings.get_boolean('show-window-title')) {
-            windowTitleEnable();
-        } else {
-            windowTitleDisable();
-        }
-
-        if (this._settings.get_boolean('show-window-controls')) {
-            windowControlsEnable(this);
-        } else {
-            windowControlsDisable();
-        }
-
-        if (this._settings.get_boolean('panel-hover-fullscreen')) {
-            panelHoverEnable();
-        } else {
-            panelHoverDisable();
-        }
-
-        if (this._settings.get_boolean('panel-transparency')) {
-            panelTransparencyEnable(this._settings);  // Pass settings object
-        } else {
-            panelTransparencyDisable();
-        }
-
-        if (this._settings.get_boolean('hide-minimized-windows')) {
-            hideMinimizedWindowsEnable();
-        } else {
-            hideMinimizedWindowsDisable();
-        }
-
-        if (this._settings.get_boolean('hide-activities-button')) {
-            hideActivitiesButtonEnable();
-        } else {
-            hideActivitiesButtonDisable();
-        }
-
-        if (this._settings.get_boolean('overview-wallpaper-background')) {
-            overviewWallpaperEnable(this._settings);
-        } else {
-            overviewWallpaperDisable();
-        }
-
-        if (this._settings.get_boolean('skip-overview-on-login')) {
-            skipOverviewEnable();
-        } else {
-            skipOverviewDisable();
-        }
-
-        // Firefox styling manager
-        if (this._settings.get_boolean('enable-firefox-styling') || this._settings.get_boolean('show-window-controls'))
-            firefoxThemeManagerEnable(this);
-        else
-            firefoxThemeManagerDisable();
-
-        // Thunderbird styling manager
-        if (this._settings.get_boolean('enable-thunderbird-styling') || this._settings.get_boolean('show-window-controls'))
-            thunderbirdThemeManagerEnable(this);
-        else
-            thunderbirdThemeManagerDisable();
-
-        // Keyboard indicator module (idempotent apply on general refresh)
-        if (this._settings.get_boolean('keyboard-indicator'))
-            keyboardIndicatorEnable(this._settings);
-        else
-            keyboardIndicatorDisable();
-
-        // Dock blur
-        if (this._settings.get_boolean('dock-blur'))
-            dockBlurEnable();
-        else
-            dockBlurDisable();
-
-        // Launchpad app
-        if (key === 'launchpad-app-custom-icon' && this._settings.get_boolean('enable-launchpad-app')) {
-            launchpadAppDisable();
-            launchpadAppEnable(this, gettextFunc);
-        } else if (this._settings.get_boolean('enable-launchpad-app')) {
-            launchpadAppEnable(this, gettextFunc);
-        } else {
-            launchpadAppDisable();
-        }
-    }
-
     enable() {
+        this._cleanup = new CleanupRegistry();
         this._settings = this.getSettings();
-        this._settingsChangedId = this._settings.connect('changed', (settings, key) => this._on_settings_changed(key));
-        
-        // Enable GTK theme manager
-        gtkThemeManagerEnable(this);
-        // Enable Firefox theme manager based on setting
-        if (this._settings.get_boolean('enable-firefox-styling') || this._settings.get_boolean('show-window-controls'))
-            firefoxThemeManagerEnable(this);
-        // Enable Thunderbird theme manager based on setting
-        if (this._settings.get_boolean('enable-thunderbird-styling') || this._settings.get_boolean('show-window-controls'))
-            thunderbirdThemeManagerEnable(this);
+        this._interfaceSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.interface' });
+        Glass.configure(this._settings);
+        // Before anything reads settings: a migration write during the registry's first pass
+        // would re-enter it with half-migrated values.
+        runAllMigrations(this._settings);
 
-        focusLaunchedWindowEnable();
-        
-        this._on_settings_changed(null);
-        // Generate wallpaper background if enabled
-        overviewWallpaperRefresh();
+        this._features = new FeatureRegistry(CleanupRegistry);
+        this._features.registerAll(FEATURES);
+
+        this._cleanup.connect(this._settings, 'changed',
+            (_settings, key) => {
+                if (!KEYS_THAT_NEVER_AFFECT_FEATURES.has(key))
+                    this._features.refresh(key);
+            });
+        this._cleanup.connect(this._interfaceSettings, 'changed::show-battery-percentage',
+            () => this._features.apply('battery-percentage'));
+
+        // The dock is a separate extension the user can turn on and off under
+        // us, and the dock features follow it either way
+        this._cleanup.connect(Main.extensionManager, 'extension-state-changed',
+            (_manager, extension) => {
+                if (!isDockExtension(extension))
+                    return;
+                resetDockSettings();
+                this._features.refresh(null);
+            });
+
+        // A crash or hard logout can leave Dash to Dock colours Kiwi changed; put them back first
+        try {
+            restoreStaleColors(this._settings);
+        } catch (err) {
+            console.error('[Kiwi] could not restore dock colours:', err);
+        }
+
+        this._features.start({
+            extension: this,
+            settings: this._settings,
+            gettext: this.gettext.bind(this),
+            interfaceSettings: this._interfaceSettings,
+        });
     }
 
     disable() {
-        if (this._settingsChangedId) {
-            this._settings.disconnect(this._settingsChangedId);
-            this._settingsChangedId = null;
-        }
-        moveFullscreenDisable();
-        addUsernameDisable();
-        focusLaunchedWindowDisable();
-        lockIconDisable();
-        transparentMoveDisable();
-        batteryPercentageDisable();
-        calendarDisable();
-        windowTitleDisable();
-        windowControlsDisable();
-        panelHoverDisable();
-        panelTransparencyDisable();
-        hideMinimizedWindowsDisable();
-        hideActivitiesButtonDisable();
-        overviewWallpaperDisable();
-        skipOverviewDisable();
-        keyboardIndicatorDisable();
-        gtkThemeManagerDisable();
-        firefoxThemeManagerDisable();
-        thunderbirdThemeManagerDisable();
-        quickSettingsMediaDisable();
-        quickSettingsNotificationsDisable();
-        launchpadAppDisable();
-        dockBlurDisable();
+        this._cleanup?.dispose();
+        this._cleanup = null;
+        this._features?.stop();
+        this._features = null;
+        Glass.configure(null);
+        this._interfaceSettings = null;
+        resetDockSettings();
         this._settings = null;
     }
 }

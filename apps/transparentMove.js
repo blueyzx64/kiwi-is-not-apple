@@ -9,13 +9,13 @@ const TRANSPARENT_ON_RESIZING = true;
 const TRANSITION_TIME = 0.2; // in seconds
 const WINDOW_OPACITY = 230; // Opacity value (0-255)
 
-const _grab_moving_operations = [
+const GRAB_MOVING_OPERATIONS = [
     Meta.GrabOp.MOVING,
     Meta.GrabOp.KEYBOARD_MOVING,
     Meta.GrabOp.MOVING_UNCONSTRAINED,
 ];
 
-const _grab_resizing_operations = [
+const GRAB_RESIZING_OPERATIONS = [
     Meta.GrabOp.RESIZING_NW,
     Meta.GrabOp.RESIZING_N,
     Meta.GrabOp.RESIZING_NE,
@@ -37,74 +37,74 @@ const _grab_resizing_operations = [
 
 export class TransparentMove {
     constructor() {
-        this._window_opacity = {};
-        this._allowed_grab_operations = [];
-        this.init_grab_operations();
+        // Original opacity per Meta.Window; keyed on the window (not the pid, which
+        // several windows of one app share) and weak so closed windows drop out.
+        this._windowOpacity = new WeakMap();
     }
 
-    init_grab_operations() {
-        this._allowed_grab_operations = [];
+    initGrabOperations() {
+        this._allowedGrabOperations = [];
         if (TRANSPARENT_ON_MOVING) {
-            this._allowed_grab_operations.push(..._grab_moving_operations);
+            this._allowedGrabOperations.push(...GRAB_MOVING_OPERATIONS);
         }
     
         if (TRANSPARENT_ON_RESIZING) {
-            this._allowed_grab_operations.push(..._grab_resizing_operations);
+            this._allowedGrabOperations.push(...GRAB_RESIZING_OPERATIONS);
         }
     }
 
-    is_grab_operation_allowed(grab_op) {
-        return this._allowed_grab_operations.indexOf(grab_op) > -1;
+    isGrabOperationAllowed(grabOp) {
+        return this._allowedGrabOperations.indexOf(grabOp) > -1;
     }
 
-    set_opacity(window_surfaces, target_opacity, on_complete) {
-        const complete_func = () => {
-            if (on_complete)
-                on_complete();
+    setOpacity(windowSurfaces, targetOpacity, onComplete) {
+        const completeFunc = () => {
+            if (onComplete)
+                onComplete();
         };
 
-        if (window_surfaces.length === 0) {
-            complete_func();
+        if (windowSurfaces.length === 0) {
+            completeFunc();
             return;
         }
 
         if (TRANSITION_TIME < 0.001) {
-            window_surfaces.forEach(surface => {
-                surface.opacity = target_opacity;
+            windowSurfaces.forEach(surface => {
+                surface.opacity = targetOpacity;
             });
-            complete_func();
+            completeFunc();
         } else {
-            window_surfaces.forEach(surface => {
+            windowSurfaces.forEach(surface => {
                 surface.ease({
                     duration: TRANSITION_TIME * 1000,
                     mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-                    opacity: target_opacity,
-                    onComplete: complete_func,
+                    opacity: targetOpacity,
+                    onComplete: completeFunc,
                 });
             });
         }
     }
 
-    get_window_surfaces(meta_window) {
-        const window_actor = meta_window.get_compositor_private();
-        if (!window_actor)
+    getWindowSurfaces(metaWindow) {
+        const windowActor = metaWindow.get_compositor_private();
+        if (!windowActor)
             return [];
 
-        const surfaces = this.find_meta_surface_actors(window_actor);
+        const surfaces = this.findMetaSurfaceActors(windowActor);
         if (surfaces.length > 0)
             return surfaces;
 
-        return [window_actor];
+        return [windowActor];
     }
 
-    find_meta_surface_actors(meta_actor) {
-        if (meta_actor.constructor.name.indexOf('MetaSurfaceActor') > -1) {
-            return [meta_actor];
+    findMetaSurfaceActors(metaActor) {
+        if (metaActor.constructor.name.indexOf('MetaSurfaceActor') > -1) {
+            return [metaActor];
         }
         
         const surfaces = [];
-        for (const child of meta_actor.get_children()) {
-            const result = this.find_meta_surface_actors(child);
+        for (const child of metaActor.get_children()) {
+            const result = this.findMetaSurfaceActors(child);
             if (result.length > 0) {
                 surfaces.push(...result);
             }
@@ -113,53 +113,63 @@ export class TransparentMove {
         return surfaces;
     }
 
-    window_grab_begin(meta_display, meta_window, meta_grab_op, gpointer) {
-        if (!meta_window || !this.is_grab_operation_allowed(meta_grab_op)) {
+    windowGrabBegin(metaDisplay, metaWindow, metaGrabOp, gpointer) {
+        if (!metaWindow || !this.isGrabOperationAllowed(metaGrabOp)) {
             return;
         }
     
-        const window_surfaces = this.get_window_surfaces(meta_window);
-        if (window_surfaces.length === 0)
+        const windowSurfaces = this.getWindowSurfaces(metaWindow);
+        if (windowSurfaces.length === 0)
             return;
 
-        const pid = meta_window.get_pid();
-        if (!this._window_opacity[pid])
-            this._window_opacity[pid] = window_surfaces[0].opacity;
+        if (!this._windowOpacity.has(metaWindow))
+            this._windowOpacity.set(metaWindow, windowSurfaces[0].opacity);
 
-        this.set_opacity(window_surfaces, WINDOW_OPACITY);
+        this.setOpacity(windowSurfaces, WINDOW_OPACITY);
     }
 
-    window_grab_end(meta_display, meta_window, meta_grab_op, gpointer) {
-        if (!meta_window || !this.is_grab_operation_allowed(meta_grab_op)) {
+    windowGrabEnd(metaDisplay, metaWindow, metaGrabOp, gpointer) {
+        if (!metaWindow || !this.isGrabOperationAllowed(metaGrabOp)) {
             return;
         }
     
-        const window_surfaces = this.get_window_surfaces(meta_window);
-        if (window_surfaces.length === 0)
+        const windowSurfaces = this.getWindowSurfaces(metaWindow);
+        if (windowSurfaces.length === 0)
             return;
 
-        const pid = meta_window.get_pid();
-        const complete_func = function() {
-            delete this._window_opacity[pid];
-        };
+        const opacity = this._windowOpacity.get(metaWindow);
+        if (opacity === undefined)
+            return;
 
-        this.set_opacity(window_surfaces, this._window_opacity[pid], complete_func.bind(this));
+        this.setOpacity(windowSurfaces, opacity, () => this._windowOpacity?.delete(metaWindow));
     }
 
     enable() {
-        this.init_grab_operations();
-        this._on_window_grab_begin = global.display.connect('grab-op-begin', this.window_grab_begin.bind(this));
-        this._on_window_grab_end = global.display.connect('grab-op-end', this.window_grab_end.bind(this));
+        this.initGrabOperations();
+        this._onWindowGrabBegin = global.display.connect('grab-op-begin', this.windowGrabBegin.bind(this));
+        this._onWindowGrabEnd = global.display.connect('grab-op-end', this.windowGrabEnd.bind(this));
     }
 
     disable() {
-        global.display.disconnect(this._on_window_grab_begin);
-        global.display.disconnect(this._on_window_grab_end);
-    
-        delete this._window_opacity;
-        delete this._allowed_grab_operations;
-        delete this._on_window_grab_begin;
-        delete this._on_window_grab_end;
+        global.display.disconnect(this._onWindowGrabBegin);
+        global.display.disconnect(this._onWindowGrabEnd);
+
+        // A window mid-move or mid-fade would stay dimmed; stopping the fade also
+        // skips its onComplete, which would touch the state deleted below
+        for (const actor of global.get_window_actors()) {
+            const opacity = this._windowOpacity.get(actor.meta_window);
+            if (opacity === undefined)
+                continue;
+            for (const surface of this.getWindowSurfaces(actor.meta_window)) {
+                surface.remove_all_transitions();
+                surface.opacity = opacity;
+            }
+        }
+
+        delete this._windowOpacity;
+        delete this._allowedGrabOperations;
+        delete this._onWindowGrabBegin;
+        delete this._onWindowGrabEnd;
     }
 }
 

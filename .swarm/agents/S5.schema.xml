@@ -1,0 +1,47 @@
+<!-- S5 fragment: paste inside <schema> of org.gnome.shell.extensions.kiwi.gschema.xml -->
+      <!-- Spotlight (apps/spotlight) -->
+      <key name="spotlight" type="b">
+        <default>true</default>
+        <summary>Spotlight</summary>
+        <description>A centred search bar for apps, settings, files, the clipboard, calculations and the web.</description>
+      </key>
+      <key name="spotlight-on-super" type="b">
+        <default>true</default>
+        <summary>Open Spotlight with a tap of Super</summary>
+        <description>A tap of the Super key opens Spotlight instead of the Activities overview. The overview stays on the hot corner, the touchpad gesture, Super+A and the Activities button. Off gives the key back to the overview.</description>
+      </key>
+      <key name="spotlight-shortcut" type="as">
+        <default>[]</default>
+        <summary>Extra Spotlight shortcut</summary>
+        <description>An optional extra shortcut that opens Spotlight, for example &lt;Super&gt;slash. Empty means none. Super+Space is left to GNOME's input-source switch.</description>
+      </key>
+      <key name="spotlight-files" type="b">
+        <default>true</default>
+        <summary>Spotlight: files and documents</summary>
+        <description>Show file results from GNOME's own search (Files). Kiwi does not index anything.</description>
+      </key>
+      <key name="spotlight-settings" type="b">
+        <default>true</default>
+        <summary>Spotlight: settings</summary>
+        <description>Show GNOME Settings panels and Kiwi switches in the results.</description>
+      </key>
+      <key name="spotlight-calculator" type="b">
+        <default>true</default>
+        <summary>Spotlight: calculator</summary>
+        <description>Evaluate arithmetic and unit conversions typed in the search field.</description>
+      </key>
+      <key name="spotlight-clipboard" type="b">
+        <default>true</default>
+        <summary>Spotlight: clipboard</summary>
+        <description>Show recent Clipboard history entries. Needs Clipboard history to be on.</description>
+      </key>
+      <key name="spotlight-web" type="b">
+        <default>true</default>
+        <summary>Spotlight: web search</summary>
+        <description>Add a row that opens your search engine in the browser. Nothing is sent until you press Return.</description>
+      </key>
+      <key name="spotlight-engine" type="s">
+        <default>'duckduckgo'</default>
+        <summary>Spotlight: web search engine</summary>
+        <description>One of duckduckgo, google, bing, brave, startpage, ecosia, or an https address that contains %s for the search words.</description>
+      </key>

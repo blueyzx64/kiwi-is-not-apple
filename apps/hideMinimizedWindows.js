@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Filters minimized windows out of overview and switcher lists.
+//
+// Which ones is WindowState.hideFromSwitcher(): with the user's "hide minimized windows" switch
+// on, every minimized window except the ones Stage Manager staged; when only minimize-to-dock
+// turned this module on, just the windows parked in the dock (the rest behave as stock).
 
+import { InjectionManager } from 'resource:///org/gnome/shell/extensions/extension.js';
 import { Workspace } from 'resource:///org/gnome/shell/ui/workspace.js';
 import {
     GroupCyclerPopup,
@@ -8,48 +13,38 @@ import {
     WindowSwitcherPopup,
 } from 'resource:///org/gnome/shell/ui/altTab.js';
 
-const isOverviewWindow = Workspace.prototype._isOverviewWindow;
-const groupGetWindows = GroupCyclerPopup.prototype._getWindows;
-const windowGetWindows = WindowCyclerPopup.prototype._getWindows;
-const windowSwitcherWindows = WindowSwitcherPopup.prototype._getWindowList;
+import { WindowState } from '../coordinators/windowState.js';
 
-let connected = false;
+let _injectionManager = null;
+let _settings = null;
 
-function _filterWindows(windows) {
-    return windows.filter(w => !w.minimized);
+// No settings handed in (older features.js entry): keep the old "every minimized window" rule
+const _hideAll = () => _settings?.get_boolean('hide-minimized-windows') ?? true;
+const _hidden = w => WindowState.hideFromSwitcher(w, { hideAllMinimized: _hideAll() });
+
+function _filterMinimized(original) {
+    return function (...args) {
+        return original.apply(this, args).filter(w => !_hidden(w));
+    };
 }
 
-export function enable() {
-    if (connected) return;
-    connected = true;
+/** @param {?Gio.Settings} [settings] Kiwi's settings (ctx.settings) */
+export function enable(settings = null) {
+    _settings = settings;
+    if (_injectionManager) return;
+    _injectionManager = new InjectionManager();
 
-    Workspace.prototype._isOverviewWindow = (win) => {
-        const show = isOverviewWindow(win);
-        let meta = win;
-        if (win.get_meta_window)
-            meta = win.get_meta_window();
-        return show && !meta.minimized;
-    };
-
-    WindowCyclerPopup.prototype._getWindows = function() {
-        return _filterWindows(windowGetWindows.bind(this)());
-    };
-
-    GroupCyclerPopup.prototype._getWindows = function() {
-        return _filterWindows(groupGetWindows.bind(this)());
-    };
-
-    WindowSwitcherPopup.prototype._getWindowList = function() {
-        return _filterWindows(windowSwitcherWindows.bind(this)());
-    };
+    _injectionManager.overrideMethod(Workspace.prototype, '_isOverviewWindow',
+        original => function (win) {
+            return original.call(this, win) && !_hidden(win);
+        });
+    _injectionManager.overrideMethod(WindowCyclerPopup.prototype, '_getWindows', _filterMinimized);
+    _injectionManager.overrideMethod(GroupCyclerPopup.prototype, '_getWindows', _filterMinimized);
+    _injectionManager.overrideMethod(WindowSwitcherPopup.prototype, '_getWindowList', _filterMinimized);
 }
 
 export function disable() {
-    if (!connected) return;
-    connected = false;
-
-    Workspace.prototype._isOverviewWindow = isOverviewWindow;
-    WindowCyclerPopup.prototype._getWindows = windowGetWindows;
-    GroupCyclerPopup.prototype._getWindows = groupGetWindows;
-    WindowSwitcherPopup.prototype._getWindowList = windowSwitcherWindows;
+    _injectionManager?.clear();
+    _injectionManager = null;
+    _settings = null;
 }

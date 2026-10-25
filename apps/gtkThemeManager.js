@@ -1,203 +1,235 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Generates GTK CSS imports for window controls and titlebar tweaks based on settings.
+//
+// Imports are written only to the user's ~/.config/gtk-{3,4}.0/gtk.css so the
+// extension never writes inside its own installation directory. This keeps
+// system-wide installs (e.g. /usr/share/gnome-shell/extensions, owned by root)
+// working. See https://github.com/kem-a/kiwi-kemma/issues/86
+
+// Dangling imports: the managed block holds absolute file:// paths into the extension folder.
+// After a shell crash, or an uninstall that skipped disable(), those imports stay in gtk.css.
+// GTK only logs a warning for an import it cannot open, so apps keep working; the stale block
+// is replaced on the next enable and removed on the next disable. Nothing else is safe to do
+// from here: the extension is not running. Manual fix: delete the block between the two
+// "Kiwi (is not Apple) - managed imports" comments in ~/.config/gtk-{3,4}.0/gtk.css.
+// (A "Remove Kiwi GTK changes" button in prefs could call the same cleanup.)
 
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
-Gio._promisify(Gio.File.prototype, 'load_contents_async', 'load_contents_finish');
+import { CleanupRegistry } from '../lib/disposables.js';
+import { KiwiSettings } from '../lib/settings.js';
+import { titlebarHideSheet, createJobQueue } from './windowControls/model.js';
+
+const MARKER_BEGIN = '/* Kiwi (is not Apple) - managed imports: begin */';
+const MARKER_END = '/* Kiwi (is not Apple) - managed imports: end */';
+
+// Matches the whole managed block, including the markers themselves.
+const MANAGED_BLOCK_REGEX = /\/\* Kiwi \(is not Apple\) - managed imports: begin \*\/[\s\S]*?\/\* Kiwi \(is not Apple\) - managed imports: end \*\/\n?/g;
+
+// Matches any single-line @import pointing into the extension, in any quoting
+// style. Cleans up the unmarked imports written by versions <= 1.9.1.
+const LEGACY_IMPORT_REGEX = /^[^\n]*@import[^\n]*kiwi@kemma[^\n]*\n?/gm;
 
 let gtkThemeManager = null;
 
-class GtkThemeManager {
-    constructor(ext) {
-        this._extension = ext;
-        this._settings = null;
-        this._settingsChangedId = null;
-    }
+Gio._promisify(Gio.File.prototype, 'load_contents_async', 'load_contents_finish');
+Gio._promisify(Gio.File.prototype, 'make_directory_async', 'make_directory_finish');
+Gio._promisify(Gio.File.prototype, 'delete_async', 'delete_finish');
+Gio._promisify(Gio.File.prototype, 'replace_contents_bytes_async', 'replace_contents_finish');
+Gio._promisify(Gio.File.prototype, 'replace_async', 'replace_finish');
+Gio._promisify(Gio.File.prototype, 'query_info_async', 'query_info_finish');
+Gio._promisify(Gio.OutputStream.prototype, 'close_async', 'close_finish');
 
-    async updateGtkCss() {
-        const extension = this._extension;
-        const enableAppButtons = this._settings.get_boolean('enable-app-window-buttons');
-        const showControlsOnPanel = this._settings.get_boolean('show-window-controls');
-        const buttonType = this._settings.get_string('button-type');
-        const buttonSize = this._settings.get_string('button-size');
-    
-    // Define GTK 3 and GTK 4 specific content
-    let gtk3Content = '';
-    let gtk4Content = '';
-    
-    // Add titlebuttons CSS only if app window buttons are enabled
-    if (enableAppButtons) {
-        if (buttonType === 'titlebuttons-alt') {
-            gtk3Content += `@import 'titlebuttons-alt3.css';\n`;
-            gtk4Content += `@import 'titlebuttons-alt4.css';\n`;
-        } else {
-            // Default to titlebuttons
-            gtk3Content += `@import 'titlebuttons3.css';\n`;
-            gtk4Content += `@import 'titlebuttons4.css';\n`;
-        }
-
-        // Add button size overrides if small size is selected
-        if (buttonSize === 'small') {
-            gtk3Content += `@import 'titlebuttons-size-small3.css';\n`;
-            gtk4Content += `@import 'titlebuttons-size-small4.css';\n`;
-        }
-    }
-    
-    // Add hide-titlebar CSS if window controls should be shown in panel
-    if (showControlsOnPanel) {
-        gtk3Content += `@import 'hide-titlebar3.css';\n`;
-        gtk4Content += `@import 'hide-titlebar4.css';\n`;
-    }
-    
-    // Always add fixes CSS at the end
-    gtk3Content += `\n@import 'fixes3.css';\n`;
-    gtk4Content += `\n@import 'fixes4.css';\n`;
-    
-    // Update both GTK 3 and GTK 4 files in the icons folder
-    const gtk3Path = `${extension.path}/icons/gtk3.css`;
-    const gtk4Path = `${extension.path}/icons/gtk4.css`;
-    
-    try {
-        // Write to GTK 3.0 file
-        const gtk3File = Gio.File.new_for_path(gtk3Path);
-        gtk3File.replace_contents(gtk3Content, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
-        
-        // Write to GTK 4.0 file
-        const gtk4File = Gio.File.new_for_path(gtk4Path);
-        gtk4File.replace_contents(gtk4Content, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
-        
-        // Update user GTK config files with imports
-        await this.createUserGtkConfig();
-        
-    } catch (error) {
-        console.error(`[Kiwi] Error updating GTK CSS files: ${error}`);
-    }
+async function isSymlink(file) {
+    const info = await file.query_info_async('standard::is-symlink',
+        Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, GLib.PRIORITY_DEFAULT, null);
+    return info.get_is_symlink();
 }
 
-    async createUserGtkConfig() {
-    try {
-        const extension = this._extension;
-        const configDir = GLib.get_user_config_dir();
-        
-        // Create user GTK config directories if they don't exist
-        const gtk3ConfigDir = `${configDir}/gtk-3.0`;
-        const gtk4ConfigDir = `${configDir}/gtk-4.0`;
-        
-        GLib.mkdir_with_parents(gtk3ConfigDir, 0o755);
-        GLib.mkdir_with_parents(gtk4ConfigDir, 0o755);
-        
-        // Define the import lines
-        const gtk3ImportLine = `@import '${extension.path}/icons/gtk3.css';\n`;
-        const gtk4ImportLine = `@import '${extension.path}/icons/gtk4.css';\n`;
-        
-        // Paths to user GTK CSS files
-        const gtk3UserPath = `${gtk3ConfigDir}/gtk.css`;
-        const gtk4UserPath = `${gtk4ConfigDir}/gtk.css`;
-        
-        // Process GTK 3 config
-        await this.processUserGtkFile(gtk3UserPath, gtk3ImportLine);
-        
-        // Process GTK 4 config
-        await this.processUserGtkFile(gtk4UserPath, gtk4ImportLine);
-        
-    } catch (error) {
-        console.error(`[Kiwi] Error creating user GTK config: ${error}`);
-    }
-}
-
-    async processUserGtkFile(filePath, importLine) {
+// Replaces our managed block in <dir>/gtk.css, leaving the user's own rules untouched.
+// An empty block removes our imports. The file is deleted only when it held our block
+// and nothing else; a file we did not write to is never touched.
+export async function processUserGtkFile(dirPath, managedBlock) {
+    const filePath = GLib.build_filenamev([dirPath, 'gtk.css']);
     try {
         const file = Gio.File.new_for_path(filePath);
-        let existingContent = '';
-        
-        // Read existing content if file exists
-        if (file.query_exists(null)) {
+
+        let existing = null;
+        try {
             const [contents] = await file.load_contents_async(null);
-            existingContent = new TextDecoder().decode(contents);
+            existing = new TextDecoder().decode(contents);
+        } catch (e) {
+            if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_FOUND))
+                throw e;
         }
-        
-        // Check if our import is already present
-        const kiwieImportRegex = /@import\s+['"][^'"]*kiwi@kemma[^'"]*['"];\s*\n?/g;
-        
-        // Remove any existing kiwi imports
-        existingContent = existingContent.replace(kiwieImportRegex, '');
-        
-        // Add our import at the beginning
-        const newContent = importLine + existingContent;
-        
-        // Write the updated content
-        file.replace_contents(newContent, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
-        
+
+        if (existing === null && !managedBlock)
+            return;
+
+        // Strip any previous block, plus unmarked imports from older versions
+        const rest = (existing ?? '')
+            .replace(MANAGED_BLOCK_REGEX, '')
+            .replace(LEGACY_IMPORT_REGEX, '');
+        const hadOurs = existing !== null && rest !== existing;
+
+        // Our imports come first so user rules can still override them
+        const newContent = managedBlock + rest;
+
+        if (newContent === existing)
+            return;
+
+        if (!newContent.trim()) {
+            if (!hadOurs)
+                return;
+            // A symlinked gtk.css (stow, home-manager) is the user's: never delete the link
+            // or its target, just empty it. GIO hangs on an empty buffer, so use a stream.
+            if (await isSymlink(file)) {
+                const stream = await file.replace_async(null, false, Gio.FileCreateFlags.NONE,
+                    GLib.PRIORITY_DEFAULT, null);
+                await stream.close_async(GLib.PRIORITY_DEFAULT, null);
+            } else {
+                await file.delete_async(GLib.PRIORITY_DEFAULT, null);
+            }
+            return;
+        }
+
+        if (existing === null) {
+            try {
+                await Gio.File.new_for_path(dirPath).make_directory_async(GLib.PRIORITY_DEFAULT, null);
+            } catch (e) {
+                if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.EXISTS))
+                    throw e;
+            }
+        }
+        // Flags NONE writes through a symlink to its target instead of replacing the link.
+        await file.replace_contents_bytes_async(
+            new GLib.Bytes(new TextEncoder().encode(newContent)),
+            null, false, Gio.FileCreateFlags.NONE, null);
     } catch (error) {
         console.error(`[Kiwi] Error processing GTK file ${filePath}: ${error}`);
     }
 }
 
-    async removeUserGtkConfig() {
-    try {
-        const configDir = GLib.get_user_config_dir();
-        const gtk3UserPath = `${configDir}/gtk-3.0/gtk.css`;
-        const gtk4UserPath = `${configDir}/gtk-4.0/gtk.css`;
-        
-        // Remove our imports from both files
-        for (const path of [gtk3UserPath, gtk4UserPath]) {
-            try {
-                const file = Gio.File.new_for_path(path);
-                if (file.query_exists(null)) {
-                    const [contents] = await file.load_contents_async(null);
-                    let content = new TextDecoder().decode(contents);
-                    
-                    // Remove any kiwi@kemma imports
-                    const kiwieImportRegex = /@import\s+['"][^'"]*kiwi@kemma[^'"]*['"];\s*\n?/g;
-                    content = content.replace(kiwieImportRegex, '');
-                    
-                    // If there's remaining content, write it back, otherwise delete the file
-                    if (content.trim()) {
-                        file.replace_contents(content, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
-                    } else {
-                        file.delete(null);
-                    }
-                }
-            } catch (e) {
-                // File might not exist or be inaccessible, continue
+
+// File work runs one job at a time across ALL manager instances: a lock drops one instance and
+// the unlock makes another, and their jobs must not overlap on the same gtk.css files.
+const enqueueFileJob = createJobQueue(error => console.error(`[Kiwi] GTK css job failed: ${error}`));
+
+class GtkThemeManager {
+    constructor(ext) {
+        this._extension = ext;
+        this._ks = null;
+        this._cleanup = new CleanupRegistry();
+    }
+
+    // Absolute file:// URI for a stylesheet shipped in the extension's css folder.
+    _cssUri(name) {
+        const path = GLib.build_filenamev([this._extension.path, 'css', name]);
+        return Gio.File.new_for_path(path).get_uri();
+    }
+
+    // Stylesheets to pull in for a given GTK major version ('3' or '4').
+    _stylesheetsFor(version) {
+        const ks = this._ks;
+        const enableAppButtons = ks.bool('enable-app-window-buttons');
+        const buttonType = ks.string('button-type');
+        const buttonSize = ks.string('button-size');
+        const appFixes = ks.bool('popup-menu-styling');
+
+        const sheets = [];
+
+        // Titlebutton styling only if app window buttons are enabled
+        if (enableAppButtons) {
+            if (buttonType === 'titlebuttons-alt') {
+                sheets.push(`titlebuttons-alt${version}.css`);
+            } else {
+                sheets.push(`titlebuttons${version}.css`);
+                // Glass only overrides the images of the default set
+                if (buttonType === 'titlebuttons-glass')
+                    sheets.push(`titlebuttons-glass${version}.css`);
+            }
+
+            if (buttonSize === 'small') {
+                sheets.push(`titlebuttons-size-small${version}.css`);
+                if (buttonType === 'titlebuttons-glass')
+                    sheets.push(`titlebuttons-glass-size-small${version}.css`);
             }
         }
-        
-    } catch (error) {
-        console.error(`[Kiwi] Error removing user GTK config: ${error}`);
+
+        // Remove the titlebar buttons of CSD windows while the panel shows the controls
+        const hide = titlebarHideSheet({
+            showOnPanel: ks.bool('show-window-controls'),
+            remove: ks.bool('remove-titlebar-buttons'),
+            scope: ks.string('window-controls-scope'),
+            gtkVersion: version,
+        });
+        if (hide)
+            sheets.push(hide);
+
+        // App fixes go last so they can override the above
+        if (appFixes)
+            sheets.push(`fixes${version}.css`);
+
+        return sheets;
     }
-}
+
+    _buildManagedBlock(version) {
+        const sheets = this._stylesheetsFor(version);
+        if (!sheets.length)
+            return '';
+
+        const imports = sheets.map(name => `@import url("${this._cssUri(name)}");`);
+        return `${MARKER_BEGIN}\n${imports.join('\n')}\n${MARKER_END}\n`;
+    }
+
+    _enqueue(job) {
+        return enqueueFileJob(job);
+    }
+
+    // Settings are read now, the files are written later, so a disable cannot starve the job.
+    updateGtkCss() {
+        const configDir = GLib.get_user_config_dir();
+        const jobs = ['3', '4'].map(version => ({
+            dir: GLib.build_filenamev([configDir, `gtk-${version}.0`]),
+            block: this._buildManagedBlock(version),
+        }));
+        return this._enqueue(async () => {
+            for (const { dir, block } of jobs)
+                await this.processUserGtkFile(dir, block);
+        });
+    }
+
+    processUserGtkFile(dirPath, managedBlock) {
+        return processUserGtkFile(dirPath, managedBlock);
+    }
+
+    removeUserGtkConfig() {
+        const configDir = GLib.get_user_config_dir();
+        return this._enqueue(async () => {
+            for (const version of ['3', '4'])
+                await this.processUserGtkFile(GLib.build_filenamev([configDir, `gtk-${version}.0`]), '');
+        });
+    }
 
     enable() {
-        if (!this._settings) {
-            this._settings = this._extension.getSettings();
-            this._settingsChangedId = this._settings.connect('changed', (settings, key) => {
-                if (key === 'enable-app-window-buttons' || key === 'button-type' || key === 'button-size' || key === 'show-window-controls') {
-                    this.updateGtkCss().catch(error => {
-                        console.error(`[Kiwi] Error in settings changed handler: ${error}`);
-                    });
-                }
-            });
-            
-            // Initial update
-            this.updateGtkCss().catch(error => {
-                console.error(`[Kiwi] Error in initial update: ${error}`);
-            });
-        }
+        const ks = new KiwiSettings(this._extension.getSettings());
+        this._ks = ks;
+        ks.attach(this._cleanup);
+        ks.watch([
+            'enable-app-window-buttons', 'button-type', 'button-size', 'show-window-controls',
+            'window-controls-scope', 'remove-titlebar-buttons', 'popup-menu-styling',
+        ], () => this.updateGtkCss());
+
+        this.updateGtkCss();
     }
 
     disable() {
-        if (this._settingsChangedId && this._settings) {
-            this._settings.disconnect(this._settingsChangedId);
-            this._settingsChangedId = null;
-            this._settings = null;
-        }
-        
+        this._cleanup.dispose();
+        this._ks = null;
+
         // Remove our imports from user GTK config files
-        this.removeUserGtkConfig().catch(error => {
-            console.error(`[Kiwi] Error in disable cleanup: ${error}`);
-        });
+        this.removeUserGtkConfig();
 
         this._extension = null;
     }

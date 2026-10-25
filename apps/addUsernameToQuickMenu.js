@@ -44,10 +44,8 @@ class AddUsernameToQuickMenu extends St.Widget {
         } else {
             this._mappedId = this.connect('notify::mapped', () => {
                 if (this.mapped) {
-                    if (this._mappedId) {
-                        this.disconnect(this._mappedId);
-                        this._mappedId = null;
-                    }
+                    this.disconnect(this._mappedId);
+                    this._mappedId = null;
                     this._startSlideIn();
                 }
             });
@@ -56,7 +54,7 @@ class AddUsernameToQuickMenu extends St.Widget {
 
     _startSlideIn() {
         // Get the full width of the label
-        let [, naturalWidth] = this._usernameLabel.get_preferred_width(-1);
+        const [, naturalWidth] = this._usernameLabel.get_preferred_width(-1);
 
         // Set the container's width to the label's width
         this.set_width(naturalWidth);
@@ -77,7 +75,7 @@ class AddUsernameToQuickMenu extends St.Widget {
 
     animateOut(callback) {
         // Get the full width of the label
-        let [, naturalWidth] = this._usernameLabel.get_preferred_width(-1);
+        const [, naturalWidth] = this._usernameLabel.get_preferred_width(-1);
 
         // Stop any existing animations
         this._usernameLabel.remove_all_transitions();
@@ -128,8 +126,6 @@ export function disable() {
         const instance = addUsernameInstance;
         addUsernameInstance = null;
 
-        const QuickSettingsMenu = Main.panel.statusArea.quickSettings;
-        QuickSettingsMenu._indicators.remove_child(instance);
         instance.destroy();
     }
 }

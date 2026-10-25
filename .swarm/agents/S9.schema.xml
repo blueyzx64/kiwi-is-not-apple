@@ -1,0 +1,28 @@
+<!-- S9 fragment: paste inside <schema> of org.gnome.shell.extensions.kiwi.gschema.xml -->
+      <!-- Stage Manager (apps/stageManager). The toggle shortcut key comes with the full feature. -->
+      <key name="stage-manager" type="b">
+        <default>true</default>
+        <summary>Stage Manager</summary>
+        <description>Show the other apps as live, stacked thumbnails in a strip at the screen edge. Click one to switch to it. While Stage Manager is on, Minimize to Dock, window tiling by drag and Move Fullscreen Window are paused (their settings are kept).</description>
+      </key>
+      <key name="stage-manager-side" type="s">
+        <default>'left'</default>
+        <summary>Stage Manager strip side</summary>
+        <description>Which screen edge holds the strip: "left" or "right".</description>
+      </key>
+      <key name="stage-manager-autohide" type="b">
+        <default>true</default>
+        <summary>Auto-hide the strip</summary>
+        <description>Hide the strip while a window on the stage overlaps it, and show it again when the pointer reaches the screen edge.</description>
+      </key>
+      <key name="stage-manager-group-by-app" type="b">
+        <default>true</default>
+        <summary>Group windows by app</summary>
+        <description>Windows of the same app share one stack in the strip. Off gives each window its own thumbnail.</description>
+      </key>
+      <key name="stage-manager-recent-count" type="i">
+        <default>6</default>
+        <range min="1" max="10"/>
+        <summary>Recent apps in the strip</summary>
+        <description>The most thumbnails the strip lists. Fewer are shown when the screen is too short.</description>
+      </key>
