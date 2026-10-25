@@ -303,4 +303,5 @@ valgrind:
   (both read from the `GNOME/glib` mirror, `docs/reference/gobject/{tutorial,concepts}.md`)
 - `g_signal_add_emission_hook`: https://docs.gtk.org/gobject/func.signal_add_emission_hook.html
 - `g_clear_signal_handler` (2.62), `G_DEFINE_FINAL_TYPE` (2.70): GObject API
-  docs (**unverified** version numbers; compiled fine on 2.80)
+  docs, confirmed: https://docs.gtk.org/gobject/func.clear_signal_handler.html ,
+  https://docs.gtk.org/gobject/func.DEFINE_FINAL_TYPE.html

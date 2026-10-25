@@ -25,9 +25,9 @@ Verified against mutter `src/core/meta-context-main.c` (48.0, 49.0, 50.0, main),
   `sudo dnf install mutter-devkit`, or `dnf install /usr/libexec/mutter-devkit`.
   The binary used to come only with `mutter-devel` (Red Hat bug 2418788). On
   Ubuntu it is `mutter-dev-bin` (per a Discourse thread).
-- Window size: `MUTTER_DEBUG_DUMMY_MODE_SPECS=1600x1000` was used with
-  `--nested` (unverified for devkit). For devkit, prefer
-  `--virtual-monitor 1600x1000`.
+- Window size: `MUTTER_DEBUG_DUMMY_MODE_SPECS=1600x1000` only worked with
+  `--nested` (read by `meta-monitor-manager-dummy.c` up to mutter 49; no mutter
+  51.0 C code reads it). For devkit, use `--virtual-monitor 1600x1000`.
 - The nested shell loads extensions from `~/.local/share/gnome-shell/extensions`.
   Enable Kiwi with `gnome-extensions enable kiwi@kemma` from a terminal
   *inside* the same D-Bus session, or pre-enable it in the
@@ -87,9 +87,10 @@ gnome-extensions upload <zip>           # 49+
   `references/testing-strategy.md`.
 - Runner: Jasmine for GJS (`jasmine-gjs`). gnome-shell vendors it as
   `subprojects/jasmine-gjs` and its ESLint config defines Jasmine globals for
-  `tests/unit/**`. Install from your distro (`jasmine-gjs` (unverified package
-  name)) or git, then run `jasmine --module tests/unit/*.js` (unverified flags;
-  see `jasmine --help`).
+  `tests/unit/**`. It is not packaged in Fedora or Debian: build it from
+  https://github.com/ptomato/jasmine-gjs with meson, then run
+  `jasmine --module tests/unit/` (`--module` runs specs as ES modules; gnome-shell
+  `tests/meson.build` uses `--module --tap --no-config`).
 - Minimal no-dependency alternative: `gjs -m tests/run.js`, where `run.js`
   imports modules and uses `console.assert`, exiting non-zero via
   `imports.system.exit(1)` or `import System from 'system'`.
@@ -107,19 +108,21 @@ gnome-extensions upload <zip>           # 49+
   never), `consistent-return`, `eqeqeq: smart`, `prefer-arrow-callback`,
   `prefer-const` (destructuring all), and `jsdoc/require-jsdoc` for public
   ESM exports. Globals: `global`, `_`, `C_`, `N_`, `ngettext`.
-- gjs.guide also documents a standalone ESLint setup for extensions
-  (unverified current content).
+- gjs.guide's style guide (guides/gjs/style-guide.html) documents a standalone
+  setup: a legacy `.eslintrc.yml` and a flat `eslint.config.js` built on
+  `@eslint/js`, plus `npx eslint .` and GitLab/GitHub CI examples.
 - Types for editor and LSP: `@girs/gnome-shell` (npm, 50.0.4 at the time of
   writing), `@girs/gjs` (5.x). These are TypeScript declarations. In JS,
-  reference them through `jsconfig.json` `"types"` (gjs.guide "TypeScript and
-  LSP").
+  load them via an `ambient.d.ts` (`import "@girs/gjs"; import
+  "@girs/gnome-shell/ambient"; …`) listed in `include` (gjs.guide "TypeScript
+  and LSP").
 - Kiwi has no ESLint config committed. If you add one, match the existing
   4-space, single-quote, semicolon style.
 
 ## 7. Crash and performance debugging
 - Run under gdb: `dbus-run-session -- gdb --args gnome-shell --devkit --wayland`.
-  Inside gdb, `call gjs_dumpstack()` prints the JS stack (unverified symbol on
-  current gjs).
+  Inside gdb, `call gjs_dumpstack()` prints the JS stack (public symbol,
+  gjs `gjs/context.h`).
 - Profiling: Sysprof captures gjs and Shell marks (gjs NEWS mentions sysprof
   integration and `System.dumpMemoryInfo`).
 - Frame drops from blur: compare with the effect disabled. Watch paint counts
@@ -130,6 +133,7 @@ gnome-extensions upload <zip>           # 49+
 - https://gjs.guide/extensions/upgrading/gnome-shell-49.html (devkit replaces nested)
 - https://gitlab.gnome.org/GNOME/mutter/-/blob/main/src/core/meta-context-main.c (options; compare tags 49.0 and 50.0)
 - https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/main/src/main.c
+- https://gjs.guide/guides/gjs/style-guide.html (ESLint) ; https://github.com/ptomato/jasmine-gjs (README, src/options.js)
 - https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/main/tools/eslint.config.js , tools/package.json
 - https://bugzilla.redhat.com/show_bug.cgi?id=2418788 (mutter-devkit packaging)
 - https://discourse.gnome.org/t/gnome-49-nested-sessions-no-longer-possible/30987

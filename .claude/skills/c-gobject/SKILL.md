@@ -95,4 +95,4 @@ malloc). ASan inside a GTK module requires the *host app* to be ASan-built or
 - GI annotations: https://gi.readthedocs.io/en/latest/annotations/giannotations.html
 - Meson GNOME module: https://mesonbuild.com/Gnome-module.html
 - GNOME programming guidelines: https://developer.gnome.org/documentation/guidelines/programming.html
-  (not reachable from this sandbox; content cited from memory is marked **unverified**)
+  (C style: …/programming/coding-style.html; unverifiable claims are marked **unverified**)

@@ -66,8 +66,8 @@ Notes: generated C routinely triggers `-Wincompatible-pointer-types`/
 `-Wdiscarded-qualifiers` noise (seen in every example here), so `-w` for C plus
 `--fatal-warnings` for Vala keeps the signal. GCC 14+ turns
 `incompatible-pointer-types` into an **error** by default — another reason for
-`-w` or `-Wno-error=incompatible-pointer-types` (**unverified** for every valac
-version; check if a build suddenly fails after a compiler upgrade).
+`-w` or `-Wno-error=incompatible-pointer-types` (GCC 14 porting notes:
+https://gcc.gnu.org/gcc-14/porting_to.html#incompatible-pointer-types).
 
 ## 3. meson: library with GIR + typelib (tested)
 
@@ -167,9 +167,12 @@ GIRepository.Repository.prepend_library_path(dir);
 const {default: KiwiHelper} = await import('gi://KiwiHelper?version=0.1');
 ```
 
-Newer GJS built on GLib's girepository-2.0 (`GIRepository-3.0`) replaces the
-static calls with `GIRepository.Repository.dup_default().prepend_search_path(dir)`
-(**unverified** here; check the GJS version in the target Shell).
+GJS moved to GLib's girepository-2.0 (`GIRepository-3.0`) in 1.85.2 (GNOME 49;
+https://gitlab.gnome.org/GNOME/gjs/-/blob/master/NEWS). There the calls are
+instance methods (`prepend_search_path`/`prepend_library_path`, GLib 2.80) on
+`GIRepository.Repository.dup_default()` (GLib ≥ 2.86:
+https://docs.gtk.org/girepository/type_func.Repository.dup_default.html); the
+JS import version string is **unverified** — test on the target Shell.
 
 ## 5. GIR-friendly Vala API rules
 

@@ -213,4 +213,5 @@ valgrind --leak-check=full --suppressions=/usr/share/glib-2.0/valgrind/glib.supp
   (read from the `GNOME/glib` mirror, `docs/reference/glib/running.md`)
 - Auto-cleanup: https://docs.gtk.org/glib/auto-cleanup.html
 - `g_idle_add_once` since 2.74, `GStrvBuilder` since 2.68: from GLib API docs
-  (**unverified** here beyond compiling against GLib 2.80).
+  (confirmed: https://docs.gtk.org/glib/func.idle_add_once.html ,
+  https://docs.gtk.org/glib/struct.StrvBuilder.html).

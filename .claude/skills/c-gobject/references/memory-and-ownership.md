@@ -211,7 +211,9 @@ G_DEBUG=gc-friendly ./app                           # zero freed GLib memory (he
 
 Refcount bugs: in gdb `break g_object_unref if object == 0x...`; the GTK
 Inspector (`GTK_DEBUG=interactive`) shows object counts in its Statistics tab
-when GLib is built with instance counting (**unverified** on distro builds).
+when GLib is built with `G_ENABLE_DEBUG` and `GOBJECT_DEBUG=instance-count` is
+set (https://docs.gtk.org/gobject/func.type_get_instance_count.html; **unverified**
+per distro — `meson.options` says distros typically disable `glib_debug`).
 
 ## 11. Sources
 
@@ -220,4 +222,4 @@ when GLib is built with instance counting (**unverified** on distro builds).
 - Floating refs: https://docs.gtk.org/gobject/floating-refs.html
 - Auto-cleanup rules: https://docs.gtk.org/glib/auto-cleanup.html (read from `GNOME/glib` mirror)
 - GNOME memory-management guideline: https://developer.gnome.org/documentation/guidelines/programming/memory-management.html
-  (not reachable here; rules above are consistent with it from memory — **unverified**)
+  (checked: ownership/transfer vocabulary matches)

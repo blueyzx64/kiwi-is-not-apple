@@ -219,6 +219,9 @@ Set `G_LOG_DOMAIN` with `-X -DG_LOG_DOMAIN=\"kiwi-helper\"` (meson:
 - docs.vala.dev tutorial ch. 2 (basics) and 4.2 (error handling), 4.1 (contracts):
   https://docs.vala.dev — source `vala-lang/vala-docs/docs/tutorials/main/02-00-basics/`
 - GLib running/debug env vars: https://docs.gtk.org/glib/running.html
-- Non-null enforcement behaviour: from valac 0.56 behaviour and the
-  "experimental features" chapter (05-00); details of preconditions **unverified**
-  beyond public-method `g_return_*` generation observed in `valac -C` output.
+- Non-null enforcement: docs.vala.dev 4.1 ("Vala does that implicitly for all
+  parameters that are not marked with ?") and 5.3 strict non-null mode
+  (`--enable-experimental-non-null`, static check):
+  https://docs.vala.dev/tutorials/main/04-00-advanced-features/04-01-assertions-and-contract-programming.html ,
+  https://docs.vala.dev/tutorials/main/05-00-experimental-features/05-03-strict-non-null-mode.html
+  (`valac -C` 0.56 output showed the `g_return_*` checks on public methods).

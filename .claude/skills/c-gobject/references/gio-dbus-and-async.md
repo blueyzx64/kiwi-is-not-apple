@@ -293,5 +293,6 @@ methods.
 - GDBus overview: https://docs.gtk.org/gio/migrating-gdbus.html ,
   https://docs.gtk.org/gio/method.DBusConnection.register_object.html
 - `gnome.gdbus_codegen`: https://mesonbuild.com/Gnome-module.html#gnomegdbus_codegen
-- gdbus-codegen generated names: https://docs.gtk.org/gio/gdbus-codegen.html
-  (naming from memory — **unverified** here)
+- gdbus-codegen generated names: `man gdbus-codegen`, source
+  https://gitlab.gnome.org/GNOME/glib/-/blob/main/docs/reference/gio/gdbus-codegen.rst
+  (names confirmed by running gdbus-codegen 2.80 on the XML above)

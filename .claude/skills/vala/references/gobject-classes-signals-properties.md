@@ -188,7 +188,7 @@ public class FileSource : ScanSource {
     }
 }
 
-public sealed class Leaf : Object { }        // Vala >= 0.56: G_TYPE_FLAG_FINAL
+public sealed class Leaf : Object { }        // Vala >= 0.54: G_TYPE_FLAG_FINAL
 ```
 
 - Single inheritance of classes; multiple interfaces.
@@ -267,5 +267,5 @@ plus a null check for values from outside.
 - docs.vala.dev tutorial 3.1–3.13 (OOP: construction, destruction, signals,
   properties, interfaces, RTTI) — `vala-lang/vala-docs/docs/tutorials/main/03-00-object-oriented-programming/`
 - GObject construction model: https://docs.gtk.org/gobject/concepts.html#object-instantiation
-- `sealed` keyword: Vala 0.56 release notes (**unverified** here beyond successful
-  compilation with valac 0.56.16).
+- `sealed` keyword: added in Vala 0.53.1 ("Add support for sealed classes
+  [#278]"), i.e. stable 0.54: https://gitlab.gnome.org/GNOME/vala/-/blob/main/NEWS

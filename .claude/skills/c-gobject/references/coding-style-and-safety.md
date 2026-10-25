@@ -40,28 +40,27 @@ kiwi_index_add_file (KiwiIndex   *self,
     }
 
   for (guint i = 0; i < self->roots->len; i++)
-    {
-      if (g_str_has_prefix (path, g_ptr_array_index (self->roots, i)))
-        return kiwi_index_insert (self, path, error);
-    }
+    if (g_str_has_prefix (path, g_ptr_array_index (self->roots, i)))
+      return kiwi_index_insert (self, path, error);
 
   return TRUE;
 }
 ```
 
-- 2-space indent; braces on their own line, indented 2 for blocks
-  (GNU); space before `(` in calls and declarations.
+- 2-space indent, spaces only (no tabs); no braces for single-statement
+  blocks, else braces on their own line indented 2 (GNU); function braces not
+  indented; space before `(` in calls and declarations.
 - Return type on its own line; parameters aligned, one per line.
 - Names: `kiwi_index_add_file` (`namespace_type_verb`), types `KiwiIndex`,
   macros `KIWI_TYPE_INDEX`, enums `KIWI_INDEX_STATE_READY`.
 - `self` for the instance; `klass` for class pointers.
-- Declare variables at the top of a block (GNOME style), initialise them;
+- Declare variables at the top of a block (GLib/GTK habit, not a written rule), initialise them;
   `g_autoptr` variables *must* be initialised.
 - Compare pointers explicitly (`if (path == NULL)`); booleans implicitly.
 - Static everything not in the public header.
-- Don't mix tabs/spaces; ship an `.editorconfig`. GNU indent or
-  `clang-format` with a GNOME config enforces it (**unverified**: no official
-  GNOME clang-format file is mandated; projects vary — follow the file you edit).
+- Ship an `.editorconfig`. No GNOME-wide clang-format file exists; the GNOME
+  guide's "single most important rule" is to imitate the surrounding code
+  (developer.gnome.org C Coding Style). GTK ships its own `.clang-format`.
 - Kiwi's current `advanced/titlebuttons_hover.c` uses K&R/1TBS with
   inconsistent indentation (lines 87–88, 95–96); if you rewrite it, pick one
   style for the whole file.
@@ -217,9 +216,9 @@ managers, password managers, installers):
 ## 8. Sources
 
 - GTK coding style: https://gitlab.gnome.org/GNOME/gtk/-/blob/main/docs/CODING-STYLE.md
-  (not reachable from this sandbox; summarised from memory — **unverified** details)
+  (checked: indentation, braces, `== NULL`, no `== TRUE`, return type line)
 - GNOME programming guidelines (memory, threading, logging, namespacing):
-  https://developer.gnome.org/documentation/guidelines/programming.html (**unverified** here)
+  https://developer.gnome.org/documentation/guidelines/programming/coding-style.html
 - `g_size_checked_mul`: https://docs.gtk.org/glib/func.size_checked_mul.html (macro present in GLib 2.80 `gtypes.h`)
 - `g_spawn_check_wait_status`: https://docs.gtk.org/glib/func.spawn_check_wait_status.html
 - Meson built-in options (`b_sanitize`, `warning_level`): https://mesonbuild.com/Builtin-options.html

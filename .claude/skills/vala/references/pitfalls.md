@@ -99,8 +99,8 @@ looks fine in Vala but is wrong through GObject Introspection. Items marked
 ## 7. Build and toolchain
 
 - Generated C produces many C warnings **(verified)**; GCC ≥ 14 makes
-  `incompatible-pointer-types` an error by default (GCC 14 porting notes;
-  **unverified** against every valac release). Use `-w` for C or
+  `incompatible-pointer-types` an error by default (GCC 14 porting notes,
+  confirmed). Use `-w` for C or
   `-Wno-error=incompatible-pointer-types`, and `--fatal-warnings` for Vala.
 - valac versions differ by distro (0.56 is the long-lived series; newer
   features may need `--target-glib`). Pin `meson_version` and dependency
@@ -130,5 +130,5 @@ looks fine in Vala but is wrong through GObject Introspection. Items marked
 
 - docs.vala.dev tutorial ch. 3–4, memory-management guide (`vala-lang/vala-docs`)
 - GSettings constructor docs: https://docs.gtk.org/gio/ctor.Settings.new.html
-- GCC 14 porting notes: https://gcc.gnu.org/gcc-14/porting_to.html (**unverified** here)
+- GCC 14 porting notes: https://gcc.gnu.org/gcc-14/porting_to.html#incompatible-pointer-types
 - Reproductions: valac 0.56.16, gjs 1.80.2, GLib 2.80, GTK 4.14 (Ubuntu 24.04).

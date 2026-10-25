@@ -207,8 +207,10 @@ meson setup _b -Db_sanitize=address      # ASan/LSan on generated C
 
 GObject refcount debugging: set a breakpoint on `g_object_ref`/`g_object_unref`
 with a condition on the instance, or use `GOBJECT_DEBUG=instance-count` with
-`GTK_DEBUG=interactive` → Statistics (needs a GLib built with debug; **unverified**
-on distro builds).
+`GTK_DEBUG=interactive` → Statistics. Counts need GLib built with
+`G_ENABLE_DEBUG` (https://docs.gtk.org/gobject/func.type_get_instance_count.html;
+`-Dglib_debug`, which GLib's `meson.options` says distros typically disable —
+**unverified** per distro: try it, 0 counts means unavailable).
 
 ## 10. Sources
 

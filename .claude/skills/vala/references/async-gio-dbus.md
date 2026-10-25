@@ -333,8 +333,8 @@ ExecStart=/usr/libexec/kiwi-clipboard-helper
 
 An extension published on extensions.gnome.org cannot install either file;
 users must install the helper package separately and the extension must work
-without it. (Packaging rules: **unverified** against the current EGO review
-guidelines — check https://gjs.guide/extensions/review-guidelines/review-guidelines.html.)
+without it. (EGO rule "Extensions MUST NOT include binary executables or
+libraries": https://gjs.guide/extensions/review-guidelines/review-guidelines.html#scripts-and-binaries.)
 
 ## 10. Sources
 

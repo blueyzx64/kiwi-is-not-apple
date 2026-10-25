@@ -182,8 +182,8 @@ criticals. `Adw.Application` automatically loads `style.css` /
 ## 4. Blueprint instead of XML
 
 Blueprint (`.blp`) compiles to the same `.ui` XML. Equivalent of the template
-above (syntax per blueprint-compiler docs; compiler not installed in this
-sandbox, so **unverified** here):
+above (compiled with blueprint-compiler 0.16.0 against Gtk 4.14 / Adw 1.5
+GIRs; meson rule from https://gnome.pages.gitlab.gnome.org/blueprint-compiler/setup.html):
 
 ```blueprint
 using Gtk 4.0;
@@ -312,6 +312,7 @@ for a user install.)
   https://docs.gtk.org/gtk4/migrating-3to4.html (read from `GNOME/gtk` mirror,
   `docs/reference/gtk/migrating-3to4.md`)
 - libadwaita API: https://gnome.pages.gitlab.gnome.org/libadwaita/doc/1-latest/
-  (not reachable; checked against local `libadwaita-1.vapi` 1.5)
+  (also checked against local `libadwaita-1.vapi` 1.5)
 - Meson `gnome.compile_resources`: https://mesonbuild.com/Gnome-module.html
-- Blueprint: https://jwestman.pages.gitlab.gnome.org/blueprint-compiler/ (**unverified** here)
+- Blueprint: https://gnome.pages.gitlab.gnome.org/blueprint-compiler/ (old
+  `jwestman.pages…` URL now redirects to a GitLab login)

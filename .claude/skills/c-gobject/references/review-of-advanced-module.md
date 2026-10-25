@@ -72,7 +72,7 @@ button that gets hidden/unmapped without a leave event leaves
 `titlebuttons-hover-alt` on the headerbar. Real triggers are plausible (window
 minimised via the minimise button, maximise toggling button visibility,
 popovers/grabs) but were not reproduced with a real compositor
-(**unverified** in a live session). *Fix:* recompute from
+(**unverified** in a live session: runtime behaviour, no docs cover it). *Fix:* recompute from
 `GTK_STATE_FLAG_PRELIGHT` of *mapped* buttons on `state-flags-changed` and
 `unmap` (tested).
 

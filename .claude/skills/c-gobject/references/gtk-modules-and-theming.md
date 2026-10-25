@@ -264,7 +264,7 @@ GTK3_MODULES=${GTK3_MODULES:+$GTK3_MODULES:}/home/USER/.local/lib/kiwi/libtitleb
   modules — e.g. distro `appmenu-gtk-module`, accessibility — are often set).
 - environment.d does not expand `~`; write the absolute path (`$HOME` works
   in environment.d expansion; **unverified** whether `HOME` is defined at
-  generator time on every distro — absolute path is safest).
+  generator time — environment.d(5) does not say; absolute path is safest).
 - Put binaries in a data/lib dir (`~/.local/lib/kiwi/`), not in
   `~/.config/environment.d/` (a config directory).
 - Replace a loaded `.so` atomically (`install -m644 src dst` or write temp + `mv`).
@@ -276,11 +276,11 @@ GTK3_MODULES=${GTK3_MODULES:+$GTK3_MODULES:}/home/USER/.local/lib/kiwi/libtitleb
 
 | Situation | Module effect |
 |---|---|
-| GTK3 app with client-side decorations (GtkHeaderBar), Wayland or X11 | Works (GTK3 on Wayland always draws its own titlebar via an internal GtkHeaderBar with `.titlebar.default-decoration`). |
-| GTK3 app on X11 with server-side decorations | No GTK titlebuttons exist; Mutter draws the frame → no effect (`GTK_CSD=1` forces CSD on X11; GTK3 uses CSD on Wayland unless the compositor prefers SSD — `gtkwindow.c`). |
+| GTK3 app with client-side decorations (GtkHeaderBar), Wayland or X11 | Works (GTK3 on Mutter/Wayland always draws its own titlebar via an internal GtkHeaderBar with `.titlebar.default-decoration` — `gtkwindow.c` `create_titlebar`). |
+| GTK3 app on X11 with server-side decorations | No GTK titlebuttons exist; Mutter draws the frame → no effect (`GTK_CSD=1` forces CSD on X11; GTK3 uses CSD on Wayland unless the compositor announces SSD via `org_kde_kwin_server_decoration`, which Mutter does not — `gtkwindow.c` `gtk_window_should_use_csd`, `gdkdisplay-wayland.c`; gtk-3-24 branch). |
 | GTK4 / libadwaita app | Never loaded (no module support). Use CSS. |
 | Flatpak GTK3 app | Flatpak does not clear `GTK3_MODULES`/`GTK_MODULES` (checked in `flatpak-run.c` default env list), but the host path usually isn't visible in the sandbox → "Failed to load module" message; if visible, the .so is linked against host libs, not the runtime (ABI risk). |
-| Snap apps | Similar isolation (**unverified**). |
+| Snap apps | Similar isolation (**unverified**: snapcraft.io unreachable; snapcraft-desktop-helpers `desktop-exports` does not clear `GTK_MODULES`). |
 | `sudo`/`pkexec` apps | Environment is normally reset → not loaded. |
 | Electron/Firefox/Thunderbird | Not GTK3 headerbars in the same way; Kiwi styles them via their own CSS files (`css/firefoxWindowControls*.css`). |
 
@@ -292,8 +292,10 @@ GTK3_MODULES=${GTK3_MODULES:+$GTK3_MODULES:}/home/USER/.local/lib/kiwi/libtitleb
   backends, media backends via GIO extension points); GTK ≥ 4.13 can even link
   them statically (gtk NEWS "Let modules be statically linked into libgtk").
 - Theming GTK4 apps: user CSS `~/.config/gtk-4.0/gtk.css` (USER priority) —
-  what Kiwi already does. libadwaita apps ignore `GTK_THEME` and custom themes
-  but still load the user `gtk.css` (**unverified** for every Adw version).
+  what Kiwi already does. libadwaita ignores the `gtk-theme-name` setting
+  (forces `Adwaita-empty`) but honours `GTK_THEME` (it then skips its own
+  stylesheet — `adw-style-manager.c`); the user `gtk.css` is loaded by GTK
+  itself (`gtksettings.c`), so it applies to Adw apps too.
 - Code injection via `LD_PRELOAD` is possible but fragile, breaks with Flatpak,
   and is out of scope for Kiwi.
 

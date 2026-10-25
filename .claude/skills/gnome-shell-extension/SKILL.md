@@ -119,7 +119,7 @@ destroyed.
 # Nested shell. 49+ use --devkit (Fedora: dnf install mutter-devkit). 48 used --nested.
 dbus-run-session gnome-shell --devkit --wayland          # GNOME 49, 50, 51
 dbus-run-session -- gnome-shell --nested --wayland       # GNOME 48 and older
-MUTTER_DEBUG_DUMMY_MODE_SPECS=1600x1000 dbus-run-session gnome-shell --devkit --wayland  # (unverified for devkit)
+dbus-run-session gnome-shell --devkit --wayland --virtual-monitor 1600x1000  # sized output (DUMMY_MODE_SPECS is nested-only)
 
 journalctl -f -o cat /usr/bin/gnome-shell                # live shell log (JS errors, console.*)
 journalctl -f -o cat /usr/bin/gjs                        # prefs process log
