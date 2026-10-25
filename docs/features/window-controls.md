@@ -18,10 +18,14 @@ Optionally, real windows lose their own titlebar buttons.
 - Hovering shows the glyphs (×, −, ⤢) on all three buttons at once, like macOS.
 - No focused window (empty desktop): hide the buttons; the name reads "Desktop" or is hidden.
 - Removing the buttons from windows: CSD apps (GTK 3/4) get CSS that hides the titlebar
-  buttons. Server-side decorated windows get the `button-layout` with no buttons
-  (`':'`), and the original value is restored on disable.
+  buttons. (The first draft also set `button-layout` to `':'` for server-side windows; that was dropped, see the known limit below.)
   Electron, Qt and Firefox are best effort: Firefox and Thunderbird have their own CSS
   files; others keep their buttons.
+  **Known limit (decided):** Kiwi does not write the system `button-layout` key, which is a user
+  setting outside the extension. So server-side-decorated windows keep their own titlebar buttons
+  next to the panel ones; the hide-titlebar CSS only reaches GTK client-side decorations.
+  **Flatpak:** GTK apps in Flatpak only see the hide-titlebar CSS when the `flatpak override`
+  lines in the README (Flatpak theming) are applied.
 
 ## 4. Settings (proposed)
 | Key | Type | Default |
@@ -41,5 +45,5 @@ Optionally, real windows lose their own titlebar buttons.
 
 ## 6. Acceptance
 - [ ] The buttons follow focus changes within 1 frame and ignore unmanaged windows.
-- [ ] Turning the feature off restores `button-layout` and the GTK CSS exactly.
+- [ ] Turning the feature off restores the GTK CSS exactly (Kiwi never touches `button-layout`).
 - [ ] Works with GTK 3 and GTK 4 apps, Flatpak included (with the documented overrides).
