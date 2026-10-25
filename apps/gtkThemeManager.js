@@ -9,6 +9,10 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
+import { CleanupRegistry } from '../lib/disposables.js';
+import { KiwiSettings } from '../lib/settings.js';
+import { MIGRATIONS as WINDOW_CONTROLS_MIGRATIONS, titlebarHideSheet } from './windowControls/model.js';
+
 const MARKER_BEGIN = '/* Kiwi (is not Apple) - managed imports: begin */';
 const MARKER_END = '/* Kiwi (is not Apple) - managed imports: end */';
 
@@ -24,8 +28,11 @@ let gtkThemeManager = null;
 class GtkThemeManager {
     constructor(ext) {
         this._extension = ext;
-        this._settings = null;
-        this._settingsChangedId = null;
+        this._ks = null;
+        this._cleanup = new CleanupRegistry();
+        // File work runs one job at a time, so an unlock never interleaves with the cleanup
+        // that a lock started.
+        this._queue = Promise.resolve();
     }
 
     // Absolute file:// URI for a stylesheet shipped in the extension's css folder.
@@ -36,12 +43,11 @@ class GtkThemeManager {
 
     // Stylesheets to pull in for a given GTK major version ('3' or '4').
     _stylesheetsFor(version) {
-        const enableAppButtons = this._settings.get_boolean('enable-app-window-buttons');
-        const showControlsOnPanel = this._settings.get_boolean('show-window-controls');
-        const fullscreenOnly = this._settings.get_boolean('show-window-controls-fullscreen-only');
-        const buttonType = this._settings.get_string('button-type');
-        const buttonSize = this._settings.get_string('button-size');
-        const appFixes = this._settings.get_boolean('popup-menu-styling');
+        const ks = this._ks;
+        const enableAppButtons = ks.bool('enable-app-window-buttons');
+        const buttonType = ks.string('button-type');
+        const buttonSize = ks.string('button-size');
+        const appFixes = ks.bool('popup-menu-styling');
 
         const sheets = [];
 
@@ -63,13 +69,15 @@ class GtkThemeManager {
             }
         }
 
-        // Hide the titlebar when window controls live in the panel
-        if (showControlsOnPanel) {
-            if (fullscreenOnly)
-                sheets.push(`hide-titlebar-fullscreen${version}.css`);
-            else
-                sheets.push(`hide-titlebar${version}.css`);
-        }
+        // Remove the titlebar buttons of CSD windows while the panel shows the controls
+        const hide = titlebarHideSheet({
+            showOnPanel: ks.bool('show-window-controls'),
+            remove: ks.bool('remove-titlebar-buttons'),
+            scope: ks.string('window-controls-scope'),
+            gtkVersion: version,
+        });
+        if (hide)
+            sheets.push(hide);
 
         // App fixes go last so they can override the above
         if (appFixes)
@@ -87,89 +95,108 @@ class GtkThemeManager {
         return `${MARKER_BEGIN}\n${imports.join('\n')}\n${MARKER_END}\n`;
     }
 
-    async updateGtkCss() {
-        const configDir = GLib.get_user_config_dir();
-
-        for (const version of ['3', '4']) {
-            const gtkConfigDir = GLib.build_filenamev([configDir, `gtk-${version}.0`]);
-            GLib.mkdir_with_parents(gtkConfigDir, 0o755);
-
-            const userPath = GLib.build_filenamev([gtkConfigDir, 'gtk.css']);
-            await this.processUserGtkFile(userPath, this._buildManagedBlock(version));
-        }
+    _enqueue(job) {
+        this._queue = this._queue.then(job).catch(error => {
+            console.error(`[Kiwi] GTK css job failed: ${error}`);
+        });
+        return this._queue;
     }
 
-    // Replaces our managed block in the user's gtk.css, leaving their own rules
-    // untouched. An empty block removes our imports entirely.
-    async processUserGtkFile(filePath, managedBlock) {
+    // Settings are read now, the files are written later, so a disable cannot starve the job.
+    updateGtkCss() {
+        const configDir = GLib.get_user_config_dir();
+        const jobs = ['3', '4'].map(version => ({
+            dir: GLib.build_filenamev([configDir, `gtk-${version}.0`]),
+            block: this._buildManagedBlock(version),
+        }));
+        return this._enqueue(async () => {
+            for (const { dir, block } of jobs)
+                await this.processUserGtkFile(dir, block);
+        });
+    }
+
+    // Replaces our managed block in <dir>/gtk.css, leaving the user's own rules untouched.
+    // An empty block removes our imports. The file is deleted only when it held our block
+    // and nothing else; a file we did not write to is never touched.
+    async processUserGtkFile(dirPath, managedBlock) {
+        const filePath = GLib.build_filenamev([dirPath, 'gtk.css']);
         try {
             const file = Gio.File.new_for_path(filePath);
-            const exists = file.query_exists(null);
 
-            if (!exists && !managedBlock)
-                return;
-
-            let existingContent = '';
-            if (exists) {
+            let existing = null;
+            try {
                 const [contents] = await file.load_contents_async(null);
-                existingContent = new TextDecoder().decode(contents);
+                existing = new TextDecoder().decode(contents);
+            } catch (e) {
+                if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_FOUND))
+                    throw e;
             }
+
+            if (existing === null && !managedBlock)
+                return;
 
             // Strip any previous block, plus unmarked imports from older versions
-            existingContent = existingContent
+            const rest = (existing ?? '')
                 .replace(MANAGED_BLOCK_REGEX, '')
                 .replace(LEGACY_IMPORT_REGEX, '');
+            const hadOurs = existing !== null && rest !== existing;
 
             // Our imports come first so user rules can still override them
-            const newContent = managedBlock + existingContent;
+            const newContent = managedBlock + rest;
+
+            if (newContent === existing)
+                return;
 
             if (!newContent.trim()) {
-                // Nothing but our own content was in there
-                if (exists)
-                    file.delete(null);
+                if (hadOurs)
+                    await file.delete_async(GLib.PRIORITY_DEFAULT, null);
                 return;
             }
 
-            file.replace_contents(newContent, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
+            if (existing === null) {
+                try {
+                    await Gio.File.new_for_path(dirPath).make_directory_async(GLib.PRIORITY_DEFAULT, null);
+                } catch (e) {
+                    if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.EXISTS))
+                        throw e;
+                }
+            }
+            await file.replace_contents_bytes_async(
+                new GLib.Bytes(new TextEncoder().encode(newContent)),
+                null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
         } catch (error) {
             console.error(`[Kiwi] Error processing GTK file ${filePath}: ${error}`);
         }
     }
 
-    async removeUserGtkConfig() {
+    removeUserGtkConfig() {
         const configDir = GLib.get_user_config_dir();
-
-        for (const version of ['3', '4']) {
-            const userPath = GLib.build_filenamev([configDir, `gtk-${version}.0`, 'gtk.css']);
-            await this.processUserGtkFile(userPath, '');
-        }
+        return this._enqueue(async () => {
+            for (const version of ['3', '4'])
+                await this.processUserGtkFile(GLib.build_filenamev([configDir, `gtk-${version}.0`]), '');
+        });
     }
 
     enable() {
-        this._settings = this._extension.getSettings();
-        this._settingsChangedId = this._settings.connect('changed', (settings, key) => {
-            if (key === 'enable-app-window-buttons' || key === 'button-type' || key === 'button-size' || key === 'show-window-controls' || key === 'show-window-controls-fullscreen-only' || key === 'popup-menu-styling') {
-                this.updateGtkCss().catch(error => {
-                    console.error(`[Kiwi] Error in settings changed handler: ${error}`);
-                });
-            }
-        });
+        const ks = new KiwiSettings(this._extension.getSettings());
+        this._ks = ks;
+        // The panel scope replaced "fullscreen only"; the css below reads the new key
+        ks.migrate(WINDOW_CONTROLS_MIGRATIONS);
+        ks.attach(this._cleanup);
+        ks.watch([
+            'enable-app-window-buttons', 'button-type', 'button-size', 'show-window-controls',
+            'window-controls-scope', 'remove-titlebar-buttons', 'popup-menu-styling',
+        ], () => this.updateGtkCss());
 
-        // Initial update
-        this.updateGtkCss().catch(error => {
-            console.error(`[Kiwi] Error in initial update: ${error}`);
-        });
+        this.updateGtkCss();
     }
 
     disable() {
-        this._settings.disconnect(this._settingsChangedId);
-        this._settingsChangedId = null;
-        this._settings = null;
+        this._cleanup.dispose();
+        this._ks = null;
 
         // Remove our imports from user GTK config files
-        this.removeUserGtkConfig().catch(error => {
-            console.error(`[Kiwi] Error in disable cleanup: ${error}`);
-        });
+        this.removeUserGtkConfig();
 
         this._extension = null;
     }
@@ -177,6 +204,9 @@ class GtkThemeManager {
 
 export function enable(ext) {
     Gio._promisify(Gio.File.prototype, 'load_contents_async', 'load_contents_finish');
+    Gio._promisify(Gio.File.prototype, 'make_directory_async', 'make_directory_finish');
+    Gio._promisify(Gio.File.prototype, 'delete_async', 'delete_finish');
+    Gio._promisify(Gio.File.prototype, 'replace_contents_bytes_async', 'replace_contents_finish');
     if (!gtkThemeManager) {
         gtkThemeManager = new GtkThemeManager(ext);
         gtkThemeManager.enable();
