@@ -20,6 +20,66 @@ Gio._promisify(Gio.FileEnumerator.prototype, 'next_files_async', 'next_files_fin
 Gio._promisify(Gio.FileEnumerator.prototype, 'close_async', 'close_finish');
 
 const KIWI_MARKER_FILENAME = '.kiwi-managed';
+// Journal in the profile dir while chrome/ is being swapped, so a crash can be finished or undone.
+// Marker value for a chrome/ Kiwi created from nothing: there is no user dir to restore.
+// Markers from older versions have no backup= line and mean chrome.bak.
+const NO_BACKUP = 'none';
+const KIWI_PENDING_FILENAME = '.kiwi-pending';
+
+// userChrome.css: Kiwi's imports live between these lines; the rest of the file is the user's.
+export const BLOCK_BEGIN = '/* Kiwi begin */';
+export const BLOCK_END = '/* Kiwi end */';
+const BLOCK_REGEX = /\/\* Kiwi begin \*\/[\s\S]*?\/\* Kiwi end \*\/\n?/g;
+
+// Every Mozilla app shares one queue: they share the profile state file below.
+const enqueueFileJob = createJobQueue(e => console.error(`[Kiwi] Mozilla file job failed: ${e}`));
+
+/** Kiwi's profile state file: {"<cssPrefix>": ["/abs/profile", ...]}. */
+export function defaultStatePath() {
+    return GLib.build_filenamev([GLib.get_user_data_dir(), 'kiwi', 'mozilla-profiles.json']);
+}
+
+/**
+ * True when the whole text is what older Kiwi versions wrote into userChrome.css: nothing,
+ * an optional `/* Kiwi *\/` line and our own @import lines. Such a file is migrated to the block.
+ */
+export function isLegacyKiwiOutput(content, cssPrefix) {
+    const importRe = new RegExp(`^@import url\\("file://[^"]*/css/${cssPrefix}[A-Za-z.-]*\\.css"\\);$`);
+    return content.split('\n').map(l => l.trim()).filter(Boolean)
+        .every(l => l === '/* Kiwi */' || importRe.test(l));
+}
+
+/** The user's part of userChrome.css: our block removed, a legacy Kiwi-only file counts as empty. */
+export function stripKiwiBlock(content, cssPrefix) {
+    if (!content.includes(BLOCK_BEGIN) && isLegacyKiwiOutput(content, cssPrefix))
+        return '';
+    return content.replace(BLOCK_REGEX, '');
+}
+
+/** userChrome.css with our block first (@import must precede rules) and the user's text kept. */
+export function applyKiwiBlock(content, imports, cssPrefix) {
+    const block = `${BLOCK_BEGIN}\n${imports.map(l => `${l}\n`).join('')}${BLOCK_END}\n`;
+    return block + stripKiwiBlock(content ?? '', cssPrefix);
+}
+
+/** Journal body / parse: {op: 'install'|'remove', backup}. */
+export function pendingBody(op, backupName) {
+    return `op=${op}\nbackup=${backupName}\n`;
+}
+export function parsePending(text) {
+    const op = text.match(/^op=(install|remove)$/m)?.[1] ?? null;
+    return op ? {op, backup: parseBackupName(text)} : null;
+}
+
+/** Profile dirs named by every [Install*] Default= in installs.ini, relative to baseDir, deduped. */
+export function installsIniProfiles(sections) {
+    const out = [];
+    for (const sec of sections) {
+        if (sec.data.Default && !out.includes(sec.data.Default))
+            out.push(sec.data.Default);
+    }
+    return out;
+}
 
 // user.js: the tag comment and the pref line Kiwi adds. Only a pair written by Kiwi is removed.
 const PREF_TAG = '// Added by Kiwi extension to enable userChrome.css';
@@ -93,6 +153,25 @@ async function fileExists(file) {
     }
 }
 
+async function deleteIfExists(file) {
+    try {
+        await file.delete_async(GLib.PRIORITY_DEFAULT, null);
+    } catch (e) {
+        if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_FOUND))
+            throw e;
+    }
+}
+
+// mkdir -p, async; the dirs it creates are only ours if they did not exist.
+async function makeDirectoryWithParents(dir) {
+    if (await fileExists(dir))
+        return;
+    const parent = dir.get_parent();
+    if (parent)
+        await makeDirectoryWithParents(parent);
+    await makeDirectory(dir);
+}
+
 async function makeDirectory(dir) {
     // Parents are the profile dir, which exists already.
     try {
@@ -107,8 +186,10 @@ async function makeDirectory(dir) {
  * Write text atomically. Never hands an empty buffer to GIO (that call hangs and would stall
  * the job queue). followLinks writes through a symlink instead of replacing it (dotfile setups).
  */
-async function writeFile(file, text, {followLinks = false} = {}) {
-    const flags = followLinks ? Gio.FileCreateFlags.NONE : Gio.FileCreateFlags.REPLACE_DESTINATION;
+async function writeFile(file, text, {followLinks = false, private: priv = false} = {}) {
+    let flags = followLinks ? Gio.FileCreateFlags.NONE : Gio.FileCreateFlags.REPLACE_DESTINATION;
+    if (priv)
+        flags |= Gio.FileCreateFlags.PRIVATE;
     if (!text) {
         const stream = await file.replace_async(null, false, flags, GLib.PRIORITY_DEFAULT, null);
         await stream.close_async(GLib.PRIORITY_DEFAULT, null);
@@ -118,9 +199,15 @@ async function writeFile(file, text, {followLinks = false} = {}) {
         null, false, flags, null);
 }
 
+
 /**
  * MozillaThemeManager — reusable manager for injecting Kiwi window‐control
  * CSS into any Mozilla application that supports userChrome.css.
+ *
+ * Kiwi only ever deletes what it wrote: its block in userChrome.css, its marker, its tagged
+ * user.js lines, and a chrome/ dir it created and that holds nothing else. Every profile it
+ * touched is recorded in the state file so a later disable cleans them all, even after the
+ * default profile changed.
  *
  * @param {object} ext       – GNOME Shell Extension instance
  * @param {object} config
@@ -136,7 +223,7 @@ export class MozillaThemeManager {
         this._config = config;
         this._settings = null;
         this._settingsChangedId = null;
-        this._queue = createJobQueue(e => console.error(`[Kiwi] ${config.logPrefix} file job failed: ${e}`));
+        this._statePath = defaultStatePath();
     }
 
     enable() {
@@ -157,9 +244,8 @@ export class MozillaThemeManager {
         this._extension = null;
     }
 
-    // One job at a time per manager so an update and a disable never interleave on the files.
-    _enqueue(job) {
-        return this._queue(job);
+    _warn(msg) {
+        console.warn(`[Kiwi] ${this._config.logPrefix} ${msg}`);
     }
 
     updateCss() {
@@ -177,209 +263,265 @@ export class MozillaThemeManager {
             buttonSize: settings.get_string('button-size'),
             cssRoot: `${this._extension.path}/css`,
         };
-        return this._enqueue(() => this._writeCss(snapshot));
-    }
-
-    async _writeCss({enableStyling, enableAppButtons, showControlsOnPanel, buttonType, buttonSize, cssRoot}) {
-        // Only touch the profile when the user turned on styling for this app.
-        if (!enableStyling) {
-            await this._removeCss();
-            return;
-        }
-
-        const profile = await this._getDefaultProfile();
-        if (!profile) {
-            console.debug(`[Kiwi] ${this._config.logPrefix} no profile found`);
-            return;
-        }
-
-        const prefix = this._config.cssPrefix;
-
-        try {
-            const chromeDir = GLib.build_filenamev([profile, 'chrome']);
-            const chromeGFile = Gio.File.new_for_path(chromeDir);
-            let backupName = null;
-
-            if (await fileExists(chromeGFile)) {
-                if (await this._isChromeManagedByKiwi(chromeDir)) {
-                    // Ours already: keep it and rewrite userChrome.css in place.
-                    backupName = await this._readBackupName(chromeDir);
-                } else {
-                    // User's own chrome/: move it aside, never delete it.
-                    backupName = await this._pickBackupName(chromeDir);
-                    await chromeGFile.move_async(
-                        Gio.File.new_for_path(GLib.build_filenamev([profile, backupName])),
-                        Gio.FileCopyFlags.NONE, GLib.PRIORITY_DEFAULT, null, null);
-                }
-            }
-
-            await makeDirectory(chromeGFile);
-
-            const imports = [];
-            if (enableAppButtons) {
-                const themingPath = `${cssRoot}/${prefix}.css`;
-                const altThemingPath = `${cssRoot}/${prefix}.alt.css`;
-                const glassThemingPath = `${cssRoot}/${prefix}.glass.css`;
-                if (buttonType === 'titlebuttons-alt') {
-                    imports.push(`@import url("file://${altThemingPath}");`);
-                } else {
-                    imports.push(`@import url("file://${themingPath}");`);
-                    // Glass only overrides the images of the default set
-                    if (buttonType === 'titlebuttons-glass')
-                        imports.push(`@import url("file://${glassThemingPath}");`);
-                }
-
-                if (buttonSize === 'small') {
-                    const smallSizePath = `${cssRoot}/${prefix}-size-small.css`;
-                    imports.push(`@import url("file://${smallSizePath}");`);
-                }
-            }
-            if (showControlsOnPanel) {
-                const hiddenPath = `${cssRoot}/${prefix}Hidden.css`;
-                imports.push(`@import url("file://${hiddenPath}");`);
-            }
-
-            // Marker first: a crash mid-write must not leave a Kiwi dir that looks user-owned.
-            const markerText = await this._readMarker(chromeDir);
-            let userJsCreated = parseUserJsCreated(markerText);
-            await this._markChromeAsKiwiManaged(chromeDir, backupName, userJsCreated);
-
-            const userChromeContent = `/* Kiwi */\n${imports.join('\n')}${imports.length ? '\n' : ''}`;
-            await writeFile(Gio.File.new_for_path(GLib.build_filenamev([chromeDir, 'userChrome.css'])), userChromeContent);
-
-            if (await this._ensureLegacyPref(profile) && !userJsCreated) {
-                userJsCreated = true;
-                await this._markChromeAsKiwiManaged(chromeDir, backupName, true);
-            }
-        } catch (e) {
-            console.error(`[Kiwi] ${this._config.logPrefix} write failed for profile ${profile}: ${e}`);
-        }
+        return enqueueFileJob(() => this._sync(snapshot));
     }
 
     removeCss() {
-        return this._enqueue(() => this._removeCss());
+        return enqueueFileJob(() => this._sync(null));
     }
 
-    async _removeCss() {
-        try {
-            const profile = await this._getDefaultProfile();
-            if (!profile)
-                return;
-
-            // The user.js line is Kiwi-tagged, so it is safe to drop whatever state chrome/ is in.
-            const chromeDir = GLib.build_filenamev([profile, 'chrome']);
-            await this._removeLegacyPref(profile, parseUserJsCreated(await this._readMarker(chromeDir)));
-
-            const chromeGFile = Gio.File.new_for_path(chromeDir);
-
-            // Not ours: leave it alone.
-            if (!await fileExists(chromeGFile) || !await this._isChromeManagedByKiwi(chromeDir))
-                return;
-
-            const backupName = await this._readBackupName(chromeDir);
-            if (!await this._removeKiwiFiles(chromeGFile))
-                return; // user added files to it; keep them and keep the backup
-
-            const bakGFile = Gio.File.new_for_path(GLib.build_filenamev([profile, backupName]));
-            if (await fileExists(bakGFile) && !await fileExists(chromeGFile)) {
-                await bakGFile.move_async(chromeGFile, Gio.FileCopyFlags.NONE,
-                    GLib.PRIORITY_DEFAULT, null, null);
+    _imports({enableAppButtons, showControlsOnPanel, buttonType, buttonSize, cssRoot}) {
+        const prefix = this._config.cssPrefix;
+        const sheets = [];
+        if (enableAppButtons) {
+            if (buttonType === 'titlebuttons-alt') {
+                sheets.push(`${prefix}.alt.css`);
+            } else {
+                sheets.push(`${prefix}.css`);
+                // Glass only overrides the images of the default set
+                if (buttonType === 'titlebuttons-glass')
+                    sheets.push(`${prefix}.glass.css`);
             }
-        } catch (e) {
-            console.warn(`[Kiwi] ${this._config.logPrefix} cleanup failed: ${e}`);
+            if (buttonSize === 'small')
+                sheets.push(`${prefix}-size-small.css`);
         }
+        if (showControlsOnPanel)
+            sheets.push(`${prefix}Hidden.css`);
+        return sheets.map(name => `@import url("file://${cssRoot}/${name}");`);
     }
 
-    // Marker text, or '' when missing.
-    async _readMarker(chromeDirPath) {
-        try {
-            return await this._readFileAsync(Gio.File.new_for_path(GLib.build_filenamev([chromeDirPath, KIWI_MARKER_FILENAME])));
-        } catch (_e) {
-            return '';
-        }
-    }
+    // snapshot null = remove everywhere. Otherwise style the current profiles and clean the
+    // ones Kiwi styled before that are no longer current.
+    async _sync(snapshot) {
+        const known = await this._readState();
+        const current = await this._getCurrentProfiles();
+        const wanted = snapshot?.enableStyling ? current : [];
+        const keep = [];
 
-    async _markChromeAsKiwiManaged(chromeDirPath, backupName = null, userJsCreated = false) {
-        try {
-            const markerPath = GLib.build_filenamev([chromeDirPath, KIWI_MARKER_FILENAME]);
-            const body = markerBody(backupName, userJsCreated);
-            await writeFile(Gio.File.new_for_path(markerPath), body);
-        } catch (e) {
-            console.warn(`[Kiwi] ${this._config.logPrefix} could not write the marker in ${chromeDirPath}: ${e}`);
-        }
-    }
-
-    // Backup dir name recorded in the marker; old markers have none, so chrome.bak.
-    async _readBackupName(chromeDirPath) {
-        try {
-            const markerPath = GLib.build_filenamev([chromeDirPath, KIWI_MARKER_FILENAME]);
-            return parseBackupName(await this._readFileAsync(Gio.File.new_for_path(markerPath)));
-        } catch (_e) {
-            return 'chrome.bak';
-        }
-    }
-
-    // chrome.bak if free, else a timestamped name. Never an existing path.
-    async _pickBackupName(chromeDirPath) {
-        const parent = GLib.path_get_dirname(chromeDirPath);
-        if (!await fileExists(Gio.File.new_for_path(GLib.build_filenamev([parent, 'chrome.bak']))))
-            return 'chrome.bak';
-        const base = `chrome.kiwi-bak-${GLib.DateTime.new_now_local().format('%Y%m%d-%H%M%S')}`;
-        let name = base;
-        for (let i = 1; await fileExists(Gio.File.new_for_path(GLib.build_filenamev([parent, name]))); i++)
-            name = `${base}-${i}`;
-        return name;
-    }
-
-    // Delete only files Kiwi wrote. Remove the dir only if nothing else is in it.
-    async _removeKiwiFiles(dirFile) {
-        const kiwiFiles = ['userChrome.css', KIWI_MARKER_FILENAME];
-        const enumerator = await dirFile.enumerate_children_async(
-            'standard::name', Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, GLib.PRIORITY_DEFAULT, null);
-        let foreign = false;
-        for (;;) {
-            const infos = await enumerator.next_files_async(64, GLib.PRIORITY_DEFAULT, null);
-            if (!infos.length)
-                break;
-            for (const info of infos) {
-                if (!kiwiFiles.includes(info.get_name()))
-                    foreign = true;
-            }
-        }
-        await enumerator.close_async(GLib.PRIORITY_DEFAULT, null);
-        // With foreign files the dir stays, so keep the marker: it is still ours and the backup
-        // can be restored later.
-        for (const name of foreign ? ['userChrome.css'] : kiwiFiles) {
-            const f = dirFile.get_child(name);
+        for (const profile of [...new Set([...known, ...current])]) {
             try {
-                await f.delete_async(GLib.PRIORITY_DEFAULT, null);
-            } catch (e) {
-                if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_FOUND)) {
-                    console.warn(`[Kiwi] ${this._config.logPrefix} could not delete ${f.get_path()}: ${e}`);
-                    return false;
+                await this._recover(profile);
+                if (wanted.includes(profile)) {
+                    keep.push(profile); // recorded before the write, so a crash still cleans it
+                    await this._writeState([...known, ...keep]);
+                    await this._install(profile, this._imports(snapshot));
+                } else if (!await this._uninstall(profile)) {
+                    keep.push(profile); // try again next time
                 }
+            } catch (e) {
+                console.error(`[Kiwi] ${this._config.logPrefix} profile ${profile}: ${e}`);
+                if (known.includes(profile) || wanted.includes(profile))
+                    keep.push(profile);
             }
         }
-        if (foreign)
-            return false;
+        await this._writeState(keep);
+    }
+
+    // ---- state file -------------------------------------------------------------------
+
+    async _readAllState() {
         try {
-            await dirFile.delete_async(GLib.PRIORITY_DEFAULT, null);
+            const data = JSON.parse(await this._readFileAsync(Gio.File.new_for_path(this._statePath)));
+            return data && typeof data === 'object' && !Array.isArray(data) ? data : {};
         } catch (e) {
-            console.warn(`[Kiwi] ${this._config.logPrefix} could not remove ${dirFile.get_path()}: ${e}`);
-            return false;
+            if (!e.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_FOUND))
+                this._warn(`state file unreadable, starting empty: ${e}`);
+            return {};
+        }
+    }
+
+    async _readState() {
+        const list = (await this._readAllState())[this._config.cssPrefix];
+        return Array.isArray(list) ? list.filter(p => typeof p === 'string' && GLib.path_is_absolute(p)) : [];
+    }
+
+    async _writeState(list) {
+        const profiles = [...new Set(list)];
+        const all = await this._readAllState();
+        const prev = JSON.stringify(all[this._config.cssPrefix] ?? []);
+        if (profiles.length)
+            all[this._config.cssPrefix] = profiles;
+        else
+            delete all[this._config.cssPrefix];
+        if (JSON.stringify(all[this._config.cssPrefix] ?? []) === prev)
+            return;
+        const file = Gio.File.new_for_path(this._statePath);
+        if (!Object.keys(all).length) {
+            await deleteIfExists(file); // our own file
+            return;
+        }
+        await makeDirectoryWithParents(file.get_parent());
+        await writeFile(file, `${JSON.stringify(all, null, 1)}\n`, {private: true});
+    }
+
+    // ---- one profile --------------------------------------------------------------------
+
+    _paths(profile) {
+        const p = name => Gio.File.new_for_path(GLib.build_filenamev([profile, ...name.split('/')]));
+        return {
+            chrome: p('chrome'),
+            marker: p(`chrome/${KIWI_MARKER_FILENAME}`),
+            userChrome: p('chrome/userChrome.css'),
+            pending: p(KIWI_PENDING_FILENAME),
+            userJs: p('user.js'),
+            sibling: name => p(name),
+        };
+    }
+
+    async _install(profile, imports) {
+        const f = this._paths(profile);
+        let backupName = NO_BACKUP;
+        let userJsCreated = false;
+
+        if (await fileExists(f.marker)) {
+            // Ours already: keep it and rewrite our block in place.
+            const marker = await this._readOptional(f.marker) ?? '';
+            backupName = parseBackupName(marker);
+            userJsCreated = parseUserJsCreated(marker);
+        } else if (await fileExists(f.chrome)) {
+            // User's own chrome/: journal first, then move it aside. Never delete it.
+            backupName = await this._pickBackupName(profile);
+            await writeFile(f.pending, pendingBody('install', backupName));
+            await f.chrome.move_async(f.sibling(backupName), Gio.FileCopyFlags.NOFOLLOW_SYMLINKS,
+                GLib.PRIORITY_DEFAULT, null, null);
+        }
+
+        await makeDirectory(f.chrome);
+        await writeFile(f.marker, markerBody(backupName, userJsCreated));
+        await deleteIfExists(f.pending);
+
+        const existing = await this._readOptional(f.userChrome);
+        const content = applyKiwiBlock(existing, imports, this._config.cssPrefix);
+        if (content !== existing)
+            await writeFile(f.userChrome, content, {followLinks: true});
+
+        if (await this._ensureLegacyPref(profile) && !userJsCreated)
+            await writeFile(f.marker, markerBody(backupName, true));
+    }
+
+    // Returns true when nothing of Kiwi's is left that still needs cleaning.
+    async _uninstall(profile) {
+        const f = this._paths(profile);
+        if (!await fileExists(Gio.File.new_for_path(profile)))
+            return true; // profile gone
+
+        const marker = await this._readOptional(f.marker);
+        // The user.js line is Kiwi-tagged, so it is safe to drop whatever state chrome/ is in.
+        await this._removeLegacyPref(profile, parseUserJsCreated(marker ?? ''));
+
+        if (marker === null)
+            return true; // not ours: leave chrome/ alone
+
+        const backupName = parseBackupName(marker);
+        await writeFile(f.pending, pendingBody('remove', backupName));
+        const done = await this._finishRemove(profile, backupName);
+        if (done)
+            await deleteIfExists(f.pending);
+        return done;
+    }
+
+    // Idempotent tail of a removal; also used to finish one a crash interrupted.
+    async _finishRemove(profile, backupName) {
+        const f = this._paths(profile);
+
+        if (await fileExists(f.marker)) {
+            const existing = await this._readOptional(f.userChrome);
+            if (existing !== null) {
+                const rest = stripKiwiBlock(existing, this._config.cssPrefix);
+                if (!rest.trim())
+                    await f.userChrome.delete_async(GLib.PRIORITY_DEFAULT, null);
+                else if (rest !== existing)
+                    await writeFile(f.userChrome, rest, {followLinks: true});
+            }
+            if (await this._hasForeignFiles(f.chrome, [KIWI_MARKER_FILENAME])) {
+                // User files live here now: keep the dir and the marker so it stays ours and
+                // the backup can still be restored later.
+                await deleteIfExists(f.pending);
+                return false;
+            }
+            // Marker goes last, right before the empty dir; the journal covers the gap.
+            await f.marker.delete_async(GLib.PRIORITY_DEFAULT, null);
+        }
+
+        if (await fileExists(f.chrome)) {
+            if (await this._hasForeignFiles(f.chrome, []))
+                return true; // not ours (the user's restored dir, or new user files)
+            await f.chrome.delete_async(GLib.PRIORITY_DEFAULT, null);
+        }
+
+        const bak = backupName === NO_BACKUP ? null : f.sibling(backupName);
+        if (bak && await fileExists(bak)) {
+            await bak.move_async(f.chrome, Gio.FileCopyFlags.NOFOLLOW_SYMLINKS,
+                GLib.PRIORITY_DEFAULT, null, null);
         }
         return true;
     }
 
-    _isChromeManagedByKiwi(chromeDirPath) {
-        const markerPath = GLib.build_filenamev([chromeDirPath, KIWI_MARKER_FILENAME]);
-        return fileExists(Gio.File.new_for_path(markerPath));
+    // Finish or undo a chrome/ swap a crash left half done.
+    async _recover(profile) {
+        const f = this._paths(profile);
+        const text = await this._readOptional(f.pending);
+        if (text === null)
+            return;
+        const pending = parsePending(text);
+        if (pending?.op === 'remove') {
+            if (await this._finishRemove(profile, pending.backup))
+                await deleteIfExists(f.pending);
+            return;
+        }
+        if (pending?.op === 'install' && !await fileExists(f.marker)) {
+            const bak = f.sibling(pending.backup);
+            if (await fileExists(bak)) {
+                // The user's dir was moved aside: put it back; the caller installs again.
+                if (await fileExists(f.chrome)) {
+                    if (await this._hasForeignFiles(f.chrome, [])) {
+                        this._warn(`left ${bak.get_path()} in place: chrome/ has new files`);
+                        await deleteIfExists(f.pending);
+                        return;
+                    }
+                    await f.chrome.delete_async(GLib.PRIORITY_DEFAULT, null);
+                }
+                await bak.move_async(f.chrome, Gio.FileCopyFlags.NOFOLLOW_SYMLINKS,
+                    GLib.PRIORITY_DEFAULT, null, null);
+            }
+        }
+        await deleteIfExists(f.pending);
     }
+
+    async _hasForeignFiles(dirFile, ours) {
+        const enumerator = await dirFile.enumerate_children_async(
+            'standard::name', Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, GLib.PRIORITY_DEFAULT, null);
+        try {
+            for (;;) {
+                const infos = await enumerator.next_files_async(64, GLib.PRIORITY_DEFAULT, null);
+                if (!infos.length)
+                    return false;
+                if (infos.some(info => !ours.includes(info.get_name())))
+                    return true;
+            }
+        } finally {
+            await enumerator.close_async(GLib.PRIORITY_DEFAULT, null);
+        }
+    }
+
+    // chrome.bak if free, else a timestamped name. Never an existing path.
+    async _pickBackupName(profile) {
+        const taken = name => fileExists(Gio.File.new_for_path(GLib.build_filenamev([profile, name])));
+        if (!await taken('chrome.bak'))
+            return 'chrome.bak';
+        const base = `chrome.kiwi-bak-${GLib.DateTime.new_now_local().format('%Y%m%d-%H%M%S')}`;
+        let name = base;
+        for (let i = 1; await taken(name); i++)
+            name = `${base}-${i}`;
+        return name;
+    }
+
+    // ---- user.js ----------------------------------------------------------------------
 
     // Returns true when Kiwi created user.js.
     async _ensureLegacyPref(profileDir) {
         try {
-            const file = Gio.File.new_for_path(GLib.build_filenamev([profileDir, 'user.js']));
+            const file = this._paths(profileDir).userJs;
             const existing = await this._readOptional(file);
             const content = existing ?? '';
             const updated = addKiwiPref(content);
@@ -387,7 +529,7 @@ export class MozillaThemeManager {
                 await writeFile(file, updated, {followLinks: true});
             return existing === null;
         } catch (e) {
-            console.warn(`[Kiwi] ${this._config.logPrefix} could not update user.js: ${e}`);
+            this._warn(`could not update user.js: ${e}`);
             return false;
         }
     }
@@ -395,7 +537,7 @@ export class MozillaThemeManager {
     // Removes only the line Kiwi added (tagged). A pref the user wrote stays.
     async _removeLegacyPref(profileDir, userJsCreated) {
         try {
-            const file = Gio.File.new_for_path(GLib.build_filenamev([profileDir, 'user.js']));
+            const file = this._paths(profileDir).userJs;
             const content = await this._readOptional(file);
             if (content === null)
                 return;
@@ -408,7 +550,7 @@ export class MozillaThemeManager {
             else
                 await writeFile(file, updated, {followLinks: true});
         } catch (e) {
-            console.warn(`[Kiwi] ${this._config.logPrefix} could not clean user.js: ${e}`);
+            this._warn(`could not clean user.js: ${e}`);
         }
     }
 
@@ -423,55 +565,56 @@ export class MozillaThemeManager {
         }
     }
 
+    // ---- profile discovery ----------------------------------------------------------------
+
     /**
-     * Locate the default profile directory.
-     * Tries installs.ini first, falls back to profiles.ini.
+     * Profiles the app uses now: every install's Default= in installs.ini (one per
+     * Firefox install), else the profiles.ini default. Legacy $HOME dir wins when present,
+     * same as Mozilla; else the XDG config dir (Firefox 147+).
      */
-    async _getDefaultProfile() {
-        // Legacy $HOME dir wins when present, same as Mozilla; else XDG config dir (Firefox 147+)
+    async _getCurrentProfiles() {
         const baseDirs = [
             GLib.build_filenamev([GLib.get_home_dir(), ...this._config.profileBaseDir.split('/')]),
             GLib.build_filenamev([GLib.get_user_config_dir(), ...this._config.xdgProfileDir.split('/')]),
         ];
 
         for (const baseDir of baseDirs) {
-            const profile = (await this._getProfileFromInstallsIni(baseDir))
-                ?? (await this._getProfileFromProfilesIni(baseDir));
-            if (profile)
-                return profile;
+            let profiles = await this._getProfilesFromInstallsIni(baseDir);
+            if (!profiles.length) {
+                const p = await this._getProfileFromProfilesIni(baseDir);
+                profiles = p ? [p] : [];
+            }
+            if (profiles.length)
+                return profiles;
         }
-        return null;
+        return [];
     }
 
-    async _getProfileFromInstallsIni(baseDir) {
+    async _getProfilesFromInstallsIni(baseDir) {
         try {
-            const installsIni = Gio.File.new_for_path(`${baseDir}/installs.ini`);
-            if (!await fileExists(installsIni))
-                return null;
-
-            const sections = await this._parseIniFile(installsIni);
-
-            let chosen = sections.find(sec => sec.data.Default && sec.data.Locked === '1');
-            if (!chosen)
-                chosen = sections.find(sec => sec.data.Default);
-            if (!chosen)
-                return null;
-
-            const path = chosen.data.Default;
-            const abs = GLib.build_filenamev([baseDir, path]);
-            return await fileExists(Gio.File.new_for_path(abs)) ? abs : null;
-        } catch (_e) {
-            return null;
+            const text = await this._readOptional(Gio.File.new_for_path(`${baseDir}/installs.ini`));
+            if (text === null)
+                return [];
+            const out = [];
+            for (const rel of installsIniProfiles(parseIni(text))) {
+                const abs = GLib.path_is_absolute(rel) ? rel : GLib.build_filenamev([baseDir, rel]);
+                if (await fileExists(Gio.File.new_for_path(abs)))
+                    out.push(abs);
+            }
+            return out;
+        } catch (e) {
+            this._warn(`installs.ini unreadable: ${e}`);
+            return [];
         }
     }
 
     async _getProfileFromProfilesIni(baseDir) {
         try {
-            const profilesIni = Gio.File.new_for_path(`${baseDir}/profiles.ini`);
-            if (!await fileExists(profilesIni))
+            const text = await this._readOptional(Gio.File.new_for_path(`${baseDir}/profiles.ini`));
+            if (text === null)
                 return null;
 
-            const sections = await this._parseIniFile(profilesIni);
+            const sections = parseIni(text);
 
             // Find the profile marked as Default=1
             let chosen = sections.find(sec => sec.name.startsWith('Profile') && sec.data.Default === '1');
@@ -484,13 +627,10 @@ export class MozillaThemeManager {
             const isRelative = chosen.data.IsRelative === '1';
             const abs = isRelative ? GLib.build_filenamev([baseDir, path]) : path;
             return await fileExists(Gio.File.new_for_path(abs)) ? abs : null;
-        } catch (_e) {
+        } catch (e) {
+            this._warn(`profiles.ini unreadable: ${e}`);
             return null;
         }
-    }
-
-    async _parseIniFile(file) {
-        return parseIni(await this._readFileAsync(file));
     }
 
     async _readFileAsync(file) {
