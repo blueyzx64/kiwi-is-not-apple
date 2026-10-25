@@ -1,0 +1,231 @@
+/* feature: clipboard
+   S10 merges this block into stylesheet.css. Only kiwi- classes; no backdrop-filter (the glass
+   comes from lib/glass.js behind the frame). Corners are concentric: frame 26, row 12. */
+
+/* ---- shared rows ---- */
+.kiwi-clip-section {
+  font-size: 11px;
+  font-weight: bold;
+  color: rgba(128, 128, 128, 0.95);
+  padding: 8px 10px 2px 10px;
+}
+
+.kiwi-clip-row {
+  border-radius: 12px;
+  padding: 0;
+  margin: 1px 0;
+}
+
+.kiwi-clip-row:hover,
+.kiwi-clip-row:focus {
+  background-color: rgba(128, 128, 128, 0.18);
+}
+
+.kiwi-clip-row:selected,
+.kiwi-clip-row:selected:hover {
+  background-color: -st-accent-color;
+  color: -st-accent-fg-color;
+}
+
+.kiwi-clip-row-box {
+  spacing: 10px;
+  padding: 6px 8px;
+}
+
+.kiwi-clip-text {
+  spacing: 1px;
+}
+
+.kiwi-clip-title {
+  font-size: 13px;
+}
+
+.kiwi-clip-sub {
+  font-size: 11px;
+  color: rgba(128, 128, 128, 0.95);
+}
+
+.kiwi-clip-row:selected .kiwi-clip-sub {
+  color: -st-accent-fg-color;
+}
+
+.kiwi-clip-tile {
+  border-radius: 8px;
+  background-color: rgba(128, 128, 128, 0.22);
+}
+
+.kiwi-clip-tile-image {
+  background-color: rgba(128, 128, 128, 0.12);
+}
+
+.kiwi-clip-tile-color {
+  border: 1px solid rgba(128, 128, 128, 0.4);
+}
+
+.kiwi-clip-actions {
+  spacing: 2px;
+}
+
+.kiwi-clip-action {
+  border-radius: 99px;
+  padding: 4px;
+}
+
+.kiwi-clip-action:hover,
+.kiwi-clip-action:focus {
+  background-color: rgba(128, 128, 128, 0.3);
+}
+
+.kiwi-clip-empty {
+  padding: 28px 12px;
+  color: rgba(128, 128, 128, 0.95);
+}
+
+/* ---- panel popover ---- */
+.kiwi-clip-popover-item {
+  padding: 0;
+}
+
+.kiwi-clip-popover {
+  padding: 10px;
+  spacing: 8px;
+}
+
+.kiwi-clip-head {
+  spacing: 8px;
+  padding: 0 4px;
+}
+
+.kiwi-clip-heading {
+  font-weight: bold;
+  font-size: 15px;
+}
+
+.kiwi-clip-count {
+  font-size: 11px;
+  color: rgba(128, 128, 128, 0.95);
+}
+
+.kiwi-clip-search,
+.kiwi-qp-search {
+  border-radius: 10px;
+  padding: 6px 10px;
+  background-color: rgba(128, 128, 128, 0.18);
+  border: none;
+  box-shadow: none;
+}
+
+.kiwi-clip-search:focus,
+.kiwi-qp-search:focus {
+  box-shadow: inset 0 0 0 2px -st-accent-color;
+}
+
+.kiwi-clip-filters {
+  spacing: 4px;
+}
+
+.kiwi-clip-filter {
+  border-radius: 99px;
+  padding: 3px 12px;
+  font-size: 12px;
+  background-color: rgba(128, 128, 128, 0.14);
+}
+
+.kiwi-clip-filter:checked {
+  background-color: -st-accent-color;
+  color: -st-accent-fg-color;
+}
+
+.kiwi-clip-foot {
+  spacing: 8px;
+  padding: 4px 4px 0 4px;
+}
+
+.kiwi-clip-recording-label,
+.kiwi-clip-hint {
+  font-size: 11px;
+  color: rgba(128, 128, 128, 0.95);
+}
+
+.kiwi-clip-clear {
+  border-radius: 99px;
+  padding: 3px 12px;
+  font-size: 12px;
+  background-color: rgba(128, 128, 128, 0.18);
+}
+
+.kiwi-clip-clear:hover,
+.kiwi-clip-clear:focus {
+  background-color: rgba(128, 128, 128, 0.32);
+}
+
+/* ---- Quick Paste ---- */
+.kiwi-quick-paste {
+  padding: 14px;
+  spacing: 10px;
+  border-radius: 26px;
+}
+
+.kiwi-qp-body {
+  spacing: 12px;
+}
+
+.kiwi-qp-list {
+  padding-right: 4px;
+}
+
+.kiwi-qp-side {
+  spacing: 8px;
+}
+
+.kiwi-qp-preview {
+  border-radius: 14px;
+  padding: 12px;
+  background-color: rgba(128, 128, 128, 0.14);
+}
+
+.kiwi-qp-text {
+  font-size: 13px;
+}
+
+.kiwi-qp-swatch {
+  border-radius: 10px;
+  min-height: 120px;
+}
+
+.kiwi-qp-color-text {
+  padding-top: 8px;
+  font-family: monospace;
+}
+
+.kiwi-qp-meta,
+.kiwi-qp-hints {
+  font-size: 11px;
+  color: rgba(128, 128, 128, 0.95);
+}
+
+.kiwi-qp-hints {
+  padding: 0 4px;
+}
+
+.kiwi-qp-buttons {
+  spacing: 8px;
+}
+
+.kiwi-qp-button {
+  border-radius: 99px;
+  padding: 5px 16px;
+  background-color: rgba(128, 128, 128, 0.22);
+}
+
+.kiwi-qp-button:hover,
+.kiwi-qp-button:focus {
+  background-color: rgba(128, 128, 128, 0.36);
+}
+
+.kiwi-qp-primary,
+.kiwi-qp-primary:hover,
+.kiwi-qp-primary:focus {
+  background-color: -st-accent-color;
+  color: -st-accent-fg-color;
+}

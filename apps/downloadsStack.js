@@ -11,6 +11,7 @@ import GLib from 'gi://GLib';
 import Shell from 'gi://Shell';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import { ModalSurface } from '../lib/modalSurface.js';
 import {
     applyIconOffset, beforeRedraw, cancelBeforeRedraw, dashEndsWithSeparator, dashOf,
     dashItemMatchesDock, disconnectAll, makeDashItem, makeDashSeparator, makeStrip,
@@ -62,6 +63,7 @@ const LIST_ATTRIBUTES = [
 let enabled = false;
 let docks = [];               // [{ dash, strip, item, button, iconSize, signals }]
 let globalSignals = [];       // [[object, id]]
+let unregisterModal = null;
 let fan = null;               // { overlay, grab, rows, anchor }
 let recent = [];              // newest file infos first, at most MAX_ROWS of them
 let recentCount = 0;          // files in the folder, however many that is
@@ -501,6 +503,8 @@ function _showFan(info) {
     for (const card of cards.slice(rows.length))
         card.ease({ opacity: 0, duration: 1, delay: rows.length * ROW_STAGGER });
 
+    // One Kiwi modal at a time: Quick Paste / Spotlight close when the fan opens
+    ModalSurface.closeAll();
     const grab = Main.pushModal(overlay, { actionMode: Shell.ActionMode.POPUP });
     // St.Button tracks its press with a click action, which does not consume
     // the event, so a press on a row bubbles up here and would tear the row
@@ -1039,6 +1043,7 @@ export function enable(gettext, settings) {
 
     const overviewId = Main.overview.connect('showing', () => _closeFan());
     globalSignals.push([Main.overview, overviewId]);
+    unregisterModal = ModalSurface.registerForeign('downloads-fan', () => _closeFan());
 
     // The pile on the dock shows what is in the folder, so it follows the folder
     folderMonitor = _downloadsFile().monitor_directory(
@@ -1069,6 +1074,9 @@ export function disable() {
             GLib.Source.remove(sources[key]);
         sources[key] = 0;
     }
+
+    unregisterModal?.();
+    unregisterModal = null;
 
     if (fan) {
         Main.popModal(fan.grab);
