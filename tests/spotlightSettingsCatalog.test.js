@@ -26,6 +26,24 @@ test('every panel name is safe for a command line', () => {
             throw new Error(p.panel);
     }
 });
+// gnome-control-center gnome-50 shell/cc-panel-loader.c: panels plus the System subpages
+const GNOME50_PANELS = new Set([
+    'applications', 'background', 'bluetooth', 'color', 'display', 'keyboard', 'mouse',
+    'multitasking', 'network', 'wifi', 'notifications', 'online-accounts', 'power', 'printers',
+    'privacy', 'search', 'sharing', 'sound', 'system', 'universal-access', 'wellbeing',
+    'about', 'datetime', 'region', 'users',
+]);
+test('every catalog panel exists in GNOME 50 Settings', () => {
+    const bad = PANELS.map(p => p.panel).filter(id => !GNOME50_PANELS.has(id));
+    eq(bad, []);
+});
+test('no appearance panel id (removed in GNOME 50)', () => eq(PANELS.some(p => p.panel === 'appearance'), false));
+test('dark style and wallpaper open the background panel', () => {
+    eq(rank(settingsItems(_, env()), 'dark style')[0].action.panel, 'background');
+    eq(rank(settingsItems(_, env()), 'wallpaper')[0].action.panel, 'background');
+});
+test('Digital Wellbeing row', () => eq(rank(settingsItems(_, env()), 'wellbeing')[0].action.panel, 'wellbeing'));
+
 test('no panels when Settings is missing', () =>
     eq(settingsItems(_, env({ panelsAvailable: false })).some(i => i.action.type === 'panel'), false));
 test('toggle hidden when the key does not exist', () => {
