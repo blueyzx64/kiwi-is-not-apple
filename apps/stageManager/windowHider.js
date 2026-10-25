@@ -6,6 +6,10 @@
 // clone keeps painting), and hidden from pick so the pointer goes through it. Every change is
 // recorded the first time it is made, and restoreAll() puts back exactly what was recorded.
 //
+// Side by side (a tiled set): tile() moves and resizes a window's frame, remembering the frame
+// and maximized state it had; untile() and restoreAll() put both back. Mutter's own tiling has
+// no public API on 50 (meta_window_tile is not introspected), so it is move_resize_frame.
+//
 // The hider never scales or moves an actor: the visible trip to and from the strip is a clone
 // flown by flight.js (index.js wires the two). Under reduced motion it is a short opacity fade.
 //
@@ -17,6 +21,7 @@ import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
 
 import { WindowState } from '../../coordinators/windowState.js';
+import { maximizeWindow, unmaximizeWindow } from '../../lib/compat.js';
 
 const FADE_MS = 160;
 
@@ -99,6 +104,54 @@ export class WindowHider {
         win.move_resize_frame(true, rect.x, rect.y, rect.width, rect.height);
     }
 
+    /**
+     * Lay a window out at `rect` for a side-by-side set. The first call remembers where it was
+     * (and whether it was maximized); later calls only move it.
+     */
+    tile(win, rect) {
+        const rec = this._record(win);
+        if (!rec.tile) {
+            rec.tile = {
+                orig: rectOf(win),
+                maximized: !!(win.maximized_horizontally || win.maximized_vertically),
+            };
+        }
+        if (win.maximized_horizontally || win.maximized_vertically)
+            unmaximizeWindow(win);
+        win.move_resize_frame(true, rect.x, rect.y, rect.width, rect.height);
+    }
+
+    isTiled(win) {
+        return !!this._records.get(win)?.tile;
+    }
+
+    tiledWindows() {
+        return [...this._records].filter(([, rec]) => rec.tile).map(([win]) => win);
+    }
+
+    /** Put a tiled window back where it was before its set was laid out. */
+    untile(win) {
+        const rec = this._records.get(win);
+        if (!rec?.tile)
+            return;
+        const t = rec.tile;
+        rec.tile = null;
+        this._restoreTile(win, t);
+    }
+
+    _restoreTile(win, t) {
+        try {
+            if (win.minimized)
+                return;
+            const o = t.orig;
+            win.move_resize_frame(true, o.x, o.y, o.width, o.height);
+            if (t.maximized)
+                maximizeWindow(win);
+        } catch (e) {
+            console.error(`[Kiwi] stage restore tile: ${e.message}`);
+        }
+    }
+
     /** Window is gone: drop its record. */
     forget(win) {
         const rec = this._records.get(win);
@@ -136,6 +189,10 @@ export class WindowHider {
                 }
             } catch (e) {
                 console.error(`[Kiwi] stage restore actor: ${e.message}`);
+            }
+            if (rec.tile) {
+                this._restoreTile(win, rec.tile);
+                rec.tile = null;
             }
             try {
                 if (rec.frame && !win.minimized && sameRect(rectOf(win), rec.frame.set)) {
@@ -206,6 +263,7 @@ export class WindowHider {
             scale: clean ? [actor.scale_x, actor.scale_y] : [1, 1],
             pivot: clean ? actor.get_pivot_point() : [0, 0],
             frame: null,
+            tile: null,          // {orig, maximized} while the window is laid out in a side-by-side set
             userMinimized: false,
             token: 0,
             guard: 0,          // notify::opacity on the actor while hidden

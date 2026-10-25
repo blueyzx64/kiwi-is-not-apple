@@ -487,6 +487,37 @@
         <summary>Stage Manager shortcut</summary>
         <description>Turns Stage Manager on or off. Empty means no shortcut; prefs has a button for Ctrl+Super+S.</description>
       </key>
+      <key name="stage-manager-new-windows" type="s">
+        <choices>
+          <choice value='replace'/>
+          <choice value='join'/>
+        </choices>
+        <default>'replace'</default>
+        <summary>New windows in Stage Manager</summary>
+        <description>"replace": a new app window takes the stage and the previous set goes to the strip as one entry (macOS). "join": the new window joins the set on the stage.</description>
+      </key>
+      <key name="stage-manager-wallpaper-click" type="b">
+        <default>true</default>
+        <summary>Click the wallpaper to show the desktop</summary>
+        <description>A click on the wallpaper sends the windows on the stage to the strip; another click brings them back.</description>
+      </key>
+      <key name="stage-manager-tilt" type="i">
+        <default>22</default>
+        <range min="0" max="40"/>
+        <summary>Strip tilt</summary>
+        <description>How far, in degrees, the windows in the strip turn toward the stage. 0 lays them flat.</description>
+      </key>
+      <key name="stage-manager-animation-speed" type="d">
+        <default>1.0</default>
+        <range min="0.5" max="2.0"/>
+        <summary>Stage Manager animation speed</summary>
+        <description>1 is normal, 2 twice as fast, 0.5 half as fast. Reduced motion still replaces the moves with short fades.</description>
+      </key>
+      <key name="stage-manager-remove-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;Down']</default>
+        <summary>Remove from set shortcut</summary>
+        <description>Takes the focused window out of the set on the stage and puts it in the strip. Only active while Stage Manager is on.</description>
+      </key>
 
       <!-- Show Desktop (apps/showDesktop) -->
       <key name="show-desktop-button" type="b">

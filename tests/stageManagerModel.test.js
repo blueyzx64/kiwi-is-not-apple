@@ -2,6 +2,7 @@
 import {
     DEFAULTS, overlaps, thumbFit, cropThumb, stackLayers, cardTilt, fitCount, stripLayout,
     pointRect, clonePose, balancedFit, edgeZone, stageArea, fitToStage, centerOnStage, stripShown, StageModel, focusRoot, isExempt, edgeBarrier,
+    dropZone, dropZoneRect, tileOrder, tilePlan, scaleMs, workspaceDirection, isClick,
 } from '../apps/stageManager/model.js';
 
 let failed = 0;
@@ -530,6 +531,178 @@ test('views are copies', () => {
     m.sync(SET);
     m.stageOf(1).windows.push(99);
     eq(m.stageOf(1).windows, [1, 2]);
+});
+
+// ---- window sets (UX round 2) ----
+const AREA = { x: 200, y: 0, width: 1000, height: 800 };
+test('dropZone: left, middle band and right', () => {
+    eq(dropZone({ x: 210, y: 10 }, AREA), 'left');
+    eq(dropZone({ x: 700, y: 10 }, AREA), 'center');
+    eq(dropZone({ x: 1190, y: 10 }, AREA), 'right');
+});
+test('dropZone: band edges and outside', () => {
+    eq(dropZone({ x: 549, y: 5 }, AREA), 'left');
+    eq(dropZone({ x: 550, y: 5 }, AREA), 'center');
+    eq(dropZone({ x: 850, y: 5 }, AREA), 'right');
+    eq(dropZone({ x: 100, y: 5 }, AREA), null);
+    eq(dropZone({ x: 300, y: 900 }, AREA), null);
+    eq(dropZone({ x: 300, y: 5 }, null), null);
+});
+test('dropZone: no middle band means halves', () => {
+    eq(dropZone({ x: 699, y: 5 }, AREA, 0), 'left');
+    eq(dropZone({ x: 700, y: 5 }, AREA, 0), 'right');
+});
+test('dropZoneRect: halves and whole, inset', () => {
+    eq(dropZoneRect(AREA, 'left', 10), { x: 210, y: 10, width: 480, height: 780 });
+    eq(dropZoneRect(AREA, 'right', 10), { x: 710, y: 10, width: 480, height: 780 });
+    eq(dropZoneRect(AREA, 'center', 10), { x: 210, y: 10, width: 980, height: 780 });
+    eq(dropZoneRect(AREA, null), null);
+});
+test('tileOrder: dropped on the zone side', () => {
+    eq(tileOrder('left', [5], [1, 2]), [5, 1, 2]);
+    eq(tileOrder('right', [5, 6], [1]), [1, 5, 6]);
+    eq(tileOrder('center', [5], [1]), null);
+    eq(tileOrder('right', [1], [1, 2]), [2, 1]);
+});
+test('tilePlan: two equal halves with gaps', () => {
+    const p = tilePlan(AREA, 2, 8);
+    eq(p.length, 2);
+    eq(p[0], { x: 208, y: 8, width: 488, height: 784 });
+    eq(p[1].x, 704);
+    eq(p[1].x + p[1].width <= AREA.x + AREA.width, true);
+});
+test('tilePlan: three columns, none, degenerate', () => {
+    eq(tilePlan(AREA, 3).length, 3);
+    eq(tilePlan(AREA, 0), []);
+    eq(tilePlan({ x: 0, y: 0, width: 10, height: 10 }, 4, 8), []);
+});
+test('scaleMs: speed multiplier, clamped, bad input is normal', () => {
+    eq(scaleMs(300, 2), 150);
+    eq(scaleMs(300, 0.5), 600);
+    eq(scaleMs(300, 100), 75);
+    eq(scaleMs(300, NaN), 300);
+    eq(scaleMs(300, 0), 300);
+});
+test('workspaceDirection', () => {
+    eq(workspaceDirection(0, 1), 1);
+    eq(workspaceDirection(2, 1), -1);
+    eq(workspaceDirection(1, 1), 0);
+    eq(workspaceDirection(null, 1), 0);
+});
+test('isClick: still and quick is a click, a drag or a hold is not', () => {
+    eq(isClick({ x: 0, y: 0, time: 0 }, { x: 3, y: 2, time: 100 }), true);
+    eq(isClick({ x: 0, y: 0, time: 0 }, { x: 30, y: 2, time: 100 }), false);
+    eq(isClick({ x: 0, y: 0, time: 0 }, { x: 0, y: 0, time: 2000 }), false);
+    eq(isClick(null, { x: 0, y: 0, time: 0 }), false);
+});
+test('stackLayers: a set fans out and stays opaque', () => {
+    const set = stackLayers(3, 'left', 3, { set: true });
+    const app = stackLayers(3, 'left', 3);
+    eq(Math.abs(set[1].dx) > Math.abs(app[1].dx), true);
+    eq(set[2].opacity > app[2].opacity, true);
+    eq(set[0].tilt, 0);
+});
+
+const SETWINS = [W(1, 'a'), W(2, 'a'), W(3, 'b'), W(4, 'c')];
+function setModel() {
+    const m = new StageModel();
+    m.sync(SETWINS);
+    m.focus(3);
+    return m;
+}
+test('join: strip entry added to the stage makes one set, current', () => {
+    const m = setModel();
+    const v = m.join('app:a', 'app:b');
+    eq(v.set, true);
+    eq(v.windows.sort(), [1, 2, 3]);
+    eq(m.current.id, v.id);
+    eq(m.strip().map(s => s.id), ['app:c']);
+    eq(v.apps.sort(), ['a', 'b']);
+});
+test('join: the set keeps the destination place and the source leaves the order', () => {
+    const m = setModel();
+    m.focus(4);
+    const v = m.join('app:a', 'app:b');
+    eq(ids(m.stages()), ['app:c', v.id]);
+});
+test('join into an existing set keeps its id', () => {
+    const m = setModel();
+    const a = m.join('app:a', 'app:b');
+    const b = m.join('app:c', a.id);
+    eq(b.id, a.id);
+    eq(b.windows.length, 4);
+});
+test('join: unknown or same stage', () => {
+    const m = setModel();
+    eq(m.join('app:b', 'app:b'), null);
+    eq(m.join('nope', 'app:b'), null);
+});
+test('a set goes to the strip as one entry when another app takes the stage', () => {
+    const m = setModel();
+    const v = m.join('app:a', 'app:b');
+    m.focus(4);
+    eq(m.strip().map(s => s.id), [v.id]);
+    eq(m.visibility().hide.sort(), [1, 2, 3]);
+});
+test('split takes a window out of a set; the last one dissolves it', () => {
+    const m = setModel();
+    const v = m.join('app:c', 'app:b');
+    m.split(4);
+    eq(m.stageOf(4).id, 'win:4');
+    eq(m.stageOf(3).id, 'app:b');
+    eq(m.current.id, 'app:b');
+    eq(m.stages().some(s => s.id === v.id), false);
+});
+test('a closed window dissolves a set of two', () => {
+    const m = setModel();
+    m.join('app:c', 'app:b');
+    m.sync(SETWINS.filter(w => w.id !== 4));
+    eq(m.current.id, 'app:b');
+    eq(m.stages().every(s => !s.set), true);
+});
+test('a new window of an app in a set joins the set', () => {
+    const m = setModel();
+    const v = m.join('app:c', 'app:b');
+    const r = m.sync([...SETWINS, W(9, 'c')]);
+    eq(r.added, [9]);
+    eq(m.stageOf(9).id, v.id);
+});
+test('a new window of another app gets its own stage', () => {
+    const m = setModel();
+    m.join('app:c', 'app:b');
+    m.sync([...SETWINS, W(9, 'z')]);
+    eq(m.stageOf(9).id, 'app:z');
+});
+test('sync reports new ids only once', () => {
+    const m = new StageModel();
+    eq(m.sync(SETWINS).added, [1, 2, 3, 4]);
+    eq(m.sync(SETWINS).added, []);
+});
+test('tiles: set, read, filtered and cleared', () => {
+    const m = setModel();
+    const v = m.join('app:c', 'app:b');
+    eq(m.setTiles(v.id, [4, 3, 99]), [4, 3]);
+    eq(m.tilesOf(v.id), [4, 3]);
+    eq(m.setTiles('app:a', [1, 2]), null);
+    m.split(4);
+    eq(m.tilesOf(v.id), null);
+});
+test('tiles of a set of three survive a split down to two', () => {
+    const m = setModel();
+    const v = m.join('app:c', 'app:b');
+    m.join('app:a', v.id);
+    m.setTiles(v.id, [4, 3, 1]);
+    m.split(2);
+    eq(m.tilesOf(v.id), [4, 3, 1]);
+    m.split(1);
+    eq(m.tilesOf(v.id), [4, 3]);
+});
+test('sets survive setGroupByApp', () => {
+    const m = setModel();
+    const v = m.join('app:c', 'app:b');
+    m.setGroupByApp(false);
+    eq(m.stageOf(3).id, v.id);
+    eq(m.stageOf(1).id, 'win:1');
 });
 
 if (failed)
