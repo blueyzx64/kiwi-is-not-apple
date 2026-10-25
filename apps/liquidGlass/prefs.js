@@ -7,6 +7,8 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Gtk from 'gi://Gtk';
 
+import { MIN_TINT_PERCENT } from '../../lib/glassParams.js';
+
 const N_ = s => s;
 
 export const PAGE = { id: 'liquid-glass', title: N_('Liquid Glass'), icon: 'applications-graphics-symbolic' };
@@ -119,7 +121,7 @@ export function buildPrefs({ settings, window, extension }) {
     const look = new Adw.PreferencesGroup({ title: _('Look') });
     look.add(_styleRow(settings, _));
     look.add(_scaleRow(settings, _('Blur'), _('How much the background is blurred'), 'liquid-glass-blur'));
-    look.add(_scaleRow(settings, _('Tint'), _('Higher keeps text readable over any wallpaper'), 'liquid-glass-tint'));
+    look.add(_scaleRow(settings, _('Tint'), _('Higher keeps text readable over any wallpaper. In Tinted style, values below %d are treated as %d to keep text readable.').format(MIN_TINT_PERCENT, MIN_TINT_PERCENT), 'liquid-glass-tint'));
     look.add(_switchRow(settings, _('Edge highlight'), _('A thin light edge along the top'), 'liquid-glass-highlight'));
     groups.push(look);
 

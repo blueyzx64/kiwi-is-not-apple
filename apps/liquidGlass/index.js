@@ -155,6 +155,8 @@ export class LiquidGlass {
             // while the menu is open.
             state.token = this._cleanup.connect(menu, 'open-state-changed', (_m, open) => handle.setVisible(open));
             handle.setVisible(menu.isOpen);
+            // Menu destroyed under us: forget it, touch nothing on the dead actor
+            state.destroyToken = this._cleanup.connect(menu, 'destroy', () => this._menus.delete(menu));
             this._menus.set(menu, state);
         }
     }
@@ -174,6 +176,7 @@ export class LiquidGlass {
 
     _detachMenu(menu, state) {
         this._cleanup.release(state.token);
+        this._cleanup.release(state.destroyToken);
         state.handle.destroy();
         if (menu.actor)
             menu.actor.set_style(state.savedStyle);
