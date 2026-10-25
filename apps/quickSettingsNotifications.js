@@ -8,6 +8,8 @@ import Clutter from 'gi://Clutter';
 import GObject from 'gi://GObject';
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
+import { NotificationRouter } from '../coordinators/notificationRouter.js';
+import { CleanupRegistry } from '../lib/disposables.js';
 import {
     SHELL_HAS_SYSTEM_DND,
     controlCenterOwnsDnd,
@@ -29,8 +31,9 @@ let notificationWidget = null;
 let _originalMaxHeight; // undefined until saved; the saved style itself may be null
 let _initTimeoutId = null;
 let _dndButton = null;
-let _notificationSettings = null;
-let _notificationSettingsChangedId = null;
+// Do Not Disturb state is shared through NotificationRouter (same key the notch reads)
+const _dndCleanup = new CleanupRegistry();
+let _dndWatching = false;
 let _dndEnsureTimeoutId = null;
 // The quick settings system item is built a moment after the panel; give up after 10 s
 const DND_ENSURE_INTERVAL_MS = 200;
@@ -51,7 +54,7 @@ function getSystemItemContainer() {
 }
 
 function syncDndButtonState() {
-    const dndActive = !_notificationSettings.get_boolean('show-banners');
+    const dndActive = NotificationRouter.state().dnd;
     if (_dndButton.checked !== dndActive)
         _dndButton.checked = dndActive;
 
@@ -61,17 +64,13 @@ function syncDndButtonState() {
 }
 
 function toggleDnd() {
-    const showBanners = _notificationSettings.get_boolean('show-banners');
-    _notificationSettings.set_boolean('show-banners', !showBanners);
+    NotificationRouter.setDnd(!NotificationRouter.state().dnd);
 }
 
 function ensureDndButton() {
     // The Control Center provides Do Not Disturb as a tile; no second button in the footer
     if (controlCenterOwnsDnd())
         return true;
-
-    if (!_notificationSettings)
-        _notificationSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.notifications' });
 
     const container = getSystemItemContainer();
     if (!container)
@@ -121,8 +120,12 @@ function ensureDndButton() {
             container.add_child(_dndButton);
     }
 
-    if (!_notificationSettingsChangedId) {
-        _notificationSettingsChangedId = _notificationSettings.connect('changed::show-banners', syncDndButtonState);
+    if (!_dndWatching) {
+        _dndWatching = true;
+        NotificationRouter.connect(_dndCleanup, () => {
+            if (_dndButton)
+                syncDndButtonState();
+        });
     }
 
     syncDndButtonState();
@@ -158,17 +161,13 @@ function destroyDndButton() {
         GLib.Source.remove(_dndEnsureTimeoutId);
         _dndEnsureTimeoutId = null;
     }
-    if (_notificationSettingsChangedId) {
-        _notificationSettings.disconnect(_notificationSettingsChangedId);
-        _notificationSettingsChangedId = null;
-    }
+    _dndCleanup.dispose();
+    _dndWatching = false;
 
     if (_dndButton) {
         _dndButton.destroy();
         _dndButton = null;
     }
-
-    _notificationSettings = null;
 
     restoreDateMenuIndicator();
     removePanelMoonIcon();

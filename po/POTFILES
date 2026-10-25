@@ -12,7 +12,8 @@ apps/controlCenter/userRow.js
 apps/downloadsStack.js
 apps/launchpadApp.js
 apps/liquidGlass/prefs.js
-apps/mediaPlayback.js
+apps/notch/prefs.js
+apps/notch/view.js
 apps/panelMedia.js
 apps/quickSettingsNotifications.js
 apps/spotlight/index.js
@@ -24,4 +25,5 @@ apps/stageManager/prefs.js
 apps/windowControls/prefs.js
 apps/windowTiling.js
 apps/windowTitle.js
+lib/mpris.js
 prefs.js

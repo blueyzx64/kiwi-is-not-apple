@@ -44,6 +44,7 @@ import { enable as reduceWindowAnimationsEnable, disable as reduceWindowAnimatio
 import { enableDragRestore, disableDragRestore } from './apps/windowTiling.js';
 import { dockActive } from './apps/dockUtils.js';
 import { LiquidGlass } from './apps/liquidGlass/index.js';
+import { NotchFeature } from './apps/notch/index.js';
 import { ControlCenter } from './apps/controlCenter/index.js';
 import { StageManager } from './apps/stageManager/index.js';
 import { StageManagerShortcut } from './apps/stageManager/shortcut.js';
@@ -53,6 +54,10 @@ import { SpotlightFeature } from './apps/spotlight/index.js';
 
 // ctx: { extension, settings (Gio.Settings), gettext, interfaceSettings (Gio.Settings) }
 const bool = (ctx, key) => ctx.settings.get_boolean(key);
+
+// The date menu leaves the centre box when the user asked for it, and always while the notch
+// owns the centre. The message list moves to Quick Settings with it.
+const calendarRight = ctx => bool(ctx, 'move-calendar-right') || bool(ctx, 'notch');
 
 // Everything that hangs off Dash-to-Dock stays off while it is not running
 const minimizeToDock = ctx => dockActive() && bool(ctx, 'minimize-to-dock');
@@ -88,7 +93,7 @@ export const FEATURES = [
     },
     {
         id: 'lock-icon', reapply: true, setting: 'lock-icon',
-        enable: () => lockIconEnable(),
+        enable: ctx => lockIconEnable(ctx.extension),
         disable: () => lockIconDisable(),
     },
     {
@@ -110,21 +115,21 @@ export const FEATURES = [
     // Calendar group. The calendar re-attaches the date menu at the far right of the panel,
     // so a change of either key restarts it and the notification pieces together.
     {
-        id: 'calendar', reapply: true, setting: 'move-calendar-right',
+        id: 'calendar', reapply: true, when: calendarRight,
         restartOn: ['keep-notification-panel'],
         enable: ctx => calendarEnable(ctx.extension),
         disable: () => calendarDisable(),
     },
     {
         id: 'quick-settings-notifications', reapply: true,
-        when: ctx => bool(ctx, 'move-calendar-right') && !bool(ctx, 'keep-notification-panel'),
+        when: ctx => calendarRight(ctx) && !bool(ctx, 'keep-notification-panel'),
         restartOn: ['keep-notification-panel'],
         enable: ctx => quickSettingsNotificationsEnable(ctx.gettext, ctx.settings),
         disable: () => quickSettingsNotificationsDisable(),
     },
     {
         id: 'panel-media', reapply: true,
-        when: ctx => bool(ctx, 'move-calendar-right') && !bool(ctx, 'keep-notification-panel'),
+        when: ctx => calendarRight(ctx) && !bool(ctx, 'keep-notification-panel'),
         restartOn: ['keep-notification-panel'],
         enable: ctx => panelMediaEnable(ctx.gettext),
         disable: () => panelMediaDisable(),
@@ -299,5 +304,11 @@ export const FEATURES = [
         when: ctx => ctx.settings.get_strv('stage-manager-shortcut').length > 0,
         restartOn: ['stage-manager-shortcut'],
         cls: StageManagerShortcut,
+    },
+    {
+        // Pill in the centre of the bar for banners, media and volume. Replaces the stock banners
+        // and OSD (parts switch live on notch-notifications / notch-osd / notch-live-activities).
+        id: 'notch', setting: 'notch',
+        cls: NotchFeature,
     },
 ];
