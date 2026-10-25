@@ -10,13 +10,13 @@
 | Clipboard | S4 | R1 CHANGES; S4 fixing; integration ready (feat/integration-s4) | feat/clipboard |
 | Spotlight | S5 | doing (model first; waits S4 modalSurface) | feat/spotlight |
 | Auto-hide bar | S6 | done, merged | feat/autohide |
-| Control Center | S7 | R2 CHANGES; S7 fixing | feat/control-center |
+| Control Center | S7 | fixed; queued for S10 integration | feat/control-center |
 | Notch | S8 | doing | feat/notch |
-| Stage Manager | S9 | R4 CHANGES; S9 fixing | feat/stage-manager |
+| Stage Manager | S9 | fixed; queued for S10 integration | feat/stage-manager |
 | User files (D1) | D1 | doing | debt/user-files |
-| Panel transparency (D2) | D2 | built; R3 review | debt/panel-transparency |
-| Overview patches (D3) | D3 | built; R3 review | debt/overview-patches |
-| Window utils (D4) | D4 | built; R3 review | debt/window-utils |
+| Panel transparency (D2) | D2 | R3 CHANGES; D2 fixing | debt/panel-transparency |
+| Overview patches (D3) | D3 | done, merged | debt/overview-patches |
+| Window utils (D4) | D4 | done, merged | debt/window-utils |
 | Dock (D5) | D5 | R6 APPROVE; D5 small follow-up | debt/dock |
 | CSS debt (D6) | D6 | done, merged | debt/css-debt |
 | Build/CI (D7) | D7 | done, merged | debt/build-ci |
