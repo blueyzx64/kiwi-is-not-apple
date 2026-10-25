@@ -1133,6 +1133,11 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
     padding: 2px;
 }
 
+.kiwi-stage-icon-tile {
+    border-radius: 10px;
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
 /* feature: clipboard
    Only kiwi- classes; no backdrop-filter (the glass
    comes from lib/glass.js behind the frame). Corners are concentric: frame 26, row 12. */
