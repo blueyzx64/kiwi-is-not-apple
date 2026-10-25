@@ -8,12 +8,12 @@
 | Window controls | S2 | done, merged | feat/window-controls |
 | Liquid Glass | S3 | done, merged incl. review fixes | feat/liquid-glass |
 | Clipboard | S4 | done, merged | feat/clipboard |
-| Spotlight | S5 | R7 APPROVE; S10 integrating | feat/spotlight |
+| Spotlight | S5 | done, merged | feat/spotlight |
 | Auto-hide bar | S6 | done, merged | feat/autohide |
 | Control Center | S7 | merged; Now Playing → MprisWatcher after notch | feat/control-center |
 | Notch | S8 | built; R8 review | feat/notch |
 | Stage Manager | S9 | merged; shortcut after clipboard (keybindings) | feat/stage-manager |
-| User files (D1) | D1 | R9 CHANGES; D1 fixing | debt/user-files |
+| User files (D1) | D1 | done, merged | debt/user-files |
 | Panel transparency (D2) | D2 | done, merged | debt/panel-transparency |
 | Overview patches (D3) | D3 | done, merged | debt/overview-patches |
 | Window utils (D4) | D4 | done, merged | debt/window-utils |
@@ -23,3 +23,10 @@
 | Docs (D8) | D8 | pass 1 merged; pass 2 at end | debt/docs |
 | Reviewer 2 | R1 | reviewing S4 | - |
 | Audit fixes (autohide restore, glass contrast/menu destroy) | S6, S3 | done, merged | feat/autohide-fix, feat/liquid-glass-fix2 |
+| Small modules (D9) | D9 | doing | debt/small-modules |
+| Window move (D10) | D10 | doing | debt/window-move |
+| Lint (L1) | L1 | doing | debt/lint |
+| Audit merged CC/SM/clipboard/spotlight (A2) | A2 | doing | - |
+| Shell smoke harness (X1) | X1 | doing | - |
+| PR notes + manual test list (P1) | P1 | doing | - |
+| Now Playing -> MprisWatcher (S7) | S7 | doing (on feat/notch base) | feat/cc-mpris |

@@ -31,7 +31,7 @@ list. Report per §9.
 Busy right now, so do not edit: notch files (S8: coordinators/notificationRouter.js,
 coordinators/mprisWatcher.js, lib/mpris.js, apps/notch/, calendar.js, quickSettingsNotifications.js,
 panelMedia.js, mediaPlayback.js), spotlight integration (S10: features.js, prefs.js, schema,
-stylesheet.css, po/), S9 (apps/stageManager/, windowControls*), D1 (mozillaThemeManager.js, gtkThemeManager.js).
+stylesheet.css, po/), S9 (apps/stageManager/, windowControls*), D1 is merged, so its files are free.
 
 | ID | Card | Owns | Rows (§2) |
 |---|---|---|---|
