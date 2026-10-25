@@ -66,15 +66,23 @@ These features work only when [Dash to Dock](https://extensions.gnome.org/extens
 
 ## New in this version
 
-All of these are on by default and can be turned off in Kiwi's preferences.
+All of these are on by default unless noted, and each can be turned off in Kiwi's preferences or from the Kiwi section of the Control Center.
 
-- **Window controls in the top bar** for every focused window: close, minimize and maximize on the left, macOS style (Position setting: left, right or follow GNOME), with the apps' own titlebar buttons removed.
-- **Liquid Glass**: translucent top bar, menus and overlays that keep their rounded shape (plain transparency, no blur; solid in high contrast).
+- **Window controls in the top bar** for every focused window: close, minimize and maximize on the left, macOS style. While they are in the top bar, apps' own titlebar buttons are removed (Kiwi saves your GNOME button layout and restores it exactly when you turn this off). Minimize and maximize work on every window, including dialogs and fixed-size windows.
+- **No Activities button**: the workspace pill at the top left is hidden (setting: *Hide Activities Button*).
+- **Liquid Glass**: translucent, rounded top bar, menus and overlays (plain transparency, no blur; solid in high contrast).
 - **Clipboard history** with Quick Paste. History is saved in `~/.local/share/kiwi/clipboard/`. The shortcut is empty by default; set it in preferences ("Use Super+Shift+V").
-- **Spotlight**: tap Super to search apps, files, settings, clipboard and the web, and to calculate. The overview stays on the hot corner, Super+A and the Activities button.
-- **Control Center**: the Quick Settings menu in a macOS-style layout.
-- **Stage Manager**: a strip of other apps at the screen edge; other apps' windows are hidden, not minimized.
-- **Notification notch**: notifications, volume, brightness and Now Playing in a pill at the top centre.
+- **Spotlight**: tap Super to search apps, files, settings, clipboard and the web, and to calculate, in a rounded panel that stays readable on any background.
+- **Control Center**: the Quick Settings menu in a calmer macOS-style layout with rounded-square tiles, plus a *Kiwi* section with toggles for the notch, Stage Manager, window buttons, clipboard, Spotlight, Liquid Glass and rounded corners.
+- **Stage Manager**: other apps sit on a rounded floor at the screen edge, as live, tilted previews; windows fly to and from the strip. Parked windows are hidden from the overview (still in Alt+Tab).
+- **Notification notch**: notifications, Now Playing controls (previous, play/pause, next), volume and brightness in a pill at the top centre. Click it to open the dashboard; click outside or press Esc to close it. Do Not Disturb silences it.
+- **Rounded window corners** (off by default): rounds every app window, including GTK 3, Qt and Electron apps. Maximized and fullscreen windows stay square. Radius and excluded apps are in preferences.
+
+### Changes in this update
+- **Removed: auto-hide top bar.** The top bar now always shows, because it holds the notch and the window controls.
+- **Added:** rounded window corners; Kiwi feature toggles in the Control Center; Hide Activities on by default.
+- **Fixed:** square backgrounds behind rounded menus, the notch and the top bar; Spotlight with no backing; notch media buttons and Do Not Disturb; clipboard history not listing copies; minimize/maximize greyed out on some windows; apps keeping their own buttons next to the top-bar ones.
+- **Redesigned:** preferences now use a sidebar with readable labels and search; new features are grouped under *macOS Features*.
 
 ## Installation
 

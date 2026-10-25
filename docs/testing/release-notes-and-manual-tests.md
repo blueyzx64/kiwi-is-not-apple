@@ -35,6 +35,22 @@ Headless runs can't check looks, real input or real apps, so please work through
   - D7: Makefile, CI workflow, and the archived release-upload action replaced.
   - D8: code map and docs refreshed.
 
+## 1b. Update after owner testing on Fedora 44 (UX round 1)
+
+The owner ran the first build on a real Fedora 44 desktop and reported these; all are fixed or changed:
+
+- **Rounded surfaces:** the square backing behind Control Center, clipboard, notch, top bar and Stage Manager is gone. Liquid Glass is now plain transparency (no blur or shader layers); menus and overlays use a ~92% fill so content behind them doesn't compete.
+- **Spotlight:** rounded translucent panel with rim and shadow, follows the dark shell theme, scale-and-fade open.
+- **Control Center:** calmer look, rounded-square tiles, a *Kiwi* toggle section (Notch, Stage Manager, Window Buttons, Clipboard, Spotlight, Liquid Glass, Rounded Corners).
+- **Stage Manager:** one rounded floor behind the strip; windows are live previews tilted ~22° toward the stage, sized so tall and wide windows look balanced; our own fly-to-strip / fly-back animation replaces GNOME's minimize effect; parked windows are hidden from the overview.
+- **Notch:** media buttons work (clicks used to collapse the card before the button fired), Do Not Disturb toggles GNOME's own setting and silences the notch, the dashboard lists recent notifications, and clicking outside or Esc closes it.
+- **Clipboard:** copies were recorded but the list crashed while drawing on GNOME 50 (`gicon: undefined`); fixed, and Quick Paste works again.
+- **Preferences:** sidebar navigation with section headers and search instead of the squashed bottom icon bar.
+- **Window controls:** forced minimize/maximize for every window; buttons removed from every app via GNOME's button layout while the top-bar controls are on, restored exactly when off.
+- **Activities button:** hidden by default.
+- **Removed: auto-hide top bar** (the bar holds the notch and window controls). Its settings keys stay in the schema, marked deprecated and unread.
+- **New: rounded window corners** (`rounded-corners`, off by default; `rounded-corners-radius` 12; `rounded-corners-blacklist`). Uses a per-window GLSL effect on GNOME 50; maximized, tiled and fullscreen windows stay square. On GNOME 51 the effect API is gone and the feature does nothing (logged once).
+
 ## 2. Behaviour changes users will notice
 
 New features default to ON (owner decision); users opt out in prefs.
@@ -152,6 +168,13 @@ Run each item on Fedora 44 Workstation, GNOME 50, in a Wayland session (GNOME 50
 - [ ] Turn on experimental refraction on GNOME 50 (**(future)**: repeat on 51, whose shader API differs). Expected: works, or journal says "[Kiwi] shader effect unavailable" and plain glass still works.
 - [ ] Open Control Center and the calendar. Expected: tinted bubble and blur only while open (note any corner bleed).
 - [ ] Install Blur my Shell. Expected: the prefs notice shows.
+
+### Rounded window corners
+- [ ] Turn on Rounded Corners (Control Center tile or prefs). Expected: every normal window, including GTK 3 / Electron / Qt ones, has smooth rounded corners; shadows follow the curve with no square notch.
+- [ ] Maximize, tile and fullscreen a window. Expected: square corners; unmaximize brings them back.
+- [ ] Change the radius from 0 to 24. Expected: corners update live. Add an app to the excluded list. Expected: that app's windows go square.
+- [ ] Check Stage Manager previews, the overview and a full-screen screenshot. Expected: corners look right in all three.
+- [ ] Turn it off. Expected: every window is square again, no artefacts.
 
 ### Removed: auto-hide top bar
 - [ ] Before upgrading, have auto-hide on (`panel-autohide=true`), then upgrade and log in. Expected: the bar is shown with its normal strut (maximized windows sit below it), no edge push needed, no slide, no *Auto-hide Top Bar* prefs page and no *Hide Top Bar* tile in the Control Center.
