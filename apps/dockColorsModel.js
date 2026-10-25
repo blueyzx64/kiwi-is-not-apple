@@ -45,3 +45,20 @@ export function parseSaved(text) {
         return null;
     }
 }
+
+/**
+ * Which keys to write back when Kiwi's colours are found left over (feature off).
+ *
+ * @param {Object<string,string>} current values in Dash-to-Dock's keys now
+ * @param {Object<string,string>|null} saved the persisted originals, or null
+ * @param {Object<string,string[]>} kiwiValues per key, every colour Kiwi writes
+ * @returns {Object<string,string>} key -> original, only for keys still holding a Kiwi colour
+ */
+export function staleRestores(current, saved, kiwiValues) {
+    const out = {};
+    for (const [key, original] of Object.entries(saved ?? {})) {
+        if (key in current && (kiwiValues[key] ?? []).includes(current[key]))
+            out[key] = original;
+    }
+    return out;
+}

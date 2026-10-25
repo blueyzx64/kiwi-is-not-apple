@@ -29,7 +29,7 @@ import Shell from 'gi://Shell';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
-import { parseSaved, resolveOriginals } from './dockColorsModel.js';
+import { parseSaved, resolveOriginals, staleRestores } from './dockColorsModel.js';
 import { dashOf, dockSettings, disconnectAll, prefersDark, watchDocks } from './dockUtils.js';
 
 // What is behind the dock, which the indicator and separator read against
@@ -84,7 +84,7 @@ let bgSettings;
 let screenshot;
 let globalSignals = [];      // [object, id], for disconnectAll
 let windowSignals = [];      // [object, id], torn down and rebuilt per workspace
-let sources = {};
+const sources = {};
 let savedColors = null;
 let docks = [];              // [{ container, destroyId }]
 let mode = null;             // 'light' | 'dark' behind the dock, once measured
@@ -345,6 +345,30 @@ function _disconnectWindowSignals() {
 }
 
 /* ------------------------------------------------------------- entry points */
+
+/**
+ * Put the user's Dash-to-Dock colours back if a previous session died while Kiwi
+ * had them overwritten and the feature is not running now to do it itself. Call
+ * once before features start. Sync; a no-op without a record. The record is kept
+ * while Dash-to-Dock's settings are not available yet.
+ *
+ * @param {Gio.Settings} settings Kiwi's settings
+ */
+export function restoreStaleColors(settings) {
+    if (!settings?.settings_schema?.has_key(SAVED_SETTING))
+        return;
+    const saved = parseSaved(settings.get_string(SAVED_SETTING));
+    if (!saved)
+        return;
+    const dock = dockSettings();
+    if (!dock)
+        return;
+
+    const current = Object.fromEntries(SAVED_KEYS.map(key => [key, dock.get_string(key)]));
+    for (const [key, value] of Object.entries(staleRestores(current, saved, KIWI_VALUES)))
+        dock.set_string(key, value);
+    settings.set_string(SAVED_SETTING, '');
+}
 
 /**
  * @param {Gio.Settings} [settings] Kiwi's settings; without them the originals are
