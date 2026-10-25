@@ -33,6 +33,7 @@ function _shortcutRow(settings, _) {
     const read = () => settings.get_strv(key)[0] ?? '';
     row.text = read();
 
+    const base = row.title;
     const note = () => {
         const text = row.text.trim();
         row.remove_css_class('error');
@@ -43,12 +44,26 @@ function _shortcutRow(settings, _) {
         const hit = findConflicts([text], KNOWN_DEFAULTS)[0];
         return hit ? _('Also used by GNOME: %s').replace('%s', hit.with) : '';
     };
+    // An EntryRow has no subtitle, so the note goes in its title
+    const showNote = () => {
+        const n = note();
+        row.title = n ? `${base}: ${n}` : base;
+    };
+    const use = new Gtk.Button({
+        label: _('Use Super+Shift+V'), valign: Gtk.Align.CENTER, css_classes: ['flat'],
+    });
+    use.connect('clicked', () => {
+        settings.set_strv(key, ['<Super><Shift>v']);
+        row.text = '<Super><Shift>v';
+    });
+    row.add_suffix(use);
     row.connect('changed', () => {
         const text = row.text.trim();
-        note();
+        showNote();
         if (_isAccel(text))
             settings.set_strv(key, text ? [text] : []);
     });
+    showNote();
     const id = settings.connect(`changed::${key}`, () => {
         if (read() !== row.text.trim())
             row.text = read();

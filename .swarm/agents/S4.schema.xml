@@ -11,9 +11,9 @@
         <description>When off, nothing new is recorded and the existing history is kept.</description>
       </key>
       <key name="clipboard-shortcut" type="as">
-        <default><![CDATA[['<Super><Shift>v']]]></default>
+        <default>[]</default>
         <summary>Quick Paste shortcut</summary>
-        <description>Opens Quick Paste. Empty turns the shortcut off.</description>
+        <description>Opens Quick Paste. Empty means no shortcut; prefs has a button for Super+Shift+V.</description>
       </key>
       <key name="clipboard-panel-icon" type="b">
         <default>true</default>

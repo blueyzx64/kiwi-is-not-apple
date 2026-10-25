@@ -34,7 +34,7 @@ export class QuickPaste {
             radius: 26,
             styleClass: 'kiwi-quick-paste',
             build: frame => this._build(frame),
-            onKeyPress: event => this._onKey(event),
+            onCapturedKey: event => this._onKey(event),
             onClosed: () => {
                 this._ui = null;
                 this._order = [];

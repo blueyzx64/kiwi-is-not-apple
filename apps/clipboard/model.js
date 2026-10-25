@@ -7,11 +7,14 @@ export const MiB = 1024 * 1024;
 
 export const DEFAULTS = Object.freeze({
     maxItems: 25,                // unpinned entries kept; pinned ones never count or expire
-    maxTextBytes: 1 * MiB,       // longer text is not recorded
+    maxTextBytes: 256 * 1024,    // longer text is not recorded
     maxImageBytes: 5 * MiB,      // bigger images are not recorded
     maxPreviewChars: 400,        // stored preview length for list rows
     images: true,
     ignoreSensitive: true,
+    maxTotalImageBytes: 256 * MiB,   // all image bytes kept (64 MiB when nothing is saved to disk)
+    maxTotalTextBytes: 4 * MiB,      // all text bytes kept; keeps history.json small
+    maxPinned: 50,
     maxAgeMs: 0,                 // 0 = no expiry for unpinned entries
 });
 
@@ -204,6 +207,9 @@ export class History {
     constructor(opts = {}) {
         this._max = clampItems(opts.maxItems ?? DEFAULTS.maxItems);
         this._maxAge = Math.max(0, opts.maxAgeMs ?? DEFAULTS.maxAgeMs);
+        this._maxImageTotal = opts.maxTotalImageBytes ?? DEFAULTS.maxTotalImageBytes;
+        this._maxTextTotal = opts.maxTotalTextBytes ?? DEFAULTS.maxTotalTextBytes;
+        this._maxPinned = opts.maxPinned ?? DEFAULTS.maxPinned;
         this._items = [];        // newest first
     }
 
@@ -231,6 +237,7 @@ export class History {
      * @returns {{status: 'added'|'bumped'|'same', entry: object, evicted: object[]}}
      *   'same' = it is already the newest entry (nothing changed, e.g. our own paste).
      *   'bumped' = a duplicate moved to the top; pin and first-seen app are kept, time updates.
+     *   'refused' = it can never fit the byte budget, because pinned entries already use it.
      *   evicted: entries pushed out by the cap; the store deletes their files.
      */
     add(entry) {
@@ -247,6 +254,8 @@ export class History {
             this._items.unshift(old);
             return { status: 'bumped', entry: old, evicted: [] };
         }
+        if (!this._fits(entry))
+            return { status: 'refused', entry, evicted: [] };
         this._items.unshift(entry);
         return { status: 'added', entry, evicted: this._trim() };
     }
@@ -261,8 +270,43 @@ export class History {
         const e = this.get(id);
         if (!e)
             return null;
+        if (!e.pinned) {
+            // Pinned entries are never evicted, so they are capped by count and by bytes
+            if (this._items.filter(x => x.pinned).length >= this._maxPinned)
+                return null;
+            if (this._bytes(e.kind, true) + e.size > this._budget(e.kind))
+                return null;
+        }
         e.pinned = !e.pinned;
         return e.pinned;
+    }
+
+    /** Change limits (settings changed). @returns {object[]} evicted */
+    configure(opts) {
+        if (opts.maxItems !== undefined)
+            this._max = clampItems(opts.maxItems);
+        if (opts.maxTotalImageBytes !== undefined)
+            this._maxImageTotal = opts.maxTotalImageBytes;
+        if (opts.maxTotalTextBytes !== undefined)
+            this._maxTextTotal = opts.maxTotalTextBytes;
+        return this._trim();
+    }
+
+    _budget(kind) {
+        return kind === 'image' ? this._maxImageTotal : this._maxTextTotal;
+    }
+
+    _bytes(kind, pinnedOnly = false) {
+        let n = 0;
+        for (const e of this._items) {
+            if (e.kind === kind && (!pinnedOnly || e.pinned))
+                n += e.size;
+        }
+        return n;
+    }
+
+    _fits(entry) {
+        return this._bytes(entry.kind, true) + entry.size <= this._budget(entry.kind);
     }
 
     /**
@@ -335,6 +379,18 @@ export class History {
             evicted.push(e);
             return false;
         });
+        // Byte budgets, per kind: drop the oldest unpinned until the total fits
+        for (const kind of ['image', 'text']) {
+            let total = this._bytes(kind);
+            for (let i = this._items.length - 1; i >= 0 && total > this._budget(kind); i--) {
+                const e = this._items[i];
+                if (e.kind !== kind || e.pinned)
+                    continue;
+                this._items.splice(i, 1);
+                evicted.push(e);
+                total -= e.size;
+            }
+        }
         return evicted;
     }
 }

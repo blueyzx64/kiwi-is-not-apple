@@ -55,6 +55,25 @@ test('save, load, modes 0600/0700, clear', async () => {
     eq(GLib.file_test(stray, GLib.FileTest.EXISTS), true, 'user file kept after clear');
 });
 
+test('prepare repairs a wide mode on Kiwi dirs; load drops images with no file', async () => {
+    const base = GLib.dir_make_tmp('kiwi-clip-XXXXXX');
+    const dir = GLib.build_filenamev([base, 'kiwi', 'clipboard']);
+    GLib.mkdir_with_parents(dir, 0o755);
+    GLib.mkdir_with_parents(GLib.build_filenamev([dir, 'images']), 0o755);
+    const store = new ClipboardStore(dir);
+    await store.prepare();
+    eq(mode(dir), 0o700, 'dir');
+    eq(mode(GLib.build_filenamev([dir, 'images'])), 0o700, 'images');
+    eq(mode(GLib.build_filenamev([base, 'kiwi'])), 0o700, 'kiwi');
+    const h = new History();
+    const name = imageFileName(H(5), 'image/png');
+    h.add(makeEntry({ kind: 'image', hash: H(5), mime: 'image/png', size: 4, time: 1, file: name }));
+    h.add(makeEntry({ kind: 'text', hash: 't', mime: 't', size: 1, time: 2, text: 'x' }));
+    await store.saveIndex(h);
+    const back = await store.load();
+    eq(back.length, 1, 'image without a file is dropped');
+});
+
 test('corrupt index loads as empty', async () => {
     const dir = GLib.dir_make_tmp('kiwi-clip-XXXXXX');
     GLib.file_set_contents(GLib.build_filenamev([dir, 'history.json']), '{oops');
