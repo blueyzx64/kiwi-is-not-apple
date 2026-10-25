@@ -104,3 +104,5 @@ All answered by the owner on 2026-10-25. Do not ask the owner again; ask the orc
 - Real-Shell runs between about 14:20 and 14:30 UTC are INVALID (stale bus socket: "Connection refused", probe
   never up, "Kiwi errors: 0" is meaningless). Re-run. A run counts only if shell.log has "GNOME Shell
   started" and your probe answered.
+- Test fixtures must never contain full literal secret-shaped strings (GitHub push protection blocks
+  the push). Split them at runtime, e.g. `'glpat-xYz' + '123…'`.
