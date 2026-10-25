@@ -151,9 +151,11 @@ test('file removed on dispose, missing file tolerated', () => {
     const r = new CleanupRegistry();
     r.file(path);
     r.dispose();
+    pump(50);
     eq(GLib.file_test(path, GLib.FileTest.EXISTS), false);
     r.file(path);
     r.dispose();
+    pump(50);
 });
 
 if (failed) {
