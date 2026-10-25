@@ -6,6 +6,14 @@
 // system-wide installs (e.g. /usr/share/gnome-shell/extensions, owned by root)
 // working. See https://github.com/kem-a/kiwi-kemma/issues/86
 
+// Dangling imports: the managed block holds absolute file:// paths into the extension folder.
+// After a shell crash, or an uninstall that skipped disable(), those imports stay in gtk.css.
+// GTK only logs a warning for an import it cannot open, so apps keep working; the stale block
+// is replaced on the next enable and removed on the next disable. Nothing else is safe to do
+// from here: the extension is not running. Manual fix: delete the block between the two
+// "Kiwi (is not Apple) - managed imports" comments in ~/.config/gtk-{3,4}.0/gtk.css.
+// (A "Remove Kiwi GTK changes" button in prefs would call the same cleanup: see the Outbox.)
+
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
