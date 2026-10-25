@@ -33,3 +33,8 @@ All answered by the owner on 2026-10-25. Do not ask the owner again; ask the orc
 - Reduced motion: `org.gnome.desktop.a11y.interface reduced-motion` on GNOME 50+;
   `org.gnome.desktop.interface enable-animations` on 48–49.
 - Phase 0 refactor lands as its own change with no visible behaviour change.
+
+## Orchestrator defaults (owner may override)
+- Wave 0: Firefox/Thunderbird profiles are touched only when the per-app styling key is on.
+  Hiding Firefox's native buttons (`Hidden.css`) under panel controls now needs that key too.
+  Owner to confirm; S2 must not re-add writes into a user `chrome/` without the styling key.

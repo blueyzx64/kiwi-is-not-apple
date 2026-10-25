@@ -1,8 +1,9 @@
 # Board
 | ID | Owner | Status | Branch |
 |---|---|---|---|
-| Phase 0 foundation | S1 | todo | feat/foundation |
-| Integrator/review | S10 | todo | feat/integration |
+| Wave 0 Firefox fix | S1 | done, PR #1 into main; merged here | fix/mozilla-chrome-dataloss |
+| Phase 0 foundation | S1 | doing | feat/foundation |
+| Integrator/review | S10 | doing | feat/integration |
 | Window controls | S2 | todo | feat/window-controls |
 | Liquid Glass | S3 | todo | feat/liquid-glass |
 | Clipboard | S4 | todo | feat/clipboard |
