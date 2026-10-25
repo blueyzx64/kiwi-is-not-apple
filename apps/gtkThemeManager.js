@@ -19,7 +19,7 @@ import GLib from 'gi://GLib';
 
 import { CleanupRegistry } from '../lib/disposables.js';
 import { KiwiSettings } from '../lib/settings.js';
-import { MIGRATIONS as WINDOW_CONTROLS_MIGRATIONS, titlebarHideSheet, createJobQueue } from './windowControls/model.js';
+import { titlebarHideSheet, createJobQueue } from './windowControls/model.js';
 
 const MARKER_BEGIN = '/* Kiwi (is not Apple) - managed imports: begin */';
 const MARKER_END = '/* Kiwi (is not Apple) - managed imports: end */';
@@ -215,8 +215,6 @@ class GtkThemeManager {
     enable() {
         const ks = new KiwiSettings(this._extension.getSettings());
         this._ks = ks;
-        // The panel scope replaced "fullscreen only"; the css below reads the new key
-        ks.migrate(WINDOW_CONTROLS_MIGRATIONS);
         ks.attach(this._cleanup);
         ks.watch([
             'enable-app-window-buttons', 'button-type', 'button-size', 'show-window-controls',

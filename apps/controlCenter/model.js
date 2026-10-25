@@ -164,3 +164,8 @@ export function batteryTime({ state, toEmpty, toFull }) {
     const total = Math.round(seconds / 60);
     return { kind, hours: Math.floor(total / 60), minutes: total % 60 };
 }
+
+/** Old key -> new key, for runMigrations (run once from extension.js enable()). */
+export const MIGRATIONS = [
+    { from: 'add-username-to-quick-menu', to: 'control-center-user-row' },
+];

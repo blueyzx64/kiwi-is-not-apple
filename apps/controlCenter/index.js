@@ -16,7 +16,6 @@ import GLib from 'gi://GLib';
 import St from 'gi://St';
 
 import { Glass } from '../../lib/glass.js';
-import { runMigrations } from '../../lib/settings.js';
 import { SHELL_HAS_SYSTEM_DND } from '../../lib/compat.js';
 import { restoreBuiltinDndToggle, setControlCenterOwnsDnd } from '../quickSettingsDnDRemoval.js';
 import { refreshLegacyDnd } from '../quickSettingsNotifications.js';
@@ -37,9 +36,6 @@ const GLASS_CLASS = 'kiwi-cc-glass';
 const WAIT_MS = 200;
 const WAIT_ATTEMPTS = 50;
 
-export const MIGRATIONS = [
-    { from: 'add-username-to-quick-menu', to: 'control-center-user-row' },
-];
 
 export class ControlCenter {
     constructor(ctx, cleanup) {
@@ -61,7 +57,6 @@ export class ControlCenter {
 
     enable() {
         this._cleanup.add(() => this._teardown());
-        runMigrations(this._ctx.settings, MIGRATIONS);
 
         const qs = readyQuickSettings();
         if (qs) {
