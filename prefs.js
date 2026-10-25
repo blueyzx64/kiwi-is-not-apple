@@ -24,10 +24,12 @@ import Gtk from 'gi://Gtk';
 import GLib from 'gi://GLib';
 import { ExtensionPreferences, gettext as _ } from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
+import * as liquidGlassPrefs from './apps/liquidGlass/prefs.js';
 import * as windowControlsPrefs from './apps/windowControls/prefs.js';
 
 // Feature prefs modules (see apps/<feature>/prefs.js): PAGE says where, buildPrefs() makes the groups
-const FEATURE_PREFS = [windowControlsPrefs];
+// New pages appear in this order, after Options and before Advanced (Liquid Glass first).
+const FEATURE_PREFS = [liquidGlassPrefs, windowControlsPrefs];
 
 const D2D_UUIDS = ['dash-to-dock@micxgx.gmail.com', 'ubuntu-dock@ubuntu.com'];
 const EXTENSION_ACTIVE = 1;
@@ -457,8 +459,18 @@ export default class KiwiPreferences extends ExtensionPreferences {
             Gio.SettingsBindFlags.GET);
         settings.bind('panel-blur', panelBlurRow, 'active',
             Gio.SettingsBindFlags.DEFAULT);
-        settings.bind('panel-transparency', panelBlurRow, 'sensitive',
-            Gio.SettingsBindFlags.GET);
+        // While Liquid Glass is on it decides the panel blur (surface list), so this switch steps aside
+        const syncPanelBlurRow = () => {
+            const glass = settings.get_boolean('liquid-glass');
+            panelBlurRow.sensitive = settings.get_boolean('panel-transparency') && !glass;
+            panelBlurRow.subtitle = glass
+                ? _("Handled by Liquid Glass")
+                : _("Blur the background behind the panel");
+        };
+        syncPanelBlurRow();
+        const panelBlurSyncIds = ['panel-transparency', 'liquid-glass']
+            .map(key => settings.connect(`changed::${key}`, syncPanelBlurRow));
+        window.connect('close-request', () => panelBlurSyncIds.forEach(id => settings.disconnect(id)));
         settings.bind('panel-color-inherit', panelColorFixRow, 'active',
             Gio.SettingsBindFlags.DEFAULT);
         settings.bind('panel-invert-tray-icons', invertTrayIconsRow, 'active',
@@ -802,18 +814,31 @@ export default class KiwiPreferences extends ExtensionPreferences {
         });
         dockPage.add(dockStylingGroup);
 
-        dockRows.push(...this._addSwitchRows(settings, dockStylingGroup, [
+        const dockStylingRows = this._addSwitchRows(settings, dockStylingGroup, [
             { key: 'dock-styling', title: _("Dock Styling"), subtitle: _("Tighten icon spacing, drop the icon highlight and darken icons while pressed") },
             { key: 'dock-blur', title: _("Dock Blur"), subtitle: _("Blur the background behind Dash-to-Dock. Recommended fixed dock opacity 10% - 30%, min 1%.") },
             { key: 'dock-adaptive-colors', title: _("Adaptive Dock Colors"), subtitle: _("Flip the running indicators and separators to suit whatever is behind the dock, wallpaper or window") },
-        ]));
+        ]);
+        dockRows.push(...dockStylingRows);
+        // While Liquid Glass is on it decides the dock blur (surface list), so this switch steps aside
+        const dockBlurRow = dockStylingRows[1];
+        const dockBlurSubtitle = dockBlurRow.subtitle;
 
         // The dock can be installed or turned on while this window is open
         const syncDockRows = () => this._withDockActive((active) => {
             dockBanner.revealed = !active;
             dockRows.forEach(row => (row.sensitive = active));
+            if (settings.get_boolean('liquid-glass'))
+                dockBlurRow.sensitive = false;
         });
-        syncDockRows();
+        const syncDockBlurRow = () => {
+            const glass = settings.get_boolean('liquid-glass');
+            dockBlurRow.subtitle = glass ? _("Handled by Liquid Glass") : dockBlurSubtitle;
+            syncDockRows();
+        };
+        syncDockBlurRow();
+        const dockGlassId = settings.connect('changed::liquid-glass', syncDockBlurRow);
+        window.connect('close-request', () => settings.disconnect(dockGlassId));
 
         const dockStateId = Gio.DBus.session.signal_subscribe(
             SHELL.name, SHELL.iface, 'ExtensionStateChanged',
@@ -1064,6 +1089,7 @@ export default class KiwiPreferences extends ExtensionPreferences {
 
         // Feature pages: groups from apps/<feature>/prefs.js, placed before the reset button
         const pages = { panel: panelPage, dock: dockPage, windowControls: windowControlsPage, advanced: advancedPage };
+        window.remove(advancedPage);   // re-added after the feature pages, so Advanced stays last
         for (const mod of FEATURE_PREFS) {
             let page = pages[mod.PAGE.into];
             if (!page) {
@@ -1073,6 +1099,7 @@ export default class KiwiPreferences extends ExtensionPreferences {
             for (const group of mod.buildPrefs({ settings, window, extension: this }))
                 page.add(group);
         }
+        window.add(advancedPage);
 
         const resetGroup = new Adw.PreferencesGroup();
         advancedPage.add(resetGroup);
