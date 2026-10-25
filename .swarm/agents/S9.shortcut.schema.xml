@@ -1,0 +1,6 @@
+<!-- S9 shortcut fragment: paste inside <schema> of org.gnome.shell.extensions.kiwi.gschema.xml, after stage-manager-recent-count -->
+      <key name="stage-manager-shortcut" type="as">
+        <default>[]</default>
+        <summary>Stage Manager shortcut</summary>
+        <description>Turns Stage Manager on or off. Empty means no shortcut; prefs has a button for Ctrl+Super+S.</description>
+      </key>

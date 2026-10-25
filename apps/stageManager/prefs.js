@@ -6,9 +6,70 @@ import Adw from 'gi://Adw';
 import Gtk from 'gi://Gtk';
 import Gio from 'gi://Gio';
 
+import { KNOWN_DEFAULTS, findConflicts, normalizeAccel } from '../../lib/keybindingsModel.js';
+
 const N_ = s => s;
 
 export const PAGE = { id: 'stage-manager', title: N_('Stage Manager'), icon: 'view-app-grid-symbolic' };
+
+function _isAccel(text) {
+    if (!text)
+        return true;                     // empty turns the shortcut off
+    if (!normalizeAccel(text))
+        return false;
+    const [ok] = Gtk.accelerator_parse(text);
+    return ok;
+}
+
+const SUGGESTED = '<Control><Super>s';
+
+function _shortcutRow(settings, _) {
+    const key = 'stage-manager-shortcut';
+    const row = new Adw.EntryRow({ title: _('Toggle shortcut') });
+    const read = () => settings.get_strv(key)[0] ?? '';
+    row.text = read();
+
+    const base = row.title;
+    const showNote = () => {
+        const text = row.text.trim();
+        row.remove_css_class('error');
+        let note = '';
+        if (!_isAccel(text)) {
+            row.add_css_class('error');
+            note = _('Not a valid shortcut. Example: <Control><Super>s');
+        } else {
+            const hit = findConflicts([text], KNOWN_DEFAULTS)[0];
+            if (hit)
+                note = _('Also used by GNOME: %s').replace('%s', hit.with);
+        }
+        // An EntryRow has no subtitle, so the note goes in its title
+        row.title = note ? `${base}: ${note}` : base;
+    };
+    // Offer the suggestion only when nothing known uses it
+    if (findConflicts([SUGGESTED], KNOWN_DEFAULTS).length === 0) {
+        const use = new Gtk.Button({
+            label: _('Use Ctrl+Super+S'), valign: Gtk.Align.CENTER, css_classes: ['flat'],
+        });
+        use.connect('clicked', () => {
+            settings.set_strv(key, [SUGGESTED]);
+            row.text = SUGGESTED;
+        });
+        row.add_suffix(use);
+    }
+    row.connect('changed', () => {
+        const text = row.text.trim();
+        showNote();
+        if (_isAccel(text))
+            settings.set_strv(key, text ? [text] : []);
+    });
+    showNote();
+    const id = settings.connect(`changed::${key}`, () => {
+        if (read() !== row.text.trim())
+            row.text = read();
+    });
+    row.connect('destroy', () => settings.disconnect(id));
+    return row;
+}
 
 /**
  * @param {{settings: Gio.Settings, window: Adw.PreferencesWindow, extension: object}} args
@@ -30,6 +91,7 @@ export function buildPrefs({ settings, window, extension }) {
     const enabled = new Adw.SwitchRow({ title: _('Show the Stage Manager strip') });
     settings.bind('stage-manager', enabled, 'active', Gio.SettingsBindFlags.DEFAULT);
     main.add(enabled);
+    main.add(_shortcutRow(settings, _));
 
     const strip = new Adw.PreferencesGroup({ title: _('Strip') });
 
