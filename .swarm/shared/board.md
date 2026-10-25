@@ -7,7 +7,7 @@
 | Integrator/review | S10 | setup merged; idle until review | feat/integration |
 | Window controls | S2 | done, merged | feat/window-controls |
 | Liquid Glass | S3 | done, merged incl. review fixes | feat/liquid-glass |
-| Clipboard | S4 | fixed; R1 re-check | feat/clipboard |
+| Clipboard | S4 | R1 APPROVE; nits; then S10 re-integrate | feat/clipboard |
 | Spotlight | S5 | R7 CHANGES; S5 fixing | feat/spotlight |
 | Auto-hide bar | S6 | done, merged | feat/autohide |
 | Control Center | S7 | fixed; queued for S10 integration | feat/control-center |
