@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // gjs -m tests/glassParams.test.js
-import { followRect, readSnapshot, MIN_TINTED_ALPHA, MIN_TINT_PERCENT, wantsSurface, resolve, tintAlpha, legacySurfaces, worstCaseContrast, tintColor, SETTING_FIELDS }
+import { POWER_PROFILE_SERVICES, pickPowerProxy, isPowerSaver, followRect, readSnapshot, MIN_TINTED_ALPHA, MIN_TINT_PERCENT, wantsSurface, resolve, tintAlpha, legacySurfaces, worstCaseContrast, tintColor, SETTING_FIELDS }
     from '../lib/glassParams.js';
 
 let failed = 0;
@@ -111,6 +111,20 @@ check('rect: one position missing -> null', followRect({ x: 0, y: 0, width: 5, h
 check('rect: transformed difference', JSON.stringify(followRect({ x: 9, y: 9, width: 5, height: 6 }, [110, 220], [100, 200]))
     === '{"x":10,"y":20,"width":5,"height":6}');
 check('rect: undefined -> null', followRect({ x: undefined, y: 0, width: 5, height: 5 }) === null);
+
+// power profiles: UPower name first, net.hadess fallback
+check('UPower preferred', POWER_PROFILE_SERVICES[0][0] === 'org.freedesktop.UPower.PowerProfiles'
+    && POWER_PROFILE_SERVICES[0][1] === '/org/freedesktop/UPower/PowerProfiles');
+check('hadess fallback', POWER_PROFILE_SERVICES[1][0] === 'net.hadess.PowerProfiles');
+{
+    const up = { g_name_owner: ':1.5' }, upDead = { g_name_owner: null }, had = { g_name_owner: ':1.9' };
+    check('owned UPower wins', pickPowerProxy([up, had]) === up);
+    check('unowned UPower -> owned hadess', pickPowerProxy([upDead, had]) === had);
+    check('none owned -> first created', pickPowerProxy([upDead, { g_name_owner: null }]) === upDead);
+    check('failed first -> second', pickPowerProxy([null, had]) === had);
+    check('nothing -> null', pickPowerProxy([null, null]) === null);
+}
+check('power-saver semantics', isPowerSaver('power-saver') && !isPowerSaver('balanced') && !isPowerSaver(undefined));
 
 if (failed) {
     print(`${failed} failed`);
