@@ -62,6 +62,10 @@ const calendarRight = ctx => bool(ctx, 'move-calendar-right') || bool(ctx, 'notc
 // Everything that hangs off Dash-to-Dock stays off while it is not running
 const minimizeToDock = ctx => dockActive() && bool(ctx, 'minimize-to-dock');
 
+// Stage Manager pauses minimize-to-dock (it keeps its saved value), so nothing is parked in the
+// dock then and the "hide minimized windows" it implies must not apply either.
+const minimizeToDockRunning = ctx => minimizeToDock(ctx) && !bool(ctx, 'stage-manager');
+
 /** @type {object[]} */
 export const FEATURES = [
     // Started once with the extension; never re-evaluated by settings changes.
@@ -128,8 +132,10 @@ export const FEATURES = [
         disable: () => quickSettingsNotificationsDisable(),
     },
     {
+        // The notch's live activity replaces this button (the Control Center tile stays)
         id: 'panel-media', reapply: true,
-        when: ctx => calendarRight(ctx) && !bool(ctx, 'keep-notification-panel'),
+        when: ctx => calendarRight(ctx) && !bool(ctx, 'keep-notification-panel') &&
+            !(bool(ctx, 'notch') && bool(ctx, 'notch-live-activities')),
         restartOn: ['keep-notification-panel'],
         enable: ctx => panelMediaEnable(ctx.gettext),
         disable: () => panelMediaDisable(),
@@ -187,7 +193,7 @@ export const FEATURES = [
     {
         // A window parked in the dock should not also show up in the overview
         id: 'hide-minimized-windows', reapply: true,
-        when: ctx => bool(ctx, 'hide-minimized-windows') || minimizeToDock(ctx),
+        when: ctx => bool(ctx, 'hide-minimized-windows') || minimizeToDockRunning(ctx),
         enable: () => hideMinimizedWindowsEnable(),
         disable: () => hideMinimizedWindowsDisable(),
     },
