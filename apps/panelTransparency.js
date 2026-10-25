@@ -13,11 +13,16 @@ import { PanelVisibility } from '../coordinators/panelVisibility.js';
 import { Glass } from '../lib/glass.js';
 import { CleanupRegistry } from '../lib/disposables.js';
 
+Gio._promisify(Gio.File.prototype, 'read_async', 'read_finish');
+Gio._promisify(Gio.InputStream.prototype, 'close_async', 'close_finish');
+Gio._promisify(GdkPixbuf.Pixbuf, 'new_from_stream_at_scale_async', 'new_from_stream_finish');
+
 const visibilityCleanup = new CleanupRegistry();
 
 let settings;
 let enabled = false;
 let windowSignals = [];
+let trackedWindows = new WeakSet();
 const workspaceTracked = new Set(); // workspaces with window-added/removed hooked
 let settingsSignals = [];
 let interfaceSettings;
@@ -126,7 +131,11 @@ function _sampleWallpaper(pixbuf) {
 
 // Decodes off the main loop (async Gio stream + async pixbuf scale). A newer call
 // cancels the one in flight; the result restyles the panel when it lands.
-async function updateWallpaperLightness() {
+function updateWallpaperLightness() {
+    _updateWallpaperLightness().catch(e => console.error(`Kiwi: wallpaper sample failed: ${e}`));
+}
+
+async function _updateWallpaperLightness() {
     wallpaperCancellable?.cancel();
     const cancellable = new Gio.Cancellable();
     wallpaperCancellable = cancellable;
@@ -352,9 +361,9 @@ function applyPanelColorFix() {
     const panel = Main.panel;
 
     if (settings.get_boolean('panel-color-inherit')) {
-        panel.add_style_class_name('kiwi-panel-color-inherit');
+        panel.add_style_class_name('kiwi-panel-solid-black');
     } else {
-        panel.remove_style_class_name('kiwi-panel-color-inherit');
+        panel.remove_style_class_name('kiwi-panel-solid-black');
     }
 
     // Clear the inline background so the theme node reports the class colour
@@ -555,6 +564,7 @@ function handleWindowSignals(connect = true) {
         });
         windowSignals = [];
         workspaceTracked.clear();
+        trackedWindows = new WeakSet();
         return;
     }
 
@@ -608,8 +618,9 @@ function syncWorkspaceSignals() {
 }
 
 function connectWindowSignals(metaWindow) {
-    if (windowSignals.some(item => item.actor === metaWindow))
+    if (trackedWindows.has(metaWindow))
         return;
+    trackedWindows.add(metaWindow);
     const actorSignals = [];
 
     actorSignals.push(metaWindow.connect('position-changed', () => {
@@ -648,6 +659,7 @@ function disconnectWindowSignals(metaWindow) {
         });
         windowSignals.splice(index, 1);
     }
+    trackedWindows.delete(metaWindow);
 }
 
 function setupSignals() {
@@ -902,7 +914,7 @@ export function disable() {
     // Remove CSS classes and give the panel its pre-Kiwi style back
     const panel = Main.panel;
     panel.remove_style_class_name('kiwi-panel-fullscreen');
-    panel.remove_style_class_name('kiwi-panel-color-inherit');
+    panel.remove_style_class_name('kiwi-panel-solid-black');
     panel.remove_style_class_name('kiwi-panel-no-transition');
     clearForegroundContrast();
     // Only hand back a style we saved; never clobber another extension's
