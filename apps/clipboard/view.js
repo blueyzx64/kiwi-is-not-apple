@@ -5,16 +5,9 @@
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 
-import { ageOf } from './model.js';
+import { ageOf, tileIconProps } from './model.js';
 
 const PREVIEW_CHARS = 2000;
-
-const TYPE_ICON = {
-    text: 'text-x-generic-symbolic',
-    link: 'insert-link-symbolic',
-    color: 'applications-graphics-symbolic',
-    image: 'image-x-generic-symbolic',
-};
 
 /** '<Super><Shift>v' -> 'Super+Shift+V' for hints. */
 export function accelLabel(accel) {
@@ -68,12 +61,7 @@ export function buildTile(entry, ctl, size) {
         return tile;
     }
     const gicon = entry.kind === 'image' ? ctl.iconFor(entry) : null;
-    tile.set_child(new St.Icon({
-        gicon: gicon ?? undefined,
-        icon_name: gicon ? undefined : TYPE_ICON[entry.type],
-        icon_size: gicon ? size : Math.round(size * 0.55),
-        style_class: gicon ? 'kiwi-clip-thumb' : 'kiwi-clip-glyph',
-    }));
+    tile.set_child(new St.Icon(tileIconProps(entry.type, size, gicon)));
     return tile;
 }
 
@@ -137,6 +125,18 @@ export function buildRow(entry, ctl, _, { onActivate, tile = 34, now = Date.now(
     row.connect('style-changed', sync);
     row.connect('clicked', () => onActivate(entry));
     return row;
+}
+
+/**
+ * Add a row for `entry` to `list`. A row that fails to build is logged and skipped, so one
+ * bad entry never blanks the rest of the list (or leaves the count stale).
+ */
+export function addRow(list, entry, ctl, _, opts) {
+    try {
+        list.add_child(buildRow(entry, ctl, _, opts));
+    } catch (e) {
+        console.warn(`[Kiwi] clipboard row failed: ${e.message}`);
+    }
 }
 
 /** "Pinned" / "Recent" caption. */

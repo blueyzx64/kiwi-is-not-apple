@@ -693,6 +693,34 @@ export function pasteChordFor(wmClass) {
     return k && TERMINAL_HINTS.some(t => k === t || k.endsWith(`.${t}`)) ? 'ctrl-shift-v' : 'ctrl-v';
 }
 
+/* ---------------------------------------------------------------- view */
+
+export const TYPE_ICON = Object.freeze({
+    text: 'text-x-generic-symbolic',
+    link: 'insert-link-symbolic',
+    color: 'applications-graphics-symbolic',
+    image: 'image-x-generic-symbolic',
+});
+
+/**
+ * St.Icon constructor properties for a row's type tile. Never holds an `undefined` value:
+ * GJS on GNOME 50 throws "Invalid value 'undefined' for property gicon in object
+ * initializer", which aborted every popover and Quick Paste refresh at the first row.
+ *
+ * @param {string} type entry.type
+ * @param {number} size tile size in px
+ * @param {object|null} gicon thumbnail for images, or null for the type glyph
+ */
+export function tileIconProps(type, size, gicon = null) {
+    if (gicon)
+        return { gicon, icon_size: size, style_class: 'kiwi-clip-thumb' };
+    return {
+        icon_name: TYPE_ICON[type] ?? TYPE_ICON.text,
+        icon_size: Math.round(size * 0.55),
+        style_class: 'kiwi-clip-glyph',
+    };
+}
+
 /** "2 min ago" style age as [unit, n] so the view can translate it. */
 export function ageOf(then, now) {
     const s = Math.max(0, Math.floor((now - then) / 1000));

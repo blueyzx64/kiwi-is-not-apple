@@ -9,7 +9,7 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import { Glass } from '../../lib/glass.js';
 import { ModalSurface } from '../../lib/modalSurface.js';
-import { accelLabel, buildRow, sectionLabel } from './view.js';
+import { accelLabel, addRow, sectionLabel } from './view.js';
 
 const WIDTH = 380;
 const LIST_HEIGHT = 360;
@@ -122,6 +122,13 @@ export class ClipboardPopover {
     _refresh() {
         const _ = this._;
         const ctl = this._ctl;
+        // Header and footer first: they must be right even if a row fails
+        this._count.text = String(ctl.count);
+        this._switch.state = ctl.recording;
+        this._recLabel.text = ctl.recording ? _('Recording') : _('Paused');
+        const hint = accelLabel(ctl.shortcut);
+        this._hint.text = hint ? _('Quick Paste %s').replace('%s', hint) : '';
+
         const { pinned, recent } = ctl.view({ filter: this._filter, query: this._query });
         this._list.destroy_all_children();
         const now = Date.now();
@@ -130,7 +137,7 @@ export class ClipboardPopover {
             for (const e of rows) {
                 if (shown++ >= MAX_ROWS)
                     return;
-                this._list.add_child(buildRow(e, ctl, _, { onActivate: en => ctl.copy(en, { close: true }), now }));
+                addRow(this._list, e, ctl, _, { onActivate: en => ctl.copy(en, { close: true }), now });
             }
         };
         if (pinned.length) {
@@ -147,11 +154,6 @@ export class ClipboardPopover {
                 style_class: 'kiwi-clip-empty', x_align: Clutter.ActorAlign.CENTER,
             }));
         }
-        this._count.text = String(ctl.count);
-        this._switch.state = ctl.recording;
-        this._recLabel.text = ctl.recording ? _('Recording') : _('Paused');
-        const hint = accelLabel(ctl.shortcut);
-        this._hint.text = hint ? _('Quick Paste %s').replace('%s', hint) : '';
     }
 
     // ---- glass: a translucent fill on the rounded menu box itself (lib/glass.js) ----
