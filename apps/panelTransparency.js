@@ -63,8 +63,9 @@ const ICON_LUMINANCE_MIN = 0.6;      // above this the icon counts as light
 const ICON_LUMINANCE_MAX_DARK = 0.4; // below this it counts as dark
 const ICON_SPREAD_MAX = 0.15;        // luminance std dev; above this it has its own contrast
 
-// Blur state. The blur itself (and its tint, Liquid Glass tiers, legacy panel-blur key,
-// repaint workarounds) is lib/glass.js; this module only says when the panel is see-through.
+// Glass state. Liquid Glass is plain transparency (lib/glass.js): with layers 'blur' the
+// service draws nothing here, the panel's own background-color below is the translucent fill
+// and follows the panel's shape. The handle is kept for its tier (high contrast -> solid).
 let blurHandle = null;
 let blurWanted = false;   // last visibility updatePanelStyle asked for
 let glassRegistry = null;
@@ -77,7 +78,7 @@ function createBlurEffect() {
     if (!panelBox)
         return;
 
-    // layers: 'blur' - the panel keeps its own (adjustable) background colour
+    // layers: 'blur' - the panel keeps its own (adjustable) background colour; no layer is added
     blurHandle = Glass.attach(panel, {
         surface: 'panel',
         parent: panelBox,
@@ -823,8 +824,7 @@ export function enable(_settings) {
     // Apply panel color fix on startup
     applyPanelColorFix();
 
-    // The glass layer is always attached; lib/glass.js decides whether it is drawn
-    // (Liquid Glass panel surface, or the legacy panel-blur key while it is off).
+    // The glass handle is always attached; it only reports the tier (no layer is drawn).
     createBlurEffect();
     glassRegistry = new CleanupRegistry();
     let glassReady = false;

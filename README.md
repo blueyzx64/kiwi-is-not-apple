@@ -40,7 +40,7 @@ These features work only when [Dash to Dock](https://extensions.gnome.org/extens
 
 ## Options
 
-- **Overview Wallpaper Blur**: Use the blurred current wallpaper as overview background.
+- **Overview Wallpaper**: Use the current wallpaper, dimmed, as overview background.
 - **Seamless Overview Zoom**: Zoom the whole desktop, including the strip behind the panel, in and out of the overview.
 - **Focus on Overview Exit**: Focus the window under the cursor when leaving the overview, like macOS Mission Control.
 - **Skip to Desktop**: Do not show the overview when logging in.
@@ -69,7 +69,7 @@ These features work only when [Dash to Dock](https://extensions.gnome.org/extens
 All of these are on by default and can be turned off in Kiwi's preferences.
 
 - **Window controls in the top bar** for every focused window: close, minimize and maximize on the left, macOS style (Position setting: left, right or follow GNOME), with the apps' own titlebar buttons removed.
-- **Liquid Glass**: translucent, blurred top bar, menus, dock and overlays (solid in high contrast).
+- **Liquid Glass**: translucent top bar, menus and overlays that keep their rounded shape (plain transparency, no blur; solid in high contrast).
 - **Auto-hide top bar**: push the pointer against the top edge to reveal it.
 - **Clipboard history** with Quick Paste. History is saved in `~/.local/share/kiwi/clipboard/`. The shortcut is empty by default; set it in preferences ("Use Super+Shift+V").
 - **Spotlight**: tap Super to search apps, files, settings, clipboard and the web, and to calculate. The overview stays on the hot corner, Super+A and the Activities button.

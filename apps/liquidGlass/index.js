@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Liquid Glass: applies lib/glass.js to the shell surfaces the user picked.
 //
+// Glass is a translucent fill on the surface actor itself (no blur, no extra layer), so
+// every surface keeps its own rounded shape:
 // - panel   : only while Panel Transparency is off. With it on, apps/panelTransparency.js
-//             owns the panel colour and already draws the blur through the same service.
-// - menus   : Control Center and the date/calendar menu.
+//             owns the panel colour.
+// - menus   : Control Center and the date/calendar menu. The fill goes on the menu box
+//             (.popup-menu-content), the rounded bubble; the BoxPointer around it stays
+//             untouched (an -arrow-background-color there draws a square backing).
 // - dock    : apps/dockBlur.js (it knows Dash to Dock's actors) - see its `when` in features.js.
-// - overlays: not attached here. Spotlight, Quick Paste, the notch and the Stage Manager
-//             strip attach themselves with Glass.attach(actor, {surface: 'overlays'}).
+// - overlays: not attached here. Spotlight, Quick Paste, the clipboard popover and the
+//             Stage Manager strip attach themselves with Glass.attach(actor, {surface: 'overlays'}).
 //
 // Everything lives in the entry's CleanupRegistry; disable() has nothing left to do.
 
@@ -14,18 +18,6 @@ import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import { Glass } from '../../lib/glass.js';
-import { tintColor } from '../../lib/glassParams.js';
-
-const PANEL_CLASS = 'kiwi-glass-panel';
-const MENU_RADIUS = { quickSettings: 26, dateMenu: 18 };
-
-/**
- * The bubble actor of a popup menu. For most menus menu.actor is the BoxPointer, but the
- * Quick Settings menu's actor is a 0x0 container and the bubble is menu._boxPointer.
- */
-function _bubble(menu) {
-    return menu?._boxPointer ?? menu?.actor ?? null;
-}
 
 /** True when text on this actor is light, i.e. the glass behind it must be the dark one. */
 function _textIsLight(actor) {
@@ -42,7 +34,7 @@ export class LiquidGlass {
         this._ctx = ctx;
         this._cleanup = cleanup;
         this._panel = null;     // {handle, restore}
-        this._menus = new Map();   // menu -> {handle, savedStyle}
+        this._menus = new Map();   // menu -> {handle, token, destroyToken}
     }
 
     enable() {
@@ -83,37 +75,25 @@ export class LiquidGlass {
 
     _refreshAll() {
         this._panel?.handle.refresh();
-        for (const [menu, state] of this._menus) {
+        for (const state of this._menus.values())
             state.handle.refresh();
-            this._styleMenu(menu, state);
-        }
     }
 
     // ---- panel -------------------------------------------------------------
 
     _attachPanel() {
         const panel = Main.panel;
-        const panelBox = panel.get_parent();
-        if (!panelBox)
-            return;
         const handle = Glass.attach(panel, {
             surface: 'panel',
-            parent: panelBox,
             layers: 'glass',
-            name: 'kiwi-glass-panel',
             isDark: () => _textIsLight(panel),
         });
 
         const reg = this._cleanup;
         const sync = (inOverview = Main.overview.visible) => {
             const inFullscreen = Main.layoutManager.primaryMonitor?.inFullscreen ?? false;
-            const show = !inOverview && !inFullscreen;
-            handle.setVisible(show);
-            // Never leave the panel bare-transparent while the glass is hidden
-            if (show)
-                panel.add_style_class_name(PANEL_CLASS);
-            else
-                panel.remove_style_class_name(PANEL_CLASS);
+            // Hidden: the panel falls back to its theme colour
+            handle.setVisible(!inOverview && !inFullscreen);
         };
         const tokens = [
             // The panel is transparent in the overview and solid over fullscreen windows
@@ -130,63 +110,36 @@ export class LiquidGlass {
         this._panel = null;
         tokens.forEach(t => this._cleanup.release(t));
         handle.destroy();
-        Main.panel.remove_style_class_name(PANEL_CLASS);
     }
 
     // ---- menus -------------------------------------------------------------
 
     _menuTargets() {
         const area = Main.panel.statusArea;
-        return [
-            ['quickSettings', area.quickSettings?.menu],
-            ['dateMenu', area.dateMenu?.menu],
-        ].filter(([, menu]) => _bubble(menu)?.get_parent());
+        return [area.quickSettings?.menu, area.dateMenu?.menu].filter(menu => menu?.box);
     }
 
     _attachMenus() {
-        for (const [kind, menu] of this._menuTargets()) {
+        for (const menu of this._menuTargets()) {
             if (this._menus.has(menu))
                 continue;
-            const boxPointer = _bubble(menu);
-            const handle = Glass.attach(boxPointer.bin ?? boxPointer, {
+            // The rounded bubble is the menu box; its theme radius is kept as is
+            const box = menu.box;
+            const handle = Glass.attach(box, {
                 surface: 'menus',
-                parent: boxPointer.get_parent(),
-                below: boxPointer,
-                layers: 'blur',
                 role: 'large',
-                radius: MENU_RADIUS[kind],
-                name: `kiwi-glass-${kind}`,
-                isDark: () => _textIsLight(boxPointer),
+                isDark: () => _textIsLight(box),
             });
-            const state = { handle, box: boxPointer, savedStyle: boxPointer.get_style(), kind };
-            // The blur layer does not follow the open/close animation, so it is shown only
-            // while the menu is open.
-            state.token = this._cleanup.connect(menu, 'open-state-changed', (_m, open) => handle.setVisible(open));
-            handle.setVisible(menu.isOpen);
-            // Menu destroyed under us: forget it, touch nothing on the dead actor
+            const state = { handle };
+            // Menu destroyed under us: forget it (the handle dies with the box)
             state.destroyToken = this._cleanup.connect(menu, 'destroy', () => this._menus.delete(menu));
             this._menus.set(menu, state);
         }
     }
 
-    // The bubble keeps its shape and arrow; only its fill becomes the glass tint.
-    _styleMenu(menu, state) {
-        const { params } = state.handle;
-        const box = state.box;
-        if (!params || params.tier === 'off') {
-            box.set_style(state.savedStyle);
-            return;
-        }
-        const tint = params.tier === 'opaque'
-            ? tintColor({ ...params, dim: false, alpha: 1 }) : tintColor(params);
-        box.set_style(`${state.savedStyle ?? ''} -arrow-background-color: ${tint};`);
-    }
-
     _detachMenu(menu, state) {
-        this._cleanup.release(state.token);
         this._cleanup.release(state.destroyToken);
         state.handle.destroy();
-        state.box.set_style(state.savedStyle);
         this._menus.delete(menu);
     }
 
