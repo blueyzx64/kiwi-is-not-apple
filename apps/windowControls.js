@@ -423,24 +423,3 @@ export class WindowControlsFeature {
         }
     }
 }
-
-// Legacy pair, used while features.js still lists this module as a plain enable/disable entry.
-let _legacy = null;
-
-export function enable(ext) {
-    if (_legacy)
-        return;
-    const settings = ext.getSettings();
-    const cleanup = new CleanupRegistry();
-    const feature = new WindowControlsFeature({ extension: ext, settings }, cleanup);
-    feature.enable();
-    _legacy = { feature, cleanup };
-}
-
-export function disable() {
-    if (!_legacy)
-        return;
-    _legacy.feature.disable();
-    _legacy.cleanup.dispose();
-    _legacy = null;
-}

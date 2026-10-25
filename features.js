@@ -18,7 +18,7 @@ import { enable as transparentMoveEnable, disable as transparentMoveDisable } fr
 import { enable as batteryPercentageEnable, disable as batteryPercentageDisable } from './apps/batteryPercentage.js';
 import { enable as calendarEnable, disable as calendarDisable } from './apps/calendar.js';
 import { enable as windowTitleEnable, disable as windowTitleDisable } from './apps/windowTitle.js';
-import { enable as windowControlsEnable, disable as windowControlsDisable } from './apps/windowControls.js';
+import { WindowControlsFeature } from './apps/windowControls.js';
 import { enable as panelHoverEnable, disable as panelHoverDisable } from './apps/panelHover.js';
 import { enable as panelTransparencyEnable, disable as panelTransparencyDisable } from './apps/panelTransparency.js';
 import { enable as panelStylingEnable, disable as panelStylingDisable, enableMenus as popupStylingEnable, disableMenus as popupStylingDisable } from './apps/panelStyling.js';
@@ -132,12 +132,10 @@ export const FEATURES = [
         disable: () => disableDragRestore(),
     },
     {
-        // Calendar (re-)enable moves dateMenu to the end of _rightBox, which pushes the
-        // controls out of the last slot, so these keys tear them down to re-attach rightmost.
-        id: 'window-controls', reapply: true, setting: 'show-window-controls',
-        restartOn: ['button-type', 'enable-app-window-buttons', 'keep-notification-panel', 'move-calendar-right'],
-        enable: ctx => windowControlsEnable(ctx.extension),
-        disable: () => windowControlsDisable(),
+        // Placed by PanelLayout, which re-sorts when the calendar re-adds the date menu,
+        // so no restartOn keys are needed. Reacts to its own settings keys.
+        id: 'window-controls', setting: 'show-window-controls',
+        cls: WindowControlsFeature,
     },
     {
         id: 'panel-hover-fullscreen', reapply: true, setting: 'panel-hover-fullscreen',
