@@ -133,7 +133,11 @@ export function buildPrefs({ settings, extension }) {
     what.add(switchRow(settings, _('Files and documents'), _('Uses GNOME search, so nothing is indexed twice'), 'spotlight-files'));
     what.add(switchRow(settings, _('Settings'), _('GNOME Settings panels and Kiwi switches'), 'spotlight-settings'));
     what.add(switchRow(settings, _('Calculator'), _('Arithmetic and unit conversions such as 5 km in miles'), 'spotlight-calculator'));
-    what.add(switchRow(settings, _('Clipboard'), _('Recent copies from Clipboard history'), 'spotlight-clipboard'));
+    what.add(switchRow(settings, _('Clipboard'), _('Search your copies from Clipboard history'), 'spotlight-clipboard'));
+    const recentClips = switchRow(settings, _('Show recent clipboard when the search is empty'),
+        _('Anyone who can see the screen sees what you copied'), 'spotlight-recent-clipboard');
+    settings.bind('spotlight-clipboard', recentClips, 'sensitive', Gio.SettingsBindFlags.GET);
+    what.add(recentClips);
 
     const web = new Adw.PreferencesGroup({ title: _('Web') });
     web.add(switchRow(settings, _('Web search'), _('Adds a row that opens your search engine. Nothing is sent until you press Return'), 'spotlight-web'));

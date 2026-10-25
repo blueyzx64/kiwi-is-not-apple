@@ -256,7 +256,9 @@ export class SpotlightFeature {
 
     _emptySections() {
         const ks = this._ks;
-        const clips = ks.bool('spotlight-clipboard') ? this._clipboard.recent(4) : [];
+        // Privacy: copied text shows on an empty search only when the user asked for it
+        const clips = ks.bool('spotlight-clipboard') && ks.bool('spotlight-recent-clipboard')
+            ? this._clipboard.recent(4) : [];
         return buildEmptySections(this._apps.recent(6), clips);
     }
 
