@@ -68,7 +68,7 @@ These features work only when [Dash to Dock](https://extensions.gnome.org/extens
 
 All of these are on by default and can be turned off in Kiwi's preferences.
 
-- **Window controls in the top bar** for every focused window, with the apps' own titlebar buttons removed.
+- **Window controls in the top bar** for every focused window: close, minimize and maximize on the left, macOS style (Position setting: left, right or follow GNOME), with the apps' own titlebar buttons removed.
 - **Liquid Glass**: translucent, blurred top bar, menus, dock and overlays (solid in high contrast).
 - **Auto-hide top bar**: push the pointer against the top edge to reveal it.
 - **Clipboard history** with Quick Paste. History is saved in `~/.local/share/kiwi/clipboard/`. The shortcut is empty by default; set it in preferences ("Use Super+Shift+V").

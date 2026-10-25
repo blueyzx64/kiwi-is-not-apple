@@ -6,7 +6,7 @@ Brings the 8 planned macOS-style features (window controls, Liquid Glass, auto-h
 - `make check`: eslint 0 errors / 0 warnings, strict schema compile, `gjs -m` unit tests green.
 - `make pack`, and the prefs pages smoke-built under Xvfb.
 - `make smoke`: headless Shell 46 with shims.
-- **GNOME 50 (supported) headless run:** in progress. See section 4d.
+- **GNOME 50 (supported) headless run:** done on Fedora 44 packages (GNOME Shell 50.6). 20 enable/disable cycles, 8 functional probes PASS, 0 Kiwi errors, 0 Shell warnings. See section 4d.
 - **Earlier, other versions (not supported in this release):** headless GNOME Shell 48.1 and 51.1 (Arch chroot). Each had 20 enable/disable cycles, 7 functional probes PASS and 0 Kiwi errors. They show the shared code loads, not that GNOME 50 works.
 
 Headless runs can't check looks, real input or real apps, so please work through the manual list on Fedora 44 Workstation with GNOME 50 on Wayland.
@@ -121,6 +121,7 @@ Run each item on Fedora 44 Workstation, GNOME 50, in a Wayland session (GNOME 50
 - [ ] Alt-tab, then click other windows. Expected: buttons follow focus at once; they hide on an empty desktop and in the overview.
 - [ ] Hover one button. Expected: glyphs show on all three (Kiwi png mode). Turn app-window-buttons off. Expected: symbolic icons.
 - [ ] Set scope to maximized, then fullscreen. Expected: floating windows hide the controls under "maximized"; only fullscreen shows them under "fullscreen"; changes apply live.
+- [ ] Fresh install on stock Fedora 44 (`button-layout` `appmenu:close`), focus any window. Expected: close, minimize and maximize show on the left of the top bar, in that order, before the app name.
 - [ ] Set position left, right and system, and set `button-layout` to `appmenu:minimize,maximize,close` with position system. Expected: controls sit right, last slot; with calendar-right on they are still last.
 - [ ] Play a fullscreen video. Expected: minimize greyed, close inert for 3 s.
 - [ ] Open a GTK3 app and a GTK4 app (Files). Expected: own titlebar buttons gone and the window is still draggable. Turn remove-titlebar-buttons off. Expected: buttons return.
@@ -291,14 +292,14 @@ Run each item on Fedora 44 Workstation, GNOME 50, in a Wayland session (GNOME 50
 - **Firefox `Hidden.css` gate:** hiding Firefox's native buttons now needs the per-app styling key (plus window controls and `remove-titlebar-buttons`). This is an orchestrator default; please confirm.
 - **Defaults that differ from main:** `panel-transparency` true → false, `keyboard-indicator` false → true, `dock-blur` false → true. Confirm or revert.
 - **Auto-hide plus titlebar removal:** both are on by default, so a window has no titlebar buttons and its panel controls sit in a hidden bar until you push the top edge. Decide whether one default should change.
-- **`button-layout` default shows close only:** with window-controls position `system`, Kiwi follows GNOME's default `appmenu:close`, so the panel shows only a close button. Positions `left`/`right` show all three. Decide whether the default position should change.
+- **Window controls default to the left:** `window-controls-position` now defaults to `left`, so stock GNOME 50 (`appmenu:close`) shows close, minimize and maximize on the left. Position `system` still follows GNOME's layout (close only on stock Fedora).
 - **Clipboard persisted to disk by default** (owner decision, kept): the secret detection is a heuristic, so the metadata wording must not promise more. The shortcut stays empty by default (EGO); the spec asked for `<Super><Shift>v`.
 - **Privacy defaults chosen by the orchestrator, you may override:** `notch-show-clipboard` off, and Spotlight empty-query clipboard off.
 
 ### Known limits
 - **Other GNOME versions come later.** This release supports only GNOME 50 on Fedora 44. The 48, 49 and 51 code paths in `lib/compat.js` are kept and were partly exercised headless (48.1, 51.1), but they are not claimed and not supported in this release.
 - **Server-side-decorated windows keep their own buttons.** Kiwi doesn't write the system `button-layout` key (Qt, Electron).
-- **Super-tap takeover:** Kiwi blocks the oldest `overlay-key` handler (assumed to be the Shell's). A Spotlight open/close probe passed on headless 48.1 and 51.1 (GNOME 50 run pending), but the probe did not press a real Super key.
+- **Super-tap takeover:** Kiwi blocks the oldest `overlay-key` handler (assumed to be the Shell's). A Spotlight open/close probe passed on headless 50.6, 48.1 and 51.1, but the probe did not press a real Super key.
 - **Quick Paste uses a virtual-keyboard Ctrl+V** (Ctrl+Shift+V for terminals). Pasting into a real app window has not been tested.
 - **Liquid Glass refraction is experimental.**
   - It forces the still wallpaper-copy path and cannot bend the live backdrop.
@@ -314,7 +315,7 @@ Run each item on Fedora 44 Workstation, GNOME 50, in a Wayland session (GNOME 50
 
 ## 4b. EGO submission notes
 
-- **Version coverage:** `metadata.json` lists shell-version `["50"]` only. A headless GNOME 50 run is in progress (section 4d). Earlier headless runs on 48.1 and 51.1 cover other versions only. The owner must test on Fedora 44 Workstation with GNOME 50 before uploading to extensions.gnome.org.
+- **Version coverage:** `metadata.json` lists shell-version `["50"]` only. A headless GNOME 50.6 run on Fedora 44 packages passed (section 4d). Earlier headless runs on 48.1 and 51.1 cover other versions only. The owner must test on Fedora 44 Workstation with GNOME 50 before uploading to extensions.gnome.org.
 - **`overlay-key` handler block (Spotlight):** Kiwi finds the oldest `overlay-key` handler on the display (assumed to be the Shell's overview handler) with `signal_handler_find` and blocks only that id, then connects its own. Disable disconnects its own handler and unblocks that id. If not found, it warns and stock behaviour stays. Other extensions' handlers are untouched; the blocked handler id is logged at debug level. The assumption was read from the 51.1 source only.
 - **Dash to Dock settings writes:** the adaptive-colours feature writes Dash to Dock colour keys. Originals are saved to the Kiwi key `dock-colors-saved`, restored on disable, and restored on the next enable after a crash (`restoreStaleColors`). Keys that were at their default are `reset()`, and keys the user changed while Kiwi ran are left alone.
 - **`favorite-apps` write (Launchpad):** `launchpadApp.js` inserts a synthetic Launchpad desktop id into the shell's `favorite-apps` after the first favourite. On disable it removes only its own id, and resets the key when it was the default before and is the default again.
@@ -336,7 +337,11 @@ Run each item on Fedora 44 Workstation, GNOME 50, in a Wayland session (GNOME 50
 
 ### GNOME 50 (the supported version)
 
-**A headless GNOME 50 run is in progress.** Results: _to be filled in by the orchestrator_.
+Headless real GNOME Shell 50.6 from **Fedora 44 packages** (a Fedora 44 root in a chroot; `gnome-shell --headless --wayland --virtual-monitor 1280x800`, surfaceless renderer, no GPU), on the merged branch:
+- 20 enable/disable cycles of the whole extension, then each feature toggled on and off.
+- **0 Kiwi errors** in the journal. 0 `isnan` / NaN geometry warnings, 0 "needs an allocation" warnings, 0 box-shadow warnings, 0 GC-sweep criticals.
+- 8 functional probes, all **PASS**: overview hidden at startup; notch receives a `notify-send` notification and the stock banner stays hidden; Spotlight opens and closes; Quick Settings shows 4 columns; maximize fills the work area and the panel controls show; Stage Manager hides and reveals windows; **window controls sit on the left as close, minimize, maximize on stock `button-layout` `appmenu:close`**; clipboard history records a copy.
+- An earlier notch "sweeping phase" CRITICAL seen once on 48.1 did not reproduce in 10 targeted runs (50.6, 51.1, 48.1) and came from a run where the probe was down; no notify handler on `global.display` exists in the notch code.
 
 ### Earlier runs on other versions (48.1, 51.1; not supported in this release)
 
@@ -379,11 +384,11 @@ Headless can't cover:
 - **Multi-monitor hardware:** the 1280x800 virtual monitor only; S9's 2-virtual-monitor run is not real hardware.
 - **Specific apps and extensions:** Firefox and Thunderbird profile styling, Dash to Dock (dock blur, colours, Launchpad), third-party Quick Settings extensions, password managers.
 - **Lock screen and suspend:** a real session lock, suspend/resume, login.
-- **GNOME 50 on Fedora 44:** the GNOME 50 headless run is pending (see above). No run used Fedora 44 packaging, its default extensions or its SELinux/Flatpak setup (all runs were in an Arch chroot).
+- **Fedora 44 desktop setup:** the GNOME 50 run used Fedora 44 packages in a chroot, but not Fedora's default extensions, SELinux, Flatpak apps, tuned-ppd or a real login session.
 
 ## 5. Not tested
 
-The supported platform is **Fedora 44 Workstation with GNOME 50**. A **GNOME 50 headless run is in progress** (section 4d). Earlier headless runs used other versions (48.1, 51.1), which this release does not support. Nobody has used these features on Fedora 44 or on any real desktop with a screen, GPU, real input and real apps.
+The supported platform is **Fedora 44 Workstation with GNOME 50**. A **headless GNOME 50.6 run on Fedora 44 packages passed** (section 4d). Earlier headless runs used other versions (48.1, 51.1), which this release does not support. Nobody has used these features on Fedora 44 or on any real desktop with a screen, GPU, real input and real apps.
 
 Also run in the cloud:
 - Pure-logic unit tests with `gjs -m` (`bash tests/run.sh`).
