@@ -7,6 +7,7 @@ import GObject from 'gi://GObject';
 import Gio from 'gi://Gio';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
+import { PanelLayout } from '../coordinators/panelLayout.js';
 
 export const LockIcon = GObject.registerClass(
 class LockIcon extends PanelMenu.Button {
@@ -102,6 +103,7 @@ class LockIcon extends PanelMenu.Button {
 });
 
 let lockIcon = null;
+let lockSlot = null;
 
 /**
  * @param extension the Extension object (optional); its icons/ folder is used.
@@ -113,11 +115,17 @@ export function enable(extension) {
             Gio.File.new_for_uri(import.meta.url).get_parent().get_parent();
         lockIcon = new LockIcon(dir);
         Main.panel.addToStatusArea('lock-indicator', lockIcon, 0, 'right');
+        // Leftmost of the right box, whatever else is enabled (see coordinators/panelLayout.js)
+        lockSlot = PanelLayout.claim(null, {
+            id: 'lock-indicator', actor: lockIcon.container, box: 'right', anchor: { first: true },
+        });
     }
 }
 
 export function disable() {
     if (lockIcon) {
+        lockSlot?.release();
+        lockSlot = null;
         lockIcon.destroy();
         lockIcon = null;
     }
