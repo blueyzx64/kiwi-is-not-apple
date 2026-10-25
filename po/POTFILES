@@ -10,6 +10,7 @@ apps/liquidGlass/prefs.js
 apps/mediaPlayback.js
 apps/panelMedia.js
 apps/quickSettingsNotifications.js
+apps/stageManager/prefs.js
 apps/windowControls/prefs.js
 apps/windowTiling.js
 apps/windowTitle.js

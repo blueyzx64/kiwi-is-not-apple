@@ -28,10 +28,11 @@ import * as liquidGlassPrefs from './apps/liquidGlass/prefs.js';
 import * as windowControlsPrefs from './apps/windowControls/prefs.js';
 import * as autohidePrefs from './apps/autohide/prefs.js';
 import * as controlCenterPrefs from './apps/controlCenter/prefs.js';
+import * as stageManagerPrefs from './apps/stageManager/prefs.js';
 
 // Feature prefs modules (see apps/<feature>/prefs.js): PAGE says where, buildPrefs() makes the groups
 // New pages appear in this order, after Options and before Advanced (Liquid Glass first).
-const FEATURE_PREFS = [liquidGlassPrefs, windowControlsPrefs, autohidePrefs, controlCenterPrefs];
+const FEATURE_PREFS = [liquidGlassPrefs, windowControlsPrefs, autohidePrefs, controlCenterPrefs, stageManagerPrefs];
 
 const D2D_UUIDS = ['dash-to-dock@micxgx.gmail.com', 'ubuntu-dock@ubuntu.com'];
 const EXTENSION_ACTIVE = 1;

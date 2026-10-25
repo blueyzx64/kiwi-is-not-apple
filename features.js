@@ -45,6 +45,7 @@ import { enableDragRestore, disableDragRestore } from './apps/windowTiling.js';
 import { dockActive } from './apps/dockUtils.js';
 import { LiquidGlass } from './apps/liquidGlass/index.js';
 import { ControlCenter } from './apps/controlCenter/index.js';
+import { StageManager } from './apps/stageManager/index.js';
 import { Glass } from './lib/glass.js';
 
 // ctx: { extension, settings (Gio.Settings), gettext, interfaceSettings (Gio.Settings) }
@@ -272,5 +273,11 @@ export const FEATURES = [
         // Quick Settings restyled as a Control Center; last so it sees the other panel features
         id: 'control-center', setting: 'control-center',
         cls: ControlCenter,
+    },
+    {
+        // Stage Manager wins over these (decisions.md); their saved values are kept
+        id: 'stage-manager', setting: 'stage-manager',
+        cls: StageManager,
+        conflictsWith: ['minimize-to-dock', 'move-window-to-new-workspace', 'tiling-title-menu'],
     },
 ];

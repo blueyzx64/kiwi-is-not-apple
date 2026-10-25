@@ -1104,3 +1104,31 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
     background-color: -st-accent-color;
     color: -st-accent-fg-color;
 }
+
+/* feature: stage-manager */
+/* Strip pill. The glass layer (blur, tint, rim) comes from lib/glass.js; this only gives a
+   fallback tint for when glass is off or opaque, and the card look. */
+.kiwi-stage-strip {
+    border-radius: 22px;
+    background-color: rgba(30, 30, 30, 0.28);
+}
+
+.kiwi-stage-card {
+    border-radius: 12px;
+    padding: 0;
+    background-color: transparent;
+    border: 1px solid transparent;
+    transition-duration: 120ms;
+}
+
+.kiwi-stage-card:hover,
+.kiwi-stage-card:focus {
+    background-color: rgba(255, 255, 255, 0.10);
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+.kiwi-stage-badge {
+    border-radius: 9px;
+    background-color: rgba(0, 0, 0, 0.35);
+    padding: 2px;
+}
