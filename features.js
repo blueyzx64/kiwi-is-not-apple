@@ -43,6 +43,8 @@ import { enable as downloadsStackEnable, disable as downloadsStackDisable } from
 import { enable as reduceWindowAnimationsEnable, disable as reduceWindowAnimationsDisable } from './apps/reduceWindowAnimations.js';
 import { enableDragRestore, disableDragRestore } from './apps/windowTiling.js';
 import { dockActive } from './apps/dockUtils.js';
+import { LiquidGlass } from './apps/liquidGlass/index.js';
+import { Glass } from './lib/glass.js';
 
 // ctx: { extension, settings (Gio.Settings), gettext, interfaceSettings (Gio.Settings) }
 const bool = (ctx, key) => ctx.settings.get_boolean(key);
@@ -233,7 +235,7 @@ export const FEATURES = [
     },
     {
         id: 'dock-blur', reapply: true,
-        when: ctx => dockActive() && bool(ctx, 'dock-blur'),
+        when: ctx => dockActive() && Glass.wants('dock', ctx.settings),
         enable: () => dockBlurEnable(),
         disable: () => dockBlurDisable(),
     },
@@ -255,5 +257,10 @@ export const FEATURES = [
         restartOn: ['launchpad-app-custom-icon'],
         enable: ctx => launchpadAppEnable(ctx.extension, ctx.gettext),
         disable: () => launchpadAppDisable(),
+    },
+    {
+        // Frosted panel and menus; the dock and wallpaper blur ride on the same service
+        id: 'liquid-glass', setting: 'liquid-glass',
+        cls: LiquidGlass,
     },
 ];

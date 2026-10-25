@@ -1,5 +1,6 @@
 apps/downloadsStack.js
 apps/launchpadApp.js
+apps/liquidGlass/prefs.js
 apps/mediaPlayback.js
 apps/panelMedia.js
 apps/quickSettingsNotifications.js

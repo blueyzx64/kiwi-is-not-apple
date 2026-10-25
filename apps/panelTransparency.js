@@ -6,11 +6,11 @@ import GLib from 'gi://GLib';
 import St from 'gi://St';
 import Gio from 'gi://Gio';
 import Meta from 'gi://Meta';
-import Shell from 'gi://Shell';
 import GdkPixbuf from 'gi://GdkPixbuf';
 import Clutter from 'gi://Clutter';
 
-import { connectPaintSignal } from './blurPaintSignal.js';
+import { Glass } from '../lib/glass.js';
+import { CleanupRegistry } from '../lib/disposables.js';
 
 let settings;
 let enabled = false;
@@ -54,182 +54,38 @@ const ICON_LUMINANCE_MIN = 0.6;      // above this the icon counts as light
 const ICON_LUMINANCE_MAX_DARK = 0.4; // below this it counts as dark
 const ICON_SPREAD_MAX = 0.15;        // luminance std dev; above this it has its own contrast
 
-// Blur state
-let blurEffect = null;
-let blurBackgroundGroup = null;
-let blurWidget = null;
-let blurSizeSignals = [];
-let blurPaintSignals = []; // paint signal connections to force blur repaint
-let blurRepaintIdleId = 0; // idle source for coalesced blur repaints
-
-// --- Panel blur helpers ---
-// Uses the same approach as blur-my-shell: a Meta.BackgroundGroup (width/height 0)
-// containing an St.Widget with Shell.BlurEffect, inserted at index 0 of panelBox.
-// Meta.BackgroundGroup doesn't participate in layout allocation, so it won't
-// create a "second panel" like a bare St.Widget would.
+// Blur state. The blur itself (and its tint, Liquid Glass tiers, legacy panel-blur key,
+// repaint workarounds) is lib/glass.js; this module only says when the panel is see-through.
+let blurHandle = null;
+let blurWanted = false;   // last visibility updatePanelStyle asked for
+let glassRegistry = null;
 
 function createBlurEffect() {
     destroyBlurEffect();
 
     const panel = Main.panel;
     const panelBox = panel.get_parent();
-    if (!panelBox) return;
+    if (!panelBox)
+        return;
 
-    // Container that doesn't affect layout
-    blurBackgroundGroup = new Meta.BackgroundGroup({
-        name: 'kiwi-panel-blur-group',
-        width: 0,
-        height: 0,
+    // layers: 'blur' - the panel keeps its own (adjustable) background colour
+    blurHandle = Glass.attach(panel, {
+        surface: 'panel',
+        parent: panelBox,
+        layers: 'blur',
+        name: 'kiwi-panel-blur',
     });
-
-    // Widget sized to match panel — carries the blur effect
-    blurWidget = new St.Widget({ name: 'kiwi-panel-blur' });
-
-    blurEffect = new Shell.BlurEffect({
-        mode: Shell.BlurMode.BACKGROUND,
-        radius: 30,
-        brightness: 1.0,
-    });
-    blurWidget.add_effect(blurEffect);
-
-    // Force throttled blur repaints when content above the blur repaints
-    // (panel button hover, shadows) — fixes lingering squared artifacts
-    // (GNOME Shell #2857).
-    connectPaintSignal(blurWidget, _scheduleBlurRepaint);
-
-    blurBackgroundGroup.insert_child_at_index(blurWidget, 0);
-    panelBox.insert_child_at_index(blurBackgroundGroup, 0);
-
-    // Size/position the blur widget to match the panel
-    _updateBlurSize();
-
-    // Track panel position/size changes
-    blurSizeSignals.push(
-        panel.connect('notify::position', _updateBlurSize),
-        panel.connect('notify::size', _updateBlurSize),
-    );
-    blurSizeSignals.push(
-        panelBox.connect('notify::size', _updateBlurSize),
-        panelBox.connect('notify::position', _updateBlurSize),
-    );
-
-    // Force blur repaint when background actors repaint.
-    // Shell.BlurEffect with BACKGROUND mode relies on reading the framebuffer
-    // beneath the widget, but the compositor's clipped-redraws optimization
-    // often skips repainting the blur when only the background changes.
-    // This is the same workaround used by blur-my-shell (GNOME Shell #2857).
-    _connectPaintSignals();
-}
-
-function _scheduleBlurRepaint() {
-    if (blurRepaintIdleId || !blurEffect) return;
-    blurRepaintIdleId = GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
-        blurRepaintIdleId = 0;
-        if (blurEffect && blurWidget.visible)
-            blurEffect.queue_repaint();
-        return GLib.SOURCE_REMOVE;
-    });
-}
-
-function _connectPaintSignals() {
-    _disconnectPaintSignals();
-
-    const backgroundGroup = Main.layoutManager._backgroundGroup;
-
-    // Connect to each current background actor
-    for (const bg of backgroundGroup) {
-        _connectBgActor(bg);
-    }
-
-    // Re-connect when background actors are added/removed (monitor or wallpaper changes)
-    const addId = backgroundGroup.connect('child-added', (_group, child) => {
-        _connectBgActor(child);
-    });
-    const removeId = backgroundGroup.connect('child-removed', (_group, child) => {
-        // Remove entries for the departing actor (don't disconnect — it's already gone)
-        blurPaintSignals = blurPaintSignals.filter(s => s.actor !== child);
-    });
-    blurPaintSignals.push({ actor: backgroundGroup, id: addId });
-    blurPaintSignals.push({ actor: backgroundGroup, id: removeId });
-
-    // Event-driven repaint: only queue repaint when content actually changes
-    const restackedId = global.display.connect('restacked', _scheduleBlurRepaint);
-    blurPaintSignals.push({ actor: global.display, id: restackedId });
-
-    const wmSignals = ['map', 'destroy', 'minimize', 'unminimize', 'switch-workspace'];
-    for (const sigName of wmSignals) {
-        const id = global.window_manager.connect(sigName, _scheduleBlurRepaint);
-        blurPaintSignals.push({ actor: global.window_manager, id });
-    }
-
-    const showId = Main.overview.connect('showing', _scheduleBlurRepaint);
-    const hideId = Main.overview.connect('hidden', _scheduleBlurRepaint);
-    blurPaintSignals.push({ actor: Main.overview, id: showId });
-    blurPaintSignals.push({ actor: Main.overview, id: hideId });
-}
-
-function _connectBgActor(bg) {
-    const contentId = bg.connect('notify::content', _scheduleBlurRepaint);
-    // Auto-cleanup when the actor is destroyed (avoids accessing disposed objects)
-    const destroyId = bg.connect('destroy', () => {
-        blurPaintSignals = blurPaintSignals.filter(s => s.actor !== bg);
-    });
-    blurPaintSignals.push({ actor: bg, id: contentId });
-    blurPaintSignals.push({ actor: bg, id: destroyId });
-}
-
-function _disconnectPaintSignals() {
-    // Copy and clear first so destroy-signal callbacks don't mutate mid-iteration
-    const signals = blurPaintSignals;
-    blurPaintSignals = [];
-    for (const { actor, id } of signals)
-        actor.disconnect(id);
-    if (blurRepaintIdleId) {
-        GLib.Source.remove(blurRepaintIdleId);
-        blurRepaintIdleId = 0;
-    }
-}
-
-function _updateBlurSize() {
-    const panel = Main.panel;
-    if (!blurWidget) return;
-
-    blurWidget.set_position(panel.x, panel.y);
-    blurWidget.set_size(panel.width, panel.height);
-    _scheduleBlurRepaint();
+    blurHandle.setVisible(blurWanted);
 }
 
 function destroyBlurEffect() {
-    const panel = Main.panel;
-    const panelBox = panel.get_parent();
-
-    // Disconnect size tracking signals
-    if (blurSizeSignals.length > 0) {
-        // First two signals are on the panel, last two on panelBox
-        panel.disconnect(blurSizeSignals[0]);
-        panel.disconnect(blurSizeSignals[1]);
-        if (panelBox) {
-            panelBox.disconnect(blurSizeSignals[2]);
-            panelBox.disconnect(blurSizeSignals[3]);
-        }
-        blurSizeSignals = [];
-    }
-
-    _disconnectPaintSignals();
-
-    // destroy() also unparents it and destroys its children
-    if (blurBackgroundGroup) {
-        blurBackgroundGroup.destroy();
-        blurBackgroundGroup = null;
-    }
-    blurWidget = null;
-    blurEffect = null;
+    blurHandle?.destroy();
+    blurHandle = null;
 }
 
 function updateBlurVisibility(visible) {
-    if (blurWidget) {
-        blurWidget.visible = visible;
-    }
+    blurWanted = visible;
+    blurHandle?.setVisible(visible);
 }
 
 // --- Adaptive foreground helpers ---
@@ -600,12 +456,13 @@ function updatePanelStyle(alpha = null) {
         if (alpha !== null) {
             lastForcedAlpha = alpha;
         }
-        const opacity = lastForcedAlpha ?? settings.get_int('panel-transparency-level') / 100;
+        // High contrast (Glass opaque tier): a solid panel
+        const opacity = blurHandle?.tier === 'opaque'
+            ? 1.0 : lastForcedAlpha ?? settings.get_int('panel-transparency-level') / 100;
         const newStyle = `background-color: rgba(${r}, ${g}, ${b}, ${opacity}) !important;`;
         
         // Show/hide blur regardless of whether style string changed
-        const blurEnabled = settings.get_boolean('panel-blur');
-        updateBlurVisibility(blurEnabled && opacity < 1.0);
+        updateBlurVisibility(opacity < 1.0);
         updateForegroundContrast(opacity, _luminance({ red: r, green: g, blue: b }));
 
         if (ownBackground !== newStyle) {
@@ -749,14 +606,6 @@ function setupSignals() {
         }),
         settings.connect('changed::panel-invert-tray-icons', () => {
             updatePanelStyle(null);
-        }),
-        settings.connect('changed::panel-blur', () => {
-            if (settings.get_boolean('panel-blur')) {
-                createBlurEffect();
-                checkWindowTouchingPanel();
-            } else {
-                destroyBlurEffect();
-            }
         })
     ];
 
@@ -895,10 +744,17 @@ export function enable(_settings) {
     // Apply panel color fix on startup
     applyPanelColorFix();
 
-    // Create blur effect if blur is enabled
-    if (settings.get_boolean('panel-blur')) {
-        createBlurEffect();
-    }
+    // The glass layer is always attached; lib/glass.js decides whether it is drawn
+    // (Liquid Glass panel surface, or the legacy panel-blur key while it is off).
+    createBlurEffect();
+    glassRegistry = new CleanupRegistry();
+    let glassReady = false;
+    Glass.watch(glassRegistry, () => {
+        // High contrast turns the panel solid; leaving it restores the user's level
+        if (glassReady)
+            updatePanelStyle(null);
+    });
+    glassReady = true;
 
     timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
         checkWindowTouchingPanel();
@@ -975,7 +831,10 @@ export function disable() {
     contentIcons = new WeakMap();
 
     // Destroy blur effect
+    glassRegistry?.dispose();
+    glassRegistry = null;
     destroyBlurEffect();
+    blurWanted = false;
 
     // Remove CSS classes and give the panel its pre-Kiwi style back
     const panel = Main.panel;

@@ -1,0 +1,49 @@
+<!-- S3 fragment: paste inside <schema> of org.gnome.shell.extensions.kiwi.gschema.xml -->
+      <!-- Liquid Glass (apps/liquidGlass, lib/glass.js) -->
+      <key name="liquid-glass" type="b">
+        <default>true</default>
+        <summary>Liquid Glass</summary>
+        <description>Frosted, translucent shell surfaces. Off keeps solid surfaces; the old Panel Blur and Dock Blur switches then apply again.</description>
+      </key>
+      <key name="liquid-glass-style" type="s">
+        <default>'tinted'</default>
+        <summary>Liquid Glass style</summary>
+        <description>"tinted" is easier to read. "clear" is more transparent.</description>
+      </key>
+      <key name="liquid-glass-blur" type="i">
+        <default>30</default>
+        <range min="0" max="100"/>
+        <summary>Liquid Glass blur</summary>
+        <description>Blur radius behind glass surfaces.</description>
+      </key>
+      <key name="liquid-glass-tint" type="i">
+        <default>55</default>
+        <range min="0" max="100"/>
+        <summary>Liquid Glass tint</summary>
+        <description>How strongly glass surfaces are tinted. The default keeps text readable over any wallpaper.</description>
+      </key>
+      <key name="liquid-glass-highlight" type="b">
+        <default>true</default>
+        <summary>Liquid Glass highlight</summary>
+        <description>Draw a thin light edge along the top of glass surfaces.</description>
+      </key>
+      <key name="liquid-glass-refraction" type="b">
+        <default>false</default>
+        <summary>Liquid Glass edge refraction (experimental)</summary>
+        <description>Bend the picture at the edges of glass surfaces. Experimental; uses a still copy of the wallpaper instead of the live screen.</description>
+      </key>
+      <key name="liquid-glass-surfaces" type="as">
+        <default>['panel', 'menus', 'dock', 'overlays']</default>
+        <summary>Liquid Glass surfaces</summary>
+        <description>Which surfaces use glass: panel, menus, dock, overlays.</description>
+      </key>
+      <key name="liquid-glass-performance" type="b">
+        <default>false</default>
+        <summary>Liquid Glass performance mode</summary>
+        <description>Blur a still copy of the wallpaper instead of the live screen.</description>
+      </key>
+      <key name="liquid-glass-off-in-powersave" type="b">
+        <default>true</default>
+        <summary>Performance mode in Power Saver</summary>
+        <description>Switch to performance mode automatically while the Power Saver profile is active.</description>
+      </key>
