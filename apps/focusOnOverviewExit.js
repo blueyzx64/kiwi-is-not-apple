@@ -6,6 +6,7 @@ import Clutter from 'gi://Clutter';
 
 import { InjectionManager } from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import { windowForActor } from './util/windows.js';
 import { ControlsManager } from 'resource:///org/gnome/shell/ui/overviewControls.js';
 
 let _injectionManager = null;
@@ -14,22 +15,12 @@ let _overviewHidingId = 0;
 let _stageEventId = 0;
 let _hoveredWindow = null;
 
-// The pointer lands on a child of a preview (the clone, the icon, the caption),
-// so walk up until an ancestor names the window it stands for.
-function _windowForActor(actor) {
-    for (let a = actor; a; a = a.get_parent()) {
-        if (a.metaWindow)
-            return a.metaWindow;
-    }
-    return null;
-}
-
 function _onStageEvent(stage, event) {
     const type = event.type();
     if (type !== Clutter.EventType.MOTION && type !== Clutter.EventType.ENTER)
         return Clutter.EVENT_PROPAGATE;
 
-    const window = _windowForActor(stage.get_event_actor(event));
+    const window = windowForActor(stage.get_event_actor(event));
     if (window === _hoveredWindow)
         return Clutter.EVENT_PROPAGATE;
 

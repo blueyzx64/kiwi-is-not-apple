@@ -37,7 +37,7 @@ import { KiwiSettings } from '../lib/settings.js';
 import { watchReducedMotion, setUnredirectAllowed, STOCK_PANEL_CHROME } from '../lib/compat.js';
 import {
     MIGRATIONS, initialState, step, visible, wantsStrut, modeFromSettings,
-    edgeSegments, hasMonitorAbove,
+    edgeSegments, hasMonitorAbove, chromeFlagsFor,
 } from './panelVisibilityModel.js';
 
 const SHOW_MS = 320;
@@ -163,7 +163,14 @@ export class PanelVisibilityFeature {
         this._desktopQueued = 0;
 
         const box = this._box;
-        const saved = { trackHover: box.track_hover, reactive: box.reactive };
+        // The public chrome API has no getter, so read the layout manager's tracking record
+        // (private _trackedActors, guarded; falls back to the stock flags if it is gone).
+        const saved = {
+            trackHover: box.track_hover,
+            reactive: box.reactive,
+            visible: box.visible,
+            chrome: chromeFlagsFor(Main.layoutManager._trackedActors, box, STOCK_PANEL_CHROME),
+        };
         // Registered first, so it runs last on dispose: put the bar back exactly as the stock
         // shell has it.
         cleanup.add(() => this._restore(saved));
@@ -393,8 +400,8 @@ export class PanelVisibilityFeature {
         const lm = Main.layoutManager;
         lm.untrackChrome(box);
         // _trackActor re-evaluates visibility itself: hidden again over a fullscreen window.
-        box.show();
-        lm.trackChrome(box, { ...STOCK_PANEL_CHROME });
+        box.visible = saved.visible;
+        lm.trackChrome(box, { ...saved.chrome });
         this._strut = true;
     }
 

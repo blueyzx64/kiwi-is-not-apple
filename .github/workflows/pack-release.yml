@@ -56,11 +56,8 @@ jobs:
 
       - name: Upload pack to release
         if: github.event_name == 'release'
-        uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ${{ steps.pack.outputs.asset }}
-          asset_name: ${{ steps.pack.outputs.asset }}
-          asset_content_type: application/zip
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.release.tag_name }}
+          ASSET: ${{ steps.pack.outputs.asset }}
+        run: gh release upload "$TAG" "$ASSET" --clobber

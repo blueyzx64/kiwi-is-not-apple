@@ -89,3 +89,50 @@ Attach in `enable()` and add `cleanup.add(() => h.destroy())`. Check `Glass.moti
 - `connect(cleanup, fn({visible, autoHiding, mode}))` fires on visibility or mode changes.
 - Feature id `panel-autohide`. Style class `kiwi-panel-autohide` is on Main.panel while it runs.
 - Not done: no banner-offset hold and no drag-and-drop hold.
+
+## coordinators/windowState.js (frozen from S9, feat/stage-manager; not merged yet)
+`import { WindowState } from '../coordinators/windowState.js'` is a singleton. `WindowStateRegistry` is the class, for tests.
+- FLAGS: `staged | isolatedFullscreen | tiled | parkedInDock`.
+- `set(win, flag, on=true) -> changed`, `has(win, flag)`, `flags(win)`, `list(flag)`, `clear(win)`.
+  Call `clearFlag(flag)` in your disable().
+- `skipsDock(win)` is true for staged windows, and minimizedToDock skips them.
+  `hiddenFromSwitcher(win)` = parkedInDock && !staged, and only those are hidden by hideMinimizedWindows.
+- The `stageActive` getter and `setStageActive(bool)` are for Stage Manager only.
+  moveFullscreenWindow and windowTiling pause while it is true.
+- `watch(cleanup|fn, fn(win, flag, on)) -> stop`. The stage-mode event is `(null, 'stageActive', on)`.
+- `win._kiwiStaged` mirrors staged. Flags drop when the window emits 'unmanaged'.
+
+## lib/modalSurface.js and lib/keybindings.js (frozen from S4, feat/clipboard)
+- `new ModalSurface(cleanup, {id, build(frame, modal)->focusActor?, width?, height?, position:'center'|'top',
+  radius=24, styleClass?, onKeyPress?(event, modal)->Clutter.EVENT_STOP|PROPAGATE, onClosed?})`
+  - `build` runs on every open with a fresh `St.BoxLayout` frame (class `kiwi-modal`). Glass 'overlays' is
+    already behind it, so do not attach again. Esc or an outside click closes it. It also closes on cleanup dispose.
+  - `open()->bool` (false if already open), `close({immediate?})`, `toggle()`, `isOpen`, `frame`, `id`.
+  - Static: `registerForeign(id, closeFn)->unregister`, `closeAll()`, `openId`. Opening one modal closes the
+    open one and every registered foreign overlay (the Downloads fan is registered).
+- `Keybindings` (module singleton):
+  - `add(cleanup, name, rawGSettings, handler, {flags?, modes?})->bool`. `name` is an `as` key in Kiwi's schema.
+    Defaults: IGNORE_AUTOREPEAT, NORMAL|OVERVIEW. Removed on dispose.
+  - `remove(name)`, `removeAll()`, `has(name)`, `names()`, `conflicts([accels])->[{accel, with}]`.
+- `clipboardService()` from apps/clipboard/index.js is null when the feature is off. Otherwise it has
+  `.search(q, n)`, `.latest(n)`, `.copy(entry)`, `.connectChanged(fn)`, `.connectCopied(fn(entry))`.
+- windowState additions (S9 Wave D): `setMinimizeInterceptor(fn(win)->bool)` and `interceptMinimize(win)->bool`.
+  `interceptMinimize` returns false unless stageActive. Callers ask it before `win.minimize()`.
+
+## apps/util/windows.js (frozen from D4, debt/window-utils)
+- `isHelperWindowInfo({title, appName})->bool` (same rule as windowControls `isExcludedWindow`),
+  `isUserWindow(win, appName=null)->bool`, `windowForActor(actor)->?Meta.Window`. No gi imports.
+
+## Notch coordinators (frozen from S8, feat/notch; not merged yet)
+- `NotificationRouter`:
+  - `setBannerSink(cleanup, {present(n)})->{release}` and `pinBanners(cleanup)->{release}`.
+  - `connect(cleanup, fn({count, dnd}))` fires on change only.
+  - `state()`, `setDnd(bool)`, `isDiverting()`.
+  - It is the single owner of banner routing and of DnD state.
+- `MprisWatcher.acquire(cleanup, gettext)->{players, on('player-added'|'player-removed', fn), release()}`:
+  refcounted, the only MPRIS watcher. Player and Source live in lib/mpris.js.
+  The Control Center Now Playing tile moves to it after the notch merges.
+- `apps/notch/stateMachine.js`: `initialState, step, view, nextDeadline, wantsBar, URGENCY, SIZES, DEFAULT_CONFIG`.
+- lib/compat.js adds: `takeQueuedBanner, kickTray, canDivertBanners, canDivertOsd`.
+- ModalSurface delta (S4): options `offsetTop` (px, position 'top') and `onCapturedKey(event, modal)` (capture phase).
+  The open fade is on the overlay. `open()` logs why it failed.

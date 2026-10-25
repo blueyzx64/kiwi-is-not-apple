@@ -27,10 +27,14 @@ import { ExtensionPreferences, gettext as _ } from 'resource:///org/gnome/Shell/
 import * as liquidGlassPrefs from './apps/liquidGlass/prefs.js';
 import * as windowControlsPrefs from './apps/windowControls/prefs.js';
 import * as autohidePrefs from './apps/autohide/prefs.js';
+import * as controlCenterPrefs from './apps/controlCenter/prefs.js';
+import * as clipboardPrefs from './apps/clipboard/prefs.js';
+import * as spotlightPrefs from './apps/spotlight/prefs.js';
+import * as stageManagerPrefs from './apps/stageManager/prefs.js';
 
 // Feature prefs modules (see apps/<feature>/prefs.js): PAGE says where, buildPrefs() makes the groups
 // New pages appear in this order, after Options and before Advanced (Liquid Glass first).
-const FEATURE_PREFS = [liquidGlassPrefs, windowControlsPrefs, autohidePrefs];
+const FEATURE_PREFS = [liquidGlassPrefs, windowControlsPrefs, autohidePrefs, controlCenterPrefs, clipboardPrefs, spotlightPrefs, stageManagerPrefs];
 
 const D2D_UUIDS = ['dash-to-dock@micxgx.gmail.com', 'ubuntu-dock@ubuntu.com'];
 const EXTENSION_ACTIVE = 1;
@@ -593,7 +597,6 @@ export default class KiwiPreferences extends ExtensionPreferences {
             { key: 'custom-dnd-button', title: _("Custom Do Not Disturb Button"), subtitle: _("Replace the system Do Not Disturb button with Kiwi's custom implementation") },
             { key: 'lock-icon', title: _("Caps Lock and Num Lock"), subtitle: _("Show Caps Lock and Num Lock icon") },
             { key: 'hide-activities-button', title: _("Hide Activities Button"), subtitle: _("Hide the Activities button in the top panel") },
-            { key: 'add-username-to-quick-menu', title: _("Add Username"), subtitle: _("Add username to the quick menu") },
         ]);
 
         const panelStylingGroup = new Adw.PreferencesGroup({

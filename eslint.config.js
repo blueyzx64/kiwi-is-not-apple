@@ -78,8 +78,11 @@ export default [
         },
     },
     {
-        // prefs runs in its own process: no Shell libs, no Shell globals
-        files: ['prefs.js', 'apps/*/prefs.js'],
-        languageOptions: {globals: {global: 'off'}},
+        // prefs runs in its own process: no Shell globals. gettext must be imported
+        // (`gettext as _`) or taken from the extension; N_ is not provided there.
+        files: ['prefs.js', 'apps/**/prefs.js', 'prefs/**/*.js'],
+        languageOptions: {
+            globals: {global: 'off', _: 'off', C_: 'off', N_: 'off', ngettext: 'off'},
+        },
     },
 ];

@@ -44,7 +44,11 @@ import { enable as reduceWindowAnimationsEnable, disable as reduceWindowAnimatio
 import { enableDragRestore, disableDragRestore } from './apps/windowTiling.js';
 import { dockActive } from './apps/dockUtils.js';
 import { LiquidGlass } from './apps/liquidGlass/index.js';
+import { ControlCenter } from './apps/controlCenter/index.js';
+import { StageManager } from './apps/stageManager/index.js';
 import { Glass } from './lib/glass.js';
+import { ClipboardHistory } from './apps/clipboard/index.js';
+import { SpotlightFeature } from './apps/spotlight/index.js';
 
 // ctx: { extension, settings (Gio.Settings), gettext, interfaceSettings (Gio.Settings) }
 const bool = (ctx, key) => ctx.settings.get_boolean(key);
@@ -75,7 +79,9 @@ export const FEATURES = [
         disable: () => moveFullscreenDisable(),
     },
     {
-        id: 'add-username-to-quick-menu', reapply: true, setting: 'add-username-to-quick-menu',
+        // The Control Center user row replaces this
+        id: 'add-username-to-quick-menu', reapply: true,
+        when: ctx => bool(ctx, 'add-username-to-quick-menu') && !bool(ctx, 'control-center'),
         enable: () => addUsernameEnable(),
         disable: () => addUsernameDisable(),
     },
@@ -94,7 +100,8 @@ export const FEATURES = [
         // Also re-applied alone when org.gnome.desktop.interface show-battery-percentage changes.
         id: 'battery-percentage', reapply: true,
         when: ctx => bool(ctx, 'battery-percentage') &&
-            !ctx.interfaceSettings.get_boolean('show-battery-percentage'),
+            !ctx.interfaceSettings.get_boolean('show-battery-percentage') &&
+            !(bool(ctx, 'control-center') && bool(ctx, 'battery-percentage-always')),
         enable: () => batteryPercentageEnable(),
         disable: () => batteryPercentageDisable(),
     },
@@ -138,6 +145,16 @@ export const FEATURES = [
         // so no restartOn keys are needed. Reacts to its own settings keys.
         id: 'window-controls', setting: 'show-window-controls',
         cls: WindowControlsFeature,
+    },
+    {
+        // Local clipboard history; its panel icon claims a slot through PanelLayout
+        id: 'clipboard-history', setting: 'clipboard-history',
+        cls: ClipboardHistory,
+    },
+    {
+        // Super tap / shortcut opens Spotlight; the clipboard provider reads clipboardService() lazily
+        id: 'spotlight', setting: 'spotlight',
+        cls: SpotlightFeature,
     },
     {
         // Modes always / fullscreen-hover / autohide; runs for the last two. Reacts to its own
@@ -244,7 +261,7 @@ export const FEATURES = [
         // Dock colors that follow the wallpaper behind the dock
         id: 'dock-adaptive-colors', reapply: true,
         when: ctx => dockActive() && bool(ctx, 'dock-adaptive-colors'),
-        enable: () => dockColorsEnable(),
+        enable: ctx => dockColorsEnable(ctx.settings),
         disable: () => dockColorsDisable(),
     },
     {
@@ -263,5 +280,16 @@ export const FEATURES = [
         // Frosted panel and menus; the dock and wallpaper blur ride on the same service
         id: 'liquid-glass', setting: 'liquid-glass',
         cls: LiquidGlass,
+    },
+    {
+        // Quick Settings restyled as a Control Center; last so it sees the other panel features
+        id: 'control-center', setting: 'control-center',
+        cls: ControlCenter,
+    },
+    {
+        // Stage Manager wins over these (decisions.md); their saved values are kept
+        id: 'stage-manager', setting: 'stage-manager',
+        cls: StageManager,
+        conflictsWith: ['minimize-to-dock', 'move-window-to-new-workspace', 'tiling-title-menu'],
     },
 ];
