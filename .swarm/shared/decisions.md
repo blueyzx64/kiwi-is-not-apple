@@ -68,3 +68,5 @@ All answered by the owner on 2026-10-25. Do not ask the owner again; ask the orc
   cards in `.swarm/shared/debt-cards.md`; R1 is a second reviewer next to S10.
 - New source folders: add them to the Makefile `EXTRA` list and the pack-release.yml loop. Run `make check`
   before handing off. Run `make pot` before release (CI does not).
+- Stage Manager pauses minimize-to-dock, move-window-to-new-workspace and tiling-title-menu while on
+  (feature spec §5). Alt-tab to a hidden window switches to its stage, as on macOS.

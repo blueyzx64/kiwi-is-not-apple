@@ -116,3 +116,9 @@ Attach in `enable()` and add `cleanup.add(() => h.destroy())`. Check `Glass.moti
   - `remove(name)`, `removeAll()`, `has(name)`, `names()`, `conflicts([accels])->[{accel, with}]`.
 - `clipboardService()` from apps/clipboard/index.js is null when the feature is off. Otherwise it has
   `.search(q, n)`, `.latest(n)`, `.copy(entry)`, `.connectChanged(fn)`, `.connectCopied(fn(entry))`.
+- windowState additions (S9 Wave D): `setMinimizeInterceptor(fn(win)->bool)` and `interceptMinimize(win)->bool`.
+  `interceptMinimize` returns false unless stageActive. Callers ask it before `win.minimize()`.
+
+## apps/util/windows.js (frozen from D4, debt/window-utils)
+- `isHelperWindowInfo({title, appName})->bool` (same rule as windowControls `isExcludedWindow`),
+  `isUserWindow(win, appName=null)->bool`, `windowForActor(actor)->?Meta.Window`. No gi imports.
