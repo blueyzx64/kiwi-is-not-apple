@@ -38,8 +38,8 @@ All answered by the owner on 2026-10-25. Do not ask the owner again; ask the orc
 - Wave 0: Firefox/Thunderbird profiles are touched only when the per-app styling key is on.
   Hiding Firefox's native buttons (`Hidden.css`) under panel controls now needs that key too.
   Owner to confirm; S2 must not re-add writes into a user `chrome/` without the styling key.
-- Settings migrations: add int key `settings-version`; every key rename is an idempotent
-  migration (pool H-migration) run once on enable, old key kept readable until removed.
+- Settings migrations: use `runMigrations` from lib/settings.js (idempotent; no version key).
+  Old key stays readable until removed.
 - Key overlaps (S10 key table in `.swarm/agents/S10.md`):
   - `panel-blur`/`dock-blur` -> S3 maps them onto `liquid-glass-surfaces` by migration.
   - `panel-hover-fullscreen` -> S6 migrates into `panel-autohide` mode.
