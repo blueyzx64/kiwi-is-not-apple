@@ -91,9 +91,13 @@ the process. Two traps, both verified:
    exposing realize", is why `advanced/` fell back to polling.
 2. The hook must return `TRUE` or it is removed after the first emission.
 
-Complete module (built with `-Wall -Wextra -Werror`, loaded with
-`GTK3_MODULES` into a GTK3 test app under Xvfb with `G_DEBUG=fatal-criticals`:
-all 3 titlebuttons wired; setting/unsetting PRELIGHT toggled the headerbar class):
+Complete module (built with `-fvisibility=hidden -Wall -Wextra -Werror
+-Wl,--as-needed`, loaded with `GTK3_MODULES` into GTK3 test apps under Xvfb with
+`G_DEBUG=fatal-criticals`, valgrind-clean): all 3 titlebuttons wired; synthetic
+enter/leave on the buttons' event windows toggles the headerbar class; the
+class clears after a button rebuild (`decoration-layout` change) and after
+hiding a hovered button — the two cases where the current `advanced/` code or a
+naive state-flags version leave it stuck:
 
 ```c
 #include <gtk/gtk.h>
@@ -109,6 +113,7 @@ any_titlebutton_prelit (GtkWidget *box)
     {
       GtkWidget *child = l->data;
       if (GTK_IS_BUTTON (child) &&
+          gtk_widget_get_mapped (child) &&   /* hidden/destroyed buttons keep PRELIGHT */
           gtk_style_context_has_class (gtk_widget_get_style_context (child), "titlebutton") &&
           (gtk_widget_get_state_flags (child) & GTK_STATE_FLAG_PRELIGHT))
         return TRUE;
@@ -117,15 +122,12 @@ any_titlebutton_prelit (GtkWidget *box)
 }
 
 static void
-on_state_flags_changed (GtkWidget *button, GtkStateFlags previous, gpointer user_data)
+update_target (GtkWidget *button, GtkWidget *target)
 {
-  GtkWidget *target = GTK_WIDGET (user_data);
   GtkWidget *box = gtk_widget_get_parent (button);
   GtkStyleContext *ctx = gtk_widget_get_style_context (target);
-  (void) previous;
 
-  /* Recompute from real widget state instead of counting enter/leave:
-   * nothing can get "stuck" when a leave event is missed. */
+  /* Recompute from real widget state instead of counting enter/leave. */
   if (box != NULL && GTK_IS_CONTAINER (box) && any_titlebutton_prelit (box))
     gtk_style_context_add_class (ctx, "titlebuttons-hover-alt");
   else
@@ -133,23 +135,40 @@ on_state_flags_changed (GtkWidget *button, GtkStateFlags previous, gpointer user
 }
 
 static void
+on_state_flags_changed (GtkWidget *button, GtkStateFlags previous, gpointer user_data)
+{
+  (void) previous;
+  update_target (button, GTK_WIDGET (user_data));
+}
+
+static void
+on_unmap (GtkWidget *button, gpointer user_data)
+{
+  /* Runs after GtkWidget's RUN_FIRST class handler, so @button is already
+   * unmapped. Covers hide, window minimise and button rebuilds. */
+  update_target (button, GTK_WIDGET (user_data));
+}
+
+static void
 wire_button (GtkWidget *button, GtkWidget *target)
 {
   if (g_object_get_qdata (G_OBJECT (button), wired_quark) != NULL)
     return;
-  /* Auto-disconnects when @target is finalized: no dangling user_data. */
+  /* Auto-disconnects when @target is finalized. */
   g_signal_connect_object (button, "state-flags-changed",
                            G_CALLBACK (on_state_flags_changed), target, 0);
+  g_signal_connect_object (button, "unmap", G_CALLBACK (on_unmap), target, 0);
   g_object_set_qdata (G_OBJECT (button), wired_quark, GINT_TO_POINTER (1));
 }
 
 static gboolean
-on_widget_realize (GSignalInvocationHint *ihint, guint n_params,
-                   const GValue *params, gpointer data)
+on_button_realize (GSignalInvocationHint *ihint,
+                   guint                  n_params,
+                   const GValue          *params,
+                   gpointer               data)
 {
-  GtkWidget *w = g_value_get_object (&params[0]);
   (void) ihint; (void) n_params; (void) data;
-
+  GtkWidget *w = g_value_get_object (&params[0]);
   if (GTK_IS_BUTTON (w) &&
       gtk_style_context_has_class (gtk_widget_get_style_context (w), "titlebutton"))
     {
@@ -158,7 +177,7 @@ on_widget_realize (GSignalInvocationHint *ihint, guint n_params,
       if (target != NULL)
         wire_button (w, target);
     }
-  return TRUE;                                   /* keep the hook */
+  return TRUE; /* keep the hook installed */
 }
 
 G_MODULE_EXPORT const gchar *
@@ -173,9 +192,11 @@ gtk_module_init (gint *argc, gchar ***argv)
 {
   (void) argc; (void) argv;
   wired_quark = g_quark_from_static_string ("kiwi-tb-wired");
-  g_type_class_ref (GTK_TYPE_WIDGET);            /* make "realize" exist */
+  /* Signals exist only once the class is initialised; at module-init time
+   * nothing has instantiated a widget yet, so g_signal_lookup() would be 0. */
+  g_type_class_ref (GTK_TYPE_WIDGET);
   g_signal_add_emission_hook (g_signal_lookup ("realize", GTK_TYPE_WIDGET),
-                              0, on_widget_realize, NULL, NULL);
+                              0, on_button_realize, NULL, NULL);
 }
 ```
 
