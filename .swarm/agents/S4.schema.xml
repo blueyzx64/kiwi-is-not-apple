@@ -1,0 +1,48 @@
+<!-- S4 fragment: paste inside <schema> of org.gnome.shell.extensions.kiwi.gschema.xml -->
+      <!-- Clipboard history (apps/clipboard) -->
+      <key name="clipboard-history" type="b">
+        <default>true</default>
+        <summary>Clipboard history</summary>
+        <description>Keep a history of copied text, links, colours and images, with a top-bar popover and Quick Paste.</description>
+      </key>
+      <key name="clipboard-recording" type="b">
+        <default>true</default>
+        <summary>Record clipboard changes</summary>
+        <description>When off, nothing new is recorded and the existing history is kept.</description>
+      </key>
+      <key name="clipboard-shortcut" type="as">
+        <default><![CDATA[['<Super><Shift>v']]]></default>
+        <summary>Quick Paste shortcut</summary>
+        <description>Opens Quick Paste. Empty turns the shortcut off.</description>
+      </key>
+      <key name="clipboard-panel-icon" type="b">
+        <default>true</default>
+        <summary>Clipboard icon in the top bar</summary>
+        <description>Show the clipboard history popover button in the top bar.</description>
+      </key>
+      <key name="clipboard-history-size" type="i">
+        <default>25</default>
+        <range min="1" max="500"/>
+        <summary>Clipboard history size</summary>
+        <description>How many unpinned entries are kept. Pinned entries never count and never expire.</description>
+      </key>
+      <key name="clipboard-images" type="b">
+        <default>true</default>
+        <summary>Keep copied images</summary>
+        <description>Record images in the clipboard history. Images over 5 MB are skipped.</description>
+      </key>
+      <key name="clipboard-persist" type="b">
+        <default>true</default>
+        <summary>Save clipboard history to disk</summary>
+        <description>Save history in ~/.local/share/kiwi/clipboard/ (readable only by you) so it survives screen lock and log out. Turning it off deletes the saved files.</description>
+      </key>
+      <key name="clipboard-ignore-sensitive" type="b">
+        <default>true</default>
+        <summary>Ignore passwords</summary>
+        <description>Do not record copies marked as secret (x-kde-passwordManagerHint) or copied from known password managers.</description>
+      </key>
+      <key name="clipboard-excluded-apps" type="as">
+        <default>[]</default>
+        <summary>Apps to ignore</summary>
+        <description>Extra window classes or application ids whose copies are never recorded.</description>
+      </key>
