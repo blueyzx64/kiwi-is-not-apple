@@ -5,7 +5,7 @@
 > 2. Toggling is centralised and coarse. **Any** GSettings change re-runs `_on_settings_changed()` (`extension.js:57-277`), which calls `enable()` or `disable()` on *every* module. So every module must be idempotent.
 > 3. Most features patch private Shell internals directly: `Main.panel._leftBox/_rightBox/_centerBox`, `quickSettings._indicators/_grid/_system`, `Main.messageTray._bannerBin/_sources`, `layoutManager._trackedActors`, `Main.wm._shouldAnimateActor`, `Workspace.prototype._init` and Dash-to-Dock's private actors.
 > 4. App theming works by writing outside the extension. `gtkThemeManager.js` injects `@import` lines into `~/.config/gtk-{3,4}.0/gtk.css`. `mozillaThemeManager.js` rewrites the Firefox and Thunderbird profile `chrome/` folders and `user.js`. `dockColors.js` writes Dash-to-Dock's GSettings and `launchpadApp.js` writes a `.desktop` file plus `favorite-apps`.
-> 5. *Original state:* no build system beyond `gnome-extensions pack`, no lint, no tests, no `session-modes`, so the whole extension is torn down and rebuilt on every screen lock. *Merged since:* a `Makefile`, `ci.yml`, eslint, 24 test files and the `FeatureRegistry` (section 0). `session-modes` is still not declared.
+> 5. *Original state:* no build system beyond `gnome-extensions pack`, no lint, no tests, no `session-modes`, so the whole extension is torn down and rebuilt on every screen lock. *Merged since:* a `Makefile`, `ci.yml`, eslint, 25 test files and the `FeatureRegistry` (section 0). `session-modes` is still not declared.
 > 6. Items 1 and 2 describe the original dispatcher. It was replaced by `features.js` + `lib/featureRegistry.js` (section 2.0).
 
 > **Status note (docs card D8, pass 2).** Sections below that describe the original code keep
@@ -13,8 +13,7 @@
 > described in **section 0 (merged since)** and in rows or paragraphs marked *Merged*. Status
 > words: "merged, untested on Shell" means it is on the integration branch and passes
 > `make check` (eslint, strict schema, `tests/run.sh`) but nobody has run it on a real GNOME Shell.
-> The notch (S8) is **in integration** (not merged when this was written). Its files are listed in
-> 0.4 as pending.
+> The notch (S8) is now merged too (0.4), also untested on Shell.
 
 ## Table of contents
 
@@ -37,9 +36,9 @@ All line numbers refer to commit `c2f3d0f` (HEAD at time of writing).
 
 ## 0. Merged since the first map
 
-Base: `ccr-f3c1f44c-rv5a8r` at `7b58d8a`. Merged features, all untested on Shell: foundation (S1),
+Base: `ccr-f3c1f44c-rv5a8r` at `817e61a`. Merged features, all untested on Shell: foundation (S1),
 window controls (S2), Liquid Glass (S3), clipboard (S4), Spotlight (S5), auto-hide top bar (S6),
-Control Center (S7), Stage Manager (S9). Merged debt cards: D1 to D6, D7 (CI and Makefile), D9, D10.
+Control Center (S7), notch (S8), Stage Manager (S9). Merged debt cards: D1 to D6, D7 (CI and Makefile), D9, D10.
 Frozen APIs are in `.swarm/shared/contracts.md`.
 
 ### 0.1 `lib/` (shared, no feature logic)
@@ -79,26 +78,26 @@ Frozen APIs are in `.swarm/shared/contracts.md`.
 | `apps/autohide/{prefs.js,style.css}` | Prefs page *Auto-hide Top Bar*; `style.css` is the source of the `/* feature: autohide */` block in `stylesheet.css` |
 | `apps/clipboard/{index,model,store,popover,quickPaste,view,prefs}.js`, `style.css` | *Merged, untested on Shell.* Clipboard history (`clipboard-history`, class `ClipboardHistory`). Watches `Meta.Selection owner-changed` (no polling). `model.js` (512) is pure policy: dedupe, cap, pins, size and mime limits, password-manager and sensitive-text filtering, terminal paste chord. `store.js` saves async under `~/.local/share/kiwi/clipboard/` (dir 0700, files 0600), reloaded on enable because Kiwi tears down on lock. `popover.js`: top-bar button placed through `PanelLayout`. `quickPaste.js`: keyboard window on `ModalSurface`. `clipboardService()` is the read API the Spotlight provider uses. The shortcut default is empty (`[]`, EGO rule); the prefs row has a *Use Super+Shift+V* button |
 | `apps/spotlight/{index,model,view,calculator,overlayKey,providerInfo,prefs}.js`, `providers/{apps,dbusSearch,settings,settingsCatalog,clipboard}.js`, `style.css` | *Merged, untested on Shell.* Spotlight (`spotlight`, class `SpotlightFeature`). `model.js` is the pure ranking, sections and search session (stream, timeout, cancel). `calculator.js` has its own parser (no `eval`, units). `overlayKey.js` takes over the Super tap by blocking only the Shell's own `overlay-key` handler (found with `signal_handler_find`, oldest id) and unblocking it on stop. Providers: apps (`Shell.AppSystem`), files and others through GNOME search providers over D-Bus (`dbusSearch.js`, async with timeout), a settings catalog, clipboard history, web search (`spotlight-engine`). Uses `ModalSurface`, `PanelVisibility.hold` and closes on lock |
-| `apps/controlCenter/{index,model,shell,tiles,userRow,nowPlaying,prefs}.js`, `style.css` | *Merged, untested on Shell.* Control Center (`control-center`, class `ControlCenter`, registered last). Keeps the stock Quick Settings grid but sets 4 columns, reorders and sets column spans per item (table in `model.js`). Snapshots the actors on enable and restores the order on disable, skipping dead actors. It owns Do Not Disturb (`quickSettingsDnDRemoval` restores into the live container; `quickSettingsNotifications` has one gate). `userRow.js` puts avatar and name in the system item (replaces `add-username-to-quick-menu`, migrated to `control-center-user-row`). `battery-percentage-always` binds the panel label to the power toggle. Now Playing (`nowPlaying.js`) currently uses `apps/mediaPlayback.js` with its own Source; it moves to the shared MPRIS watcher after the notch merges (see 0.4). No `Glass.attach` of its own: `Glass.watch` only, class `kiwi-cc-glass` |
+| `apps/controlCenter/{index,model,shell,tiles,userRow,nowPlaying,prefs}.js`, `style.css` | *Merged, untested on Shell.* Control Center (`control-center`, class `ControlCenter`, registered last). Keeps the stock Quick Settings grid but sets 4 columns, reorders and sets column spans per item (table in `model.js`). Snapshots the actors on enable and restores the order on disable, skipping dead actors. It owns Do Not Disturb (`quickSettingsDnDRemoval` restores into the live container; `quickSettingsNotifications` has one gate). `userRow.js` puts avatar and name in the system item (replaces `add-username-to-quick-menu`, migrated to `control-center-user-row`). `battery-percentage-always` binds the panel label to the power toggle. Now Playing (`nowPlaying.js`) uses the shared `MprisWatcher` (0.4). No `Glass.attach` of its own: `Glass.watch` only, class `kiwi-cc-glass` |
 | `apps/stageManager/{index,model,shellAdapter,windowHider,strip,shortcut,prefs}.js`, `style.css` | *Merged, untested on Shell.* Stage Manager (`stage-manager`, class `StageManager`; `conflictsWith` minimize-to-dock, move-window-to-new-workspace, tiling-title-menu, so those pause and keep their settings). One stage per workspace, the focused app's windows are the stage, other stages become cards in a strip on a chosen side. `windowHider.js` hides with opacity 0 and removes from the pick list, never minimizes, and restores every window and frame on disable. `model.js` is pure. The toggle shortcut is its own entry `stage-manager-shortcut` (`StageManagerShortcut`) so it works while the feature is off |
 | `apps/util/windows.js` (50) | Shared window predicates with no gi imports: `isHelperWindowInfo`, `isUserWindow`, `windowForActor`. Used by `windowTitle`, `focusOnOverviewExit`, `windowControls` |
 | `apps/dockRetry.js` (56), `apps/dockColorsModel.js` (64), `apps/batteryModel.js` (20) | Pure helpers from debt cards: `boundedRetry` (the one retry loop for dock discovery), the model that decides when saved dock colours are stale, and `shouldShowLabel` for the battery label |
 | `features.js` (303) | `FEATURES` array that replaces the dispatcher. Order is start order |
-| `tests/*.test.js`, `tests/run.sh` | 24 test files run with `gjs -m` (lib, coordinators, window controls, clipboard, Spotlight including a fake search provider on `dbus-run-session`, Control Center, Stage Manager, dock helpers, Mozilla manager, window utils, battery) |
+| `tests/*.test.js`, `tests/run.sh` | 25 test files run with `gjs -m` (lib, coordinators, window controls, clipboard, Spotlight including a fake search provider on `dbus-run-session`, Control Center, Stage Manager, dock helpers, Mozilla manager, window utils, battery) |
 
-### 0.4 Pending: notch (in integration, not merged)
+### 0.4 Notch (merged, untested on Shell)
 
-The notch (S8, branch `feat/notch`) was approved in review and is being merged by S10. Until it
-merges, nothing in the tree below exists on the integration branch. Planned files, from the S8 plan
-and the architecture doc:
-
-| Path | Planned role |
+| Path | Role |
 |---|---|
-| `coordinators/notificationRouter.js` | Decides who shows a notification (notch, stock banner, `calendar`), so features stop fighting over `Main.messageTray._bannerBin` |
-| `coordinators/mprisWatcher.js` and `lib/mpris.js` | One shared MPRIS watcher and client, to replace the separate Sources of `panelMedia`, `mediaPlayback` and the Control Center Now Playing tile |
-| `apps/notch/` | The notch actor (claims box `center` in `PanelLayout`), live activities, the clipboard "Copied" pill through `clipboardService().connectCopied` |
+| `coordinators/notificationRouter.js` (297) | `NotificationRouter`: the one owner of how banners reach the screen. `setBannerSink(cleanup, {present(n)})` diverts banners after the stock filters (acknowledged, urgency, DND, busy, fullscreen) ran; the notification stays in its source so it remains in the calendar message list; last sink wins; stock banners return on release. `pinBanners(cleanup)` keeps banners top-right (used by `calendar.js`). `state()`/`connect()` give `{count, dnd}` (replaces the calendar dot's 5 s poll), `setDnd`, `isDiverting`. Starts with its first user and tears down with the last. Uses private `MessageTray` members, guarded in `lib/compat.js` |
+| `coordinators/mprisWatcher.js` (81) and `lib/mpris.js` (483) | `MprisWatcher.acquire(cleanup, gettext)` returns a handle with `players`, `on('player-added'/'player-removed')`, `release()`. One shared `Source` of `Player` objects (moved out of `mediaPlayback.js`), started by the first user and stopped, with pending D-Bus calls cancelled, when the last lets go. Users: `panelMedia`, `controlCenter/nowPlaying`, `notch` |
+| `apps/notch/{index,stateMachine,view,prefs}.js`, `style.css` | `NotchFeature` (`notch`). `stateMachine.js` (385) is pure and tested (`tests/notchStateMachine.test.js`): states idle 190x32, live activity 250x32, OSD 270x32 (1.5 s, preempts), compact 290x32, expanded 430x140 or dashboard 640x200. `index.js` wires the banner sink (`notch-notifications`), the MPRIS live activity and dashboard (`notch-live-activities`), `Main.osdWindowManager._showOsdWindow` (`notch-osd`), a `PanelLayout` claim in the centre box and `PanelVisibility.hold('notch')` |
 
-Treat these as pending: signatures are not frozen in `contracts.md` yet.
+Changes in existing modules: `calendar.js` (216) now uses `NotificationRouter.pinBanners` and the router state instead of its own poll; `quickSettingsNotifications.js` (402) uses the router; `panelMedia.js` (159) uses `MprisWatcher`; the Control Center Now Playing tile uses `MprisWatcher` (no second Source). `apps/mediaPlayback.js` keeps `MediaItem` (the card), the Source moved to `lib/mpris.js`.
+
+**Calendar forcing.** `features.js` defines `calendarRight = move-calendar-right || notch`. While the notch is on the clock moves right and the notification list lives in Quick Settings, whatever `move-calendar-right` says. Prefs says so: the notch row has a subtitle and the `move-calendar-right` row is greyed out with "On while the notch is on".
+
+**Deferred (phase 2, decided).** The "Up next" dashboard panel (MPRIS has no reliable queue API), the timer, recording and charging live activities, and "toggle changed" confirmations. Phase 1 has the Clipboard dashboard panel and the "Copied" confirmation.
 
 ### 0.5 Debt cards merged (what changed in existing modules)
 
@@ -121,17 +120,17 @@ Treat these as pending: signatures are not frozen in `contracts.md` yet.
 | Path | Lines | Role |
 |---|---|---|
 | `extension.js` | 77 | *Merged:* thin entry point. Builds a `FeatureRegistry` from `features.js`, forwards `changed` signals, hands over `ctx`. The old 365-line dispatcher is gone |
-| `features.js` | 303 | *Merged:* feature list (see 0.3) |
+| `features.js` | 314 | *Merged:* feature list (see 0.3) |
 | `lib/`, `coordinators/` | ~4k | *Merged:* see section 0 |
-| `tests/` | — | *Merged:* `run.sh` plus 24 `*.test.js` files |
+| `tests/` | — | *Merged:* `run.sh` plus 26 `*.test.js` files |
 | `Makefile` | — | *Merged:* developer tasks (see 0.5, D7) |
 | `prefs.js` | 1136 | Adw preferences window. Original pages inline in `fillPreferencesWindow()`; feature pages come from `apps/<feature>/prefs.js` (`FEATURE_PREFS`) |
 | `metadata.json` | 19 | uuid `kiwi@kemma`, shell 48–51, gettext-domain `kiwi@kemma`, **no `session-modes`** |
-| `apps/*.js` | ~12k | 38 files directly in `apps/` (`panelHover.js` and `blurPaintSignal.js` left; new `dockRetry`, `dockColorsModel`, `batteryModel`) plus folders `windowControls/`, `liquidGlass/`, `autohide/`, `clipboard/`, `spotlight/`, `controlCenter/`, `stageManager/`, `util/` |
-| `stylesheet.css` | 1480 | Shell (St) styles, mostly gated behind `kiwi-*` classes |
+| `apps/*.js` | ~12k | 38 files directly in `apps/` (`panelHover.js` and `blurPaintSignal.js` left; new `dockRetry`, `dockColorsModel`, `batteryModel`) plus folders `windowControls/`, `liquidGlass/`, `autohide/`, `clipboard/`, `spotlight/`, `controlCenter/`, `notch/`, `stageManager/`, `util/` |
+| `stylesheet.css` | 1649 | Shell (St) styles, mostly gated behind `kiwi-*` classes |
 | `css/*.css` (29 files) | ~3.3k | GTK3/GTK4 titlebutton themes, hide-titlebar rules, app fixes, Firefox/Thunderbird userChrome, prefs.css |
 | `icons/` | — | PNG titlebuttons (`titlebuttons/`, `titlebuttons-glass/`, @2 variants), SVG symbolic icons |
-| `schemas/…kiwi.gschema.xml` | 539 | 92 keys (45 added over the original 47: 3 window controls, 9 Liquid Glass, 5 auto-hide, 1 dock, 3 Control Center, 6 Stage Manager, 9 clipboard, 9 Spotlight) |
+| `schemas/…kiwi.gschema.xml` | 567 | 97 keys (50 added over the original 47: 3 window controls, 9 Liquid Glass, 5 auto-hide, 1 dock, 3 Control Center, 6 Stage Manager, 9 clipboard, 9 Spotlight, 5 notch) |
 | `po/*.po`, `translating/` | — | 17 languages, `kiwi.pot` (193 msgids), compile script |
 | `advanced/` | — | Optional GTK3 module `titlebuttons_hover.c` with a **committed prebuilt `.so`** and install scripts |
 | `.github/workflows/pack-release.yml` | 60 | Packs the zip on release (debt card D7 may change CI; not described here until merged) |
@@ -152,7 +151,7 @@ Treat these as pending: signatures are not frozen in `contracts.md` yet.
 4. `start(ctx)` with `ctx = {extension, settings, gettext, interfaceSettings}` starts every wanted feature in list order.
 5. `disable()` disposes the extension registry, calls `stop()` (reverse order, each feature's own cleanup registry is disposed after its `disable()`), unconfigures Glass, resets the cached dock settings.
 
-Entries in `features.js`: 39 ids. Two are `startOnly` (`gtk-theme`, `focus-new-windows`). Eight use `cls` (`window-controls`, `panel-autohide`, `clipboard-history`, `spotlight`, `liquid-glass`, `control-center`, `stage-manager`, `stage-manager-shortcut`) and own their signals through the cleanup registry they are given. The rest are the old modules with `reapply: true` (legacy: `enable()` re-runs on every settings change while wanted). `stage-manager` is the first entry to use `conflictsWith` (minimize-to-dock, move-window-to-new-workspace, tiling-title-menu pause while it runs); `needs` is still unused. `panel-hover-fullscreen` is no longer an id; `panel-autohide` replaced it. The notch entry is not in the list yet (0.4).
+Entries in `features.js`: 40 ids. Two are `startOnly` (`gtk-theme`, `focus-new-windows`). Nine use `cls` (`window-controls`, `panel-autohide`, `clipboard-history`, `spotlight`, `liquid-glass`, `control-center`, `notch`, `stage-manager`, `stage-manager-shortcut`) and own their signals through the cleanup registry they are given. The rest are the old modules with `reapply: true` (legacy: `enable()` re-runs on every settings change while wanted). `stage-manager` is the first entry to use `conflictsWith` (minimize-to-dock, move-window-to-new-workspace, tiling-title-menu pause while it runs); `needs` is still unused. `panel-hover-fullscreen` is no longer an id; `panel-autohide` replaced it.
 
 Order matters in a few places: `control-center` is registered after `liquid-glass` and the other panel features so it sees them; clipboard comes before Spotlight, which reads `clipboardService()` lazily; `minimize-to-dock` is registered before `downloads-in-dock` so the stack lets go first on stop; `calendar` is registered before `window-controls`, and `PanelLayout` keeps the controls last when the calendar moves the date menu.
 
@@ -208,7 +207,7 @@ There is no registry. Each module is imported by name (`extension.js:22-54`) and
 
 `KiwiPreferences.fillPreferencesWindow()` (`prefs.js:111-1106`) builds everything inline.
 
-> **Merged, untested on Shell.** Page order now: About, Panel, Dock, Buttons, Options, **Liquid Glass**, **Auto-hide Top Bar**, **Control Center**, **Clipboard**, **Spotlight**, **Stage Manager**, Advanced (last, with *Restore Defaults*). `FEATURE_PREFS` imports the `apps/<feature>/prefs.js` of liquidGlass, windowControls, autohide, controlCenter, clipboard, spotlight and stageManager; each exports `PAGE` and `buildPrefs()` (contract in `.swarm/shared/contracts.md`). The window controls groups join the Buttons page (`PAGE.into: 'windowControls'`) and replace the old *fullscreen-only* row. The `panel-hover-fullscreen` row is gone (the Auto-hide page replaces it). The panel-blur and dock-blur rows defer to Liquid Glass. Line numbers in the table below are the original ones.
+> **Merged, untested on Shell.** Page order now: About, Panel, Dock, Buttons, Options, **Liquid Glass**, **Auto-hide Top Bar**, **Control Center**, **Clipboard**, **Spotlight**, **Notch**, **Stage Manager**, Advanced (last, with *Restore Defaults*). `FEATURE_PREFS` imports the `apps/<feature>/prefs.js` of liquidGlass, windowControls, autohide, controlCenter, clipboard, spotlight, notch and stageManager; each exports `PAGE` and `buildPrefs()` (contract in `.swarm/shared/contracts.md`). The window controls groups join the Buttons page (`PAGE.into: 'windowControls'`) and replace the old *fullscreen-only* row. The `panel-hover-fullscreen` row is gone (the Auto-hide page replaces it). The panel-blur and dock-blur rows defer to Liquid Glass. Line numbers in the table below are the original ones.
  Helpers: `_createLinkRow` (`:38`), `_addSwitchRows` (`:56`), `_withDockActive` (D-Bus `ListExtensions` to the shell, `:77-91`), `_createEnumComboRow` (`:94-109`).
 
 | Page (icon) | Line | Groups → rows (keys) |
@@ -301,6 +300,8 @@ The `schema` column gives the line in `schemas/org.gnome.shell.extensions.kiwi.g
 | `clipboard-history` (true), `-recording` (true), `-shortcut` ([]), `-panel-icon` (true), `-history-size` (25), `-images` (true), `-persist` (true), `-ignore-sensitive` (true), `-excluded-apps` ([]) | `clipboard` | history switch, pause, Quick Paste shortcut (empty by default; prefs button *Use Super+Shift+V*), caps, disk persistence, secret filtering |
 | `spotlight` (true), `-on-super` (true), `-shortcut` ([]), `-files` (true), `-settings` (true), `-calculator` (true), `-clipboard` (true), `-web` (true), `-engine` ('duckduckgo') | `spotlight` | feature switch, Super tap takeover, optional shortcut, result groups, web search engine |
 
+| `notch` (true), `notch-notifications` (true), `notch-live-activities` (true), `notch-osd` (true), `notch-timeout` (5, range 2 to 30 s) | `notch` | feature switch, which parts take over, and how long a notification stays (hover keeps it open, urgent ones stay until dismissed) |
+
 **Deprecated, still in the schema:** `panel-hover-fullscreen`, `show-window-controls-fullscreen-only` and `add-username-to-quick-menu` are read only by one-time migrations (the last one's feature entry runs only while `control-center` is off). `panel-blur` and `dock-blur` are legacy inputs to Liquid Glass (`Glass.wants`).
 
 External settings that Kiwi reads or writes:
@@ -336,11 +337,11 @@ Rows for `windowControls.js` and `panelHover.js` were updated for merged work. T
 | `panelHover.js` | **Removed** (merged with auto-hide). Replaced by `coordinators/panelVisibility.js`, see section 0.2 | — | panel-autohide* | — |
 | `panelTransparency.js` (930) | Translucent panel, optional blur, adaptive dark/light foreground, tray icon inversion | Owns `Main.panel.style` background and re-asserts it on `notify::style` (`:511-525,:863-866`); `Main.layoutManager._backgroundGroup` children (`:137`); `Meta.BackgroundGroup` inserted at `panelBox` index 0 (`:79-101`); `St.ThemeContext changed`. *Merged (D2):* window signals on all workspaces (resynced on workspace add, remove and switch), no 2 s poll, async cancellable wallpaper sampling, `WeakSet` window tracking, `kiwi-panel-solid-black` class. *Merged (S3/S6):* blur now goes through `Glass.attach` (no private `BlurEffect`), and it reads `PanelVisibility.autoHiding()` / `connect()` to drop its "opaque when a window touches" rule while the bar auto-hides | panel-transparency* | B |
 | `panelStyling.js` (25) | Adds the gate classes `.kiwi-panel-styled` (panel) and `.kiwi-popup-styled` (uiGroup) | `Main.panel`, `Main.uiGroup` style classes | panel-styling, popup-menu-styling | A |
-| `calendar.js` (289) | Moves the clock to the right, hides the dateMenu message list, moves banners to the top-right, notification dot | `dateMenu.container` `_centerBox`→`_rightBox` (`:198-201`); `dateMenu._messageList.hide()`, `dateMenu._calendar`, `dateMenu.menu.box.style` (`:206-215`); **`Main.messageTray._bannerBin` x/y align** (`:220-228`); dot into `quickSettings._indicators` or `_rightBox` (`:54-56,:86`); `messageTray source-added/removed`, `_sources`, `_notificationQueue` (`:163,:280-287`); 500ms and **5s poll** (`:75,:167`) | move-calendar-right, keep-notification-panel, notification-indicator-style | A- |
-| `quickSettingsNotifications.js` (403) | Notification list inside Quick Settings, custom DnD button and panel moon | `quickSettings.menu._grid.add_child` + `layout_manager.child_set_property(column-span 2)` (`:276-286`); `quickSettings.menu.actor.set_style(max-height 90%)` (`:278-280`); `_system._systemItem.child` (`:46`); subclass of `MessageList.MessageView` with `_setupMpris(){}` (`:163-167`); `Main.messageTray.connectObject`; **unbounded 200ms retry**; writes `show-banners`. *Merged (S7):* one gate in `ensureDndButton` so the Control Center can own Do Not Disturb | custom-dnd-button | A- |
+| `calendar.js` (216) | Moves the clock to the right, hides the dateMenu message list, moves banners to the top-right, notification dot | `dateMenu.container` `_centerBox`→`_rightBox` (`:198-201`); `dateMenu._messageList.hide()`, `dateMenu._calendar`, `dateMenu.menu.box.style` (`:206-215`); **`Main.messageTray._bannerBin` x/y align** (`:220-228`); dot into `quickSettings._indicators` or `_rightBox` (`:54-56,:86`); `messageTray source-added/removed`, `_sources`, `_notificationQueue` (`:163,:280-287`); 500ms and **5s poll** (`:75,:167`) | move-calendar-right, keep-notification-panel, notification-indicator-style | A- |
+| `quickSettingsNotifications.js` (402) | Notification list inside Quick Settings, custom DnD button and panel moon | `quickSettings.menu._grid.add_child` + `layout_manager.child_set_property(column-span 2)` (`:276-286`); `quickSettings.menu.actor.set_style(max-height 90%)` (`:278-280`); `_system._systemItem.child` (`:46`); subclass of `MessageList.MessageView` with `_setupMpris(){}` (`:163-167`); `Main.messageTray.connectObject`; **unbounded 200ms retry**; writes `show-banners`. *Merged (S7):* one gate in `ensureDndButton` so the Control Center can own Do Not Disturb | custom-dnd-button | A- |
 | `quickSettingsDnDRemoval.js` (227) | Helpers that find and remove the built-in DnD toggle (49+) and indicator, and keep `dateMenu._indicator` hidden | Heuristic actor search by icon name, accessible name or constructor name (`:27-61`); reparents actors out of `_grid`/`_indicators` and back (`:63-102`); `dateMenu._indicator` notify handlers (`:149-169`); `SHELL_HAS_SYSTEM_DND` version gate. *Merged (S7):* restores into the live container (not a saved dead parent), destroy-safe, and a flag lets the Control Center own DnD | (via caller) | A- |
-| `panelMedia.js` (154) | Panel media button with MPRIS cards | `addToStatusArea('kiwi-media', …, 1, 'right')` (`:146`); `global.stage notify::key-focus` (connectObject) | (gated by move-calendar-right && !keep-notification-panel) | A |
-| `mediaPlayback.js` (1135) | Kiwi's own MPRIS client (`Source`, `Player`) and `MediaItem` card (artwork, marquee, seek slider, soundwave) | Subclasses `MessageList.Message`, `Slider`/`BarLevel` (`:42-104`); private Message fields `_header`, `_icon`, `_bodyBin`, `_mediaControls`, `titleLabel` (`:145-345`); D-Bus `NameOwnerChanged`; 240ms soundwave and 1s progress timers (`:324,:466`) | — | A |
+| `panelMedia.js` (159) | Panel media button with MPRIS cards | `addToStatusArea('kiwi-media', …, 1, 'right')` (`:146`); `global.stage notify::key-focus` (connectObject) | (gated by move-calendar-right && !keep-notification-panel) | A |
+| `mediaPlayback.js` (663) | Kiwi's own MPRIS client (`Source`, `Player`) and `MediaItem` card (artwork, marquee, seek slider, soundwave) | Subclasses `MessageList.Message`, `Slider`/`BarLevel` (`:42-104`); private Message fields `_header`, `_icon`, `_bodyBin`, `_mediaControls`, `titleLabel` (`:145-345`); D-Bus `NameOwnerChanged`; 240ms soundwave and 1s progress timers (`:324,:466`) | — | A |
 | `batteryPercentage.js` (191) | Battery % label when ≤20% and discharging | `quickSettings._indicators.add_child` (`:23`); UPower D-Bus with **`call_sync`**; `init_async` with no cancellable. *Merged (D9):* the show/hide rule is `batteryModel.shouldShowLabel` with an edge flag, so the label slides in and out once per change | battery-percentage | B (late async callbacks after destroy) |
 | `lockIcon.js` (124) | Caps/Num lock icons | `addToStatusArea('lock-indicator', …, 0, 'right')`; keymap via `stage.get_context().get_backend()` (51 note, `:17-18`); *Merged (D9):* takes its icons directory from the extension (`enable(extension)`, falls back to `import.meta.url`) and reads the state on `state-changed` instead of after a 500 ms delay | lock-icon | A |
 | `addUsernameToQuickMenu.js` (131) | Real name slides into the QS **panel indicator** box | `quickSettings._indicators.insert_child_at_index(…, 0)` (`:117`) | add-username-to-quick-menu | A |
@@ -418,12 +419,14 @@ apps/clipboard/index.js ──► lib/{disposables,settings,compat,keybindings},
 apps/clipboard/quickPaste.js ──► lib/modalSurface
 apps/spotlight/index.js ──► lib/{keybindings,modalSurface,glass}, coordinators/panelVisibility, spotlight/{model,view,overlayKey,providers/*}
 apps/spotlight/providers/clipboard.js ──► clipboard/index.js (clipboardService)
-apps/controlCenter/index.js ──► lib/{disposables,settings,glass}, controlCenter/*, quickSettingsDnDRemoval, quickSettingsNotifications, mediaPlayback (Now Playing)
+apps/controlCenter/index.js ──► lib/{disposables,settings,glass}, controlCenter/*, quickSettingsDnDRemoval, quickSettingsNotifications; nowPlaying ──► coordinators/mprisWatcher
 apps/stageManager/index.js ──► coordinators/windowState, lib/{glass,settings}, stageManager/*
 apps/stageManager/shortcut.js ──► lib/keybindings
 apps/minimizedToDock.js, apps/windowControls.js ──► coordinators/windowState
 apps/windowControls.js, windowTitle.js, focusOnOverviewExit.js ──► apps/util/windows.js
 apps/downloadsStack.js ──► lib/modalSurface (registerForeign)
+apps/notch/index.js ──► coordinators/{notificationRouter,mprisWatcher,panelLayout,panelVisibility}, notch/{stateMachine,view}
+apps/calendar.js, apps/quickSettingsNotifications.js ──► coordinators/notificationRouter; apps/panelMedia.js ──► coordinators/mprisWatcher, mediaPlayback (MediaItem)
 apps/dockBlur.js ──► dockUtils.watchDocks ──► dockRetry; apps/dockColors.js ──► dockColorsModel
 ```
 
@@ -524,7 +527,8 @@ The profile is resolved from `installs.ini`, then `profiles.ini`, in `~/.mozilla
 | 973-1107 | *Merged:* `/* feature: control-center */` tiles, user row, Now Playing | `.kiwi-cc-*` |
 | 1108-1135 | *Merged:* `/* feature: stage-manager */` strip cards and badge | `.kiwi-stage-*` |
 | 1136-1367 | *Merged:* `/* feature: clipboard */` popover and Quick Paste | `.kiwi-clip-*`, `.kiwi-qp-*` |
-| 1368-1480 | *Merged:* `/* feature: spotlight */` | `.kiwi-spotlight-*` |
+| 1368-1481 | *Merged:* `/* feature: spotlight */` | `.kiwi-spotlight-*` |
+| 1482-1649 | *Merged:* `/* feature: notch */` | `.kiwi-notch-*` |
 | (all of 10-899) | D6 gated stock-class rules (message titles, close and clear buttons, window-content, app-menu-icon, window-controls GType selector) behind Kiwi classes, so these line ranges shifted by a few lines | |
 
 ---
