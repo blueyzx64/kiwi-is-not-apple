@@ -21,6 +21,7 @@ import { CleanupRegistry } from '../lib/disposables.js';
 import { KiwiSettings } from '../lib/settings.js';
 import { maximizeWindow, unmaximizeWindow } from '../lib/compat.js';
 import { PanelLayout } from '../coordinators/panelLayout.js';
+import { WindowState } from '../coordinators/windowState.js';
 import { isMaximized } from './windowTiling.js';
 import { IconCatalog } from './windowControls/icons.js';
 import {
@@ -50,6 +51,7 @@ class WindowControlsIndicator extends PanelMenu.Button {
      */
     _init({ catalog, settings, cleanup, onAction }) {
         super._init(0.0, 'window-controls', true);
+        this.add_style_class_name('kiwi-window-controls-indicator');
         this._catalog = catalog;
         this._settings = settings;
         this._onAction = onAction;
@@ -410,7 +412,9 @@ export class WindowControlsFeature {
             return;
         switch (name) {
         case 'minimize':
-            win.minimize();
+            // Stage Manager sends the window to its strip instead
+            if (!WindowState.interceptMinimize(win))
+                win.minimize();
             break;
         case 'maximize':
             if (win.is_fullscreen())

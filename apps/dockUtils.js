@@ -13,6 +13,8 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { DashItemContainer } from 'resource:///org/gnome/shell/ui/dash.js';
 import { ExtensionState } from 'resource:///org/gnome/shell/misc/extensionUtils.js';
 
+import { boundedRetry } from './dockRetry.js';
+
 const CONTAINER_NAME = 'dashtodockContainer';
 const D2D_SCHEMA = 'org.gnome.shell.extensions.dash-to-dock';
 const D2D_UUIDS = ['dash-to-dock@micxgx.gmail.com', 'ubuntu-dock@ubuntu.com'];
@@ -50,6 +52,18 @@ export function beforeRedraw(callback) {
 
 export function cancelBeforeRedraw(id) {
     global.compositor.get_laters().remove(id);
+}
+
+/**
+ * Timer functions for boundedRetry (dockRetry.js), on the default GLib context.
+ * The callback repeats while it returns true.
+ */
+export function glibTimers(priority = GLib.PRIORITY_DEFAULT) {
+    return {
+        add: (ms, fn) => GLib.timeout_add(priority, ms,
+            () => (fn() ? GLib.SOURCE_CONTINUE : GLib.SOURCE_REMOVE)),
+        remove: id => GLib.Source.remove(id),
+    };
 }
 
 /* -------------------------------------------------------- dock discovery */
@@ -109,17 +123,21 @@ export function watchDocks({ attach, count, globalSignals, sources }) {
     if (count() > 0)
         return;
 
-    let attempts = 0;
     if (sources.dockSearch)
         GLib.Source.remove(sources.dockSearch);
-    sources.dockSearch = GLib.timeout_add(GLib.PRIORITY_DEFAULT, DOCK_SEARCH_INTERVAL, () => {
-        dockContainers().forEach(attach);
-        if (count() > 0 || ++attempts >= DOCK_SEARCH_TRIES) {
+    const search = boundedRetry({
+        interval: DOCK_SEARCH_INTERVAL,
+        tries: DOCK_SEARCH_TRIES,
+        timers: glibTimers(),
+        step: () => {
+            dockContainers().forEach(attach);
+            return count() > 0;
+        },
+        onDone: () => {
             sources.dockSearch = 0;
-            return GLib.SOURCE_REMOVE;
-        }
-        return GLib.SOURCE_CONTINUE;
+        },
     });
+    sources.dockSearch = search.start();
 }
 
 /* ------------------------------------------------------------ dash items */

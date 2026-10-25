@@ -9,9 +9,6 @@
    later icon-style change. So the symbolic request lives on the icon itself. */
 .kiwi-window-title-icon {
   -st-icon-style: symbolic;
-}
-
-.app-menu-icon {
   padding-left: 0px;
 }
 
@@ -46,9 +43,12 @@
 }
 
 /* Panel color inherit fix for theme compatibility */
-#panel.kiwi-panel-color-inherit {
-  /* this often inherits transparency causing unwanted visual bugs */
-  /*background-color: inherit !important;*/
+/* Despite the name (the setting is "panel-color-inherit"), this does not inherit: the
+   theme colour often carries transparency, which caused visual bugs, so the class pins
+   the panel to solid black. kiwi-panel-solid-black is the honest name; apps/panelTransparency.js
+   still adds the old one until it is renamed there. */
+#panel.kiwi-panel-color-inherit,
+#panel.kiwi-panel-solid-black {
   background-color: black;
 }
 
@@ -81,8 +81,6 @@
   padding: 0 4px;
 }
 
-#panel.kiwi-panel-styled Gjs_AggregateMenu.panel-button .system-status-icon,
-#panel.kiwi-panel-styled Gjs_ui_panel_AggregateMenu.panel-button .system-status-icon,
 #panel.kiwi-panel-styled Gjs_ui_panel_QuickSettings.panel-button .system-status-icon {
   margin: 0 2px !important;
 }
@@ -210,6 +208,11 @@
 }
 
 /* Remove background on window controls container hover */
+/* The GType selector depends on the file path (apps/windowControls.js) and stays until the
+   indicator adds the style class below. */
+.kiwi-window-controls-indicator.panel-button:hover,
+.kiwi-window-controls-indicator.panel-button:active,
+.kiwi-window-controls-indicator.panel-button:focus,
 Gjs_apps_windowControls_WindowControlsIndicator.panel-button:hover,
 Gjs_apps_windowControls_WindowControlsIndicator.panel-button:active,
 Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
@@ -354,12 +357,6 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
 .kiwi-popup-styled .popup-menu .popup-menu-item:checked {
   background-color: -st-accent-color !important;
   color: -st-accent-fg-color !important;
-}
-
-/* Ensure content fills the space */
-.maximized .window-content {
-  margin-top: 0;
-  border-radius: 0;
 }
 
 
@@ -561,7 +558,7 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
   box-sizing: border-box;
 }
 
-.media-message {
+.kiwi-media .media-message {
   font-size: 0.9em;
 }
 
@@ -653,7 +650,7 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
   opacity: 0.7;
 }
 
-.message-list-clear-button {
+.kiwi-notifications .message-list-clear-button {
   margin: 4px 8px;
   padding: 4px 16px;
   border-radius: 999px;
@@ -662,21 +659,25 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
   font-size: 0.9em;
 }
 
-.message-list-clear-button:focus {
+.kiwi-notifications .message-list-clear-button:focus {
   box-shadow: inset 0 0 0 2px alpha(-st-focus-ring-color, 0.45);
 }
 
-.message-list-clear-button.disabled,
-.message-list-clear-button.disabled:hover,
-.message-list-clear-button.disabled:active {
+.kiwi-notifications .message-list-clear-button.disabled,
+.kiwi-notifications .message-list-clear-button.disabled:hover,
+.kiwi-notifications .message-list-clear-button.disabled:active {
   opacity: -st-disabled-opacity;
   box-shadow: none;
 }
 
-/* Notification expand buttons and close button */
-.message .message-expand-button, 
-.message .message-close-button,
-.message-group-header .message-collapse-button  {
+/* Notification expand buttons and close button. Gated like the rest: they restyle stock
+   messages, so they only apply with Popup Menu Styling or inside Kiwi's own list. */
+.kiwi-popup-styled .message .message-expand-button,
+.kiwi-popup-styled .message .message-close-button,
+.kiwi-popup-styled .message-group-header .message-collapse-button,
+.kiwi-notifications .message .message-expand-button,
+.kiwi-notifications .message .message-close-button,
+.kiwi-notifications .message-group-header .message-collapse-button {
   -st-icon-style: symbolic;
   min-width: 16px;
   min-height: 16px;
@@ -686,7 +687,12 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
 }
 
 /* Notification and grouped notifications titles - make normal size */
-.message-title, .message-group-title {
+.kiwi-popup-styled .message-title,
+.kiwi-popup-styled .message-group-title,
+.kiwi-notifications .message-title,
+.kiwi-notifications .message-group-title,
+.kiwi-media .message-title,
+.kiwi-media .message-group-title {
   font-size: 1em;
   font-weight: normal;
 }
@@ -962,4 +968,167 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
 /* The revealed bar floats over windows instead of sitting in a strut: give it an edge. */
 #panel.kiwi-panel-autohide {
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08), 0 6px 18px rgba(0, 0, 0, 0.28);
+}
+
+/* feature: control-center */
+/* Every rule is scoped by .kiwi-control-center, a class the feature adds to the Quick
+   Settings menu box while it is on. Removing the class restores the stock look. */
+
+/* Grid: 4 columns, a half-width stock tile is span 2 */
+.quick-settings.kiwi-control-center .quick-settings-grid {
+    spacing-rows: 10px;
+    spacing-columns: 10px;
+}
+
+/* Tiles */
+.kiwi-control-center .quick-toggle,
+.kiwi-control-center .quick-toggle-menu-button {
+    border-radius: 18px;
+}
+
+.kiwi-control-center .quick-toggle-has-menu .quick-toggle:ltr {
+    border-radius: 18px 0 0 18px;
+}
+
+.kiwi-control-center .quick-toggle-has-menu .quick-toggle:rtl {
+    border-radius: 0 18px 18px 0;
+}
+
+.kiwi-control-center .quick-toggle-has-menu .quick-toggle-menu-button:ltr {
+    border-radius: 0 18px 18px 0;
+}
+
+.kiwi-control-center .quick-toggle-has-menu .quick-toggle-menu-button:rtl {
+    border-radius: 18px 0 0 18px;
+}
+
+/* 1x1 tiles (Stage Manager, Liquid Glass) */
+.kiwi-control-center .kiwi-cc-tile {
+    min-width: 0;
+    max-width: 6em;
+    padding: 0;
+}
+
+.kiwi-control-center .kiwi-cc-tile .quick-toggle-icon {
+    icon-size: 18px;
+}
+
+/* Sections */
+.kiwi-control-center .kiwi-cc-section-title {
+    font-size: 0.9em;
+    font-weight: bold;
+    padding: 4px 6px 0 6px;
+}
+
+/* Sliders: bigger touch target */
+.kiwi-control-center .quick-slider .slider-bin {
+    padding: 10px;
+    border-radius: 22px;
+}
+
+/* Now Playing. max-width keeps a long title from widening the whole menu. */
+.kiwi-control-center .kiwi-cc-now-playing {
+    min-width: 0;
+    max-width: 22em;
+    min-height: 64px;
+    padding: 8px 12px;
+    spacing: 10px;
+    border-radius: 18px;
+}
+
+.kiwi-control-center .kiwi-cc-np-art {
+    border-radius: 10px;
+}
+
+.kiwi-control-center .kiwi-cc-np-title {
+    font-weight: bold;
+}
+
+.kiwi-control-center .kiwi-cc-np-artist {
+    font-size: 0.9em;
+}
+
+.kiwi-control-center .kiwi-cc-np-button {
+    padding: 8px;
+    border-radius: 99px;
+}
+
+.kiwi-control-center .kiwi-cc-np-button:hover {
+    background-color: rgba(128, 128, 128, 0.25);
+}
+
+/* Footer: user, battery and the icon buttons must fit in one row of 4 columns */
+.kiwi-control-center .quick-settings-system-item .icon-button {
+    padding: 8px;
+}
+
+.kiwi-control-center .quick-settings-system-item .power-item {
+    min-width: 0;
+    max-width: 6.5em;
+}
+
+.kiwi-control-center .kiwi-cc-user {
+    spacing: 8px;
+    padding-right: 8px;
+}
+
+.kiwi-control-center .kiwi-cc-user-name {
+    font-weight: bold;
+    max-width: 4.5em;
+}
+
+/* Top bar: battery percentage that stays on */
+.kiwi-cc-battery-label {
+    padding-left: 2px;
+}
+
+/* Liquid Glass on: translucent tiles over the blurred bubble (apps/liquidGlass). Not applied
+   under high contrast, where the stock solid tiles stay. */
+.kiwi-control-center.kiwi-cc-glass .quick-toggle,
+.kiwi-control-center.kiwi-cc-glass .quick-toggle-menu-button,
+.kiwi-control-center.kiwi-cc-glass .kiwi-cc-now-playing,
+.kiwi-control-center.kiwi-cc-glass .quick-slider .slider-bin,
+.kiwi-control-center.kiwi-cc-glass .quick-settings-system-item .icon-button {
+    background-color: rgba(128, 128, 128, 0.20);
+    box-shadow: none;
+}
+
+.kiwi-control-center.kiwi-cc-glass .quick-toggle:hover,
+.kiwi-control-center.kiwi-cc-glass .quick-toggle-menu-button:hover,
+.kiwi-control-center.kiwi-cc-glass .quick-settings-system-item .icon-button:hover {
+    background-color: rgba(128, 128, 128, 0.32);
+}
+
+.kiwi-control-center.kiwi-cc-glass .quick-toggle:checked,
+.kiwi-control-center.kiwi-cc-glass .quick-toggle-menu-button:checked {
+    background-color: -st-accent-color;
+    color: -st-accent-fg-color;
+}
+
+/* feature: stage-manager */
+/* Strip pill. The glass layer (blur, tint, rim) comes from lib/glass.js; this only gives a
+   fallback tint for when glass is off or opaque, and the card look. */
+.kiwi-stage-strip {
+    border-radius: 22px;
+    background-color: rgba(30, 30, 30, 0.28);
+}
+
+.kiwi-stage-card {
+    border-radius: 12px;
+    padding: 0;
+    background-color: transparent;
+    border: 1px solid transparent;
+    transition-duration: 120ms;
+}
+
+.kiwi-stage-card:hover,
+.kiwi-stage-card:focus {
+    background-color: rgba(255, 255, 255, 0.10);
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+.kiwi-stage-badge {
+    border-radius: 9px;
+    background-color: rgba(0, 0, 0, 0.35);
+    padding: 2px;
 }

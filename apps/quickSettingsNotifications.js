@@ -10,6 +10,7 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import {
     SHELL_HAS_SYSTEM_DND,
+    controlCenterOwnsDnd,
     suppressBuiltinDndIndicator,
     suppressBuiltinDndToggle,
     restoreBuiltinDndIndicator,
@@ -65,6 +66,10 @@ function toggleDnd() {
 }
 
 function ensureDndButton() {
+    // The Control Center provides Do Not Disturb as a tile; no second button in the footer
+    if (controlCenterOwnsDnd())
+        return true;
+
     if (!_notificationSettings)
         _notificationSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.notifications' });
 
@@ -275,6 +280,12 @@ function _applyCustomDndSetting() {
     }
 }
 
+/** Re-apply the custom DND setting now (the Control Center just gave Do Not Disturb back). */
+export function refreshLegacyDnd() {
+    if (enabled)
+        _applyCustomDndSetting();
+}
+
 export function enable(gettext, settings) {
     gettextFunc = gettext;
     _kiwiSettings = settings;
@@ -360,7 +371,7 @@ export function disable() {
 }
 
 function ensurePanelMoonIcon(isActive = false) {
-    if (SHELL_HAS_SYSTEM_DND)
+    if (SHELL_HAS_SYSTEM_DND && !controlCenterOwnsDnd())
         suppressBuiltinDndIndicator();
 
     const indicatorsContainer = Main.panel.statusArea.quickSettings._indicators;

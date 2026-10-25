@@ -1,7 +1,7 @@
 // Run: gjs -m tests/panelVisibilityModel.test.js
 import {
     initialState, step, visible, wantsStrut, modeFromSettings, edgeSegments, hasMonitorAbove,
-    MIGRATIONS,
+    MIGRATIONS, chromeFlagsFor,
 } from '../coordinators/panelVisibilityModel.js';
 import { runMigrations } from '../lib/settings.js';
 
@@ -206,6 +206,17 @@ test('migration: old off turns auto-hide off; idempotent; untouched when never s
     const fresh = fakeSettings({});
     runMigrations(fresh, MIGRATIONS);
     eq(fresh.user, {});
+});
+
+test('chromeFlagsFor: recorded flags, keys only if present, fallback when untracked', () => {
+    const a = {};
+    const fb = { affectsStruts: true, trackFullscreen: true };
+    eq(chromeFlagsFor([{ actor: a, affectsStruts: false, trackFullscreen: true, affectsInputRegion: true }], a, fb),
+        { affectsStruts: false, trackFullscreen: true, affectsInputRegion: true });
+    eq(chromeFlagsFor([{ actor: a, affectsStruts: false, trackFullscreen: false }], a, fb),
+        { affectsStruts: false, trackFullscreen: false });
+    eq(chromeFlagsFor([], a, fb), fb);
+    eq(chromeFlagsFor(undefined, a, fb), fb);
 });
 
 print(failed ? `${failed} FAILED` : 'all passed');

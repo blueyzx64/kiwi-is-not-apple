@@ -24,6 +24,7 @@ import { FeatureRegistry } from './lib/featureRegistry.js';
 import { FEATURES } from './features.js';
 import { Glass } from './lib/glass.js';
 import { isDockExtension, resetDockSettings } from './apps/dockUtils.js';
+import { restoreStaleColors } from './apps/dockColors.js';
 
 export default class KiwiExtension extends Extension {
     enable() {
@@ -47,6 +48,13 @@ export default class KiwiExtension extends Extension {
                 if (isDockExtension(extension))
                     this._features.refresh(null);
             });
+
+        // A crash or hard logout can leave Dash to Dock colours Kiwi changed; put them back first
+        try {
+            restoreStaleColors(this._settings);
+        } catch (err) {
+            console.error('[Kiwi] could not restore dock colours:', err);
+        }
 
         this._features.start({
             extension: this,

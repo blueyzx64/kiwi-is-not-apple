@@ -384,5 +384,56 @@
         <description>Do not hide the top bar while no window is showing on the primary monitor.</description>
       </key>
 
+      <key name="dock-colors-saved" type="s">
+        <default>''</default>
+        <summary>Dash-to-Dock colours saved while Kiwi adaptive colours run</summary>
+        <description>Internal. JSON of the user's original Dash-to-Dock indicator and background colours, written while dock adaptive colours are on and cleared when they are turned off. Restores the colours after a shell crash. Do not edit.</description>
+      </key>
+
+      <!-- Control Center (apps/controlCenter) -->
+      <key name="control-center" type="b">
+        <default>true</default>
+        <summary>Control Center</summary>
+        <description>Re-lay out the Quick Settings menu like the macOS Control Center: blocks for connectivity, focus, display, sound and media, with Stage Manager and Liquid Glass tiles. GNOME keeps running every toggle. Off restores the stock menu.</description>
+      </key>
+      <key name="control-center-user-row" type="b">
+        <default>true</default>
+        <summary>Control Center user row</summary>
+        <description>Show your picture and name in the Control Center footer, with the battery time left. Replaces the old username label in the top bar (add-username-to-quick-menu, migrated).</description>
+      </key>
+      <key name="battery-percentage-always" type="b">
+        <default>false</default>
+        <summary>Always show battery percentage</summary>
+        <description>Show the battery charge in the top bar at any level, not only when it is low. Not shown while GNOME's own battery percentage is on.</description>
+      </key>
+
+      <!-- Stage Manager (apps/stageManager) -->
+      <key name="stage-manager" type="b">
+        <default>true</default>
+        <summary>Stage Manager</summary>
+        <description>Show the other apps as live, stacked thumbnails in a strip at the screen edge. Click one to switch to it. While Stage Manager is on, Minimize to Dock, window tiling by drag and Move Fullscreen Window are paused (their settings are kept).</description>
+      </key>
+      <key name="stage-manager-side" type="s">
+        <default>'left'</default>
+        <summary>Stage Manager strip side</summary>
+        <description>Which screen edge holds the strip: "left" or "right".</description>
+      </key>
+      <key name="stage-manager-autohide" type="b">
+        <default>true</default>
+        <summary>Auto-hide the strip</summary>
+        <description>Hide the strip while a window on the stage overlaps it, and show it again when the pointer reaches the screen edge.</description>
+      </key>
+      <key name="stage-manager-group-by-app" type="b">
+        <default>true</default>
+        <summary>Group windows by app</summary>
+        <description>Windows of the same app share one stack in the strip. Off gives each window its own thumbnail.</description>
+      </key>
+      <key name="stage-manager-recent-count" type="i">
+        <default>6</default>
+        <range min="1" max="10"/>
+        <summary>Recent apps in the strip</summary>
+        <description>The most thumbnails the strip lists. Fewer are shown when the screen is too short.</description>
+      </key>
+
     </schema>
 </schemalist>

@@ -8,15 +8,21 @@ import GLib from 'gi://GLib';
 import Meta from 'gi://Meta';
 
 import { Glass } from '../lib/glass.js';
-import { dashOf, dockContainers } from './dockUtils.js';
+import { boundedRetry } from './dockRetry.js';
+import { dashOf, disconnectAll, glibTimers, watchDocks } from './dockUtils.js';
 
 // The blur itself (effect, repaint workarounds, Liquid Glass tiers, legacy dock-blur
 // key) is lib/glass.js. This module finds the dash background and keeps the glass
 // rectangle matched to it.
 
 let enabled = false;
-let dockSearchId = null;
 const dashes = []; // array of per-dash state objects
+let globalSignals = []; // [object, id], for disconnectAll
+const sources = { dockSearch: 0 };
+
+// Waiting for the dash and its background to be allocated
+const ALLOCATION_RETRY_INTERVAL = 200; // ms
+const ALLOCATION_RETRY_TRIES = 25;     // ~5 s
 
 function _hasValidAllocation(actor) {
     return actor.has_allocation() && actor.width > 0 && actor.height > 0;
@@ -54,14 +60,14 @@ function _tryBlurDock(dockContainer) {
         // pixels tall, which is where the slim blur strip came from. Wait for a
         // real allocation instead of baking in the wrong geometry.
         if (!_hasValidAllocation(dash) || !_hasValidAllocation(dashBackground)) {
-            retryUpdateSize();
+            retry.start();
             return;
         }
         const w = dashBackground.width;
         const h = dashBackground.height;
         const x = dashBackground.x;
         const y = dashBackground.y + dash.y;
-        retryAttempts = 0;
+        retry.stop();
 
         // The dock notifies through a dozen signals and re-emits them for every
         // frame it slides or zooms; re-rendering the blur is only worth it when
@@ -90,18 +96,16 @@ function _tryBlurDock(dockContainer) {
     };
 
     // A relayout that ends up with the same allocation emits no notify, so a
-    // read taken too early would never be corrected — retry until allocated.
-    let retryId = 0;
-    let retryAttempts = 0;
-    const retryUpdateSize = () => {
-        if (retryId || retryAttempts >= 25) return;
-        retryAttempts++;
-        retryId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 200, () => {
-            retryId = 0;
+    // read taken too early would never be corrected - retry until allocated.
+    const retry = boundedRetry({
+        interval: ALLOCATION_RETRY_INTERVAL,
+        tries: ALLOCATION_RETRY_TRIES,
+        timers: glibTimers(),
+        step: () => {
             queueUpdateSize();
-            return GLib.SOURCE_REMOVE;
-        });
-    };
+            return _hasValidAllocation(dash) && _hasValidAllocation(dashBackground);
+        },
+    });
     queueUpdateSize();
 
     // Allocation signals catch geometry settling that the x/y/width/height
@@ -127,10 +131,7 @@ function _tryBlurDock(dockContainer) {
                 global.compositor.get_laters().remove(updateLaterId);
                 updateLaterId = 0;
             }
-            if (retryId) {
-                GLib.Source.remove(retryId);
-                retryId = 0;
-            }
+            retry.stop();
         },
     };
 
@@ -158,16 +159,11 @@ function _removeDashBlur(info, disconnectDestroy = true) {
     if (idx >= 0) dashes.splice(idx, 1);
 }
 
-function _blurExistingDocks() {
-    dockContainers().forEach(container => _tryBlurDock(container));
-}
-
 function _removeAllBlurs() {
     // Copy array since _removeDashBlur mutates it
     [...dashes].forEach(info => _removeDashBlur(info));
 }
 
-let childAddedId = null;
 let startupCompleteId = null;
 
 export function enable() {
@@ -192,28 +188,9 @@ export function enable() {
 }
 
 function _enable() {
-    // Watch for new dock containers being added (e.g., dock enabled after us)
-    childAddedId = Main.uiGroup.connect('child-added', (_group, actor) => {
-        if (actor.name === 'dashtodockContainer')
-            _tryBlurDock(actor);
-    });
-
-    // Blur any already-existing docks
-    _blurExistingDocks();
-
-    // If no docks found yet, retry a few times (dock may load after us)
-    if (dashes.length === 0) {
-        let attempts = 0;
-        dockSearchId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
-            attempts++;
-            _blurExistingDocks();
-            if (dashes.length > 0 || attempts >= 10) {
-                dockSearchId = null;
-                return GLib.SOURCE_REMOVE;
-            }
-            return GLib.SOURCE_CONTINUE;
-        });
-    }
+    // Blur every dock there is and every one that turns up later (the dock may
+    // load after us), retrying for a while
+    watchDocks({ attach: _tryBlurDock, count: () => dashes.length, globalSignals, sources });
 }
 
 export function disable() {
@@ -224,15 +201,13 @@ export function disable() {
         startupCompleteId = null;
     }
 
-    if (dockSearchId) {
-        GLib.Source.remove(dockSearchId);
-        dockSearchId = null;
+    if (sources.dockSearch) {
+        GLib.Source.remove(sources.dockSearch);
+        sources.dockSearch = 0;
     }
 
-    if (childAddedId) {
-        Main.uiGroup.disconnect(childAddedId);
-        childAddedId = null;
-    }
+    disconnectAll(globalSignals);
+    globalSignals = [];
 
     _removeAllBlurs();
 }

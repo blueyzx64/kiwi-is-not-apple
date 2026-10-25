@@ -6,7 +6,8 @@ import Gio from 'gi://Gio';
 import GioUnix from 'gi://GioUnix';
 import Shell from 'gi://Shell';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import { InjectionManager } from 'resource:///org/gnome/shell/extensions/extension.js';
+
+import { CleanupRegistry } from '../lib/disposables.js';
 import { dashOf, disconnectAll, watchDocks } from './dockUtils.js';
 
 Gio._promisify(Gio.File.prototype, 'query_info_async', 'query_info_finish');
@@ -23,7 +24,7 @@ const LAUNCHPAD_POSITION = 1;
 
 let _enabled = false; // Guards repeated enable() calls, including pending initialization
 let _enableCancellable = null;
-let _injectionManager = null;
+const _cleanup = new CleanupRegistry();
 let _app = null;
 // Keep writes and disable-time deletions in order across rapid enable cycles.
 let _fileOperations = Promise.resolve();
@@ -217,10 +218,9 @@ export async function enable(extension, gettext) {
     _app = new Shell.App({
         app_info: GioUnix.DesktopAppInfo.new_from_filename(_desktopPath(LAUNCHPAD_DESKTOP_ID)),
     });
-    _injectionManager = new InjectionManager();
-    _injectionManager.overrideMethod(Shell.AppSystem.prototype, 'lookup_app',
-        original => function (id) {
-            return id === LAUNCHPAD_DESKTOP_ID ? _app : original.call(this, id);
+    _cleanup.inject(Shell.AppSystem.prototype, 'lookup_app',
+        function (original, id) {
+            return id === LAUNCHPAD_DESKTOP_ID && _app ? _app : original.call(this, id);
         });
 
     if (!Main.overview.isDummy)
@@ -246,8 +246,7 @@ export function disable() {
     disconnectAll(globalSignals);
     globalSignals = [];
 
-    _injectionManager?.clear();
-    _injectionManager = null;
+    _cleanup.dispose();
     _app = null;
 
     for (const { box, childId, destroyId } of overviewWatches) {

@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Kiwi Extension - Helpers for removing GNOME Shell's built-in DND UI that was added in GNOME 49
 // This module removes system DND elements to avoid duplicate UI elements when Kiwi's own DND elements
+// are shown by the legacy quick settings notifications module.
+//
+// While the Control Center is on it owns Do Not Disturb (apps/controlCenter): the stock toggle
+// stays in the grid, where the Control Center places it, so the grid helpers here do nothing.
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { SHELL_HAS_SYSTEM_DND } from '../lib/compat.js';
@@ -19,6 +23,25 @@ const DND_ICON_NAMES = new Set([
 const _suppressedActors = {
     toggle: null,
     indicator: null,
+};
+
+let _controlCenterOwnsDnd = false;
+
+/** Called by the Control Center on enable (true) and disable (false). */
+export function setControlCenterOwnsDnd(owns) {
+    _controlCenterOwnsDnd = owns;
+}
+
+/** True while the Control Center provides Do Not Disturb; Kiwi's own button stays out. */
+export function controlCenterOwnsDnd() {
+    return _controlCenterOwnsDnd;
+}
+
+// Where each suppressed actor lives. Looked up again on restore: a grid or indicator row
+// that was rebuilt since is a different object, and the saved parent would be dead.
+const _containers = {
+    toggle: () => Main.panel.statusArea.quickSettings?.menu?._grid ?? null,
+    indicator: () => Main.panel.statusArea.quickSettings?._indicators ?? null,
 };
 
 let _dateMenuIndicatorState = null;
@@ -65,16 +88,20 @@ function suppressActor(key, actor, { preserveVisibility = false } = {}) {
     if (!parent)
         return false;
 
-    _suppressedActors[key] = {
+    const entry = {
         actor,
-        parent,
         index: parent.get_children().indexOf(actor),
+        destroyed: false,
         state: preserveVisibility ? {
             visible: actor.visible,
             reactive: actor.reactive,
             opacity: actor.opacity,
         } : null,
     };
+    entry.destroyId = actor.connect('destroy', () => {
+        entry.destroyed = true;
+    });
+    _suppressedActors[key] = entry;
 
     parent.remove_child(actor);
     actor.hide();
@@ -86,8 +113,17 @@ function restoreActor(key) {
     const suppressed = _suppressedActors[key];
     if (!suppressed)
         return;
+    _suppressedActors[key] = null;
 
-    const { actor, parent, index, state } = suppressed;
+    const { actor, index, state, destroyed, destroyId } = suppressed;
+    if (destroyed)
+        return;
+    actor.disconnect(destroyId);
+
+    // The container is the live one, not the one the actor was taken from
+    const parent = _containers[key]();
+    if (!parent || actor.get_parent())
+        return;
     parent.insert_child_at_index(actor, Math.min(index, parent.get_n_children()));
 
     if (state) {
@@ -97,12 +133,10 @@ function restoreActor(key) {
     } else {
         actor.show();
     }
-
-    _suppressedActors[key] = null;
 }
 
 export function suppressBuiltinDndToggle() {
-    if (!SHELL_HAS_SYSTEM_DND)
+    if (!SHELL_HAS_SYSTEM_DND || _controlCenterOwnsDnd)
         return true;
 
     if (_suppressedActors.toggle)
@@ -124,7 +158,7 @@ export function restoreBuiltinDndToggle() {
 }
 
 export function suppressBuiltinDndIndicator() {
-    if (_suppressedActors.indicator)
+    if (_controlCenterOwnsDnd || _suppressedActors.indicator)
         return true;
 
     const indicators = Main.panel.statusArea.quickSettings._indicators;
