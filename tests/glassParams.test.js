@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // gjs -m tests/glassParams.test.js
-import { MIN_TINTED_ALPHA, MIN_TINT_PERCENT, wantsSurface, resolve, tintAlpha, legacySurfaces, worstCaseContrast, tintColor, SETTING_FIELDS }
+import { readSnapshot, MIN_TINTED_ALPHA, MIN_TINT_PERCENT, wantsSurface, resolve, tintAlpha, legacySurfaces, worstCaseContrast, tintColor, SETTING_FIELDS }
     from '../lib/glassParams.js';
 
 let failed = 0;
@@ -88,6 +88,19 @@ check('migrate: both off', JSON.stringify(legacySurfaces({ panelBlur: false, doc
     === JSON.stringify(['menus', 'overlays']));
 
 check('every field has a key', Object.keys(SETTING_FIELDS).length === 11);
+
+// Glass.wants(surface, gs) reads a passed Gio.Settings fresh (no stale snapshot)
+{
+    const store = { 'liquid-glass': true, 'liquid-glass-surfaces': ['panel'] };
+    const fake = {
+        settings_schema: { has_key: k => k in store },
+        get_boolean: k => store[k], get_int: k => store[k], get_string: k => store[k], get_strv: k => store[k],
+    };
+    check('fresh read: dock off', !wantsSurface(readSnapshot(fake), 'dock'));
+    store['liquid-glass-surfaces'] = ['panel', 'dock'];
+    check('fresh read: dock on right after the change', wantsSurface(readSnapshot(fake), 'dock'));
+    check('missing keys fall back to defaults', readSnapshot(fake).style === 'tinted');
+}
 
 if (failed) {
     print(`${failed} failed`);

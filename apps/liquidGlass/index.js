@@ -19,6 +19,14 @@ import { tintColor } from '../../lib/glassParams.js';
 const PANEL_CLASS = 'kiwi-glass-panel';
 const MENU_RADIUS = { quickSettings: 26, dateMenu: 18 };
 
+/**
+ * The bubble actor of a popup menu. For most menus menu.actor is the BoxPointer, but the
+ * Quick Settings menu's actor is a 0x0 container and the bubble is menu._boxPointer.
+ */
+function _bubble(menu) {
+    return menu?._boxPointer ?? menu?.actor ?? null;
+}
+
 /** True when text on this actor is light, i.e. the glass behind it must be the dark one. */
 function _textIsLight(actor) {
     try {
@@ -132,14 +140,14 @@ export class LiquidGlass {
         return [
             ['quickSettings', area.quickSettings?.menu],
             ['dateMenu', area.dateMenu?.menu],
-        ].filter(([, menu]) => menu?.actor?.get_parent());
+        ].filter(([, menu]) => _bubble(menu)?.get_parent());
     }
 
     _attachMenus() {
         for (const [kind, menu] of this._menuTargets()) {
             if (this._menus.has(menu))
                 continue;
-            const boxPointer = menu.actor;
+            const boxPointer = _bubble(menu);
             const handle = Glass.attach(boxPointer.bin ?? boxPointer, {
                 surface: 'menus',
                 parent: boxPointer.get_parent(),
@@ -150,7 +158,7 @@ export class LiquidGlass {
                 name: `kiwi-glass-${kind}`,
                 isDark: () => _textIsLight(boxPointer),
             });
-            const state = { handle, savedStyle: boxPointer.get_style(), kind };
+            const state = { handle, box: boxPointer, savedStyle: boxPointer.get_style(), kind };
             // The blur layer does not follow the open/close animation, so it is shown only
             // while the menu is open.
             state.token = this._cleanup.connect(menu, 'open-state-changed', (_m, open) => handle.setVisible(open));
@@ -164,7 +172,7 @@ export class LiquidGlass {
     // The bubble keeps its shape and arrow; only its fill becomes the glass tint.
     _styleMenu(menu, state) {
         const { params } = state.handle;
-        const box = menu.actor;
+        const box = state.box;
         if (!params || params.tier === 'off') {
             box.set_style(state.savedStyle);
             return;
@@ -178,8 +186,7 @@ export class LiquidGlass {
         this._cleanup.release(state.token);
         this._cleanup.release(state.destroyToken);
         state.handle.destroy();
-        if (menu.actor)
-            menu.actor.set_style(state.savedStyle);
+        state.box.set_style(state.savedStyle);
         this._menus.delete(menu);
     }
 
