@@ -11,5 +11,5 @@
 | Spotlight | S5 | doing (model first; waits S4 modalSurface) | feat/spotlight |
 | Auto-hide bar | S6 | done, merged | feat/autohide |
 | Control Center | S7 | doing | feat/control-center |
-| Notch | S8 | todo | feat/notch |
+| Notch | S8 | doing | feat/notch |
 | Stage Manager | S9 | doing (model + strip only) | feat/stage-manager |
