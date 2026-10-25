@@ -88,3 +88,9 @@ All answered by the owner on 2026-10-25. Do not ask the owner again; ask the orc
   media). The Control Center Now Playing tile stays.
 - Smoke harness: `make smoke` (tools/smoke). Leads run it after enable/disable changes. In this
   container use KIWI_SMOKE_SHELL_VERSION=46 KIWI_SMOKE_SHIM=1. Results there are indicative only.
+- Adversarial round (V1–V10). Privacy defaults chosen by the orchestrator, owner may override:
+  - `notch-show-clipboard` defaults to false.
+  - Spotlight shows no clipboard rows for an empty query by default; typing still searches the clipboard.
+  - Clipboard history stays saved to disk by default (owner decision), but it gets content heuristics:
+    private-key blocks, likely card numbers by Luhn check, long high-entropy tokens.
+  - The metadata wording must not overpromise secret detection.
