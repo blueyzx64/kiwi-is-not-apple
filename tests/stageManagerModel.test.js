@@ -148,7 +148,7 @@ test('stripLayout shrinks to fit a short screen', () => {
     const last = l.cards[3];
     eq(last.y + last.height <= wa.height - DEFAULTS.padBottom + 1e-6, true);
     eq(l.cards[0].y >= DEFAULTS.padTop - 1e-6, true);
-    near(l.cards[0].width / l.cards[0].height, 180 / 116);
+    near(l.cards[0].width / l.cards[0].height, DEFAULTS.thumbW / DEFAULTS.thumbH);
 });
 test('stripLayout honours option overrides', () => {
     const l = stripLayout({ workArea: WA, count: 1, stripWidth: 300, thumbW: 100, thumbH: 60 });

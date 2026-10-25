@@ -1320,37 +1320,31 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
 }
 
 /* feature: stage-manager */
-/* No slab behind the strip: only the cards. Each window sits on a rounded translucent mat with a
-   soft shadow (concentric: mat 12px, the window's own corners inside). No glass, no blur. */
+/* No slab behind the strip: a column of fixed-size rounded cards, each a plain translucent fill
+   with a rim and a soft shadow; the windows sit centred inside. No glass, no blur. */
 .kiwi-stage-strip {
     background-color: transparent;
 }
 
 .kiwi-stage-card {
-    border-radius: 14px;
+    border-radius: 16px;
     padding: 0;
-    background-color: transparent;
-    border: none;
-}
-
-.kiwi-stage-thumb {
-    border-radius: 12px;
     background-color: rgba(255, 255, 255, 0.10);
     border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.32);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.30);
 }
 
-.kiwi-stage-card:hover .kiwi-stage-thumb,
-.kiwi-stage-card:focus .kiwi-stage-thumb {
-    background-color: rgba(255, 255, 255, 0.18);
-    border-color: rgba(255, 255, 255, 0.30);
+.kiwi-stage-card:hover {
+    background-color: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.24);
 }
 
-.kiwi-stage-card:focus .kiwi-stage-thumb {
+.kiwi-stage-card:focus {
     border: 2px solid -st-accent-color;
 }
 
 .kiwi-stage-icon-tile {
+    border-radius: 10px;
     background-color: rgba(40, 40, 44, 0.55);
 }
 
