@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Kiwi is not Apple 2.0.0\n"
 "Report-Msgid-Bugs-To: https://github.com/kem-a/kiwi-kemma/issues\n"
-"POT-Creation-Date: 2026-10-25 20:50+0000\n"
+"POT-Creation-Date: 2026-10-25 21:44+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -475,7 +475,7 @@ msgid ""
 "dock, wallpaper or window"
 msgstr ""
 
-#: prefs.js:1167 apps/controlCenter/model.js:70
+#: prefs.js:1167 apps/controlCenter/model.js:69
 msgid "Window Buttons"
 msgstr ""
 
@@ -547,13 +547,13 @@ msgid "Apply macOS window control styling for Thunderbird."
 msgstr ""
 
 #: prefs.js:1257
-msgid "Show Window Controls on Panel"
+msgid "Window controls in top bar (removes them from app windows)"
 msgstr ""
 
 #: prefs.js:1258
 msgid ""
-"Display close, minimize, maximize buttons in the top panel for the focused "
-"window"
+"Close, minimize and maximize for the focused window. Turn off to give every "
+"app its own titlebar buttons back"
 msgstr ""
 
 #: prefs.js:1267
@@ -753,66 +753,12 @@ msgstr ""
 msgid "macOS Features"
 msgstr ""
 
-#: apps/autohide/prefs.js:11
-msgid "Auto-hide Top Bar"
-msgstr ""
-
-#: apps/autohide/prefs.js:20 apps/stageManager/prefs.js:118
-msgid "Auto-hide"
-msgstr ""
-
-#: apps/autohide/prefs.js:21
-msgid ""
-"The top bar slides away and comes back when the pointer pushes against the "
-"top edge."
-msgstr ""
-
-#: apps/autohide/prefs.js:25
-msgid "Auto-hide the top bar"
-msgstr ""
-
-#: apps/autohide/prefs.js:26
-msgid "Windows then use the full screen height"
-msgstr ""
-
-#: apps/autohide/prefs.js:32
-msgid "Only over fullscreen windows"
-msgstr ""
-
-#: apps/autohide/prefs.js:33
-msgid "Keep the top bar and its space otherwise"
-msgstr ""
-
-#: apps/autohide/prefs.js:39
-msgid "Keep visible on an empty desktop"
-msgstr ""
-
-#: apps/autohide/prefs.js:40
-msgid "Do not hide while no window is open on the main screen"
-msgstr ""
-
-#: apps/autohide/prefs.js:55
-msgid "Reveal delay (ms)"
-msgstr ""
-
-#: apps/autohide/prefs.js:55
-msgid "How long to push against the top edge"
-msgstr ""
-
-#: apps/autohide/prefs.js:57
-msgid "Hide delay (ms)"
-msgstr ""
-
-#: apps/autohide/prefs.js:57
-msgid "How long after the pointer leaves the top bar"
-msgstr ""
-
 #: apps/clipboard/index.js:603 apps/clipboard/prefs.js:114
 msgid "Clipboard History"
 msgstr ""
 
 #: apps/clipboard/popover.js:51 apps/clipboard/prefs.js:13
-#: apps/controlCenter/model.js:71 apps/notch/view.js:577
+#: apps/controlCenter/model.js:70 apps/notch/view.js:577
 #: apps/spotlight/prefs.js:136 apps/spotlight/providers/clipboard.js:18
 #: apps/spotlight/view.js:22
 msgid "Clipboard"
@@ -983,7 +929,7 @@ msgid "Colour"
 msgstr ""
 
 #: apps/clipboard/quickPaste.js:202 apps/clipboard/view.js:49
-#: apps/notch/index.js:517 apps/spotlight/providers/clipboard.js:17
+#: apps/notch/index.js:500 apps/spotlight/providers/clipboard.js:17
 msgid "Image"
 msgstr ""
 
@@ -1006,7 +952,7 @@ msgstr ""
 msgid "%d d ago"
 msgstr ""
 
-#: apps/clipboard/view.js:113
+#: apps/clipboard/view.js:113 apps/roundedCorners/prefs.js:32
 msgid "Remove"
 msgstr ""
 
@@ -1024,19 +970,20 @@ msgstr ""
 msgid "Stage Manager"
 msgstr ""
 
-#: apps/controlCenter/model.js:69
-msgid "Hide Top Bar"
-msgstr ""
-
-#: apps/controlCenter/model.js:72 apps/spotlight/prefs.js:14
+#: apps/controlCenter/model.js:71 apps/spotlight/prefs.js:14
 #: apps/spotlight/prefs.js:120
 msgid "Spotlight"
 msgstr ""
 
-#: apps/controlCenter/model.js:73 apps/liquidGlass/prefs.js:14
+#: apps/controlCenter/model.js:72 apps/liquidGlass/prefs.js:14
 #: apps/liquidGlass/prefs.js:105 apps/liquidGlass/prefs.js:108
 #: apps/spotlight/providers/settingsCatalog.js:42
 msgid "Liquid Glass"
+msgstr ""
+
+#: apps/controlCenter/model.js:73 apps/roundedCorners/prefs.js:13
+#: apps/roundedCorners/prefs.js:67
+msgid "Rounded Corners"
 msgstr ""
 
 #: apps/controlCenter/nowPlaying.js:45
@@ -1213,7 +1160,7 @@ msgstr ""
 msgid "Surfaces"
 msgstr ""
 
-#: apps/notch/index.js:505
+#: apps/notch/index.js:488
 msgid "Copied"
 msgstr ""
 
@@ -1336,15 +1283,47 @@ msgstr ""
 msgid "Do Not Disturb Indicator"
 msgstr ""
 
-#: apps/spotlight/index.js:199
+#: apps/roundedCorners/prefs.js:19
+msgid "Excluded Apps"
+msgstr ""
+
+#: apps/roundedCorners/prefs.js:20
+msgid ""
+"These apps keep square corners. Use the WM_CLASS or app id, for example "
+"\"org.gnome.Terminal\" or \"firefox\"."
+msgstr ""
+
+#: apps/roundedCorners/prefs.js:22
+msgid "Add an app id or WM_CLASS"
+msgstr ""
+
+#: apps/roundedCorners/prefs.js:68
+msgid ""
+"Round all four corners of app windows, including apps that draw square "
+"bottom corners. Maximized, tiled and fullscreen windows stay square."
+msgstr ""
+
+#: apps/roundedCorners/prefs.js:70
+msgid "Round window corners"
+msgstr ""
+
+#: apps/roundedCorners/prefs.js:75
+msgid "Corner radius"
+msgstr ""
+
+#: apps/roundedCorners/prefs.js:76
+msgid "In pixels"
+msgstr ""
+
+#: apps/spotlight/index.js:190
 msgid "Open"
 msgstr ""
 
-#: apps/spotlight/index.js:206
+#: apps/spotlight/index.js:197
 msgid "Search the web for"
 msgstr ""
 
-#: apps/spotlight/index.js:207 apps/spotlight/prefs.js:142
+#: apps/spotlight/index.js:198 apps/spotlight/prefs.js:142
 #: apps/spotlight/view.js:25
 msgid "Web"
 msgstr ""
@@ -1642,6 +1621,10 @@ msgstr ""
 msgid "Right"
 msgstr ""
 
+#: apps/stageManager/prefs.js:118
+msgid "Auto-hide"
+msgstr ""
+
 #: apps/stageManager/prefs.js:119
 msgid "Hide the strip while a window overlaps it; reveal it at the screen edge"
 msgstr ""
@@ -1720,9 +1703,10 @@ msgstr ""
 
 #: apps/windowControls/prefs.js:58
 msgid ""
-"Hide the buttons that windows draw themselves while the panel shows them. "
-"Works for GTK 3 and GTK 4 apps; Qt, Electron and server-side decorated "
-"windows keep theirs"
+"While the top bar shows the buttons for all windows, Kiwi sets a GNOME "
+"button layout without them (GTK, libadwaita, Chromium/Electron and server-"
+"side frames follow it) and restores yours when turned off. With the "
+"maximized or fullscreen scope only GTK apps lose theirs"
 msgstr ""
 
 #: apps/windowTiling.js:367

@@ -17,6 +17,7 @@ apps/notch/prefs.js
 apps/notch/view.js
 apps/panelMedia.js
 apps/quickSettingsNotifications.js
+apps/roundedCorners/prefs.js
 apps/spotlight/index.js
 apps/spotlight/prefs.js
 apps/spotlight/providers/clipboard.js
