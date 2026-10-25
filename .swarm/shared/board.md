@@ -5,7 +5,7 @@
 | Phase 0 foundation | S1 | done, merged 8ca7637 | feat/foundation |
 | advanced/ fixes + foundation nits | S1 | done, merged | feat/advanced-fixes |
 | Integrator/review | S10 | setup merged; idle until review | feat/integration |
-| Window controls | S2 | doing | feat/window-controls |
+| Window controls | S2 | built; S10 review + integration | feat/window-controls |
 | Liquid Glass | S3 | doing | feat/liquid-glass |
 | Clipboard | S4 | todo | feat/clipboard |
 | Spotlight | S5 | todo | feat/spotlight |

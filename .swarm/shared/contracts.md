@@ -44,3 +44,16 @@ _S1 froze lib/ and features.js (below). S3's lib/glass.js comes later._
   dock-blur, dock-styling, dock-adaptive-colors, battery-percentage, lock-icon,
   add-username-to-quick-menu, window-title, tiling-title-menu, keyboard-indicator, launchpad-app,
   firefox-theme, thunderbird-theme, gtk-theme.
+
+## coordinators/panelLayout.js (frozen from S2, feat/window-controls)
+- `import { PanelLayout } from '../coordinators/panelLayout.js';`
+- `const slot = PanelLayout.claim(cleanup, {id, actor, box: 'left'|'center'|'right', anchor?})`
+  - `actor` = the panel-box child (e.g. `indicator.container`). Released on `cleanup.dispose()`;
+    PanelLayout never destroys the actor. Same `id` replaces the old claim.
+  - `anchor` (default `{last:true}`): `{first:true}` | `{last:true}` |
+    `{before:[ids], fallback?:'first'|'last'}` | `{after:[ids], fallback?}`. ids = a
+    `Main.panel.statusArea` role or another claim id; unknown ids use the fallback.
+- `slot.update({box?, anchor?})`, `slot.release()`, `PanelLayout.claimed() -> string[]`.
+- Re-sorts in one idle on `child-added` of a claimed box.
+- Claims in use: `window-controls` (left before `window-title`, or right last).
+  The notch (S8) claims box `center`.
