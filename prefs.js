@@ -386,7 +386,8 @@ export default class KiwiPreferences extends ExtensionPreferences {
 
         // Panel transparency expander with sub-options
         const transparencyHasNonDefault =
-            settings.get_int('panel-transparency-level') !== 50 ||
+            settings.get_int('panel-transparency-level') !==
+                settings.get_default_value('panel-transparency-level').get_int32() ||
             settings.get_boolean('panel-opaque-on-window') ||
             settings.get_boolean('panel-blur') ||
             settings.get_boolean('panel-color-inherit') ||
@@ -605,11 +606,24 @@ export default class KiwiPreferences extends ExtensionPreferences {
         syncBatteryRow();
         interfaceSettings.connect('changed::show-battery-percentage', syncBatteryRow);
 
-        this._addSwitchRows(settings, windowTitleGroup, [
+        const panelItemRows = this._addSwitchRows(settings, windowTitleGroup, [
             { key: 'custom-dnd-button', title: _('Custom Do Not Disturb Button'), subtitle: _("Replace the system Do Not Disturb button with Kiwi's custom implementation") },
             { key: 'lock-icon', title: _('Caps Lock and Num Lock'), subtitle: _('Show Caps Lock and Num Lock icon') },
             { key: 'hide-activities-button', title: _('Hide Activities Button'), subtitle: _('Hide the Activities button in the top panel') },
+            { key: 'add-username-to-quick-menu', title: _('Add Username'), subtitle: _('Add username to the quick menu') },
         ]);
+
+        // The Control Center has its own user row and replaces this one while it is on
+        const usernameRow = panelItemRows[panelItemRows.length - 1];
+        const usernameSubtitle = usernameRow.subtitle;
+        const syncUsernameRow = () => {
+            const cc = settings.get_boolean('control-center');
+            usernameRow.sensitive = !cc;
+            usernameRow.subtitle = cc ? _('Shown in Control Center while it is on') : usernameSubtitle;
+        };
+        syncUsernameRow();
+        const usernameCcId = settings.connect('changed::control-center', syncUsernameRow);
+        window.connect('close-request', () => settings.disconnect(usernameCcId));
 
         const panelStylingGroup = new Adw.PreferencesGroup({
             title: _('Styling'),
@@ -1102,16 +1116,33 @@ export default class KiwiPreferences extends ExtensionPreferences {
         // Feature pages: groups from apps/<feature>/prefs.js, placed before the reset button
         const pages = { panel: panelPage, dock: dockPage, windowControls: windowControlsPage, advanced: advancedPage };
         window.remove(advancedPage);   // re-added after the feature pages, so Advanced stays last
-        for (const mod of FEATURE_PREFS) {
-            let page = pages[mod.PAGE.into];
-            if (!page) {
-                page = new Adw.PreferencesPage({ title: _(mod.PAGE.title), icon_name: mod.PAGE.icon });
-                window.add(page);
+        try {
+            for (const mod of FEATURE_PREFS) {
+                let page = pages[mod.PAGE?.into];
+                if (!page) {
+                    page = new Adw.PreferencesPage({
+                        title: mod.PAGE?.title ? _(mod.PAGE.title) : mod.PAGE?.id ?? '',
+                        icon_name: mod.PAGE?.icon ?? null,
+                    });
+                    window.add(page);
+                }
+                // One broken page must not take the whole window down
+                try {
+                    for (const group of mod.buildPrefs({ settings, window, extension: this }))
+                        page.add(group);
+                } catch (e) {
+                    console.error(`[Kiwi] prefs page '${mod.PAGE?.id ?? mod.PAGE?.into}' failed:`, e);
+                    const failed = new Adw.PreferencesGroup();
+                    failed.add(new Adw.ActionRow({
+                        title: _('This page failed to load'),
+                        subtitle: String(e?.message ?? e),
+                    }));
+                    page.add(failed);
+                }
             }
-            for (const group of mod.buildPrefs({ settings, window, extension: this }))
-                page.add(group);
+        } finally {
+            window.add(advancedPage);
         }
-        window.add(advancedPage);
 
         const resetGroup = new Adw.PreferencesGroup();
         advancedPage.add(resetGroup);
@@ -1139,7 +1170,11 @@ export default class KiwiPreferences extends ExtensionPreferences {
                 if (response !== 'reset')
                     return;
 
-                settings.settings_schema.list_keys().forEach((key) => settings.reset(key));
+                // Internal bookkeeping, not user settings: keep it
+                const internal = new Set(['dock-colors-saved', 'migrations-done']);
+                settings.settings_schema.list_keys()
+                    .filter(key => !internal.has(key))
+                    .forEach(key => settings.reset(key));
             });
             confirmDialog.present(window);
         });
