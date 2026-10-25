@@ -78,6 +78,17 @@ All of these are on by default unless noted, and each can be turned off in Kiwi'
 - **Notification notch**: notifications, Now Playing controls (previous, play/pause, next), volume and brightness in a pill at the top centre. Click it to open the dashboard; click outside or press Esc to close it. Do Not Disturb silences it.
 - **Rounded window corners** (off by default): rounds every app window, including GTK 3, Qt and Electron apps. Maximized and fullscreen windows stay square. Radius and excluded apps are in preferences.
 
+### Changes in update 2
+- **Stage Manager:** group windows into sets: drag a strip entry onto the stage or Shift+click it, and drop on the left or right half to place two windows side by side. A set shows in the strip as one stack. Opening a new app replaces the stage and moves the old set to the strip (or make new windows join the set). Click the wallpaper to reveal the desktop. Each workspace has its own strip, which never shows over the overview. Hover peek, tilt and speed settings.
+- **Show Desktop:** a top-bar button and Super+D slide windows to the screen edges, macOS style; with Stage Manager on, the stage moves into the strip.
+- **Notch:** redesigned like the Dynamic Island. Music is the hero (art, title, progress, controls), with a clock when nothing plays, a tidy notification list, a moon toggle for Do Not Disturb, a compact pill with a waveform, spring animations, and curved "ears" where it meets the top edge.
+- **Control Center, clipboard, calendar:** minimal macOS-style layouts with larger text. Notifications are no longer listed in the Control Center while the notch is on.
+- **Super key** toggles Spotlight (tap again to close).
+- **Gestures:** swiping up stops at the workspace overview, never the app grid. The hot corner is off (setting).
+- **Window buttons:** with the top-bar controls off, apps get stock GNOME minimize/maximize/close on the right; switch them to the left or to macOS style.
+- **Rounded corners:** now on by default, top corners only (or all four).
+- **Fixed:** a mark at the top-left of each workspace in the overview.
+
 ### Changes in this update
 - **Removed: auto-hide top bar.** The top bar now always shows, because it holds the notch and the window controls.
 - **Added:** rounded window corners; Kiwi feature toggles in the Control Center; Hide Activities on by default.

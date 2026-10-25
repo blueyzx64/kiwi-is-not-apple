@@ -51,6 +51,30 @@ The owner ran the first build on a real Fedora 44 desktop and reported these; al
 - **Removed: auto-hide top bar** (the bar holds the notch and window controls). Its settings keys stay in the schema, marked deprecated and unread.
 - **New: rounded window corners** (`rounded-corners`, off by default; `rounded-corners-radius` 12; `rounded-corners-blacklist`). Uses a per-window GLSL effect on GNOME 50; maximized, tiled and fullscreen windows stay square. On GNOME 51 the effect API is gone and the feature does nothing (logged once).
 
+## 1c. Update 2 (UX round 2, owner feedback after round 1)
+- **Stage Manager:**
+  - Sets: drag onto the stage or Shift+click adds a window; dropping on the left or right half tiles side by side; dragging a titlebar to the strip or Ctrl+Super+Down removes one.
+  - New windows replace the stage (setting: join instead).
+  - Wallpaper click and `toggleDesktop()` hide the stage.
+  - Per-workspace strips, hidden in the overview.
+  - New keys: `stage-manager-new-windows`, `-wallpaper-click`, `-tilt`, `-animation-speed`, `-remove-shortcut`.
+- **Show Desktop (new feature `show-desktop`):**
+  - Top-bar button, `<Super>d` (`show-desktop-shortcut`), and GNOME's own show-desktop action routed to it while Kiwi runs.
+  - Windows slide to the nearest edges; delegates to Stage Manager when it is on.
+- **Notch:**
+  - Dynamic-Island layout: media hero, clock fallback, compact notification rows, DND moon toggle, pill with a waveform, spring motion.
+  - Concave ears at the top corners. Solid black fill.
+- **Control Center, clipboard and calendar:** minimal macOS layouts; minimum text 14px primary and 12px secondary. Control Center hides Notifications while the notch is on.
+- **Shell behaviour (new feature `shell-behaviour`):**
+  - `overview-gestures-workspace-only` (default on): up-swipes stop at the window picker.
+  - `disable-hot-corner` (default on): runtime only; the user's `enable-hot-corners` is never written.
+  - The Super key toggles Spotlight while it is open.
+- **App buttons (new feature `app-buttons`, runs while top-bar controls are off):**
+  - `app-buttons-position` (right), `app-buttons-style` (gnome), `app-buttons-set` (all).
+  - Uses the same crash-safe `button-layout` owner.
+- **Rounded corners:** `rounded-corners` now defaults to true, `rounded-corners-which` to 'top'. libadwaita apps keep their own rounded bottoms.
+- **Fix:** the overview workspace backgrounds clipped to a corner wedge on GNOME 50 (overview-seamless-zoom).
+
 ## 2. Behaviour changes users will notice
 
 New features default to ON (owner decision); users opt out in prefs.

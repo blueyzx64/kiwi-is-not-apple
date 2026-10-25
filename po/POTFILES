@@ -18,11 +18,14 @@ apps/notch/view.js
 apps/panelMedia.js
 apps/quickSettingsNotifications.js
 apps/roundedCorners/prefs.js
+apps/showDesktop/index.js
+apps/showDesktop/prefs.js
 apps/spotlight/index.js
 apps/spotlight/prefs.js
 apps/spotlight/providers/clipboard.js
 apps/spotlight/providers/settingsCatalog.js
 apps/spotlight/view.js
+apps/stageManager/index.js
 apps/stageManager/prefs.js
 apps/windowControls/prefs.js
 apps/windowTiling.js
