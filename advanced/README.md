@@ -30,8 +30,8 @@ or if your machine is not x86_64. On any other architecture, or if you would rat
 you did not build, build it yourself (below).
 
 Where things go:
-- Library: `~/.local/share/kiwi/gtk3-modules/libtitlebuttons_hover.so`. It is installed through a temporary
-  file and a rename, so apps that are already running keep the old copy safely.
+- Library: `~/.local/share/kiwi/gtk3-modules/libtitlebuttons_hover.so`. It is written to a temporary
+  file and renamed into place, so apps that are already running keep the old copy safely.
 - Setting: `~/.config/environment.d/10-gtk3-titlebuttons.conf` sets `GTK3_MODULES`. It **appends** to any
   `GTK3_MODULES` set by an earlier file in `environment.d`. `GTK_MODULES` is not touched.
 

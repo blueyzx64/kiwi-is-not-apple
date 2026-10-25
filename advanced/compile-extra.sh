@@ -46,9 +46,10 @@ echo "Compiling titlebuttons hover module from source..."
     -o libtitlebuttons_hover.so titlebuttons_hover.c \
     $(pkg-config --cflags --libs gtk+-3.0) -Wl,--as-needed ${LDFLAGS:-}
 
-# Marks this binary as built on this machine: the installer then skips the architecture
-# and checksum checks that only make sense for the prebuilt file shipped in the repository.
-touch .built-locally
+# Marks this exact binary as built on this machine. The marker holds its SHA-256, so the
+# installer trusts it only while the .so is unchanged (a later git pull that brings a new
+# prebuilt file invalidates it).
+sha256sum libtitlebuttons_hover.so | cut -d' ' -f1 > .built-locally
 
 echo -e "${GREEN}Compilation successful.${NC}"
 echo "Run './install-extra.sh' to install it."

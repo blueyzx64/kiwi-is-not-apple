@@ -25,9 +25,13 @@ if [[ ! -f "$MODULE" ]]; then
     exit 1
 fi
 
-# The binary shipped in the repository is x86_64 only and has a published checksum.
-# A module built here by compile-extra.sh is trusted as is.
-if [[ ! -f .built-locally ]]; then
+# A module built here by compile-extra.sh is trusted only while it is the exact file that was
+# built (the marker holds its SHA-256). Otherwise it is the prebuilt binary from the repository:
+# x86_64 only, and it must match the published checksum.
+if [[ -f .built-locally ]] && [[ "$(sha256sum "$MODULE" | cut -d' ' -f1)" == "$(cat .built-locally)" ]]; then
+    echo -e "${GREEN}✓ Using the module built on this machine${NC}"
+else
+    rm -f .built-locally
     if [[ "$(uname -m)" != x86_64 ]]; then
         echo -e "${RED}The prebuilt module is x86_64 only. Run ./compile-extra.sh${NC}" >&2
         exit 1
@@ -42,9 +46,10 @@ fi
 
 mkdir -p "$LIB_DIR" "$ENV_DIR"
 
-# install(1) writes a new file and renames it over the old one. Running GTK3 apps keep the
-# old mapping; copying over the same inode would change code they are executing.
-install -m 0644 "$MODULE" "$TARGET"
+# Write a new file, then rename it over the old one. Running GTK3 apps keep the old mapping;
+# overwriting the same inode would change code they are executing.
+install -m 0644 "$MODULE" "$TARGET.tmp.$$"
+mv -f "$TARGET.tmp.$$" "$TARGET"
 echo -e "${GREEN}✓ Module installed to $TARGET${NC}"
 
 # GTK3_MODULES (not GTK_MODULES: GTK 2 reads that one too). Append to what the user's other
