@@ -4,7 +4,10 @@
 
 const N_ = s => s;
 
-/** GNOME Settings (gnome-control-center) panels. `panel` is the argument to the command. */
+/**
+ * GNOME Settings (gnome-control-center) panels. `panel` is the argument to the command.
+ * Checked against gnome-control-center gnome-50 shell/cc-panel-loader.c (tests keep it so).
+ */
 export const PANELS = [
     { panel: 'wifi', title: N_('Wi-Fi'), keywords: ['wireless', 'network', 'internet'] },
     { panel: 'network', title: N_('Network'), keywords: ['ethernet', 'vpn', 'proxy', 'internet'] },
@@ -14,8 +17,8 @@ export const PANELS = [
     { panel: 'power', title: N_('Power'), keywords: ['battery', 'sleep', 'suspend', 'power saver'] },
     { panel: 'keyboard', title: N_('Keyboard'), keywords: ['shortcuts', 'input source', 'layout', 'typing'] },
     { panel: 'mouse', title: N_('Mouse & Touchpad'), keywords: ['pointer', 'scrolling', 'tap', 'trackpad'] },
-    { panel: 'appearance', title: N_('Appearance'), keywords: ['dark mode', 'style', 'accent', 'theme'] },
-    { panel: 'background', title: N_('Wallpaper'), keywords: ['background', 'desktop picture'] },
+    // GNOME 50 has no separate 'appearance' panel: style and wallpaper live in 'background'
+    { panel: 'background', title: N_('Appearance'), keywords: ['wallpaper', 'background', 'desktop picture', 'dark style', 'dark mode', 'accent', 'style', 'theme'] },
     { panel: 'notifications', title: N_('Notifications'), keywords: ['do not disturb', 'banners', 'alerts'] },
     { panel: 'search', title: N_('Search'), keywords: ['search providers', 'files'] },
     { panel: 'multitasking', title: N_('Multitasking'), keywords: ['hot corner', 'workspaces', 'dynamic workspaces', 'active screen edges'] },
@@ -28,7 +31,9 @@ export const PANELS = [
     { panel: 'datetime', title: N_('Date & Time'), keywords: ['clock', 'timezone', 'time zone'] },
     { panel: 'region', title: N_('Region & Language'), keywords: ['locale', 'formats', 'language'] },
     { panel: 'universal-access', title: N_('Accessibility'), keywords: ['universal access', 'zoom', 'text size', 'screen reader', 'reduce motion'] },
-    { panel: 'system', title: N_('System'), keywords: ['users', 'about', 'updates', 'software'] },
+    { panel: 'wellbeing', title: N_('Digital Wellbeing'), keywords: ['screen time', 'breaks', 'usage limits', 'eye strain'] },
+    { panel: 'users', title: N_('Users'), keywords: ['accounts', 'password', 'login', 'avatar'] },
+    { panel: 'system', title: N_('System'), keywords: ['about', 'updates', 'software', 'date', 'region'] },
     { panel: 'about', title: N_('About'), keywords: ['device name', 'version', 'hardware', 'system info'] },
 ];
 
