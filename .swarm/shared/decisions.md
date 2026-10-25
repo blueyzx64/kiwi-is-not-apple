@@ -94,3 +94,8 @@ All answered by the owner on 2026-10-25. Do not ask the owner again; ask the orc
   - Clipboard history stays saved to disk by default (owner decision), but it gets content heuristics:
     private-key blocks, likely card numbers by Luhn check, long high-entropy tokens.
   - The metadata wording must not overpromise secret detection.
+- **Real Shell test env (X2):** GNOME Shell 51.1 headless in an Arch chroot. Run
+  `KIWI_SRC=<your worktree> /tmp/x2/run-real.sh [toggles]`. Output goes to /tmp/x2/last-run.txt and the log to
+  /tmp/x2/shell.log. Probe JS with `gdbus call --session --dest org.x2.Probe --object-path /org/x2/Probe
+  --method org.x2.Probe.Eval "<js>"` (from /tmp/x2/enter.sh). Every fix must be verified there.
+- Shell 48+ has no `vertical:` on St.BoxLayout. Use `orientation: Clutter.Orientation.VERTICAL`.
