@@ -50,7 +50,7 @@ export class NotchView {
     /**
      * @param {CleanupRegistry} cleanup everything made here is released on dispose
      * @param {object} handlers {onClick, onDismiss, onHover(bool), onAction(id, index),
-     *   onMedia('previous'|'toggle'|'next'), onToggleDnd}
+     *   onMedia('previous'|'toggle'|'next'), onToggleDnd, onCopy(entryId)}
      * @param {function(string): string} gettext
      */
     constructor(cleanup, handlers, gettext) {
@@ -172,7 +172,7 @@ export class NotchView {
         const signature = JSON.stringify([
             vm.kind, vm.content, vm.notificationId, vm.badge,
             vm.activity?.data ?? null, vm.osd?.kind, vm.osd?.level, vm.osd?.label,
-            vm.content === 'dashboard' ? [mediaPlain, ctx.dnd, ctx.count] : null,
+            vm.content === 'dashboard' ? [mediaPlain, ctx.dnd, ctx.count, ctx.clipboard] : null,
             n ? [n.title, n.body, n.actions?.length ?? 0] : null,
         ]);
         if (signature === this._signature)
@@ -265,7 +265,8 @@ export class NotchView {
 
     _osdPage(osd) {
         const row = this._row('kiwi-notch-osd');
-        row.add_child(icon(osd.icon ?? themed('audio-volume-high-symbolic'), 16));
+        const fallback = osd.kind === 'copied' ? 'edit-paste-symbolic' : 'audio-volume-high-symbolic';
+        row.add_child(icon(osd.icon ?? themed(fallback), 16));
         const level = osd.level;
         if (level === null || level === undefined) {
             row.add_child(label(osd.label ?? '', 'kiwi-notch-title', { x_expand: true }));
@@ -412,6 +413,26 @@ export class NotchView {
         dnd.connect('clicked', () => this._h.onToggleDnd());
         notifications.add_child(dnd);
         page.add_child(notifications);
+
+        // Clipboard history (null while the clipboard feature is off: no panel)
+        if (ctx.clipboard) {
+            const clip = new St.BoxLayout({ style_class: 'kiwi-notch-panel', vertical: true, x_expand: true });
+            clip.add_child(label(this._('Clipboard'), 'kiwi-notch-meta'));
+            if (!ctx.clipboard.length)
+                clip.add_child(label(this._('Nothing copied yet'), 'kiwi-notch-title'));
+            for (const entry of ctx.clipboard) {
+                const button = new St.Button({
+                    style_class: 'kiwi-notch-clip',
+                    can_focus: true,
+                    x_expand: true,
+                    x_align: Clutter.ActorAlign.FILL,
+                    child: label(entry.text, 'kiwi-notch-title'),
+                });
+                button.connect('clicked', () => this._h.onCopy(entry.id));
+                clip.add_child(button);
+            }
+            page.add_child(clip);
+        }
         return page;
     }
 }

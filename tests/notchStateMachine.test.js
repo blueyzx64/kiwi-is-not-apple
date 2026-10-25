@@ -308,6 +308,25 @@ test('step does not mutate its input', () => {
     eq(JSON.stringify(s0), frozen);
 });
 
+test('confirm ("Copied") shows like an osd without a level and then goes away', () => {
+    let { state } = run([{ type: 'confirm', kind: 'copied', label: 'Copied', now: 0 }]);
+    eq(kind(state), 'osd');
+    eq(view(state).osd.kind, 'copied');
+    eq(view(state).osd.level, null);
+    eq(nextDeadline(state), DEFAULT_CONFIG.osdMs);
+    ({ state } = step(state, tick(DEFAULT_CONFIG.osdMs)));
+    eq(kind(state), 'idle');
+});
+
+test('confirm preempts a card, which resumes afterwards; off with the osd setting', () => {
+    let { state } = run([notify('a', 0), { type: 'confirm', kind: 'copied', now: 100 }]);
+    eq(kind(state), 'osd');
+    ({ state } = step(state, tick(100 + DEFAULT_CONFIG.osdMs)));
+    eq(view(state).notificationId, 'a');
+    ({ state } = run([{ type: 'confirm', kind: 'copied', now: 0 }], { osd: false }));
+    eq(kind(state), 'idle');
+});
+
 print(failed ? `${failed} FAILED` : 'all passed');
 if (failed)
     imports.system.exit(1);
