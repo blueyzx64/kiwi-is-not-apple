@@ -12,6 +12,7 @@ import {
     SEARCH_PROVIDER_IFACE, NAUTILUS_DESKTOP_ID, parseProviderIni, selectProviders, normalizeMeta,
     externalScore, pickIds,
 } from '../providerInfo.js';
+import { DesktopAppInfo } from '../../../lib/gioCompat.js';
 import { normalize } from '../model.js';
 
 const PROVIDER_DIR = 'gnome-shell/search-providers';
@@ -112,7 +113,7 @@ export class DBusSearch {
         this._searchSettings = opts.searchSettings === undefined
             ? DBusSearch._openSearchSettings() : opts.searchSettings;
         this._dirs = opts.dirs ?? null;
-        this._lookupApp = opts.lookupApp ?? (id => Gio.DesktopAppInfo.new(id));
+        this._lookupApp = opts.lookupApp ?? (id => DesktopAppInfo.new(id));
         this._infos = null;
         this._loading = null;
     }

@@ -2,9 +2,9 @@
 // Applications: Shell.AppSystem + Shell.AppUsage. The index is built once, lazily, and rebuilt
 // when apps are installed or removed, so a keystroke only scores a few hundred short strings.
 
-import Gio from 'gi://Gio';
 import Shell from 'gi://Shell';
 
+import { DesktopAppInfo } from '../../../lib/compat.js';
 import { rank, usageBoost } from '../model.js';
 
 const MAX_RESULTS = 12;
@@ -29,7 +29,7 @@ export class AppsProvider {
             const id = info.get_id();
             if (!id || this._hidden.has(id) || !info.should_show())
                 continue;
-            const desktop = info instanceof Gio.DesktopAppInfo ? info : null;
+            const desktop = info instanceof DesktopAppInfo ? info : null;
             records.push({
                 id: `app:${id}`,
                 kind: 'app',
