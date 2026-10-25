@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Kiwi is not Apple 2.0.0\n"
 "Report-Msgid-Bugs-To: https://github.com/kem-a/kiwi-kemma/issues\n"
-"POT-Creation-Date: 2026-10-25 13:21+0000\n"
+"POT-Creation-Date: 2026-10-25 13:23+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1526,7 +1526,7 @@ msgid "Accessibility"
 msgstr ""
 
 #: apps/spotlight/providers/settingsCatalog.js:31
-#: apps/windowControls/prefs.js:53
+#: apps/windowControls/prefs.js:52
 msgid "System"
 msgstr ""
 
@@ -1596,12 +1596,12 @@ msgstr ""
 msgid "Which screen edge holds the strip"
 msgstr ""
 
-#: apps/stageManager/prefs.js:102 apps/windowControls/prefs.js:53
+#: apps/stageManager/prefs.js:102 apps/windowControls/prefs.js:52
 #: apps/windowTiling.js:319
 msgid "Left"
 msgstr ""
 
-#: apps/stageManager/prefs.js:102 apps/windowControls/prefs.js:53
+#: apps/stageManager/prefs.js:102 apps/windowControls/prefs.js:52
 #: apps/windowTiling.js:320
 msgid "Right"
 msgstr ""
@@ -1642,47 +1642,47 @@ msgstr ""
 msgid "Tiling title menu"
 msgstr ""
 
-#: apps/windowControls/prefs.js:35
+#: apps/windowControls/prefs.js:34
 msgid "Panel Window Controls"
 msgstr ""
 
-#: apps/windowControls/prefs.js:36
+#: apps/windowControls/prefs.js:35
 msgid "Close, minimize and maximize buttons for the focused window."
 msgstr ""
 
-#: apps/windowControls/prefs.js:40
+#: apps/windowControls/prefs.js:39
 msgid "Show buttons for"
 msgstr ""
 
-#: apps/windowControls/prefs.js:41
+#: apps/windowControls/prefs.js:40
 msgid "Which focused windows get the buttons in the top bar"
 msgstr ""
 
-#: apps/windowControls/prefs.js:44
+#: apps/windowControls/prefs.js:43
 msgid "All windows"
 msgstr ""
 
-#: apps/windowControls/prefs.js:44
+#: apps/windowControls/prefs.js:43
 msgid "Maximized windows"
 msgstr ""
 
-#: apps/windowControls/prefs.js:44
+#: apps/windowControls/prefs.js:43
 msgid "Fullscreen windows"
 msgstr ""
 
-#: apps/windowControls/prefs.js:49
+#: apps/windowControls/prefs.js:48
 msgid "Position"
 msgstr ""
 
-#: apps/windowControls/prefs.js:50
+#: apps/windowControls/prefs.js:49
 msgid "System follows the window button layout of GNOME"
 msgstr ""
 
-#: apps/windowControls/prefs.js:58
+#: apps/windowControls/prefs.js:57
 msgid "Remove titlebar buttons from windows"
 msgstr ""
 
-#: apps/windowControls/prefs.js:59
+#: apps/windowControls/prefs.js:58
 msgid ""
 "Hide the buttons that windows draw themselves while the panel shows them. "
 "Works for GTK 3 and GTK 4 apps; Qt, Electron and server-side decorated "

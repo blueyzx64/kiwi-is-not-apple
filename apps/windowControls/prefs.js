@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Prefs for the panel window controls. Adw/Gtk/Gio only (runs in the prefs process).
-// S10 puts these groups on the Window Controls page, below the "show on panel" master row,
-// and drops the old "Only when Fullscreen" row.
+// The groups go on the Window Controls page, below the "show on panel" master row.
 
 import Adw from 'gi://Adw';
 import Gtk from 'gi://Gtk';
