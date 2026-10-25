@@ -1,0 +1,31 @@
+<!-- S2 window-controls schema fragment. Merge inside <schema id="org.gnome.shell.extensions.kiwi">,
+     next to show-window-controls. Strict-compiled on a temp copy of schemas/ by S2. -->
+
+      <key name="window-controls-scope" type="s">
+        <choices>
+          <choice value="all"/>
+          <choice value="maximized"/>
+          <choice value="fullscreen"/>
+        </choices>
+        <default>'all'</default>
+        <summary>Panel window controls scope</summary>
+        <description>Which focused windows get window controls in the top bar: all windows, maximized windows (fullscreen included) or fullscreen windows only. Titlebar button removal follows the same scope. Replaces show-window-controls-fullscreen-only.</description>
+      </key>
+      <key name="window-controls-position" type="s">
+        <choices>
+          <choice value="system"/>
+          <choice value="left"/>
+          <choice value="right"/>
+        </choices>
+        <default>'system'</default>
+        <summary>Panel window controls position</summary>
+        <description>Which side of the top bar holds the window controls. 'system' follows the side of the window button layout set in GNOME.</description>
+      </key>
+      <key name="remove-titlebar-buttons" type="b">
+        <default>true</default>
+        <summary>Remove titlebar buttons from windows</summary>
+        <description>While the panel shows window controls, hide the close, minimize and maximize buttons that GTK 3 and GTK 4 windows draw in their own titlebars. Uses GTK CSS in the user's gtk.css; the window button layout is not changed.</description>
+      </key>
+      <!-- Edits for existing keys, for S10:
+           show-window-controls description -> "Display window control buttons in the top bar for the focused window (see window-controls-scope)."
+           show-window-controls-fullscreen-only -> keep, mark deprecated in its description; migrated into window-controls-scope. -->
