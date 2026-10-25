@@ -1,5 +1,5 @@
 // Run: gjs -m tests/settings.test.js
-import { KiwiSettings, runMigrations } from '../lib/settings.js';
+import { KiwiSettings, runMigrations, migrationId } from '../lib/settings.js';
 import { CleanupRegistry } from '../lib/disposables.js';
 
 let failed = 0;
@@ -115,6 +115,65 @@ test('migration with map converts type (bool -> string)', () => {
 test('migration skips keys missing from the schema', () => {
     const gs = fakeSettings({ old: 'b' }, { old: true });
     eq(runMigrations(gs, [{ from: 'old', to: 'gone' }]), []);
+});
+
+function trackedSettings(types, user = {}) {
+    return fakeSettings({ ...types, 'migrations-done': 'as' }, user, { 'migrations-done': [] });
+}
+
+test('tracked: migration runs once and records its id', () => {
+    const gs = trackedSettings({ old: 'b', new: 'b' }, { old: true });
+    eq(runMigrations(gs, [{ from: 'old', to: 'new' }]), ['new']);
+    eq(gs.user['migrations-done'], ['old->new']);
+});
+
+test('tracked: resetting the new key later does not bring the old value back', () => {
+    const gs = trackedSettings({ old: 'b', new: 'b' }, { old: true });
+    runMigrations(gs, [{ from: 'old', to: 'new' }]);
+    delete gs.user.new;   // per-key reset
+    eq(runMigrations(gs, [{ from: 'old', to: 'new' }]), []);
+    eq('new' in gs.user, false);
+});
+
+test('tracked: skipped because new key already set is recorded too', () => {
+    const gs = trackedSettings({ old: 'b', new: 'b' }, { old: true, new: false });
+    eq(runMigrations(gs, [{ from: 'old', to: 'new' }]), []);
+    eq(gs.user['migrations-done'], ['old->new']);
+    delete gs.user.new;
+    eq(runMigrations(gs, [{ from: 'old', to: 'new' }]), []);
+});
+
+test('tracked: old key never set is recorded, a later old value is not copied', () => {
+    const gs = trackedSettings({ old: 'b', new: 'b' });
+    runMigrations(gs, [{ from: 'old', to: 'new' }]);
+    eq(gs.user['migrations-done'], ['old->new']);
+    gs.user.old = true;
+    eq(runMigrations(gs, [{ from: 'old', to: 'new' }]), []);
+});
+
+test('tracked: two migrations into one key (glass pattern) write once, both recorded', () => {
+    const gs = trackedSettings({ a: 'b', c: 'b', t: 's' }, { a: true, c: true });
+    const map = () => 'x';
+    eq(runMigrations(gs, [{ from: 'a', to: 't', map }, { from: 'c', to: 't', map }]), ['t']);
+    eq(gs.user['migrations-done'], ['a->t', 'c->t']);
+});
+
+test('tracked: keys missing from schema and failures are not recorded', () => {
+    const gs = trackedSettings({ old: 'b', bad: 'v' }, { old: true });
+    runMigrations(gs, [{ from: 'old', to: 'gone' }, { from: 'old', to: 'bad' }]);
+    eq('migrations-done' in gs.user, false);
+});
+
+test('tracked: no write when nothing new ran; explicit id wins', () => {
+    const gs = trackedSettings({ old: 'b', new: 'b' }, { old: true });
+    let writes = 0;
+    const set = gs.set_strv;
+    gs.set_strv = (k, v) => { writes++; set(k, v); };
+    runMigrations(gs, [{ id: 'm1', from: 'old', to: 'new' }]);
+    runMigrations(gs, [{ id: 'm1', from: 'old', to: 'new' }]);
+    eq(writes, 1);
+    eq(gs.user['migrations-done'], ['m1']);
+    eq(migrationId({ from: 'a', to: 'b' }), 'a->b');
 });
 
 if (failed) {

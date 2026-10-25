@@ -28,7 +28,7 @@ import { restoreStaleColors } from './apps/dockColors.js';
 
 // Keys Kiwi writes itself at run time. No `when` or restartOn reads them, and a write made
 // during a refresh would re-enter the registry, so they do not trigger a pass.
-const KEYS_THAT_NEVER_AFFECT_FEATURES = new Set(['dock-colors-saved', 'clipboard-recording']);
+const KEYS_THAT_NEVER_AFFECT_FEATURES = new Set(['dock-colors-saved', 'clipboard-recording', 'migrations-done']);
 
 export default class KiwiExtension extends Extension {
     enable() {

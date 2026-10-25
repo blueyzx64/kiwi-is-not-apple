@@ -384,6 +384,12 @@
         <description>Do not hide the top bar while no window is showing on the primary monitor.</description>
       </key>
 
+      <key name="migrations-done" type="as">
+        <default>[]</default>
+        <summary>Settings migrations that already ran</summary>
+        <description>Internal. Ids of the one-time settings migrations (old key to new key) that Kiwi has already applied, so they never run again. Do not edit.</description>
+      </key>
+
       <key name="dock-colors-saved" type="s">
         <default>''</default>
         <summary>Dash-to-Dock colours saved while Kiwi adaptive colours run</summary>
