@@ -21,18 +21,23 @@ import { Glass } from '../../lib/glass.js';
 import { SHELL_HAS_SYSTEM_DND } from '../../lib/compat.js';
 import { restoreBuiltinDndToggle, setControlCenterOwnsDnd } from '../quickSettingsDnDRemoval.js';
 import { refreshLegacyDnd } from '../quickSettingsNotifications.js';
-import { MORE_HEADER_ID, planLayout } from './model.js';
+import {
+    DISPLAY_HEADER_ID, MORE_HEADER_ID, SOUND_HEADER_ID, SPACER_PREFIX, planLayout,
+} from './model.js';
 import { NowPlaying } from './nowPlaying.js';
 import {
+    ITEM_CLASS, JOIN_NEXT_CLASS, JOIN_PREV_CLASS,
     applyPlan, columnSpan, compactable, gridAlive, hideLegacyDndButton, managedChildren, readyQuickSettings,
-    restoreCompact, restoreGrid, setCompact, snapshotGrid, stockKeys,
+    restoreCompact, restoreGrid, restoreLayoutClasses, setCompact, setLayoutClasses, snapshotGrid, stockKeys,
 } from './shell.js';
+import { keepHidden } from '../util/keepHidden.js';
 import { createDndToggle, createKiwiModule } from './tiles.js';
 import { PanelBattery, UserRow } from './userRow.js';
 
 const MENU_CLASS = 'kiwi-control-center';
 const GLASS_CLASS = 'kiwi-cc-glass';
 const CALM_CLASS = 'kiwi-cc-calm';
+const LIGHT_CLASS = 'kiwi-cc-light';
 
 // The stock panel builds its items a moment after the shell starts (async imports); GNOME
 // emits no signal for it, so wait for it with a bounded poll.
@@ -57,6 +62,10 @@ export class ControlCenter {
         this._battery = null;
         this._nowPlaying = null;
         this._header = null;
+        this._captions = new Map();     // plan id -> caption label (Display, Sound, More)
+        this._spacers = [];             // blank half cells of the top block
+        this._classed = new Set();      // actors carrying layout classes
+        this._notifUndo = null;         // the hidden notification list, while the notch is on
     }
 
     enable() {
@@ -120,6 +129,7 @@ export class ControlCenter {
             // High contrast keeps the stock solid tiles and colours
             this._toggleClass(box, CALM_CLASS, !env.highContrast);
             this._toggleClass(box, GLASS_CLASS, Glass.wants('menus', settings) && !env.highContrast);
+            this._toggleClass(box, LIGHT_CLASS, !env.dark);
         });
 
         // A destroyed grid (Shell shutdown, rebuilt menu) is never touched again
@@ -130,6 +140,7 @@ export class ControlCenter {
         });
         cleanup.connect(this._grid, 'child-removed', (_g, actor) => {
             this._unwatchVisible(actor);
+            this._classed.delete(actor);
             this._stockSpans.delete(actor);
             // A toggle that leaves the grid gets its label back on the way out
             setCompact(actor, false, this._compact);
@@ -138,6 +149,8 @@ export class ControlCenter {
         for (const actor of managedChildren(this._grid))
             this._watchVisible(actor);
 
+        // The notch owns notifications: the Control Center shows no list of its own then
+        cleanup.connect(settings, 'changed::notch', () => this._queueRelayout());
         cleanup.connect(settings, 'changed::control-center-user-row', () => this._syncUserRow());
         cleanup.connect(settings, 'changed::battery-percentage-always', () => this._syncBattery());
         // The footer extras are optional: a failure there must not stop the layout
@@ -163,12 +176,20 @@ export class ControlCenter {
             grid.add_child(actor);
         };
 
-        this._header = new St.Label({
-            text: gettext('More'),
-            style_class: 'kiwi-cc-section-title',
-            visible: false,
-        });
-        grid.add_child(this._header);
+        for (const [id, text] of [
+            [DISPLAY_HEADER_ID, gettext('Display')],
+            [SOUND_HEADER_ID, gettext('Sound')],
+            [MORE_HEADER_ID, gettext('More')],
+        ]) {
+            const label = new St.Label({
+                text,
+                style_class: id === MORE_HEADER_ID ? 'kiwi-cc-section-title' : 'kiwi-cc-caption',
+                visible: false,
+            });
+            this._captions.set(id, label);
+            grid.add_child(label);
+        }
+        this._header = this._captions.get(MORE_HEADER_ID);
 
         // GNOME 49 added the stock toggle; on 48 the Control Center brings its own
         if (!SHELL_HAS_SYSTEM_DND || !qs._doNotDisturb)
@@ -212,10 +233,35 @@ export class ControlCenter {
     // ---- layout ------------------------------------------------------------
 
     _watchVisible(actor) {
-        if (this._visibleTokens.has(actor) || actor === this._header)
+        if (this._visibleTokens.has(actor) || this._isLayoutActor(actor))
             return;
         this._visibleTokens.set(actor,
             this._cleanup.connect(actor, 'notify::visible', () => this._queueRelayout()));
+    }
+
+    /** Captions and spacers: shown and hidden by the plan itself. */
+    _isLayoutActor(actor) {
+        return [...this._captions.values()].includes(actor) || this._spacers.includes(actor);
+    }
+
+    _spacer(n) {
+        while (this._spacers.length <= n) {
+            const spacer = new St.Widget({ style_class: 'kiwi-cc-spacer', visible: false });
+            this._spacers.push(spacer);
+            this._grid.add_child(spacer);
+        }
+        return this._spacers[n];
+    }
+
+    /** The legacy notification list stays hidden while the notch owns notifications. */
+    _syncNotifications(actor) {
+        const hide = !!actor && this._flag('notch', false);
+        if (hide && !this._notifUndo) {
+            this._notifUndo = keepHidden(actor, { resync: a => a._syncEmpty?.() });
+        } else if (!hide && this._notifUndo) {
+            this._notifUndo();
+            this._notifUndo = null;
+        }
     }
 
     _unwatchVisible(actor) {
@@ -233,6 +279,7 @@ export class ControlCenter {
         }
         this._grid = null;
         this._snapshot = null;
+        this._classed.clear();
     }
 
     _queueRelayout() {
@@ -257,7 +304,8 @@ export class ControlCenter {
         if (!gridAlive(grid))
             return;
 
-        const children = managedChildren(grid).filter(actor => actor !== this._header);
+        const children = managedChildren(grid).filter(actor => !this._isLayoutActor(actor));
+        this._syncNotifications(children.find(actor => this._keyOf(actor) === 'notifications'));
         const byId = new Map();
         const entries = children.map((actor, i) => {
             if (!this._stockSpans.has(actor))
@@ -271,16 +319,38 @@ export class ControlCenter {
                 compactable: !this._own.has(actor) && compactable(actor),
             };
         });
-        byId.set(MORE_HEADER_ID, this._header);
+        for (const [id, label] of this._captions)
+            byId.set(id, label);
 
         const plan = planLayout(entries);
-        this._header.visible = plan.find(p => p.id === MORE_HEADER_ID).visible;
+        const usedSpacers = new Set();
+        const placed = [];
         for (const p of plan) {
-            const actor = byId.get(p.id);
+            let actor = byId.get(p.id);
+            if (p.id.startsWith(SPACER_PREFIX)) {
+                actor = this._spacer(Number(p.id.slice(SPACER_PREFIX.length)));
+                usedSpacers.add(actor);
+            }
+            if (!actor)
+                continue;
+            if (this._isLayoutActor(actor))
+                actor.visible = p.visible;
             if (p.compact || this._compact.has(actor))
                 setCompact(actor, p.compact, this._compact);
+            setLayoutClasses(actor, [
+                ITEM_CLASS,
+                ...p.joinPrev ? [JOIN_PREV_CLASS] : [],
+                ...p.joinNext ? [JOIN_NEXT_CLASS] : [],
+            ], this._classed);
+            placed.push({ actor, span: p.span });
         }
-        applyPlan(grid, plan.map(p => ({ actor: byId.get(p.id), span: p.span })));
+        for (const spacer of this._spacers) {
+            if (!usedSpacers.has(spacer)) {
+                spacer.visible = false;
+                placed.push({ actor: spacer, span: 2 });
+            }
+        }
+        applyPlan(grid, placed);
     }
 
     // ---- teardown ------------------------------------------------------------
@@ -289,6 +359,9 @@ export class ControlCenter {
         if (!this._qs)
             return;
         try {
+            this._notifUndo?.();
+            this._notifUndo = null;
+            restoreLayoutClasses(this._classed);
             this._userRow?.destroy();
             this._battery?.destroy();
             // Destroys its own actor too
@@ -299,13 +372,17 @@ export class ControlCenter {
             }
             this._userRow = this._battery = this._nowPlaying = null;
             this._own.clear();
-            this._header?.destroy();
+            for (const actor of [...this._captions.values(), ...this._spacers])
+                actor.destroy();
+            this._captions.clear();
+            this._spacers = [];
             this._header = null;
 
             const box = this._qs.menu?.box;
             box?.remove_style_class_name(MENU_CLASS);
             box?.remove_style_class_name(GLASS_CLASS);
             box?.remove_style_class_name(CALM_CLASS);
+            box?.remove_style_class_name(LIGHT_CLASS);
 
             restoreCompact(this._compact);
             restoreGrid(this._grid, this._snapshot, this._stockSpans);

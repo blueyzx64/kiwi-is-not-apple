@@ -84,10 +84,13 @@ function iconButton(iconName, label, onClick) {
  * @param {object} entry
  * @param {object} ctl controller
  * @param {Function} _ gettext
- * @param {{onActivate: Function, tile?: number, now?: number}} o
+ * @param {{onActivate: Function, tile?: number, now?: number, compact?: boolean}} o
+ *   compact: one line (type icon, preview, time on the right), for the panel popover
  * @returns {St.Button} with `.entryId`; add pseudo class 'selected' to mark it
  */
-export function buildRow(entry, ctl, _, { onActivate, tile = 34, now = Date.now() }) {
+export function buildRow(entry, ctl, _, { onActivate, tile = 34, now = Date.now(), compact = false }) {
+    if (compact)
+        return buildCompactRow(entry, ctl, _, { onActivate, tile, now });
     const row = new St.Button({
         style_class: 'kiwi-clip-row', can_focus: true, reactive: true, track_hover: true,
         x_expand: true, x_align: Clutter.ActorAlign.FILL,
@@ -121,6 +124,57 @@ export function buildRow(entry, ctl, _, { onActivate, tile = 34, now = Date.now(
     const sync = () => {
         actions.opacity = row.hover || entry.pinned || row.has_style_pseudo_class('selected') ? 255 : 0;
     };
+    row.connect('notify::hover', sync);
+    row.connect('style-changed', sync);
+    row.connect('clicked', () => onActivate(entry));
+    return row;
+}
+
+/** One-line preview: line breaks and runs of blanks read as a single space. */
+export function oneLine(text) {
+    return String(text ?? '').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * The one-line row of the panel popover: type icon, preview, and a quiet time on the
+ * right. Pin and Remove take the time's place on hover.
+ */
+function buildCompactRow(entry, ctl, _, { onActivate, tile, now }) {
+    const row = new St.Button({
+        style_class: 'kiwi-clip-row kiwi-clip-row-compact', can_focus: true, reactive: true,
+        track_hover: true, x_expand: true, x_align: Clutter.ActorAlign.FILL,
+    });
+    row.entryId = entry.id;
+    const box = new St.BoxLayout({ style_class: 'kiwi-clip-row-box', x_expand: true });
+    row.set_child(box);
+    box.add_child(buildTile(entry, ctl, tile));
+
+    const title = new St.Label({
+        text: oneLine(titleOf(entry, _)), style_class: 'kiwi-clip-title',
+        x_expand: true, y_align: Clutter.ActorAlign.CENTER,
+    });
+    title.clutter_text.set_ellipsize(3);          // Pango.EllipsizeMode.END
+    box.add_child(title);
+
+    const time = new St.Label({
+        text: ageText(entry, now, _), style_class: 'kiwi-clip-time', y_align: Clutter.ActorAlign.CENTER,
+    });
+    box.add_child(time);
+
+    const actions = new St.BoxLayout({ style_class: 'kiwi-clip-actions', y_align: Clutter.ActorAlign.CENTER });
+    actions.add_child(iconButton(
+        'view-pin-symbolic', entry.pinned ? _('Unpin') : _('Pin'), () => ctl.togglePin(entry.id)));
+    actions.add_child(iconButton('edit-delete-symbolic', _('Remove'), () => ctl.remove(entry.id)));
+    box.add_child(actions);
+    if (entry.pinned)
+        row.add_style_pseudo_class('pinned');
+    const sync = () => {
+        // Hover only: the keyboard selection keeps its time, so the list stays calm
+        const active = row.hover;
+        actions.visible = active;
+        time.visible = !active;
+    };
+    sync();
     row.connect('notify::hover', sync);
     row.connect('style-changed', sync);
     row.connect('clicked', () => onActivate(entry));

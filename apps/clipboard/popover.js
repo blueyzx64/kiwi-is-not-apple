@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Top-bar popover: title + count, search, filter buttons, Pinned and Recent, footer with the
-// Recording switch, the shortcut hint and Clear History. Mouse first; Quick Paste is the
-// keyboard surface.
+// Top-bar popover, minimal like the macOS clipboard managers: a compact search field, small
+// filter chips, one-line rows (type icon, preview, time) with the first row selected, a
+// centred empty state, and a quiet footer (Recording switch, Clear). Up/Down move the
+// selection from the search field and Enter copies it; Quick Paste stays the full keyboard
+// surface.
 
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
@@ -9,11 +11,11 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import { Glass } from '../../lib/glass.js';
 import { ModalSurface } from '../../lib/modalSurface.js';
-import { accelLabel, addRow, sectionLabel } from './view.js';
+import { addRow, sectionLabel } from './view.js';
 
-const WIDTH = 380;
-const LIST_HEIGHT = 360;
+const WIDTH = 340;
 const MAX_ROWS = 80;
+const ROW_TILE = 24;
 
 export class ClipboardPopover {
     /**
@@ -29,12 +31,21 @@ export class ClipboardPopover {
         this._filter = 'all';
         this._query = '';
         this._glass = null;
+        this._entries = [];
+        this._selected = -1;
 
         this._build();
         cleanup.connect(menu, 'open-state-changed', (_m, open) => this._onOpen(open));
         cleanup.add(ctl.connectChanged(() => this._menu.isOpen && this._refresh()));
         cleanup.add(() => this._detachGlass());
         this._attachGlass();
+        // Secondary text needs its own shade per style to stay readable
+        Glass.watch(cleanup, ({ env }) => {
+            if (env.dark)
+                this._root.remove_style_class_name('kiwi-clip-light');
+            else
+                this._root.add_style_class_name('kiwi-clip-light');
+        });
     }
 
     _build() {
@@ -46,20 +57,17 @@ export class ClipboardPopover {
             x_expand: true, width: WIDTH,
         });
         item.add_child(root);
-
-        const head = new St.BoxLayout({ style_class: 'kiwi-clip-head' });
-        head.add_child(new St.Label({ text: _('Clipboard'), style_class: 'kiwi-clip-heading', x_expand: true }));
-        this._count = new St.Label({ style_class: 'kiwi-clip-count', y_align: Clutter.ActorAlign.CENTER });
-        head.add_child(this._count);
-        root.add_child(head);
+        this._root = root;
 
         this._entry = new St.Entry({
             style_class: 'kiwi-clip-search', hint_text: _('Search'), can_focus: true, x_expand: true,
+            primary_icon: new St.Icon({ icon_name: 'edit-find-symbolic', style_class: 'kiwi-clip-search-icon' }),
         });
         this._entry.clutter_text.connect('text-changed', () => {
             this._query = this._entry.get_text();
             this._refresh();
         });
+        this._entry.clutter_text.connect('key-press-event', (_a, event) => this._onKey(event));
         root.add_child(this._entry);
 
         const filters = new St.BoxLayout({ style_class: 'kiwi-clip-filters' });
@@ -75,9 +83,11 @@ export class ClipboardPopover {
             filters.add_child(b);
         }
         root.add_child(filters);
+        this._filters = filters;
 
+        // Natural height up to a cap (stylesheet max-height): three rows make a short list
         this._scroll = new St.ScrollView({
-            style_class: 'kiwi-clip-scroll', height: LIST_HEIGHT, overlay_scrollbars: true,
+            style_class: 'kiwi-clip-scroll', overlay_scrollbars: true,
             hscrollbar_policy: St.PolicyType.NEVER, vscrollbar_policy: St.PolicyType.AUTOMATIC,
         });
         this._list = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, x_expand: true });
@@ -88,15 +98,17 @@ export class ClipboardPopover {
         this._switch = new PopupMenu.Switch(this._ctl.recording);
         const toggle = new St.Button({
             style_class: 'kiwi-clip-recording', can_focus: true, reactive: true, child: this._switch,
+            accessible_name: _('Recording'), y_align: Clutter.ActorAlign.CENTER,
         });
         toggle.connect('clicked', () => this._ctl.setRecording(!this._ctl.recording));
-        this._recLabel = new St.Label({ style_class: 'kiwi-clip-recording-label', y_align: Clutter.ActorAlign.CENTER });
+        this._recLabel = new St.Label({
+            style_class: 'kiwi-clip-recording-label', x_expand: true, y_align: Clutter.ActorAlign.CENTER,
+        });
         foot.add_child(toggle);
         foot.add_child(this._recLabel);
-        this._hint = new St.Label({ style_class: 'kiwi-clip-hint', x_expand: true, y_align: Clutter.ActorAlign.CENTER });
-        this._hint.x_align = Clutter.ActorAlign.END;
-        foot.add_child(this._hint);
-        const clear = new St.Button({ label: _('Clear History'), style_class: 'kiwi-clip-clear', can_focus: true });
+        const clear = new St.Button({
+            label: _('Clear'), style_class: 'kiwi-clip-clear', can_focus: true, y_align: Clutter.ActorAlign.CENTER,
+        });
         clear.connect('clicked', () => this._ctl.clear());
         foot.add_child(clear);
         root.add_child(foot);
@@ -119,17 +131,60 @@ export class ClipboardPopover {
         this._entry.clutter_text.grab_key_focus();
     }
 
+    // ---- selection: Up/Down from the search field, Enter copies ----
+
+    _rows() {
+        return this._list.get_children().filter(child => child.entryId !== undefined);
+    }
+
+    _select(index) {
+        const rows = this._rows();
+        this._selected = rows.length ? Math.max(0, Math.min(index, rows.length - 1)) : -1;
+        rows.forEach((row, i) => {
+            if (i === this._selected)
+                row.add_style_pseudo_class('selected');
+            else
+                row.remove_style_pseudo_class('selected');
+        });
+        const row = rows[this._selected];
+        if (row) {
+            const adj = this._scroll.vadjustment;
+            const [top, bottom] = [row.y, row.y + row.height];
+            if (top < adj.value)
+                adj.value = top;
+            else if (bottom > adj.value + adj.page_size)
+                adj.value = bottom - adj.page_size;
+        }
+    }
+
+    _onKey(event) {
+        const key = event.get_key_symbol();
+        if (key === Clutter.KEY_Down || key === Clutter.KEY_Up) {
+            this._select(this._selected + (key === Clutter.KEY_Down ? 1 : -1));
+            return Clutter.EVENT_STOP;
+        }
+        if (key === Clutter.KEY_Return || key === Clutter.KEY_KP_Enter) {
+            const row = this._rows()[this._selected];
+            const entry = row && this._entries.find(e => e.id === row.entryId);
+            if (entry)
+                this._ctl.copy(entry, { close: true });
+            return Clutter.EVENT_STOP;
+        }
+        return Clutter.EVENT_PROPAGATE;
+    }
+
     _refresh() {
         const _ = this._;
         const ctl = this._ctl;
         // Header and footer first: they must be right even if a row fails
-        this._count.text = String(ctl.count);
         this._switch.state = ctl.recording;
         this._recLabel.text = ctl.recording ? _('Recording') : _('Paused');
-        const hint = accelLabel(ctl.shortcut);
-        this._hint.text = hint ? _('Quick Paste %s').replace('%s', hint) : '';
+        this._entry.hint_text = ctl.count
+            ? _('Search %d items').replace('%d', ctl.count)
+            : _('Search');
 
         const { pinned, recent } = ctl.view({ filter: this._filter, query: this._query });
+        this._entries = [...pinned, ...recent];
         this._list.destroy_all_children();
         const now = Date.now();
         let shown = 0;
@@ -137,23 +192,45 @@ export class ClipboardPopover {
             for (const e of rows) {
                 if (shown++ >= MAX_ROWS)
                     return;
-                addRow(this._list, e, ctl, _, { onActivate: en => ctl.copy(en, { close: true }), now });
+                addRow(this._list, e, ctl, _, {
+                    onActivate: en => ctl.copy(en, { close: true }), now, compact: true, tile: ROW_TILE,
+                });
             }
         };
         if (pinned.length) {
             this._list.add_child(sectionLabel(_('Pinned')));
             add(pinned);
         }
-        if (recent.length) {
+        if (pinned.length && recent.length)
             this._list.add_child(sectionLabel(_('Recent')));
-            add(recent);
-        }
-        if (!pinned.length && !recent.length) {
-            this._list.add_child(new St.Label({
-                text: ctl.count ? _('No matches') : _('Nothing copied yet'),
-                style_class: 'kiwi-clip-empty', x_align: Clutter.ActorAlign.CENTER,
-            }));
-        }
+        add(recent);
+        if (!pinned.length && !recent.length)
+            this._list.add_child(this._emptyState(ctl.count > 0));
+        // Nothing to filter yet: the chips would only be clutter around the empty state
+        this._filters.visible = ctl.count > 0;
+        this._select(0);
+    }
+
+    /** A centred, gentle message: nothing copied yet, or no match for the search. */
+    _emptyState(searching) {
+        const _ = this._;
+        const box = new St.BoxLayout({
+            style_class: 'kiwi-clip-empty', orientation: Clutter.Orientation.VERTICAL,
+            x_expand: true, x_align: Clutter.ActorAlign.CENTER,
+        });
+        box.add_child(new St.Icon({
+            icon_name: searching ? 'edit-find-symbolic' : 'edit-paste-symbolic',
+            style_class: 'kiwi-clip-empty-icon', x_align: Clutter.ActorAlign.CENTER,
+        }));
+        box.add_child(new St.Label({
+            text: searching ? _('No matches') : _('Nothing copied yet'),
+            style_class: 'kiwi-clip-empty-title', x_align: Clutter.ActorAlign.CENTER,
+        }));
+        box.add_child(new St.Label({
+            text: searching ? _('Try another word or filter.') : _('Text, links and images you copy appear here.'),
+            style_class: 'kiwi-clip-empty-hint', x_align: Clutter.ActorAlign.CENTER,
+        }));
+        return box;
     }
 
     // ---- glass: a translucent fill on the rounded menu box itself (lib/glass.js) ----

@@ -7,6 +7,13 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import { NotificationRouter } from '../coordinators/notificationRouter.js';
 import { CleanupRegistry } from '../lib/disposables.js';
+import { Glass } from '../lib/glass.js';
+import { keepHidden } from './util/keepHidden.js';
+
+// The macOS-like calendar card: stylesheet.css restyles the date menu under these classes
+const CARD_CLASS = 'kiwi-datemenu';
+const CARD_CALM_CLASS = 'kiwi-datemenu-calm';      // not under high contrast
+const CARD_LIGHT_CLASS = 'kiwi-datemenu-light';
 
 // State holders so we can fully restore on disable
 let dateMenu;
@@ -16,6 +23,7 @@ let originalParentIndex;
 let originalMenuBoxStyle;
 let hiddenMessageList = null; // date menu message list hidden while enabled
 const routerCleanup = new CleanupRegistry(); // banner position pin and the shared notification state
+const cardCleanup = new CleanupRegistry();   // card classes and the hidden clocks/weather
 
 // Notification indicator state
 let notificationIndicator = null;
@@ -166,6 +174,8 @@ export function enable(extension) {
         dateMenu.menu.box.style = `min-width: ${Math.max(300, natW + 20)}px;`;
     }
 
+    styleCard();
+
     // Banner position belongs to NotificationRouter (the notch may take the banners over).
     // Pin them top-right in both modes so they appear there whether or not the GNOME
     // notification panel is kept.
@@ -179,6 +189,9 @@ export function enable(extension) {
 
 export function disable() {
     dateMenu = Main.panel.statusArea.dateMenu;
+
+    // Card look off, world clocks and weather back
+    cardCleanup.dispose();
 
     // Restore the message list if we hid it
     if (hiddenMessageList) {
@@ -207,6 +220,29 @@ export function disable() {
     routerCleanup.dispose();
 
     enabled = false;
+}
+
+/**
+ * The calendar card: a month grid, a minimal header and the events. World clocks and
+ * weather are hidden (macOS has neither here, and both read "Add world clocks…" /
+ * "Select weather location…" when unset); their own sync gets the last word on restore.
+ */
+function styleCard() {
+    const box = dateMenu.menu.box;
+    const toggle = (name, on) => (on ? box.add_style_class_name(name) : box.remove_style_class_name(name));
+    box.add_style_class_name(CARD_CLASS);
+    cardCleanup.add(() => {
+        for (const name of [CARD_CLASS, CARD_CALM_CLASS, CARD_LIGHT_CLASS])
+            box.remove_style_class_name(name);
+    });
+    Glass.watch(cardCleanup, ({ env }) => {
+        toggle(CARD_CALM_CLASS, !env.highContrast);
+        toggle(CARD_LIGHT_CLASS, !env.dark);
+    });
+    for (const item of [dateMenu._clocksItem, dateMenu._weatherItem]) {
+        if (item)
+            cardCleanup.add(keepHidden(item, { resync: a => a._sync?.() }));
+    }
 }
 
 function checkForNotifications() {

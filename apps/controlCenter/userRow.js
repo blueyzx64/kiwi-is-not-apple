@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The footer of the Control Center: the stock system item (battery, screenshot, Settings,
-// Lock, Power) with the user's avatar and name in front and "time left" under the battery.
+// Lock, Power) with the user's avatar in front and "time left" under the battery. macOS has
+// no user row, so the footer stays one quiet line of small icons: the avatar shows no name
+// (the name is its accessible name).
 // Replaces the old panel username label (apps/addUsernameToQuickMenu.js).
 //
 // Reads the stock PowerToggle (system.js): its `title` already holds the percentage and
@@ -15,7 +17,7 @@ import * as UserWidget from 'resource:///org/gnome/shell/ui/userWidget.js';
 
 import { batteryTime } from './model.js';
 
-const AVATAR_SIZE = 32;
+const AVATAR_SIZE = 24;
 
 function _userName(user) {
     const name = user?.is_loaded ? user.get_real_name() : null;
@@ -53,15 +55,12 @@ export class UserRow {
             y_align: Clutter.ActorAlign.CENTER,
         });
         this._cluster.add_child(this._createAvatar(user));
-        this._name = new St.Label({
-            style_class: 'kiwi-cc-user-name',
-            y_align: Clutter.ActorAlign.CENTER,
-            text: _userName(user),
-        });
-        this._cluster.add_child(this._name);
         this._item.child.insert_child_at_index(this._cluster, 0);
 
-        const rename = () => this._name.set_text(_userName(user));
+        const rename = () => {
+            this._cluster.accessible_name = _userName(user);
+        };
+        rename();
         const update = () => this._updateTime();
         this._tokens.push(
             this._cleanup.connect(user, 'notify::is-loaded', rename),
