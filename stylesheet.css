@@ -897,3 +897,63 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
 .kiwi-downloads-stack.behind .kiwi-fan-file-icon {
   icon-shadow: 0 0 4px rgba(0, 0, 0, 0.35);
 }
+
+
+/*###############################################*/
+/*  Liquid Glass (lib/glass.js, apps/liquidGlass) */
+/*###############################################*/
+/* feature: liquid-glass
+   Layers, back to front, are built by GlassService:
+     .kiwi-glass            wrapper: drop shadow (St draws one box-shadow per actor)
+       blur widget          Shell.BlurEffect, no CSS
+       .kiwi-glass-tint     tint colour (set inline from the tint slider), rim, inset highlight
+   Corner radii are concentric: inner = max(outer - padding, 4px). Control Center 26 with
+   padding 12 gives tiles of 14; a popover of 18 with padding 6 gives items of 12.
+   Tint colours are not here: the alpha comes from the Tint setting, see lib/glassParams.js. */
+
+/* rim: dark scheme */
+.kiwi-glass-tint {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+/* rim: light scheme */
+.kiwi-glass-light .kiwi-glass-tint {
+  border: 1px solid rgba(255, 255, 255, 0.55);
+}
+
+/* top-edge specular highlight (the Highlight setting) */
+.kiwi-glass-highlight {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.kiwi-glass-light .kiwi-glass-highlight {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+/* elevation, on the wrapper only (never next to the highlight) */
+.kiwi-glass-shadowed {
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+}
+
+/* Clear style needs no extra rule: it only changes the inline tint alpha. */
+
+/* high contrast: solid surface, 1px rim at 60 % of the foreground colour */
+.kiwi-glass-opaque .kiwi-glass-tint {
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.kiwi-glass-light.kiwi-glass-opaque .kiwi-glass-tint {
+  border: 1px solid rgba(0, 0, 0, 0.6);
+}
+
+/* reduced motion: no fades on the glass */
+.kiwi-glass-static {
+  transition-duration: 0ms;
+}
+
+/* The panel's own background steps aside while a glass layer paints behind it
+   (apps/liquidGlass, only when Panel Transparency is off). */
+#panel.kiwi-glass-panel {
+  background-color: transparent;
+  box-shadow: none;
+}

@@ -13,13 +13,14 @@
 // wallpaper changes need no handling here at all.
 
 import Meta from 'gi://Meta';
-import Shell from 'gi://Shell';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as Background from 'resource:///org/gnome/shell/ui/background.js';
 
+import { Glass } from '../lib/glass.js';
+
 const GROUP_NAME = 'kiwi-overview-blur-group';
-const EFFECT_NAME = 'kiwi-overview-blur';
+const EFFECT_NAME = 'kiwi-overview-blur';  // holder actor name
 
 // Radius goes to clutter_blur_node_new() after being divided by the effect's
 // downscale_factor, and blurring a downscaled texture then upscaling it smooths
@@ -34,12 +35,14 @@ const BRIGHTNESS_LIGHT = 0.65;
 let _enabled = false;
 let _group = null;
 let _managers = [];
+let _handles = [];
 let _groupSignals = [];   // reconnected on every rebuild
 let _globalSignals = [];  // live for as long as the module is enabled
 
-function _brightness() {
-    return St.Settings.get().colorScheme === St.SystemColorScheme.PREFER_DARK
-        ? BRIGHTNESS_DARK : BRIGHTNESS_LIGHT;
+// The effect itself comes from lib/glass.js (surface 'wallpaper': a cached ACTOR-mode
+// blur whose brightness the service re-applies when the colour scheme changes).
+function _brightness(dark) {
+    return dark ? BRIGHTNESS_DARK : BRIGHTNESS_LIGHT;
 }
 
 function _disconnect(list) {
@@ -53,6 +56,8 @@ function _teardown() {
 
     // Each manager owns the Meta.BackgroundActor it parented into its holder, so it
     // has to go before the holders are destroyed under it.
+    _handles.forEach(handle => handle.destroy());
+    _handles = [];
     _managers.forEach(manager => manager.destroy());
     _managers = [];
 
@@ -68,7 +73,6 @@ function _build() {
     _teardown();
 
     _group = new Meta.BackgroundGroup({ name: GROUP_NAME });
-    const brightness = _brightness();
 
     Main.layoutManager.monitors.forEach((monitor, index) => {
         const holder = new St.Widget({
@@ -78,10 +82,11 @@ function _build() {
             width: monitor.width,
             height: monitor.height,
         });
-        holder.add_effect_with_name(EFFECT_NAME, new Shell.BlurEffect({
-            mode: Shell.BlurMode.ACTOR,
+        _handles.push(Glass.attach(holder, {
+            surface: 'wallpaper',
+            mode: 'self',
             radius: BLUR_RADIUS,
-            brightness,
+            brightness: _brightness,
         }));
 
         // BackgroundManager parents a Meta.BackgroundActor into the holder and keeps
@@ -108,13 +113,6 @@ function _build() {
     })]);
 }
 
-function _syncBrightness() {
-    const brightness = _brightness();
-    _group.get_children().forEach(holder => {
-        holder.get_effect(EFFECT_NAME).brightness = brightness;
-    });
-}
-
 export function enable() {
     if (_enabled)
         return;
@@ -125,10 +123,8 @@ export function enable() {
     // A monitor change invalidates every holder's geometry, so rebuild outright.
     _globalSignals.push([Main.layoutManager,
         Main.layoutManager.connect('monitors-changed', () => _build())]);
-    // Only the darkening depends on the colour scheme; the wallpaper swap itself is
-    // BackgroundManager's job.
-    _globalSignals.push([St.Settings.get(),
-        St.Settings.get().connect('notify::color-scheme', () => _syncBrightness())]);
+    // The colour scheme only changes the darkening, which Glass re-applies itself; the
+    // wallpaper swap is BackgroundManager's job.
 }
 
 export function disable() {
