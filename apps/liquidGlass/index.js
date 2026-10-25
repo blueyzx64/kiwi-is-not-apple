@@ -95,18 +95,23 @@ export class LiquidGlass {
             name: 'kiwi-glass-panel',
             isDark: () => _textIsLight(panel),
         });
-        panel.add_style_class_name(PANEL_CLASS);
 
         const reg = this._cleanup;
-        const sync = () => {
+        const sync = (inOverview = Main.overview.visible) => {
             const inFullscreen = Main.layoutManager.primaryMonitor?.inFullscreen ?? false;
-            handle.setVisible(!Main.overview.visible && !inFullscreen);
+            const show = !inOverview && !inFullscreen;
+            handle.setVisible(show);
+            // Never leave the panel bare-transparent while the glass is hidden
+            if (show)
+                panel.add_style_class_name(PANEL_CLASS);
+            else
+                panel.remove_style_class_name(PANEL_CLASS);
         };
         const tokens = [
             // The panel is transparent in the overview and solid over fullscreen windows
-            reg.connect(Main.overview, 'showing', () => handle.setVisible(false)),
-            reg.connect(Main.overview, 'hiding', sync),
-            reg.connect(Main.layoutManager, 'in-fullscreen-changed', sync),
+            reg.connect(Main.overview, 'showing', () => sync(true)),
+            reg.connect(Main.overview, 'hiding', () => sync(false)),
+            reg.connect(Main.layoutManager, 'in-fullscreen-changed', () => sync()),
         ];
         sync();
         this._panel = { handle, tokens };
