@@ -165,8 +165,9 @@ Signal.stop_emission_by_name (w, "changed");  // from inside a handler
 - Lambdas capture `this` and locals **strongly** (see `memory-ownership.md`).
   Always disconnect handlers on long-lived emitters (e.g. a `Gio.Settings` or
   D-Bus proxy) when the receiver goes away.
-- Method handlers: `w.changed.connect (this.on_changed);` — connected with the
-  instance as data; still disconnect when done.
+- Method handlers: `w.changed.connect (this.on_changed);` compiles to
+  `g_signal_connect_object` — no ref on `this`, auto-disconnect when `this` is
+  finalized (verified with `valac -C`). Prefer them to lambdas.
 - Signals with return values: the last handler's value wins unless an
   accumulator is used; GJS handlers must return the declared type.
 
