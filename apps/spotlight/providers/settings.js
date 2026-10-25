@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Settings results: GNOME Settings panels plus a few Kiwi switches.
 
-import Gio from 'gi://Gio';
 
 import * as Util from 'resource:///org/gnome/shell/misc/util.js';
 
+import { DesktopAppInfo } from '../../../lib/compat.js';
 import { rank } from '../model.js';
 import { settingsItems } from './settingsCatalog.js';
 
@@ -30,7 +30,7 @@ export class SettingsProvider {
         if (this._items)
             return this._items;
         const { settings, gettext } = this._ctx;
-        this._panelsAvailable ??= !!Gio.DesktopAppInfo.new(SETTINGS_APP);
+        this._panelsAvailable ??= !!DesktopAppInfo.new(SETTINGS_APP);
         const schema = settings.settings_schema;
         this._items = settingsItems(gettext, {
             panelsAvailable: this._panelsAvailable,
