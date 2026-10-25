@@ -33,6 +33,85 @@ const LEGACY_IMPORT_REGEX = /^[^\n]*@import[^\n]*kiwi@kemma[^\n]*\n?/gm;
 
 let gtkThemeManager = null;
 
+Gio._promisify(Gio.File.prototype, 'load_contents_async', 'load_contents_finish');
+Gio._promisify(Gio.File.prototype, 'make_directory_async', 'make_directory_finish');
+Gio._promisify(Gio.File.prototype, 'delete_async', 'delete_finish');
+Gio._promisify(Gio.File.prototype, 'replace_contents_bytes_async', 'replace_contents_finish');
+Gio._promisify(Gio.File.prototype, 'replace_async', 'replace_finish');
+Gio._promisify(Gio.File.prototype, 'query_info_async', 'query_info_finish');
+Gio._promisify(Gio.OutputStream.prototype, 'close_async', 'close_finish');
+
+async function isSymlink(file) {
+    const info = await file.query_info_async('standard::is-symlink',
+        Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, GLib.PRIORITY_DEFAULT, null);
+    return info.get_is_symlink();
+}
+
+// Replaces our managed block in <dir>/gtk.css, leaving the user's own rules untouched.
+// An empty block removes our imports. The file is deleted only when it held our block
+// and nothing else; a file we did not write to is never touched.
+export async function processUserGtkFile(dirPath, managedBlock) {
+    const filePath = GLib.build_filenamev([dirPath, 'gtk.css']);
+    try {
+        const file = Gio.File.new_for_path(filePath);
+
+        let existing = null;
+        try {
+            const [contents] = await file.load_contents_async(null);
+            existing = new TextDecoder().decode(contents);
+        } catch (e) {
+            if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_FOUND))
+                throw e;
+        }
+
+        if (existing === null && !managedBlock)
+            return;
+
+        // Strip any previous block, plus unmarked imports from older versions
+        const rest = (existing ?? '')
+            .replace(MANAGED_BLOCK_REGEX, '')
+            .replace(LEGACY_IMPORT_REGEX, '');
+        const hadOurs = existing !== null && rest !== existing;
+
+        // Our imports come first so user rules can still override them
+        const newContent = managedBlock + rest;
+
+        if (newContent === existing)
+            return;
+
+        if (!newContent.trim()) {
+            if (!hadOurs)
+                return;
+            // A symlinked gtk.css (stow, home-manager) is the user's: never delete the link
+            // or its target, just empty it. GIO hangs on an empty buffer, so use a stream.
+            if (await isSymlink(file)) {
+                const stream = await file.replace_async(null, false, Gio.FileCreateFlags.NONE,
+                    GLib.PRIORITY_DEFAULT, null);
+                await stream.close_async(GLib.PRIORITY_DEFAULT, null);
+            } else {
+                await file.delete_async(GLib.PRIORITY_DEFAULT, null);
+            }
+            return;
+        }
+
+        if (existing === null) {
+            try {
+                await Gio.File.new_for_path(dirPath).make_directory_async(GLib.PRIORITY_DEFAULT, null);
+            } catch (e) {
+                if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.EXISTS))
+                    throw e;
+            }
+        }
+        // Flags NONE writes through a symlink to its target instead of replacing the link.
+        await file.replace_contents_bytes_async(
+            new GLib.Bytes(new TextEncoder().encode(newContent)),
+            null, false, Gio.FileCreateFlags.NONE, null);
+    } catch (error) {
+        console.error(`[Kiwi] Error processing GTK file ${filePath}: ${error}`);
+    }
+}
+
+
 // File work runs one job at a time across ALL manager instances: a lock drops one instance and
 // the unlock makes another, and their jobs must not overlap on the same gtk.css files.
 const enqueueFileJob = createJobQueue(error => console.error(`[Kiwi] GTK css job failed: ${error}`));
@@ -121,58 +200,8 @@ class GtkThemeManager {
         });
     }
 
-    // Replaces our managed block in <dir>/gtk.css, leaving the user's own rules untouched.
-    // An empty block removes our imports. The file is deleted only when it held our block
-    // and nothing else; a file we did not write to is never touched.
-    async processUserGtkFile(dirPath, managedBlock) {
-        const filePath = GLib.build_filenamev([dirPath, 'gtk.css']);
-        try {
-            const file = Gio.File.new_for_path(filePath);
-
-            let existing = null;
-            try {
-                const [contents] = await file.load_contents_async(null);
-                existing = new TextDecoder().decode(contents);
-            } catch (e) {
-                if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_FOUND))
-                    throw e;
-            }
-
-            if (existing === null && !managedBlock)
-                return;
-
-            // Strip any previous block, plus unmarked imports from older versions
-            const rest = (existing ?? '')
-                .replace(MANAGED_BLOCK_REGEX, '')
-                .replace(LEGACY_IMPORT_REGEX, '');
-            const hadOurs = existing !== null && rest !== existing;
-
-            // Our imports come first so user rules can still override them
-            const newContent = managedBlock + rest;
-
-            if (newContent === existing)
-                return;
-
-            if (!newContent.trim()) {
-                if (hadOurs)
-                    await file.delete_async(GLib.PRIORITY_DEFAULT, null);
-                return;
-            }
-
-            if (existing === null) {
-                try {
-                    await Gio.File.new_for_path(dirPath).make_directory_async(GLib.PRIORITY_DEFAULT, null);
-                } catch (e) {
-                    if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.EXISTS))
-                        throw e;
-                }
-            }
-            await file.replace_contents_bytes_async(
-                new GLib.Bytes(new TextEncoder().encode(newContent)),
-                null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
-        } catch (error) {
-            console.error(`[Kiwi] Error processing GTK file ${filePath}: ${error}`);
-        }
+    processUserGtkFile(dirPath, managedBlock) {
+        return processUserGtkFile(dirPath, managedBlock);
     }
 
     removeUserGtkConfig() {
@@ -209,10 +238,6 @@ class GtkThemeManager {
 }
 
 export function enable(ext) {
-    Gio._promisify(Gio.File.prototype, 'load_contents_async', 'load_contents_finish');
-    Gio._promisify(Gio.File.prototype, 'make_directory_async', 'make_directory_finish');
-    Gio._promisify(Gio.File.prototype, 'delete_async', 'delete_finish');
-    Gio._promisify(Gio.File.prototype, 'replace_contents_bytes_async', 'replace_contents_finish');
     if (!gtkThemeManager) {
         gtkThemeManager = new GtkThemeManager(ext);
         gtkThemeManager.enable();

@@ -1,7 +1,8 @@
 // Run: gjs -m tests/mozillaThemeManager.test.js
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
-import {MozillaThemeManager, addKiwiPref, removeKiwiPref, parseBackupName, parseIni} from '../apps/mozillaThemeManager.js';
+import {MozillaThemeManager, addKiwiPref, removeKiwiPref, parseBackupName, parseIni,
+    applyKiwiBlock, stripKiwiBlock, isLegacyKiwiOutput, installsIniProfiles, parsePending, pendingBody} from '../apps/mozillaThemeManager.js';
 
 let failed = 0;
 const tests = [];
@@ -41,6 +42,29 @@ test('parseIni', () => {
     eq(s[0].data.Default, '1');
 });
 
+const IMP = '@import url("file:///ext/css/firefoxWindowControls.css");';
+const P = 'firefoxWindowControls';
+test('block: user text outside it is kept, block replaced', () => {
+    const a = applyKiwiBlock('#nav { color: red }\n', [IMP], P);
+    eq(a, `/* Kiwi begin */\n${IMP}\n/* Kiwi end */\n#nav { color: red }\n`);
+    eq(applyKiwiBlock(a, [], P), '/* Kiwi begin */\n/* Kiwi end */\n#nav { color: red }\n');
+    eq(stripKiwiBlock(a, P), '#nav { color: red }\n');
+});
+test('legacy Kiwi-only userChrome.css migrates; user files are not legacy', () => {
+    eq(isLegacyKiwiOutput(`/* Kiwi */\n${IMP}\n`, P), true);
+    eq(isLegacyKiwiOutput(`${IMP}\n`, P), true);
+    eq(isLegacyKiwiOutput('', P), true);
+    eq(isLegacyKiwiOutput(`${IMP}\n#x{}\n`, P), false);
+    eq(applyKiwiBlock(`/* Kiwi */\n${IMP}\n`, [IMP], P), `/* Kiwi begin */\n${IMP}\n/* Kiwi end */\n`);
+});
+test('installs.ini: every install default, deduped', () => {
+    eq(installsIniProfiles(parseIni('[Install1]\nDefault=a.default\n[Install2]\nDefault=b\n[Install3]\nDefault=a.default\n')), ['a.default', 'b']);
+});
+test('pending journal round trip', () => {
+    eq(parsePending(pendingBody('install', 'chrome.bak')), {op: 'install', backup: 'chrome.bak'});
+    eq(parsePending('junk'), null);
+});
+
 // Integration on a temp HOME-like tree, driven through the real async paths.
 function run(loopPromise) {
     const loop = new GLib.MainLoop(null, false);
@@ -67,8 +91,10 @@ function makeManager(root) {
         xdgProfileDir: 'nohome/xdg', cssPrefix: 'firefoxWindowControls', logPrefix: 'Test',
     });
     m._settings = settings;
-    m._getDefaultProfile = async () => `${root}/profile`;
-    return {m, values};
+    const current = [`${root}/profile`];
+    m._getCurrentProfiles = async () => current.filter(p => exists(p));
+    m._statePath = `${root}/share/kiwi/mozilla-profiles.json`;
+    return {m, values, current};
 }
 
 test('user chrome/ is moved aside, restored on removal, user.js line removed', () => {
@@ -106,7 +132,7 @@ test('no buttons and no panel controls: no hang, userChrome.css not empty', () =
     values['enable-app-window-buttons'] = false;
     values['show-window-controls'] = false;
     run(m.updateCss());
-    eq(read(`${root}/profile/chrome/userChrome.css`), '/* Kiwi */\n');
+    eq(read(`${root}/profile/chrome/userChrome.css`), '/* Kiwi begin */\n/* Kiwi end */\n');
     eq(read(`${root}/profile/chrome/.kiwi-managed`).includes('userjs=created'), true);
 });
 
@@ -145,6 +171,94 @@ test('foreign files in chrome/: marker kept, backup kept', () => {
     eq(exists(`${root}/profile/chrome/.kiwi-managed`), true);
     eq(exists(`${root}/profile/chrome/userChrome.css`), false);
     eq(exists(`${root}/profile/chrome.bak/userChrome.css`), true);
+});
+
+test('user edits in userChrome.css survive login and disable', () => {
+    const root = GLib.dir_make_tmp('kiwi-moz-XXXXXX');
+    GLib.mkdir_with_parents(`${root}/profile`, 0o755);
+    const {m} = makeManager(root);
+    run(m.updateCss());
+    const uc = `${root}/profile/chrome/userChrome.css`;
+    write(uc, `${read(uc)}#nav { color: red }\n`);
+    run(m.updateCss());
+    eq(read(uc).endsWith('#nav { color: red }\n'), true);
+    eq(read(uc).split('Kiwi begin').length, 2);
+    run(m.removeCss());
+    eq(read(uc), '#nav { color: red }\n');
+    eq(exists(`${root}/profile/chrome/.kiwi-managed`), true);
+});
+
+test('old Kiwi-only userChrome.css is migrated and fully removed', () => {
+    const root = GLib.dir_make_tmp('kiwi-moz-XXXXXX');
+    write(`${root}/profile/chrome/.kiwi-managed`, 'Kiwi managed chrome folder\nbackup=chrome.bak\n');
+    write(`${root}/profile/chrome/userChrome.css`, '/* Kiwi */\n@import url("file:///old/css/firefoxWindowControls.css");\n');
+    const {m} = makeManager(root);
+    run(m.updateCss());
+    eq(read(`${root}/profile/chrome/userChrome.css`).includes('/old/'), false);
+    run(m.removeCss());
+    eq(exists(`${root}/profile/chrome`), false);
+});
+
+test('every profile Kiwi touched is cleaned, also after the default changed', () => {
+    const root = GLib.dir_make_tmp('kiwi-moz-XXXXXX');
+    GLib.mkdir_with_parents(`${root}/profile`, 0o755);
+    GLib.mkdir_with_parents(`${root}/other`, 0o755);
+    const {m, current} = makeManager(root);
+    run(m.updateCss());
+    current[0] = `${root}/other`;
+    run(m.updateCss()); // old profile cleaned as it is no longer current
+    eq(exists(`${root}/profile/chrome`), false);
+    eq(exists(`${root}/other/chrome/.kiwi-managed`), true);
+    eq(JSON.parse(read(`${root}/share/kiwi/mozilla-profiles.json`)), {firefoxWindowControls: [`${root}/other`]});
+    current.length = 0; // no default profile at all: state file still drives cleanup
+    run(m.removeCss());
+    eq(exists(`${root}/other/chrome`), false);
+    eq(exists(`${root}/share/kiwi/mozilla-profiles.json`), false);
+});
+
+test('two installs in installs.ini: both styled', () => {
+    const root = GLib.dir_make_tmp('kiwi-moz-XXXXXX');
+    write(`${root}/ff/installs.ini`, '[A1]\nDefault=p1\n\n[B2]\nDefault=p2\n');
+    GLib.mkdir_with_parents(`${root}/ff/p1`, 0o755);
+    GLib.mkdir_with_parents(`${root}/ff/p2`, 0o755);
+    const {m} = makeManager(root);
+    let found = null;
+    run(m._getProfilesFromInstallsIni(`${root}/ff`).then(r => { found = r; }));
+    eq(found, [`${root}/ff/p1`, `${root}/ff/p2`]);
+});
+
+test('crash after moving chrome/ aside: next run rolls back, then installs', () => {
+    const root = GLib.dir_make_tmp('kiwi-moz-XXXXXX');
+    write(`${root}/profile/chrome.bak/userChrome.css`, 'mine');
+    GLib.mkdir_with_parents(`${root}/profile/chrome`, 0o755); // empty, no marker yet
+    write(`${root}/profile/.kiwi-pending`, 'op=install\nbackup=chrome.bak\n');
+    const {m} = makeManager(root);
+    run(m.removeCss());
+    eq(read(`${root}/profile/chrome/userChrome.css`), 'mine');
+    eq(exists(`${root}/profile/chrome.bak`), false);
+    eq(exists(`${root}/profile/.kiwi-pending`), false);
+});
+
+test('crash during removal (marker gone, empty chrome/): finished next run', () => {
+    const root = GLib.dir_make_tmp('kiwi-moz-XXXXXX');
+    write(`${root}/profile/chrome.bak/userChrome.css`, 'mine');
+    GLib.mkdir_with_parents(`${root}/profile/chrome`, 0o755);
+    write(`${root}/profile/.kiwi-pending`, 'op=remove\nbackup=chrome.bak\n');
+    const {m} = makeManager(root);
+    run(m.removeCss());
+    eq(read(`${root}/profile/chrome/userChrome.css`), 'mine');
+    eq(exists(`${root}/profile/.kiwi-pending`), false);
+});
+
+test('Kiwi-created chrome/ never restores an unrelated chrome.bak', () => {
+    const root = GLib.dir_make_tmp('kiwi-moz-XXXXXX');
+    GLib.mkdir_with_parents(`${root}/profile`, 0o755);
+    const {m} = makeManager(root);
+    run(m.updateCss());
+    write(`${root}/profile/chrome.bak/x`, 'user backup');
+    run(m.removeCss());
+    eq(exists(`${root}/profile/chrome`), false);
+    eq(read(`${root}/profile/chrome.bak/x`), 'user backup');
 });
 
 test('unmarked chrome/ is not touched by removal', () => {
