@@ -8,7 +8,7 @@
 | Window controls | S2 | done, merged | feat/window-controls |
 | Liquid Glass | S3 | done, merged incl. review fixes | feat/liquid-glass |
 | Clipboard | S4 | done, merged | feat/clipboard |
-| Spotlight | S5 | fixed; R7 re-check | feat/spotlight |
+| Spotlight | S5 | R7 APPROVE; S10 integrating | feat/spotlight |
 | Auto-hide bar | S6 | done, merged | feat/autohide |
 | Control Center | S7 | merged; Now Playing → MprisWatcher after notch | feat/control-center |
 | Notch | S8 | built; R8 review | feat/notch |
