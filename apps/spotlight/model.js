@@ -135,6 +135,11 @@ export function rank(items, query, limit = Infinity) {
     return Number.isFinite(limit) ? out.slice(0, limit) : out;
 }
 
+/** Rank bonus for the n-th most used app (0 = most used). Small: it breaks ties, it never beats a better match. */
+export function usageBoost(index) {
+    return index < 0 ? 0 : Math.max(0, 40 - index * 4);
+}
+
 /** Which section an item belongs to. Providers may set `group` themselves. */
 export function groupOf(item) {
     if (item.group && GROUPS.includes(item.group))
