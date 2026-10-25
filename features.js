@@ -194,7 +194,7 @@ export const FEATURES = [
         // A window parked in the dock should not also show up in the overview
         id: 'hide-minimized-windows', reapply: true,
         when: ctx => bool(ctx, 'hide-minimized-windows') || minimizeToDockRunning(ctx),
-        enable: () => hideMinimizedWindowsEnable(),
+        enable: ctx => hideMinimizedWindowsEnable(ctx.settings),
         disable: () => hideMinimizedWindowsDisable(),
     },
     {
