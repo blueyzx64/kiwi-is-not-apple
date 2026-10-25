@@ -86,7 +86,7 @@ export function buildPrefs({ settings, window, extension }) {
 
     const main = new Adw.PreferencesGroup({
         title: _('Stage Manager'),
-        description: _('Other apps wait as live thumbnails in a strip at the edge of the screen. Click one to switch to it. While it is on, Minimize to Dock, window tiling by drag and Move Fullscreen Window are paused; their settings are kept.'),
+        description: _('Other apps wait as live thumbnails in a strip at the edge of the screen. Click one to switch to it.'),
     });
     const enabled = new Adw.SwitchRow({ title: _('Show the Stage Manager strip') });
     settings.bind('stage-manager', enabled, 'active', Gio.SettingsBindFlags.DEFAULT);
@@ -143,5 +143,26 @@ export function buildPrefs({ settings, window, extension }) {
     sync();
     connect('stage-manager', sync);
 
-    return [main, strip];
+    // What Stage Manager pauses (features.js conflictsWith), only those the user has switched on
+    const paused = new Adw.PreferencesGroup();
+    const pausedRow = new Adw.ActionRow({ title: _('Paused while Stage Manager is on'), subtitle_lines: 0 });
+    pausedRow.add_prefix(new Gtk.Image({ icon_name: 'media-playback-pause-symbolic' }));
+    paused.add(pausedRow);
+    const PAUSES = [
+        [() => settings.get_boolean('minimize-to-dock'), _('Minimize to Dock')],
+        [() => settings.get_boolean('move-window-to-new-workspace'), _('Move Fullscreen to New Workspace')],
+        [() => settings.get_boolean('show-window-title') && settings.get_boolean('show-tiling-title-menu'),
+            _('Tiling title menu')],
+    ];
+    const syncPaused = () => {
+        const names = PAUSES.filter(([on]) => on()).map(([, name]) => name);
+        pausedRow.subtitle = names.join(', ');
+        paused.visible = settings.get_boolean('stage-manager') && names.length > 0;
+    };
+    syncPaused();
+    for (const key of ['stage-manager', 'minimize-to-dock', 'move-window-to-new-workspace',
+        'show-window-title', 'show-tiling-title-menu'])
+        connect(key, syncPaused);
+
+    return [main, paused, strip];
 }
