@@ -70,3 +70,11 @@ All answered by the owner on 2026-10-25. Do not ask the owner again; ask the orc
   before handing off. Run `make pot` before release (CI does not).
 - Stage Manager pauses minimize-to-dock, move-window-to-new-workspace and tiling-title-menu while on
   (feature spec §5). Alt-tab to a hidden window switches to its stage, as on macOS.
+- Clipboard shortcut: the schema default is `[]` (EGO: "MUST NOT ship default keyboard shortcuts for
+  clipboard interaction"). Prefs gives a one-click "Use Super+Shift+V". Owner may override.
+- Clipboard dir: one sync `GLib.mkdir_with_parents(dir, 0o700)` in enable is allowed. It creates the
+  dir with the right mode atomically. Repair a wrong mode on an existing Kiwi dir.
+- Quick Paste uses a virtual keyboard Ctrl+V, against the skill note "set clipboard and close". The
+  spec wins. Paste only if not locked and the target window really has focus.
+- Window controls: server-side-decorated windows keep their own buttons. Kiwi does not write the
+  system `button-layout` key, which is a user setting outside the extension. This is a documented limit.

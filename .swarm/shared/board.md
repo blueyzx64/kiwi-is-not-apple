@@ -7,7 +7,7 @@
 | Integrator/review | S10 | setup merged; idle until review | feat/integration |
 | Window controls | S2 | done, merged | feat/window-controls |
 | Liquid Glass | S3 | done, merged incl. review fixes | feat/liquid-glass |
-| Clipboard | S4 | built; R1 review + S10 integration | feat/clipboard |
+| Clipboard | S4 | R1 CHANGES; S4 fixing; integration ready (feat/integration-s4) | feat/clipboard |
 | Spotlight | S5 | doing (model first; waits S4 modalSurface) | feat/spotlight |
 | Auto-hide bar | S6 | done, merged | feat/autohide |
 | Control Center | S7 | built; R2 review | feat/control-center |
@@ -17,8 +17,8 @@
 | Panel transparency (D2) | D2 | built; R3 review | debt/panel-transparency |
 | Overview patches (D3) | D3 | built; R3 review | debt/overview-patches |
 | Window utils (D4) | D4 | built; R3 review | debt/window-utils |
-| Dock (D5) | D5 | doing | debt/dock |
-| CSS debt (D6) | D6 | doing | debt/css-debt |
+| Dock (D5) | D5 | built; R6 review | debt/dock |
+| CSS debt (D6) | D6 | built; R5 review | debt/css-debt |
 | Build/CI (D7) | D7 | done, merged | debt/build-ci |
 | Docs (D8) | D8 | doing | debt/docs |
 | Reviewer 2 | R1 | reviewing S4 | - |
