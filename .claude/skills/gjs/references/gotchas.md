@@ -33,7 +33,10 @@ Sources: gjs NEWS and docs (master), gnome-shell sources (main), and the shexli 
 - `actor.destroy()` disposes the C object, emits `destroy`, removes it from
   its parent and destroys its children. The **JS wrapper survives**, and any
   method or property access then logs a critical/warning that the object has
-  already been disposed (exact message varies by version (unverified text)).
+  already been disposed: a critical `Object Gjs_Foo (0x…), has been already
+  disposed — impossible to access it. This might be caused by the object
+  having been destroyed from C code…` ("finalized"/"set any property on" vary;
+  gjs gi/object.cpp `check_gobject_disposed_or_finalized`).
   Always null the reference after destroy.
 - Destroy order: disconnect signals on *other* objects first, then destroy
   your actors (children go with the parent), then set references to null.
@@ -82,15 +85,17 @@ obj.connect('changed', this._sync.bind(this));   // note: a new function each bi
   returned from C. You can **pass** BigInt to 64-bit parameters
   (`GLib.Variant.new_int64(2n ** 62n)`), and `GLib.MAXINT64_BIGINT` and
   friends exist (gjs NEWS 1.71.1, GNOME 42 cycle). 64-bit *return* values still
-  come back as Number (unverified for every path). Treat file sizes and
+  come back as Number, and GJS logs "Value … cannot be safely stored in a JS
+  Number and may be rounded" past 2^53 (gi/arg-inl.h). Treat file sizes and
   timestamps as Numbers, which is fine below 9 PB.
 - `GLib.get_monotonic_time()` returns microseconds as a Number. Clutter event
   times (`event.get_time()`) are 32-bit ms. `global.get_current_time()` for
   the X/Wayland server time.
 - Enums and flags are plain numbers: `Meta.MaximizeFlags.BOTH`. Combine with
   `|` and test with `&`. Comparing an enum to a string is always false.
-- Unsigned out-of-range values throw a TypeError on input (unverified across
-  versions). Clamp before passing (for example `opacity` 0-255).
+- Out-of-range integer arguments throw a plain `Error` (not a TypeError):
+  `value 300 is out of range for … (type …)` (gjs gi/arg.cpp,
+  `gjs_throw` = JSEXN_ERR). Clamp before passing (for example `opacity` 0-255).
 
 ## 6. Out-args, arrays and multiple returns
 - Functions with out-params return an array: `const [ok, value] = settings.get_value(...)`,
@@ -133,6 +138,7 @@ gnome-shell-extension skill's `references/version-matrix.md`.
 ## 9. Sources
 - https://gitlab.gnome.org/GNOME/gjs/-/blob/master/NEWS
 - https://gitlab.gnome.org/GNOME/gjs/-/blob/master/doc/Mapping.md , doc/Encoding.md , doc/Overrides.md , doc/Style_Guide.md
+- https://gitlab.gnome.org/GNOME/gjs/-/blob/master/gi/object.cpp (disposed critical) , gi/arg.cpp , gi/arg-inl.h (range errors, rounding warning)
 - https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/main/js/ui/environment.js
 - https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/main/js/extensions/extension.js (InjectionManager)
 - shexli spec (EGO-X-003 run_dispose, EGO-I-001 deprecated modules): https://pypi.org/project/shexli/

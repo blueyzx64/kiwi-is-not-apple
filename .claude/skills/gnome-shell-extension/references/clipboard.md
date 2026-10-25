@@ -81,14 +81,16 @@ async _read() {
   Indicator probes a list in order, which costs one transfer per miss.
 - Some apps re-offer text as `UTF8_STRING` only (an Xwayland/legacy path).
   Normalize it to `text/plain;charset=utf-8` when storing (Clipboard Indicator
-  comment, gnome-shell issue 8233 referenced there (unverified link)).
+  comment citing https://gitlab.gnome.org/GNOME/gnome-shell/-/issues/8233,
+  "get_content() only returns text/plain;charset=utf-8 … for the first item").
 - Images: show a thumbnail with
   `St.Icon({gicon: Gio.BytesIcon.new(bytes)})`, or an `St.ImageContent` from a
   `GdkPixbuf` loaded with `new_from_stream_at_scale_async`. Kiwi already
   promisifies that in `apps/mediaPlayback.js`. Cap the size, for example skip
   anything over 5 MB.
-- Files copied in Nautilus: `x-special/gnome-copied-files` or `text/uri-list`
-  (unverified for every app; inspect `get_mimetypes()`).
+- Files copied in Nautilus: `x-special/gnome-copied-files` plus a `GdkFileList`,
+  which GTK 4 serializes as `text/uri-list` (nautilus-clipboard.c,
+  gdkcontentserializer.c). Other apps vary, so inspect `get_mimetypes()`.
 
 ## 4. Writing (restore an entry)
 ```js
@@ -144,7 +146,9 @@ this._clipboard.set_content(St.ClipboardType.CLIPBOARD, entry.mime, entry.bytes 
   Always check `_enabled` before touching UI.
 - Large payloads: `St.Clipboard.get_content` loads everything into memory. For
   big images use `Meta.Selection.transfer_async` into a
-  `Gio.MemoryOutputStream` with a size cap (unverified API ergonomics in GJS).
+  `Gio.MemoryOutputStream` (`meta_selection_transfer_async(sel, type, mime,
+  size, output, cancellable, cb)`; pass a byte cap as `size`, -1 = all). This
+  is exactly what st-clipboard.c does internally.
 - Fast successive copies: coalesce reads with an idle source and remove it in
   `disable()`.
 - `St.Clipboard` instances are a singleton. Don't destroy them. Just drop the
@@ -155,6 +159,7 @@ this._clipboard.set_content(St.ClipboardType.CLIPBOARD, entry.mime, entry.bytes 
 - https://gitlab.gnome.org/GNOME/mutter/-/blob/main/src/meta/meta-selection.h , .../meta-selection-source.h , src/core/meta-selection.c (owner-changed)
 - https://gjs.guide/extensions/review-guidelines/review-guidelines.html (Clipboard Access must be declared)
 - https://github.com/Tudmotu/gnome-shell-extension-clipboard-indicator/blob/master/extension.js
+- https://gitlab.gnome.org/GNOME/nautilus/-/blob/main/src/nautilus-clipboard.c (x-special/gnome-copied-files + GdkFileList)
 - https://phabricator.kde.org/R120:637cd0bf62e419b8038cb9b1565089fbd341ee7a (Klipper: skip `x-kde-passwordManagerHint` = secret)
 - https://community.bitwarden.com/t/linux-prevent-passwords-from-being-stored-in-clipboard-manager-history/94231
 - shexli EGO-A-005: https://pypi.org/project/shexli/

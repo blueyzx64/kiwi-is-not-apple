@@ -73,9 +73,11 @@ instead (blur-shaders-and-effects.md).
   files.
 - Accent: `org.gnome.desktop.interface accent-color` (47+). From JS:
   `St.Settings.get().accent_color` (an `St.SystemAccentColor` enum). The
-  resolved colour is in the theme node: `widget.get_theme_node().lookup_color('-st-accent-color', false)`
-  (unverified lookup name; `st-theme-context.c` stores `accent_color` and
-  `accent_fg_color`).
+  resolved colours: `const [accent, accentFg] =
+  St.ThemeContext.get_for_stage(global.stage).get_accent_color()` (Cogl.Color
+  out-params, 47+). `-st-accent-color` is a CSS *value* keyword
+  (`color: -st-accent-color;`), not a property, so `lookup_color()` on that
+  name finds nothing (st-theme-node.c `term_is_accent_color`).
 - High contrast: `St.Settings.get().high_contrast`. Liquid Glass must degrade
   to opaque backgrounds when it is set.
 
@@ -106,7 +108,9 @@ widget.connect('style-changed', () => {
   `disable()`. Then `.kiwi-glass .panel-button {}` disappears cleanly.
 - Users with custom Shell themes (User Themes extension) can override you.
   Kiwi documents that it is tested with vanilla Adwaita.
-- `!important` is not supported (unverified). Higher specificity wins.
+- `!important` is honoured: st-theme.c `get_origin()` ranks important
+  declarations above normal ones (and extension sheets above both). Otherwise
+  higher specificity wins.
 
 ## 7. Sources
 - https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/main/src/st/st-theme-node.c
@@ -115,3 +119,4 @@ widget.connect('style-changed', () => {
 - https://gitlab.gnome.org/GNOME/gnome-shell/-/tree/main/data/theme/gnome-shell-sass
 - https://gjs.guide/extensions/upgrading/gnome-shell-47.html (accent color, -st-accent-color)
 - https://gjs.guide/extensions/overview/anatomy.html#stylesheet-css
+- https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/51.0/src/st/st-theme.c (`!important` via get_origin) , .../st-theme-context.c (get_accent_color)

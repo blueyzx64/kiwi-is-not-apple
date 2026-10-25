@@ -36,7 +36,8 @@ import Clutter from 'gi://Clutter';           // inside Shell: the version is fi
   The first version you specify is cached.
 - In Shell code, don't specify versions for Clutter, Meta, St, Shell, Cogl
   or Mtk. The shell already loaded the right ones (each GNOME release bumps
-  the mutter API version (unverified exact numbers)).
+  the mutter API version: 13 on 45, 16 on 48, 17 on 49, 18 on 50, then 51
+  on 51, matching the major version (mutter meson.build `libmutter_api_version`)).
 - Platform-specific APIs (46+): `import GioUnix from 'gi://GioUnix'`, for
   example `GioUnix.DesktopAppInfo` (gnome-shell remoteSearch.js uses it) and
   `GioUnix.InputStream`. The old `Gio.DesktopAppInfo` and `Gio.UnixInputStream`
@@ -88,7 +89,8 @@ Built-ins (`import x from 'name'`):
 - `system`: `exit`, `gc`, `dumpHeap`, `dumpMemoryInfo`, `programInvocationName`
 - `gettext`: `gettext`, `ngettext`, `pgettext`, `bindtextdomain`
 - `cairo`: default export only
-- `console`: `setConsoleLogDomain`, etc. (unverified names)
+- `console`: `setConsoleLogDomain`, `getConsoleLogDomain`, `DEFAULT_LOG_DOMAIN`
+  (`'Gjs-Console'`) (gjs modules/esm/console.js)
 
 Deprecated (don't use; EGO-I-001): `ByteArray` (use `TextEncoder` and
 `TextDecoder`), `Lang` (use classes and `GObject.registerClass`), `Mainloop`
@@ -105,7 +107,7 @@ exists as a global in ESM, but mixing styles is discouraged.
 ## 7. Language features by GNOME version
 | From | SpiderMonkey | Safe to use |
 |---|---|---|
-| 45 (1.78) | 115 | class fields, `#private`, static blocks, `??=`/`||=`, `Array.prototype.at`, `Object.hasOwn`, `findLast`, top-level await, `structuredClone` (unverified) |
+| 45 (1.78) | 115 | class fields, `#private`, static blocks, `??=`/`||=`, `Array.prototype.at`, `Object.hasOwn`, `findLast`, top-level await. Not `structuredClone`: GJS does not provide it (absent from gjs source as of 1.90) |
 | 47 (1.82) | 128 | `Object.groupBy`/`Map.groupBy`, `Promise.withResolvers`, `String.prototype.isWellFormed`, `ArrayBuffer.prototype.transfer`, `Array.fromAsync` (1.78+) |
 | 49 (1.86) | 140 | Iterator helpers (`iter.map/filter/take/drop/toArray…`), `Float16Array`, `Math.f16round`, duplicate named capture groups |
 Kiwi supports 48+, so anything in the first two rows is fine. Feature-test
@@ -117,3 +119,4 @@ before using 140-only features (`typeof Iterator !== 'undefined' && Iterator.pro
 - https://gitlab.gnome.org/GNOME/gjs/-/blob/master/doc/Timers.md , doc/Encoding.md , doc/Console.md
 - https://gitlab.gnome.org/GNOME/gjs/-/blob/master/NEWS (1.78 to 1.90)
 - https://gjs.guide/extensions/overview/imports-and-modules.html
+- https://gitlab.gnome.org/GNOME/gjs/-/blob/master/modules/esm/console.js ; https://gitlab.gnome.org/GNOME/mutter/-/blob/51.0/meson.build (libmutter_api_version)

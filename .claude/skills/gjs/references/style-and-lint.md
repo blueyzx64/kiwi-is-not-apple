@@ -99,10 +99,12 @@ plus `--extra-source` paths).
 - Upstream requires JSDoc on public ESM exports (`publicOnly: {esm: true}`).
   Document `@param` types such as `{Meta.Window}` or `{Clutter.Actor}` and
   `@returns`.
-- Editor types: `npm i -D @girs/gnome-shell @girs/gjs` (DefinitelyTyped-style
-  GIR typings; `@girs/gnome-shell` 50.0.4 at research time). Reference them in
-  `jsconfig.json` (`"compilerOptions": {"checkJs": false, "types": ["@girs/gnome-shell", "@girs/gjs"]}`)
-  (unverified exact option set; see gjs.guide "TypeScript and LSP").
+- Editor types: `npm i -D @girs/gnome-shell @girs/gjs` (GIR typings;
+  `@girs/gnome-shell` 50.0.4 at research time). gjs.guide "TypeScript and LSP"
+  loads them through an `ambient.d.ts` listed in the tsconfig/jsconfig
+  `include`, containing `import "@girs/gjs"; import "@girs/gjs/dom";
+  import "@girs/gnome-shell/ambient"; import "@girs/gnome-shell/extensions/global";`
+  (its tsconfig: `module`/`moduleResolution` `NodeNext`, `target` `ES2023`).
 - Since gjs 1.83.1, GJS supports source maps if you ever compile from
   TypeScript (gjs NEWS). Ship only the compiled JS, unminified (EGO-A-001).
 

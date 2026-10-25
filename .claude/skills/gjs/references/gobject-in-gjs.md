@@ -67,10 +67,12 @@ Properties: {
 ```
 - GJS ParamSpec helpers put **flags before the default** (the reverse of C).
   Nick and blurb can be `null` (the Shell does this).
-- Types: `boolean`, `int`, `uint`, `int64`, `uint64`, `double`, `float`,
-  `string`, `enum(name, nick, blurb, flags, EnumType, default)`, `flags(...)`,
-  `object(…, Type)`, `boxed(…, Type)`, `jsobject(...)`, `param`, `variant`
-  (unverified complete list; see gjs-docs GObject.ParamSpec).
+- Helpers (complete list in gjs modules/core/overrides/GObject.js): `boolean`,
+  `char`, `uchar`, `int`, `uint`, `long`, `ulong`, `int64`, `uint64`, `float`,
+  `double`, `string`, `enum(name, nick, blurb, flags, EnumType, default)`,
+  `flags(…, FlagsType, default)`, `object(…, Type)`, `boxed(…, Type)`,
+  `jsobject(name, nick, blurb, flags)`, `param(…, ParamType)` and `override`.
+  There is no `ParamSpec.variant` helper.
 - **Never** put underscores in property names. JS access uses
   `obj.corner_radius`, `obj.cornerRadius` or `obj['corner-radius']`. camelCase
   works: the Shell reads its `'has-menu'` property as `this.hasMenu`
@@ -171,7 +173,7 @@ settings.bind('key', widget, 'prop', Gio.SettingsBindFlags.DEFAULT);   // GSetti
 ## 9. Sources
 - https://gitlab.gnome.org/GNOME/gjs/-/blob/master/doc/Mapping.md
 - https://gitlab.gnome.org/GNOME/gjs/-/blob/master/doc/Overrides.md (registerClass, ParamSpec, connect_object, gtypeNameBasedOnJSPath)
-- https://gitlab.gnome.org/GNOME/gjs/-/blob/master/modules/core/overrides/GObject.js (Symbols)
+- https://gitlab.gnome.org/GNOME/gjs/-/blob/master/modules/core/overrides/GObject.js (Symbols, ParamSpec helpers)
 - https://gjs.guide/guides/gobject/subclassing.html
 - https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/main/js/misc/signalTracker.js
 - gjs NEWS 1.81.1 (single property-bag constructor), 1.89.1 (Interface static methods)

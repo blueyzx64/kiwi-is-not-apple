@@ -73,8 +73,9 @@ already has one.
   actions.
 - **Legal:** follow the GNOME Code of Conduct. No political statements.
   Trademark use: Kiwi's description already disclaims any Apple affiliation.
-  Avoid Apple logos or assets (trademark rule (unverified) as a written
-  guideline).
+  Avoid Apple logos or assets: "Extensions MUST NOT include copyrighted or
+  trademarked content" (brand names, logos, artwork) without permission
+  (review guidelines, "Copyrights and Trademarks").
 - **Telemetry:** none.
 - **Privileged helpers:** only via `pkexec` targeting root-owned files.
 
@@ -105,7 +106,8 @@ Memory leaks GJS can't collect:
   `[Kiwi (is not Apple)]`. Module code can receive the logger from
   `extension.js`.
 - `console.debug` output only appears when the GLib debug domain is enabled
-  (`G_MESSAGES_DEBUG`, unverified for the Gjs-Console domain name). Use it for
+  (`G_MESSAGES_DEBUG=Gjs-Console`, the default domain in gjs
+  modules/esm/console.js; `G_MESSAGES_DEBUG=all` also works). Use it for
   verbose output. `console.warn` and `console.error` are always visible.
   Kiwi uses `console.debug('[Kiwi] …')` (`apps/mozillaThemeManager.js`).
 - `logError(e, 'context')` prints the stack.
