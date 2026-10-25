@@ -853,4 +853,10 @@ export function disable() {
     order = [];
 
     d2dSettings = null;
+
+    // The shell also disables extensions to show the lock screen. Snapshots of windows
+    // that are still minimized cannot be re-taken (they are unmapped), so they survive
+    // that case only. Any other disable releases the textures.
+    if (!Main.sessionMode.isLocked)
+        snapshots.clear();
 }

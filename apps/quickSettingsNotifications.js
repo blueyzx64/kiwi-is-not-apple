@@ -31,6 +31,9 @@ let _dndButton = null;
 let _notificationSettings = null;
 let _notificationSettingsChangedId = null;
 let _dndEnsureTimeoutId = null;
+// The quick settings system item is built a moment after the panel; give up after 10 s
+const DND_ENSURE_INTERVAL_MS = 200;
+const DND_ENSURE_MAX_ATTEMPTS = 50;
 let _panelMoonIcon = null;
 let _kiwiSettings = null;
 let _kiwiSettingsChangedId = null;
@@ -128,8 +131,15 @@ function ensureDndButtonWithRetry() {
     if (_dndEnsureTimeoutId)
         return;
 
-    _dndEnsureTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 200, () => {
+    let attempts = 0;
+    _dndEnsureTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, DND_ENSURE_INTERVAL_MS, () => {
+        attempts++;
         if (ensureDndButton()) {
+            _dndEnsureTimeoutId = null;
+            return GLib.SOURCE_REMOVE;
+        }
+        if (attempts >= DND_ENSURE_MAX_ATTEMPTS) {
+            console.error('[Kiwi] Quick Settings system item never appeared; custom DND button not added');
             _dndEnsureTimeoutId = null;
             return GLib.SOURCE_REMOVE;
         }

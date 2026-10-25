@@ -698,7 +698,7 @@ function connectWindowSignals(metaWindow) {
     }));
 
     // Track state changes (fullscreen, maximized, etc.)
-    actorSignals.push(metaWindow.connect('notify::fullscreened', () => {
+    actorSignals.push(metaWindow.connect('notify::fullscreen', () => {
         checkWindowTouchingPanel();
     }));
     actorSignals.push(metaWindow.connect('notify::maximized-horizontally', () => {
