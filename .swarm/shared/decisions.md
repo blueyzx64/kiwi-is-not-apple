@@ -45,3 +45,7 @@ All answered by the owner on 2026-10-25. Do not ask the owner again; ask the orc
   - `panel-hover-fullscreen` -> S6 migrates into `panel-autohide` mode.
   - `minimize-to-dock` vs `stage-manager`: Stage Manager wins (see above); keep saved value.
   - stock notification keys vs notch: notch replaces banners; history stays in calendar menu.
+- Container tools (installed 2026-10-25): gettext (`xgettext`, `msgfmt`), `gnome-extensions`
+  (pack check: `gnome-extensions pack --force --extra-source=… --podir=po -o <dir> .`),
+  GNOME Shell 46 + libadwaita typelibs. Shell 46 is older than our 48–51 floor: use it for
+  packaging and prefs smoke tests only, never as proof a feature works on 48–51.
