@@ -3,8 +3,8 @@
 // in the strip, and back.
 //
 // A flight never transforms the real window actor. It flies a Clutter.Clone of it (a clone
-// paints its source even at opacity 0 or unmapped) on top of the UI, from one rect to another,
-// translate + uniform scale. While a window flies *to* the stage its actor is kept at opacity 0
+// paints its source even at opacity 0 or unmapped) on top of the UI, from one pose to another:
+// translate, uniform scale and the Y tilt of the strip, all about the window's frame centre. While a window flies *to* the stage its actor is kept at opacity 0
 // and gets its opacity back when the clone lands, so the clone and the window never show twice.
 // Under reduced motion a flight is a short crossfade in place (from === to, fade in or out).
 //
@@ -13,7 +13,7 @@
 import Clutter from 'gi://Clutter';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
-import { placeClone } from './model.js';
+import { clonePose } from './model.js';
 
 export const FLIGHT_MS = 330;
 export const FADE_MS = 160;
@@ -41,8 +41,8 @@ export class Flights {
      * Fly a clone of the window's actor.
      * @param {Meta.Window} win
      * @param {object} p
-     * @param {rect} p.from   where the window's frame is drawn at the start
-     * @param {rect} p.to     where it is drawn at the end
+     * @param {rect} p.from   where the window's frame is drawn at the start (+ optional `angle`, degrees of Y tilt)
+     * @param {rect} p.to     where it is drawn at the end (+ optional `angle`)
      * @param {?number} [p.reveal]  set: keep the real actor at opacity 0 while flying, then give it this opacity
      * @param {'in'|'out'|null} [p.fade]  fade the clone in or out on the way
      * @param {number} [p.duration]
@@ -62,16 +62,18 @@ export class Flights {
             return false;
         const frame = rectOf(win.get_frame_rect());
         const buffer = rectOf(win.get_buffer_rect());
-        const a = placeClone(frame, buffer, from);
-        const b = placeClone(frame, buffer, to);
+        const a = clonePose(frame, buffer, from);
+        const b = clonePose(frame, buffer, to);
         if (!a || !b)
             return false;
 
         const clone = new Clutter.Clone({ source: actor, reactive: false });
         clone.set_size(buffer.width, buffer.height);
-        clone.set_pivot_point(0, 0);
+        clone.set_pivot_point(a.pivotX, a.pivotY);
         clone.set_position(a.x, a.y);
         clone.set_scale(a.scale, a.scale);
+        clone.scale_z = a.scale;   // keep the depth of the tilt in proportion (see strip.js)
+        clone.rotation_angle_y = from.angle ?? 0;
         clone.opacity = fade === 'in' ? 0 : 255;
         Main.layoutManager.uiGroup.add_child(clone);
 
@@ -83,7 +85,8 @@ export class Flights {
         }
 
         clone.ease({
-            x: b.x, y: b.y, scale_x: b.scale, scale_y: b.scale,
+            x: b.x, y: b.y, scale_x: b.scale, scale_y: b.scale, scale_z: b.scale,
+            rotation_angle_y: to.angle ?? 0,
             opacity: fade === 'out' ? 0 : 255,
             duration, mode,
             onStopped: finished => {
@@ -121,13 +124,13 @@ export class Flights {
         const c = f.clone;
         if (!c || c.scale_x <= 0)
             return null;
+        // The pivot is the frame centre: it sits at clone position + pivot offset
         const s = c.scale_x;
-        return {
-            x: c.x + (f.frame.x - f.buffer.x) * s,
-            y: c.y + (f.frame.y - f.buffer.y) * s,
-            width: f.frame.width * s,
-            height: f.frame.height * s,
-        };
+        const cx = c.x + f.frame.x - f.buffer.x + f.frame.width / 2;
+        const cy = c.y + f.frame.y - f.buffer.y + f.frame.height / 2;
+        const width = f.frame.width * s;
+        const height = f.frame.height * s;
+        return { x: cx - width / 2, y: cy - height / 2, width, height, angle: c.rotation_angle_y };
     }
 
     _finish(win, f, _finished, quiet = false) {

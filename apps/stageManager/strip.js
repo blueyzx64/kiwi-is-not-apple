@@ -1,20 +1,24 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Stage Manager strip: a column of cards at the screen edge, one per stage, with no slab behind.
-// Each card is a fixed-size rounded translucent card with a soft shadow (so all cards line up),
-// holding a stack of live Clutter.Clone thumbnails (never screenshots) of its windows, centred
-// with padding and keeping their aspect ratio, and the app icon badged on its bottom-right corner.
-// Clones are never rotated or rendered offscreen: they are drawn straight from the window
-// texture (mutter mipmaps it when scaled down), so they stay sharp.
+// Stage Manager strip: one rounded translucent "floor" at the screen edge, and the parked windows
+// lying on it, one entry per stage, turned in perspective to face the stage (macOS look).
+// Each entry is a stack of live Clutter.Clone thumbnails (never screenshots) of its windows with
+// the app icon badged, unrotated, at the lead window's bottom right.
+//
+// Sharpness: clones are drawn straight from the window texture (mutter mipmaps it when scaled
+// down), never through an offscreen buffer. They are not clipped to the frame, so the window's
+// own soft shadow is the edge of the tilted quad: it fades to transparent and shows no jaggies.
 //
 // The view knows nothing about windows beyond what update() hands it. All maths is in
 // model.js; the window list comes from shellAdapter.js; index.js wires them together.
 //
 // Actor tree (all positions are absolute stage coordinates, the root is a chrome actor):
-//   root            Clutter.Actor .kiwi-stage-strip, sized to the column, the only thing that takes input
-//     cards         Clutter.Actor, one St.Button .kiwi-stage-card per stage (the rounded card)
-//       holder        Clutter.Actor: back layers first, the lead window's layer on top
-//         layer         Clutter.Actor clipped to the window frame, the clone inside
-//         badge         St.Bin .kiwi-stage-badge with the app icon (icon-shadow)
+//   root            St.Widget .kiwi-stage-strip: the floor, sized to the entries; takes the input.
+//                   It eases to a new height when entries come and go (cards counter-move).
+//     cards         Clutter.Actor, one St.Button .kiwi-stage-card per stage (transparent, a hit box)
+//       holder        Clutter.Actor: back layers first, the lead window on top
+//         clone         Clutter.Clone, pivot on the frame centre, scaled and tilted (rotation-y)
+//         ring          St.Widget .kiwi-stage-focus, same pose as the lead clone, on key focus
+//         badge         St.Bin .kiwi-stage-badge with the app icon (icon-shadow), never tilted
 //   barrier         Meta.Barrier + Layout.PressureBarrier on the screen edge: a push reveals an
 //                   auto-hidden strip (no reactive actor over the windows)
 //
@@ -30,14 +34,16 @@ import * as Layout from 'resource:///org/gnome/shell/ui/layout.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import {
-    DEFAULTS, cardTilt, cropThumb, edgeBarrier, fitCount, overlaps, stackLayers, stripLayout, stripShown,
+    DEFAULTS, cardTilt, clonePose, edgeBarrier, fitCount, overlaps, stackLayers, stripLayout, stripShown,
 } from './model.js';
 
 const PILL_PAD = 14;
 // A clone of a minimized (unmapped) window actor still paints its last buffer on mutter 18
 const CLONE_MINIMIZED = true;
-const HOVER_SCALE = 1.04;
-const HOVER_MS = 140;
+const HOVER_SCALE = 1.06;
+const HOVER_TILT = 0.4;          // share of the tilt left on hover: the window turns to you
+const HOVER_MS = 160;
+const FLOOR_MS = 260;
 const LAND_MS = 120;
 const SLIDE_MS = 250;
 const HIDE_DELAY_MS = 450;
@@ -119,7 +125,12 @@ export class StageStrip {
         const t = this._thumbs.get(win);
         if (!t)
             return null;
-        return { ...t.rect, x: t.rect.x + this._root.translation_x };
+        return {
+            ...t.rect,
+            x: t.rect.x + this._root.translation_x,
+            y: t.rect.y + this._cards.y,
+            angle: t.angle,
+        };
     }
 
     /** A flight stands in for this window's thumbnail: hide it until the flight lands. */
@@ -183,11 +194,10 @@ export class StageStrip {
             width: rects[0].width + PILL_PAD,
             height: bottom - top,
         };
+        const old = this._pill;
         this._pill = pill;
         this._strip = layout.strip;
-        this._root.set_position(pill.x, pill.y);
-        this._root.set_size(pill.width, pill.height);
-        this._cards.set_size(pill.width, pill.height);
+        this._placeFloor(old, pill);
 
         this._syncBarrier();
 
@@ -198,8 +208,37 @@ export class StageStrip {
         this._syncShown();
     }
 
+    /**
+     * Move the floor to the new pill. A visible floor eases its top and height; the cards inside
+     * counter-move by the same amount on the same curve, so they stay put on screen.
+     */
+    _placeFloor(old, pill) {
+        const root = this._root;
+        const cards = this._cards;
+        root.remove_transition('y');
+        root.remove_transition('height');
+        cards.remove_transition('y');
+        cards.set_size(pill.width, pill.height);
+        const animate = old && this._shown && root.visible && this._motion() &&
+            old.x === pill.x && (old.y !== pill.y || old.height !== pill.height);
+        if (!animate) {
+            root.set_position(pill.x, pill.y);
+            root.set_size(pill.width, pill.height);
+            cards.y = 0;
+            return;
+        }
+        const from = { y: root.y, height: root.height };
+        root.set_position(pill.x, from.y);
+        root.set_size(pill.width, from.height);
+        cards.y = pill.y - from.y;
+        const ease = { duration: FLOOR_MS, mode: Clutter.AnimationMode.EASE_OUT_CUBIC };
+        root.ease({ y: pill.y, height: pill.height, ...ease });
+        cards.ease({ y: 0, ...ease });
+    }
+
     _makeCard(card, rect, pill, scale) {
         const { side } = this._state;
+        const angle = cardTilt(side);
         const button = new St.Button({
             style_class: 'kiwi-stage-card',
             reactive: true,
@@ -209,64 +248,82 @@ export class StageStrip {
         });
         button.set_position(rect.x - pill.x, rect.y - pill.y);
         button.set_size(rect.width, rect.height);
-        button.set_pivot_point(0.5, 0.5);
-        button.rotation_angle_y = cardTilt(side);
         button.connect('clicked', () => this._onActivate(card.id));
-        button.connect('notify::hover', () => {
-            const s = button.hover ? HOVER_SCALE : 1;
-            if (this._motion())
-                button.ease({ scale_x: s, scale_y: s, duration: HOVER_MS, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
-            else
-                button.set_scale(s, s);
-        });
 
         const holder = new Clutter.Actor({ reactive: false });
         holder.set_size(rect.width, rect.height);
         button.set_child(holder);
 
-        const pad = Math.max(4, Math.round(DEFAULTS.cardPad * scale));
+        // Room on the sides for the tilt's near edge and the window shadow, so windows stay on the floor
+        const padX = Math.max(6, Math.round(DEFAULTS.cardPad * 1.7 * scale));
+        const padY = Math.max(4, Math.round(DEFAULTS.cardPad * 0.7 * scale));
+        const box = { x: padX, y: padY, width: rect.width - 2 * padX, height: rect.height - 2 * padY };
         const layers = stackLayers(card.windows.length, side);
         let front = null;
         // Back to front so the lead window paints on top
         for (const layer of [...layers].reverse()) {
             const win = card.windows[layer.index];
-            const thumb = this._makeThumb(win, rect.width, rect.height, pad) ??
-                this._makeIconThumb(card.app, win, rect.width, rect.height, pad, scale);
-            const mat = thumb.mat;
-            mat.set_pivot_point(0.5, 0.5);
-            mat.translation_x = layer.dx * scale;
-            mat.translation_y = layer.dy * scale;
-            mat.set_scale(layer.scale, layer.scale);
-            mat.opacity = this._flying.has(win) ? 0 : layer.opacity;
-            holder.add_child(mat);
+            const t = this._makeThumb(win, box, layer, scale, angle) ??
+                this._makeIconThumb(card.app, win, box, layer, scale, angle);
+            t.actor.opacity = this._flying.has(win) ? 0 : layer.opacity;
+            holder.add_child(t.actor);
             if (win) {
-                const r = thumb.inner;
+                const r = t.rect;
                 this._thumbs.set(win, {
-                    layer: mat,
+                    layer: t.actor,
                     opacity: layer.opacity,
+                    angle,
                     rect: { x: rect.x + r.x, y: rect.y + r.y, width: r.width, height: r.height },
                 });
             }
             if (layer.index === 0)
-                front = { mat, win };
+                front = { ...t, win };
         }
+        if (!front)
+            return button;
 
-        if (card.app && front) {
-            const { win: frontWin } = front;
+        // Focus ring: a rounded outline in the lead window's pose
+        const ring = new St.Widget({ style_class: 'kiwi-stage-focus', reactive: false, visible: false });
+        ring.set_position(Math.round(front.rect.x), Math.round(front.rect.y));
+        ring.set_size(Math.round(front.rect.width), Math.round(front.rect.height));
+        ring.set_pivot_point(0.5, 0.5);
+        ring.rotation_angle_y = angle;
+        holder.add_child(ring);
+        button.connect('key-focus-in', () => {
+            ring.visible = true;
+        });
+        button.connect('key-focus-out', () => {
+            ring.visible = false;
+        });
+
+        // Hover: the lead window lifts and turns toward the viewer (the ring follows it)
+        const rest = front.scale;
+        button.connect('notify::hover', () => {
+            const k = button.hover ? HOVER_SCALE : 1;
+            const tilt = button.hover ? angle * HOVER_TILT : angle;
+            this._pose(front.actor, { scale_x: rest * k, scale_y: rest * k, scale_z: rest * k, rotation_angle_y: tilt });
+            this._pose(ring, { scale_x: k, scale_y: k, rotation_angle_y: tilt });
+        });
+
+        if (card.app) {
             try {
                 const size = Math.round(DEFAULTS.badge * scale);
                 const icon = card.app.create_icon_texture(size);
                 icon.add_style_class_name('kiwi-stage-badge-icon');
                 const badge = new St.Bin({ style_class: 'kiwi-stage-badge', child: icon, reactive: false });
-                const overhang = Math.round(size * 0.3);
+                // Bottom right of the tilted window (its projected right edge, roughly)
+                const r = front.rect;
+                const halfW = r.width / 2 * Math.cos(angle * Math.PI / 180);
+                const overhang = Math.round(size * 0.35);
                 badge.set_position(
-                    rect.width - size + overhang, rect.height - size + overhang);
+                    Math.round(r.x + r.width / 2 + halfW - size + overhang),
+                    Math.round(r.y + r.height - size + overhang));
                 holder.add_child(badge);
                 // The badge rides with the lead window: hidden while that window is in the air
-                const t = this._thumbs.get(frontWin);
+                const t = this._thumbs.get(front.win);
                 if (t)
                     t.badge = badge;
-                if (this._flying.has(frontWin))
+                if (this._flying.has(front.win))
                     badge.opacity = 0;
             } catch (e) {
                 console.error(`[Kiwi] stage badge: ${e.message}`);
@@ -275,28 +332,75 @@ export class StageStrip {
         return button;
     }
 
+    _pose(actor, props) {
+        actor.remove_all_transitions();
+        if (this._motion())
+            actor.ease({ ...props, duration: HOVER_MS, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
+        else
+            actor.set(props);
+    }
+
     /**
-     * A window that cannot be cloned (no actor): its app icon on a rounded tile inside the card.
-     * @returns {{mat: St.Widget, inner: rect}}
+     * Where a stack layer draws its window's frame inside the card: the box, aspect kept, then
+     * the layer's shrink and offset (back layers peek out toward the screen edge).
      */
-    _makeIconThumb(app, win, boxW, boxH, pad, scale) {
-        const innerW = boxW - 2 * pad;
-        const innerH = boxH - 2 * pad;
-        let w = innerW;
-        let h = innerH;
-        const frame = win?.get_frame_rect?.();
-        if (frame?.width > 0 && frame?.height > 0) {
-            const k = Math.min(innerW / frame.width, innerH / frame.height);
-            w = frame.width * k;
-            h = frame.height * k;
-        }
-        const mat = new St.Widget({
+    _layerRect(frame, box, layer, scale) {
+        const k = Math.min(box.width / frame.width, box.height / frame.height) * layer.scale;
+        const width = frame.width * k;
+        const height = frame.height * k;
+        return {
+            x: box.x + (box.width - width) / 2 + layer.dx * scale,
+            y: box.y + (box.height - height) / 2 + layer.dy * scale,
+            width, height,
+        };
+    }
+
+    /**
+     * One window: its live clone (the whole buffer, shadow included) posed so the frame fills
+     * its layer rect, turned by `angle` about the frame centre.
+     * @returns {?{actor: Clutter.Clone, rect: rect, scale: number}} rect: the frame area in the card
+     */
+    _makeThumb(win, box, layer, scale, angle) {
+        const actor = win?.get_compositor_private?.();
+        if (!actor || (win.minimized && !CLONE_MINIMIZED))
+            return null;
+        const frame = win.get_frame_rect();
+        const buffer = win.get_buffer_rect();
+        if (!(frame.width > 0) || !(frame.height > 0))
+            return null;
+        const rect = this._layerRect(frame, box, layer, scale);
+        const pose = clonePose(frame, buffer, rect);
+        if (!pose)
+            return null;
+        const clone = new Clutter.Clone({ source: actor, reactive: false });
+        clone.set_size(buffer.width, buffer.height);
+        clone.set_pivot_point(pose.pivotX, pose.pivotY);
+        clone.set_position(Math.round(pose.x), Math.round(pose.y));
+        // scale_z too: Clutter scales after rotating, so an unscaled depth would exaggerate the
+        // perspective of a shrunken window
+        clone.set_scale(pose.scale, pose.scale);
+        clone.scale_z = pose.scale;
+        clone.rotation_angle_y = angle;
+        // Exact place after rounding, for flights to land on
+        const dx = Math.round(pose.x) - pose.x;
+        const dy = Math.round(pose.y) - pose.y;
+        return { actor: clone, rect: { ...rect, x: rect.x + dx, y: rect.y + dy }, scale: pose.scale };
+    }
+
+    /** A window that cannot be cloned (no actor): its app icon on a rounded tile, same pose. */
+    _makeIconThumb(app, win, box, layer, scale, angle) {
+        const f = win?.get_frame_rect?.();
+        const frame = f?.width > 0 && f?.height > 0 ? f : { width: 16, height: 10 };
+        const rect = this._layerRect(frame, box, layer, scale);
+        const tile = new St.Widget({
             style_class: 'kiwi-stage-icon-tile',
             layout_manager: new Clutter.BinLayout(),
             reactive: false,
         });
-        mat.set_position(Math.round(pad + (innerW - w) / 2), Math.round(pad + (innerH - h) / 2));
-        mat.set_size(Math.round(w), Math.round(h));
+        tile.set_position(Math.round(rect.x), Math.round(rect.y));
+        tile.set_size(Math.round(rect.width), Math.round(rect.height));
+        tile.set_pivot_point(0.5, 0.5);
+        tile.rotation_angle_y = angle;
         const size = Math.round(48 * scale);
         let icon = null;
         try {
@@ -307,35 +411,8 @@ export class StageStrip {
         icon ??= new St.Icon({ icon_name: 'application-x-executable-symbolic', icon_size: size });
         icon.x_align = Clutter.ActorAlign.CENTER;
         icon.y_align = Clutter.ActorAlign.CENTER;
-        mat.add_child(icon);
-        return { mat, inner: { x: mat.x, y: mat.y, width: mat.width, height: mat.height } };
-    }
-
-    /**
-     * One thumbnail: the live clone centred in the card inside `pad`, keeping its aspect ratio,
-     * clipped to the window frame (client shadows are cut off; the window's own rounded corners
-     * show through). Pixel-aligned so no edge is resampled.
-     * @returns {?{mat: Clutter.Actor, inner: rect}} inner: the frame area inside the card
-     */
-    _makeThumb(win, boxW, boxH, pad) {
-        const actor = win?.get_compositor_private?.();
-        if (!actor || (win.minimized && !CLONE_MINIMIZED))
-            return null;
-        const t = cropThumb(win.get_frame_rect(), win.get_buffer_rect(), boxW - 2 * pad, boxH - 2 * pad);
-        if (t.scale === 0)
-            return null;
-        const x = Math.round(pad + t.x);
-        const y = Math.round(pad + t.y);
-        const w = Math.round(t.width);
-        const h = Math.round(t.height);
-        const clip = new Clutter.Actor({ clip_to_allocation: true, reactive: false });
-        clip.set_position(x, y);
-        clip.set_size(w, h);
-        const clone = new Clutter.Clone({ source: actor, reactive: false });
-        clone.set_position(t.cloneX, t.cloneY);
-        clone.set_size(t.cloneW, t.cloneH);
-        clip.add_child(clone);
-        return { mat: clip, inner: { x, y, width: w, height: h } };
+        tile.add_child(icon);
+        return { actor: tile, rect: { x: tile.x, y: tile.y, width: tile.width, height: tile.height }, scale: 1 };
     }
 
     // ---- edge barrier ---------------------------------------------------------------------

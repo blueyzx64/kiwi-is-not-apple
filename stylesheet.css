@@ -1320,27 +1320,26 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
 }
 
 /* feature: stage-manager */
-/* No slab behind the strip: a column of fixed-size rounded cards, each a plain translucent fill
-   with a rim and a soft shadow; the windows sit centred inside. No glass, no blur. */
+/* One floor under the whole strip: a plain translucent rounded panel with a rim and a soft
+   shadow. The windows lie on it, tilted toward the stage. No glass, no blur. */
 .kiwi-stage-strip {
-    background-color: transparent;
-}
-
-.kiwi-stage-card {
-    border-radius: 16px;
-    padding: 0;
-    background-color: rgba(255, 255, 255, 0.10);
+    border-radius: 20px;
+    background-color: rgba(255, 255, 255, 0.09);
     border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.30);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
 }
 
-.kiwi-stage-card:hover {
-    background-color: rgba(255, 255, 255, 0.16);
-    border-color: rgba(255, 255, 255, 0.24);
+/* An entry is only a hit box: the window clone is its look */
+.kiwi-stage-card {
+    padding: 0;
+    background-color: transparent;
+    border: none;
 }
 
-.kiwi-stage-card:focus {
+.kiwi-stage-focus {
+    border-radius: 10px;
     border: 2px solid -st-accent-color;
+    background-color: transparent;
 }
 
 .kiwi-stage-icon-tile {
