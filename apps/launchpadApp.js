@@ -9,6 +9,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import { CleanupRegistry } from '../lib/disposables.js';
 import { dashOf, disconnectAll, watchDocks } from './dockUtils.js';
+import { unpinPlan } from './launchpadModel.js';
 
 Gio._promisify(Gio.File.prototype, 'query_info_async', 'query_info_finish');
 Gio._promisify(Gio.File.prototype, 'make_directory_async', 'make_directory_finish');
@@ -28,6 +29,8 @@ const _cleanup = new CleanupRegistry();
 let _app = null;
 // Keep writes and disable-time deletions in order across rapid enable cycles.
 let _fileOperations = Promise.resolve();
+// Whether favorite-apps had no user value before Kiwi pinned itself in
+let _favoritesWereDefault = false;
 let globalSignals = [];
 let docks = [];
 // The watched overview dash can be swapped out from under us, so it is kept
@@ -229,6 +232,7 @@ export async function enable(extension, gettext) {
 
     globalSignals.push([global.settings,
         global.settings.connect('changed::favorite-apps', _pinFavorite)]);
+    _favoritesWereDefault = global.settings.get_user_value('favorite-apps') === null;
     _pinFavorite();
 }
 
@@ -261,9 +265,16 @@ export function disable() {
     }
     docks = [];
 
-    const favorites = _otherFavorites();
-    if (favorites.length !== global.settings.get_strv('favorite-apps').length)
-        global.settings.set_strv('favorite-apps', favorites);
+    // Only Kiwi's ids come out; a list that was the default goes back to being it
+    const plan = unpinPlan(global.settings.get_strv('favorite-apps'),
+        [LAUNCHPAD_DESKTOP_ID, OLD_DESKTOP_ID],
+        global.settings.get_default_value('favorite-apps').deepUnpack(),
+        _favoritesWereDefault);
+    if (plan.action === 'reset')
+        global.settings.reset('favorite-apps');
+    else if (plan.action === 'set')
+        global.settings.set_strv('favorite-apps', plan.value);
+    _favoritesWereDefault = false;
 
     _queueFileOperation(async () => {
         for (const id of [LAUNCHPAD_DESKTOP_ID, OLD_DESKTOP_ID]) {
