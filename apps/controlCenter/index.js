@@ -22,7 +22,7 @@ import { refreshLegacyDnd } from '../quickSettingsNotifications.js';
 import { MORE_HEADER_ID, planLayout } from './model.js';
 import { NowPlaying } from './nowPlaying.js';
 import {
-    applyPlan, columnSpan, hideLegacyDndButton, managedChildren, readyQuickSettings, restoreGrid,
+    applyPlan, columnSpan, gridAlive, hideLegacyDndButton, managedChildren, readyQuickSettings, restoreGrid,
     snapshotGrid, stockKeys,
 } from './shell.js';
 import { createDndToggle, createSettingTile } from './tiles.js';
@@ -117,6 +117,8 @@ export class ControlCenter {
             this._toggleClass(box, GLASS_CLASS, Glass.wants('menus', settings) && !env.highContrast);
         });
 
+        // A destroyed grid (Shell shutdown, rebuilt menu) is never touched again
+        cleanup.connect(this._grid, 'destroy', () => this._forgetGrid());
         cleanup.connect(this._grid, 'child-added', (_g, actor) => {
             this._watchVisible(actor);
             this._queueRelayout();
@@ -222,8 +224,17 @@ export class ControlCenter {
         this._visibleTokens.delete(actor);
     }
 
+    _forgetGrid() {
+        if (this._idle) {
+            this._cleanup.release(this._idle);
+            this._idle = 0;
+        }
+        this._grid = null;
+        this._snapshot = null;
+    }
+
     _queueRelayout() {
-        if (this._idle || !this._grid)
+        if (this._idle || !gridAlive(this._grid))
             return;
         this._idle = this._cleanup.idle(() => {
             this._idle = 0;
@@ -241,7 +252,7 @@ export class ControlCenter {
 
     _relayout() {
         const grid = this._grid;
-        if (!grid)
+        if (!gridAlive(grid))
             return;
 
         const children = managedChildren(grid).filter(actor => actor !== this._header);
@@ -283,9 +294,9 @@ export class ControlCenter {
             this._header?.destroy();
             this._header = null;
 
-            const box = this._qs.menu.box;
-            box.remove_style_class_name(MENU_CLASS);
-            box.remove_style_class_name(GLASS_CLASS);
+            const box = this._qs.menu?.box;
+            box?.remove_style_class_name(MENU_CLASS);
+            box?.remove_style_class_name(GLASS_CLASS);
 
             restoreGrid(this._grid, this._snapshot, this._stockSpans);
         } finally {

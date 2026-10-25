@@ -62,9 +62,17 @@ export function stockKeys(qs) {
     return keys;
 }
 
+/**
+ * True while the grid can still be laid out. During its destruction (Shell shutdown, or a
+ * rebuilt Quick Settings menu) Clutter has already dropped the layout manager.
+ */
+export function gridAlive(grid) {
+    return !!grid?.layout_manager;
+}
+
 /** The grid's placeholder child: the layout skips it, so it is never planned or moved. */
 function placeholder(grid) {
-    return grid.layout_manager._overlay ?? null;
+    return grid.layout_manager?._overlay ?? null;
 }
 
 export function columnSpan(grid, actor) {
@@ -76,11 +84,13 @@ export function columnSpan(grid, actor) {
 }
 
 function setSpan(grid, actor, span) {
-    grid.layout_manager.child_set_property(grid, actor, 'column-span', span);
+    grid.layout_manager?.child_set_property(grid, actor, 'column-span', span);
 }
 
 /** Children the plan manages: everything in the grid except the placeholder. */
 export function managedChildren(grid) {
+    if (!gridAlive(grid))
+        return [];
     const skip = placeholder(grid);
     return grid.get_children().filter(child => child !== skip);
 }
@@ -107,6 +117,8 @@ export function snapshotGrid(grid) {
  * @param {{actor: Clutter.Actor, span: number}[]} placed in final order
  */
 export function applyPlan(grid, placed) {
+    if (!gridAlive(grid))
+        return;
     const layout = grid.layout_manager;
     layout.nColumns = COLUMNS;
     for (const { actor, span } of placed) {
@@ -126,7 +138,7 @@ export function applyPlan(grid, placed) {
  * `stockSpans` (actor -> span it arrived with) covers actors the snapshot never saw.
  */
 export function restoreGrid(grid, snapshot, stockSpans = new Map()) {
-    if (!grid || !snapshot)
+    if (!gridAlive(grid) || !snapshot)
         return;
     const layout = grid.layout_manager;
     for (const actor of restoreOrder(snapshot.actors, grid.get_children())) {
