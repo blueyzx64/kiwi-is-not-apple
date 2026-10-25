@@ -59,7 +59,8 @@ export class MozillaThemeManager {
         const buttonType = this._settings.get_string('button-type');
         const buttonSize = this._settings.get_string('button-size');
 
-        if (!enableStyling && !showControlsOnPanel) {
+        // Only touch the profile when the user turned on styling for this app.
+        if (!enableStyling) {
             await this.removeCss();
             return;
         }
@@ -75,18 +76,17 @@ export class MozillaThemeManager {
         try {
             const chromeDir = GLib.build_filenamev([profile, 'chrome']);
             const chromeGFile = Gio.File.new_for_path(chromeDir);
-            const bakDir = `${chromeDir}.bak`;
-            const bakGFile = Gio.File.new_for_path(bakDir);
-            const chromeExists = chromeGFile.query_exists(null);
-            const chromeIsKiwiManaged = chromeExists && this._isChromeManagedByKiwi(chromeDir);
+            let backupName = null;
 
-            if (chromeExists) {
-                if (chromeIsKiwiManaged) {
-                    try { this._deleteDirRecursive(chromeGFile); } catch (_e) { /* ignore */ }
-                } else if (!bakGFile.query_exists(null)) {
-                    chromeGFile.move(bakGFile, Gio.FileCopyFlags.NONE, null, null);
+            if (chromeGFile.query_exists(null)) {
+                if (this._isChromeManagedByKiwi(chromeDir)) {
+                    // Ours already: keep it and rewrite userChrome.css in place.
+                    backupName = this._readBackupName(chromeDir);
                 } else {
-                    try { this._deleteDirRecursive(chromeGFile); } catch (_e) { /* ignore */ }
+                    // User's own chrome/: move it aside, never delete it.
+                    backupName = this._pickBackupName(chromeDir);
+                    chromeGFile.move(Gio.File.new_for_path(GLib.build_filenamev([profile, backupName])),
+                        Gio.FileCopyFlags.NONE, null, null);
                 }
             }
 
@@ -117,7 +117,7 @@ export class MozillaThemeManager {
             const userChromeFile = Gio.File.new_for_path(userChromePath);
             userChromeFile.replace_contents(userChromeContent, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
 
-            this._markChromeAsKiwiManaged(chromeDir);
+            this._markChromeAsKiwiManaged(chromeDir, backupName);
             await this._ensureLegacyPref(profile);
         } catch (e) {
             console.error(`[Kiwi] ${this._config.logPrefix} write failed for profile ${profile}: ${e}`);
@@ -133,26 +133,78 @@ export class MozillaThemeManager {
             const chromeDir = GLib.build_filenamev([profile, 'chrome']);
             const chromeGFile = Gio.File.new_for_path(chromeDir);
 
-            if (chromeGFile.query_exists(null))
-                this._deleteDirRecursive(chromeGFile);
+            // Not ours: leave it alone.
+            if (!chromeGFile.query_exists(null) || !this._isChromeManagedByKiwi(chromeDir))
+                return;
 
-            const bakDir = `${chromeDir}.bak`;
-            const bakGFile = Gio.File.new_for_path(bakDir);
-            if (bakGFile.query_exists(null))
+            const backupName = this._readBackupName(chromeDir);
+            if (!this._removeKiwiFiles(chromeGFile))
+                return; // user added files to it; keep them and keep the backup
+
+            const bakGFile = Gio.File.new_for_path(GLib.build_filenamev([profile, backupName]));
+            if (bakGFile.query_exists(null) && !chromeGFile.query_exists(null))
                 bakGFile.move(chromeGFile, Gio.FileCopyFlags.NONE, null, null);
         } catch (_e) {
             // ignore cleanup errors
         }
     }
 
-    _markChromeAsKiwiManaged(chromeDirPath) {
+    _markChromeAsKiwiManaged(chromeDirPath, backupName = null) {
         try {
             const markerPath = GLib.build_filenamev([chromeDirPath, KIWI_MARKER_FILENAME]);
             const markerFile = Gio.File.new_for_path(markerPath);
-            markerFile.replace_contents('Kiwi managed chrome folder\n', null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
+            const body = `Kiwi managed chrome folder\n${backupName ? `backup=${backupName}\n` : ''}`;
+            markerFile.replace_contents(body, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
         } catch (_e) {
             // ignore marker failures
         }
+    }
+
+    // Backup dir name recorded in the marker; old markers have none, so chrome.bak.
+    _readBackupName(chromeDirPath) {
+        try {
+            const markerPath = GLib.build_filenamev([chromeDirPath, KIWI_MARKER_FILENAME]);
+            const [, bytes] = Gio.File.new_for_path(markerPath).load_contents(null);
+            const m = new TextDecoder().decode(bytes).match(/^backup=([^/\n]+)$/m);
+            return m ? m[1] : 'chrome.bak';
+        } catch (_e) {
+            return 'chrome.bak';
+        }
+    }
+
+    // chrome.bak if free, else a timestamped name. Never an existing path.
+    _pickBackupName(chromeDirPath) {
+        const parent = GLib.path_get_dirname(chromeDirPath);
+        let name = 'chrome.bak';
+        if (Gio.File.new_for_path(GLib.build_filenamev([parent, name])).query_exists(null)) {
+            const base = `chrome.kiwi-bak-${GLib.DateTime.new_now_local().format('%Y%m%d-%H%M%S')}`;
+            name = base;
+            for (let i = 1; Gio.File.new_for_path(GLib.build_filenamev([parent, name])).query_exists(null); i++)
+                name = `${base}-${i}`;
+        }
+        return name;
+    }
+
+    // Delete only files Kiwi wrote. Remove the dir only if nothing else is in it.
+    _removeKiwiFiles(dirFile) {
+        const kiwiFiles = ['userChrome.css', KIWI_MARKER_FILENAME];
+        const enumerator = dirFile.enumerate_children('standard::name', Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, null);
+        let foreign = false;
+        let info;
+        while ((info = enumerator.next_file(null)) !== null) {
+            if (!kiwiFiles.includes(info.get_name()))
+                foreign = true;
+        }
+        enumerator.close(null);
+        for (const name of kiwiFiles) {
+            const f = dirFile.get_child(name);
+            if (f.query_exists(null))
+                f.delete(null);
+        }
+        if (foreign)
+            return false;
+        dirFile.delete(null);
+        return true;
     }
 
     _isChromeManagedByKiwi(chromeDirPath) {
@@ -258,20 +310,6 @@ export class MozillaThemeManager {
         }
         if (s.name) sections.push(s);
         return sections;
-    }
-
-    _deleteDirRecursive(dirFile) {
-        const enumerator = dirFile.enumerate_children('standard::name,standard::type', Gio.FileQueryInfoFlags.NONE, null);
-        let info;
-        while ((info = enumerator.next_file(null)) !== null) {
-            const child = dirFile.get_child(info.get_name());
-            if (info.get_file_type() === Gio.FileType.DIRECTORY)
-                this._deleteDirRecursive(child);
-            else
-                child.delete(null);
-        }
-        enumerator.close(null);
-        dirFile.delete(null);
     }
 
     _readFileAsync(file) {
