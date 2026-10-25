@@ -44,8 +44,8 @@ Prefs run in a separate GTK4 process (`gjs`), so Shell libraries must not be imp
 | `Adw.ToggleGroup` / `Adw.Toggle` | 1.7 | segmented control |
 | `Adw.ShortcutsDialog`, `Adw.ShortcutLabel` | 1.8 | GNOME 49+ only; Kiwi's floor is 48, so gate it or avoid it |
 
-Adw ↔ GNOME: 1.7 = 48, 1.8 = 49, 1.9 = 50, 1.10 = 51 (usual cycle pairing,
-(unverified) for each distro). On 48, avoid anything newer than 1.7, or
+Adw ↔ GNOME: 1.7 = 48, 1.8 = 49, 1.9 = 50, 1.10 = 51 (confirmed for Fedora
+42–45 via Bodhi/mdapi: libadwaita 1.7.x, 1.8.x, 1.9.x, 1.10.0). On 48, avoid anything newer than 1.7, or
 feature-test it (`if (Adw.ShortcutLabel)`).
 
 ## 3. Binding settings
@@ -100,9 +100,10 @@ row.connect('activated', () => {
     dlg.add_controller(ctl); dlg.present(row.get_root());
 });
 ```
-`Gtk.ShortcutLabel` is GTK 4, not Adw. GTK may deprecate it in favour of
-`Adw.ShortcutLabel` (Adw 1.8+) (unverified). If it logs deprecation warnings
-on 49+, feature-test `Adw.ShortcutLabel`. Clipboard shortcuts must default to
+`Gtk.ShortcutLabel` is GTK 4, not Adw, and is not deprecated (GTK main
+gtkshortcutlabel.h). GTK 4.18 deprecated only `GtkShortcutsWindow` (gtk NEWS
+4.17.3); `Adw.ShortcutLabel` and `Adw.ShortcutsDialog` arrived in Adw 1.8
+(libadwaita NEWS 1.8.alpha). Feature-test `Adw.ShortcutLabel` before using it. Clipboard shortcuts must default to
 empty (`[]`) because of the EGO guideline.
 
 ## 6. Styling and assets in prefs

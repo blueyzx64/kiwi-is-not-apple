@@ -2,7 +2,7 @@
 
 Summary: the extensions.gnome.org (EGO) review rules that reviewers enforce, mapped to the rule IDs that the shexli static analyzer prints (EGO-M/P/I/L/X/A/C*), with a pre-submission checklist.
 It also lists the leak and lifecycle bugs reviewers reject most often and how to log properly. The rule IDs are shexli's (spec 2026-04-02), not part of gjs.guide.
-Sources: gjs.guide/extensions/review-guidelines/review-guidelines.html (through search excerpts), the shexli 0.2.1 `spec.py` (PyPI), and gnome-shell main source.
+Sources: https://gjs.guide/extensions/review-guidelines/review-guidelines.html (full page re-read 2026-10-25), the shexli 0.2.1 `spec.py` (PyPI), and gnome-shell main source.
 
 ## Contents
 1. Rule table (guideline → shexli ID)

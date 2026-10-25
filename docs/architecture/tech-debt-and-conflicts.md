@@ -76,7 +76,7 @@ Severity: **High** means it will break or block a planned feature, or risks user
 | Collides with | Nature | Sev |
 |---|---|---|
 | `metadata.json` (no `session-modes`) and the EGO lock-teardown expectation (commit `bbeac23` removed a lock-survival hack in `launchpadApp.disable`) | History held in memory is lost on every lock, because `disable()` must destroy it. Persisting it to disk raises privacy concerns (passwords, OTP codes). Decide explicitly: persist with an exclusion list and a max age, or declare `"session-modes": ["user","unlock-dialog"]` and justify it to EGO. ✔ | High |
-| No keybinding infrastructure (`grep addKeybinding` finds nothing) | Super+Shift+V needs a new `as` schema key, `Main.wm.addKeybinding(…, Shell.ActionMode.NORMAL \| OVERVIEW, …)` and `removeKeybinding` on disable. GNOME's default `toggle-message-tray` is Super+V and Super+M (⚠ check that Shift+V is free on the target distros). | Med |
+| No keybinding infrastructure (`grep addKeybinding` finds nothing) | Super+Shift+V needs a new `as` schema key, `Main.wm.addKeybinding(…, Shell.ActionMode.NORMAL \| OVERVIEW, …)` and `removeKeybinding` on disable. GNOME's default `toggle-message-tray` is Super+V and Super+M (✔ gnome-shell 51.0 `org.gnome.shell.gschema.xml.in`). No upstream default uses Super+Shift+V (✔ gnome-shell, mutter 51.0, gsettings-desktop-schemas, g-s-d media-keys schemas; distro overrides not checked). | Med |
 | Panel right box (§7 of code-map) | A new indicator competes with `lock-indicator@0`, `kiwi-media@1`, the moved `dateMenu`, the notification dot and window-controls-last. ✔ | Med |
 | `downloadsStack.js:409-521` | This is the existing modal pattern: `addTopChrome` + `pushModal(POPUP)` + backdrop click and Esc. Reuse it, but only one Kiwi modal should be open at a time. Close the fan (`_closeFan`) when the clipboard or Spotlight opens. ✔ | Low |
 | `panelHover.js:156-189` ghost menu | While the panel is revealed in fullscreen, a fake open `PopupMenu` sits in `Main.panel.menuManager`. A keybinding modal opened then may compete with that grab (⚠ runtime). | Med |
@@ -87,7 +87,7 @@ Severity: **High** means it will break or block a planned feature, or risks user
 
 | Collides with | Nature | Sev |
 |---|---|---|
-| GNOME default `org.gnome.desktop.wm.keybindings switch-input-source = ['<Super>space', …]` (⚠ upstream default, not in repo) and `keyboardIndicator.js:226-229` (`current-source-changed`) | Super+Space is already taken by input-source switching, which keyboardIndicator styles. Grabbing it breaks layout switching for multilingual users, and the default `keyboard-indicator=true` suggests such users exist. Make the binding configurable, or offer to move `switch-input-source`, never overwriting it silently. | High |
+| GNOME default `org.gnome.desktop.wm.keybindings switch-input-source = ['<Super>space', 'XF86Keyboard']` (✔ gsettings-desktop-schemas `org.gnome.desktop.wm.keybindings.gschema.xml.in`; not in repo) and `keyboardIndicator.js:226-229` (`current-source-changed`) | Super+Space is already taken by input-source switching, which keyboardIndicator styles. Grabbing it breaks layout switching for multilingual users, and the default `keyboard-indicator=true` suggests such users exist. Make the binding configurable, or offer to move `switch-input-source`, never overwriting it silently. | High |
 | Overview search (`Main.overview` / searchController); `skipOverviewOnLogin.js:13-21` replaces `Main.overview.show`; `focusOnOverviewExit.js` and `windowTitle.js:143-153` use stage `captured-event` while in the overview | If Spotlight reuses the shell's search providers through the overview, it runs into these patches. Prefer a standalone modal that instantiates `SearchResultsView` or queries providers directly (⚠ private API). | Med |
 | `downloadsStack.js:504`, `panelHover.js` ghost menu | Modal stacking (see §1.3). | Med |
 | Blur stack (§1.2) | The Spotlight backdrop should be the 4th BlurService client, not a 4th copy. | Med |
@@ -202,13 +202,13 @@ Severity: **High** means it will break or block a planned feature, or risks user
 
 | Sev | Where | Item | Status | ✔/⚠ |
 |---|---|---|---|---|
-| Info | `panelTransparency.js:88-92`, `dockBlur.js:108-112`, `overviewWallpaper.js:81-85` | `Shell.BlurEffect({radius})` | **Correct** for 46+ (`sigma` was the pre-46 name). No `sigma` anywhere. The brief's "radius→sigma" is reversed | ✔ (repo), ⚠ (upstream rename version) |
+| Info | `panelTransparency.js:88-92`, `dockBlur.js:108-112`, `overviewWallpaper.js:81-85` | `Shell.BlurEffect({radius})` | **Correct** for 46+ (`sigma` was the pre-46 name). No `sigma` anywhere. The brief's "radius→sigma" is reversed | ✔ (repo), ✔ (upstream: `sigma` in shell-blur-effect.c 45.0, `radius` from 46.0) |
 | Info | whole repo | `add_actor`/`remove_actor`, `Clutter.Container`, `get_maximized()`, `St.BoxLayout{vertical}` | **None present** (grep) | ✔ |
-| Med | `windowTiling.js:62`, `windowControls.js:265-266`, `panelTransparency.js:645-646,704-707` | Maximized state via `maximized_horizontally/vertically` properties and their `notify::` signals | Works if Mutter 49+ still exposes them alongside `is_maximized()`. Wrap in one helper that prefers `is_maximized()` when present | ⚠ |
+| Med | `windowTiling.js:62`, `windowControls.js:265-266`, `panelTransparency.js:645-646,704-707` | Maximized state via `maximized_horizontally/vertically` properties and their `notify::` signals | Works: mutter 49.0, 50.0 and 51.0 `src/core/window.c` still install `maximized-horizontally`/`maximized-vertically` (so `notify::` fires) alongside `is_maximized()`. Still wrap in one helper that prefers `is_maximized()` | ✔ |
 | Low | `windowTiling.js:51-52` | `MAXIMIZE_ARGS` (48 needs `Meta.MaximizeFlags.BOTH`) | Needed while 48 is supported | ✔ |
 | Low | `windowTitle.js:26-27` | `MENU_CLOSE_ARGS` for 51 | Needed | ✔ |
 | Low | `quickSettingsDnDRemoval.js:8` | `SHELL_HAS_SYSTEM_DND` (≥49). On 48 the toggle removal is a no-op | Needed for 48 | ✔ |
-| Low | `minimizedToDock.js:185-217` | ShaderEffect `set_shader_source` (48–50) vs `new_with_snippet` (51) | Needed | ✔ (branch), ⚠ (51 API) |
+| Low | `minimizedToDock.js:185-217` | ShaderEffect `set_shader_source` (48–50) vs `new_with_snippet` (51) | Needed | ✔ (branch), ✔ (51 API: mutter 51.0 clutter-shader-effect.h) |
 | Low | `stylesheet.css:84-85` | `Gjs_AggregateMenu` / `Gjs_ui_panel_AggregateMenu` selectors | **Dead**: AggregateMenu was removed in GNOME 43. Delete them | ✔ |
 | Low | `css/firefoxWindowControls.css` (`:root[tabsintitlebar]`) | Firefox attribute that newer releases may have renamed | ⚠ |
 | Low | 46/47 leftovers | Support dropped in `e7b10f1`. No 45–47 branches remain in JS (grep `PACKAGE_VERSION` shows only 49 and 51 gates) | ✔ |
@@ -231,7 +231,7 @@ Severity: **High** means it will break or block a planned feature, or risks user
 | Sev | Where | Issue | Fix | ✔/⚠ |
 |---|---|---|---|---|
 | Med | `panelTransparency.js:669-686, 768-770` | `window-added/removed` and per-window signals are connected only for the workspace active at enable. `switch-workspace` re-checks but never reconnects, so windows on other workspaces get no `position-changed`/`size-changed` handlers (the 2s poll hides the bug) | Reconnect on `active-workspace-changed`, as `dockColors.js:380-381` does | ✔ |
-| Med | `panelTransparency.js:701` | Connects `notify::fullscreened`. Meta.Window's property is `fullscreen`, so this never fires (it is redundant with `in-fullscreen-changed` `:783`) | Use `notify::fullscreen` | ✔ (name), ⚠ (GLib warning behaviour) |
+| Med | `panelTransparency.js:701` | Connects `notify::fullscreened`. Meta.Window's property is `fullscreen`, so this never fires (it is redundant with `in-fullscreen-changed` `:783`) | Use `notify::fullscreen` | ✔ (name), ✔ (silent: GLib `g_signal_parse_name`, used by gjs `connect`, does not validate `notify` details) |
 | Med | `batteryPercentage.js:37-91` | `init_async` without a cancellable. If `destroy()` runs first, the callbacks set `_batteryProxy` and connect `g-properties-changed` on a destroyed instance (null `_batteryLabel` → TypeError on update), and that signal is never disconnected | Pass a `Gio.Cancellable`, cancel it in `destroy()`, check it in the callbacks | ✔ |
 | Med | `batteryPercentage.js:52` | `call_sync('EnumerateDevices')` on the compositor thread | `call()` async | ✔ |
 | Low | `batteryPercentage.js:110-121` | Shows only when the percentage equals exactly 20 or the state changes. A drop from 21 to 19 between updates never shows the label. Comments say 25% | Use `<=` with an edge flag | ✔ |
@@ -323,13 +323,13 @@ Items likely to be flagged next:
 ## 3. Verification notes
 
 * **✔ items** were checked by reading the cited lines at `c2f3d0f` (all JS, CSS, schema, prefs, scripts and the C module were read in full, plus git history for the EGO commits).
-* **⚠ items needing runtime or upstream confirmation:**
-  1. Whether Mutter 49–51 still exposes `maximized-horizontally/vertically` properties and notify signals (the code depends on them in 3 modules).
-  2. The GNOME release in which `Shell.BlurEffect` renamed `sigma` to `radius` (believed to be 46). The repo uses `radius` consistently.
-  3. GNOME's default keybindings: `switch-input-source = <Super>space` and `toggle-message-tray = <Super>v/<Super>m`. These are not stored in this repo.
+* **⚠ items needing runtime or upstream confirmation** (upstream items re-checked 2026-10-25; 4, 6 and 8 remain open because they need a running session or Firefox source):
+  1. ✔ (2026-10-25) Mutter 49.0/50.0/51.0 `src/core/window.c` still install `maximized-horizontally/vertically` (https://gitlab.gnome.org/GNOME/mutter).
+  2. ✔ `sigma` → `radius` happened in GNOME 46 (gnome-shell `src/shell-blur-effect.c` 45.0 vs 46.0).
+  3. ✔ Defaults: `switch-input-source = ['<Super>space','XF86Keyboard']` (gsettings-desktop-schemas), `toggle-message-tray = ['<Super>v','<Super>m']` (gnome-shell 51.0 schema).
   4. Whether GTK delivers clicks to titlebuttons hidden with `opacity:0` and negative margins.
-  5. Whether GLib warns or stays silent for `notify::fullscreened` (an unknown property detail). Either way the handler never runs.
+  5. ✔ `notify::fullscreened` is silent: GLib `g_signal_parse_name` (gobject/gsignal.c) does not validate details. The handler never runs.
   6. Interaction between the panelHover ghost-menu grab and a new `pushModal`.
-  7. `Clutter.ShaderEffect.new_with_snippet` on GNOME 51.
+  7. ✔ `Clutter.ShaderEffect.new_with_snippet` exists in mutter 51.0 `clutter/clutter/clutter-shader-effect.h`.
   8. Firefox's current titlebar attribute (`tabsintitlebar` vs newer names) used in `firefoxWindowControls*.css`.
 * No existing files were modified. Only `docs/architecture/code-map.md` and this file were added.

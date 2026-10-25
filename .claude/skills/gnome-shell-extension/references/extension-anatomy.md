@@ -37,7 +37,7 @@ reports EGO-P-007 (unreachable JS) or EGO-P-006 (unnecessary files).
 | `version-name` | Free-form string, 46+ (NEWS 46.alpha). Kiwi: `"2.3.1"`. |
 | `session-modes` | Only `user` and `unlock-dialog` are allowed. Omit it if the only value would be `user` (EGO-M-005, EGO-M-006). With `unlock-dialog`, `disable()` must carry a comment explaining why (EGO-M-008). |
 | `donations` | Only the allowed keys, for example `github`, `kofi` (EGO-M-007). |
-| `version` | Integer assigned by EGO on upload. Don't manage it by hand (unverified). |
+| `version` | Integer assigned by EGO on upload. "SHOULD NOT be set by extension developers"; EGO overrides it (gjs.guide anatomy). |
 
 ## 3. Extension class (shell process)
 ```js

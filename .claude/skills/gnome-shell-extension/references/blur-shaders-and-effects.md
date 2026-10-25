@@ -24,8 +24,10 @@ Verified against gnome-shell `src/shell-blur-effect.{c,h}` (45.0, 46.0, main), `
   framebuffer beneath the actor (BACKGROUND mode). Real windows are painted
   before Shell chrome, so chrome can blur windows behind it.
 - mutter 51 added Wayland `ext-background-effect-v1` blur (51.beta !5071).
-  That lets *clients* request background blur behind their windows, but it
-  is not a Shell JS API (unverified as an extension-facing API).
+  That lets *clients* request background blur behind their windows. The only
+  Shell-side hook is `global.compositor.set_background_blur_params(radius,
+  saturation, noise)` (defaults 24, 1.25, 0.015; mutter 51.0 `meta/compositor.h`),
+  which tunes those client blurs. It cannot blur Shell actors.
 
 ## 2. Shell.BlurEffect
 ```js
@@ -91,8 +93,8 @@ if (Clutter.ShaderEffect.prototype.set_shader_source) {   // 48-50
 }
 ```
 - Snippet variables: `cogl_color_in`, `cogl_color_out`, `cogl_tex_coord_in[0]`
-  and `cogl_sampler0` / `cogl_texture_lookup0` (unverified names on 51;
-  lightbox uses `cogl_tex_coord_in[0].xy`).
+  and, per layer N, `uniform sampler2D cogl_samplerN` / `cogl_texture_lookupN()`
+  (mutter 51.0 cogl-pipeline-fragend-glsl.c; lightbox uses `cogl_tex_coord_in[0].xy`).
 - On 48+, use `Cogl.SnippetHook` (not `Shell.SnippetHook`; gjs.guide 48).
 - Cache snippets. Blur my Shell keeps a `Map` of snippets keyed by source
   (`render/shader/snippet_cache.js`) and clears it in `disable()`.
@@ -108,9 +110,11 @@ Stack the layers back to front inside one container:
    `rgba(30,30,30,0.35)` (dark) on the shape. Use `-st-accent-color` with
    `st-transparentize()` for an accent tint (47+).
 3. **Rim and specular**: CSS `border: 1px solid rgba(255,255,255,0.35)`,
-   `border-radius`, `box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 8px 24px rgba(0,0,0,0.25)`.
-   St supports inset box-shadow (unverified for multiple shadows; St
-   historically supports a single box-shadow).
+   `border-radius`, and one `box-shadow` per element. St parses a single
+   shadow (`inset` allowed); a comma list is not supported and extra values
+   log "Ignoring excess values in shadow definition" (st-theme-node.c
+   `parse_shadow_property`). Put `inset 0 1px 0 rgba(255,255,255,0.25)` on an
+   inner child and `0 8px 24px rgba(0,0,0,0.25)` on the outer container.
 4. **Refraction (optional, expensive)**: a shader effect on the blur widget
    that offsets UVs near the edges (lens or bezel). This needs a snippet
    effect that samples a texture. Study Blur my Shell's
@@ -147,8 +151,10 @@ Stack the layers back to front inside one container:
   `GLib.idle_add` or laters.
 - Watch for the `ACTOR_DIRTY` paint flag (Blur my Shell refreshes input only
   when it is set).
-- Measure with `GNOME_SHELL_DEBUG`, `sysprof` (the shell exports marks), or
-  frame timings in Looking Glass (unverified for each tool).
+- Measure with Sysprof: gnome-shell starts the GJS profiler when launched
+  with `GJS_TRACE_FD`/`GJS_ENABLE_PROFILER` (src/main.c `shell_profiler_init`).
+  There is no `GNOME_SHELL_DEBUG` (only `SHELL_DEBUG=backtrace-warnings|backtrace-segfaults`)
+  and Looking Glass has no frame-timing view.
 - Offer a "reduce transparency" pref and honour `St.Settings` `high-contrast`
   and `enable-animations`.
 
@@ -160,4 +166,4 @@ Stack the layers back to front inside one container:
 - https://gjs.guide/extensions/upgrading/gnome-shell-46.html (radius = sigma x 2)
 - https://gjs.guide/extensions/upgrading/gnome-shell-48.html (Cogl.SnippetHook)
 - https://github.com/aunetx/blur-my-shell (src/effects/blur/dual_kawase_blur.js, src/effects/refraction/, src/render/)
-- GNOME Shell issue #2857 (blur not repainting), as cited in Kiwi and Blur my Shell code (unverified link text)
+- https://gitlab.gnome.org/GNOME/gnome-shell/-/issues/2857 "Windows shadows causing artefacts with the new Shell.BlurEffect" (open; cited by Kiwi and Blur my Shell for the repaint workaround)

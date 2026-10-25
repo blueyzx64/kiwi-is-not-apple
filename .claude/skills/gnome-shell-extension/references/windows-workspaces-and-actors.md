@@ -177,7 +177,8 @@ container.add_child(clone);
   (Kiwi: `apps/gtkThemeManager.js` keeps a managed block, and
   `css/hide-titlebar4.css` targets `windowcontrols`). This affects apps only
   after they restart. It has no effect on Qt or Electron apps that draw their
-  own titlebars (unverified for each toolkit).
+  own titlebars (unverified for each toolkit: no upstream doc covers
+  Chromium's GTK-theme frame mode).
 
 ## 9. Pitfalls
 - Never keep a `Meta.Window` after `unmanaged`. Calling methods on it logs
@@ -196,4 +197,4 @@ container.add_child(clone);
 - https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/main/js/ui/windowManager.js
 - https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/main/js/ui/main.js (activateWindow)
 - https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/main/js/ui/environment.js (ease, easeAsync)
-- https://gjs-docs.gnome.org/meta17~17/ (API reference; the version suffix changes per release (unverified))
+- https://gjs-docs.gnome.org/meta17~17/ (API reference; suffix = mutter API version, 17 = GNOME 49, the newest on gjs-docs per its docs.json; 50 = 18, 51 = 51)

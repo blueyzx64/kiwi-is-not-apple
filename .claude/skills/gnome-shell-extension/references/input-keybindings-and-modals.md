@@ -181,8 +181,9 @@ this._pressure.destroy(); this._pressure = null;
 - Hot corners: `Main.layoutManager.hotCorners[]` (`HotCorner`, built on a
   PressureBarrier), rebuilt on `hot-corners-changed`. Toggle with
   `org.gnome.desktop.interface enable-hot-corners`. Don't destroy them.
-- On Wayland, barriers apply to pointer motion only, not touch or tablets
-  (unverified).
+- On Wayland, barriers constrain pointer motion and tablets in relative
+  mapping mode only; touch and absolute tablets pass through (mutter 51.0
+  `meta-seat-impl.c` `constrain_coordinates`).
 
 ## 8. Sources
 - https://gjs.guide/extensions/topics/session-modes.html (action modes context)

@@ -17,11 +17,11 @@ Facts were checked against gnome-shell, mutter and gjs sources and NEWS at relea
 |---|---|---|---|
 | 41 | 47 | 2024-10-29 | Workstation media is Wayland-only. X11 session packages are still in the repos. |
 | 42 | 48 | 2025-04-15 | |
-| 43 | 49 | 2025-10 | GNOME X11 session removed from the repos. Users are migrated to Wayland. |
+| 43 | 49 | 2025-10-28 | GNOME X11 session removed from the repos (Change "WaylandOnlyGNOME"). Users are migrated to Wayland. |
 | 44 | 50 | 2026-04-28 | |
-| 45 | 51 | Beta 2026-09-15. Final slipped from 10-20 to a 10-27 target (fallback 11-03) | GNOME 51 is confirmed in the F45 Beta. Final GA was not confirmed as of 2026-10-25. |
+| 45 | 51 | Beta 2026-09-15. Current Final target 2026-11-03 (target #3 2026-11-10); Final Freeze since 10-20 | GNOME 51 is in F45 (Bodhi: gnome-shell + mutter 51.0 stable 2026-09-30, 51.1 in testing). Not released as of 2026-10-25: docs.fedoraproject.org lists F44 and F43 as the supported releases. |
 
-Sources: Fedora Magazine "What's new in Fedora Workstation 41/43"; Phoronix "Fedora 42 Released"; linuxiac "Fedora 44 Officially Released"; Phoronix "Fedora 45 Beta"; linuxiac "Fedora Linux 45 Delayed". fedoraproject.org could not be reached from the research sandbox, so release dates come from those news reports.
+Sources: release dates from the "Current Final Target date" rows of https://fedorapeople.org/groups/schedule/f-41/f-41-key-tasks.html (and f-42 … f-45); GNOME versions from Bodhi/mdapi gnome-shell and libadwaita builds per release; Changes "WaylandOnlyGNOMEWorkstationMedia" (F41) and "WaylandOnlyGNOME" (F43) from https://fedoraproject.org/wiki/Releases/41/ChangeSet and /43/ChangeSet; supported list from https://docs.fedoraproject.org/en-US/releases/lifecycle/ (checked 2026-10-25).
 
 ## 2. Per-version changes
 
@@ -88,8 +88,11 @@ Sources: Fedora Magazine "What's new in Fedora Workstation 41/43"; Phoronix "Fed
   "Transition to new BoxLayout.orientation property").
 - `Clutter.Image` removed (mutter 48.alpha). Use `St.ImageContent`.
 - `Shell.SnippetHook` → `Cogl.SnippetHook` (gjs.guide 48).
-- Some WindowManager methods and `InputSourceManager._switchInputSource()` take
-  an extra event parameter (gjs.guide 48; details truncated (unverified)).
+- `WindowManager` `_startSwitcher()`, `_startA11ySwitcher()`,
+  `_switchToApplication()`, `_openNewApplicationWindow()` and
+  `_showWorkspaceSwitcher()` take `event` as their third argument, and
+  `InputSourceManager._switchInputSource(display, window, event, binding)`
+  gained `event` too (gjs.guide 48).
 - Notifications are grouped by app in the message list (NEWS 48.rc).
 
 ### GNOME 49 (Sept 2025)
@@ -108,8 +111,8 @@ Sources: Fedora Magazine "What's new in Fedora Workstation 41/43"; Phoronix "Fed
   (meta-cursor-tracker.h 49.0; EGO-C49-005).
 - **Do Not Disturb moved into Quick Settings** (`js/ui/status/doNotDisturb.js`).
   `DoNotDisturbSwitch` is gone from calendar.js (EGO-C49-001; NEWS 49.alpha.1).
-- `AppMenuButton` removed from panel.js. `Meta.Rectangle` → `Mtk.Rectangle`
-  (gjs.guide 49; Rectangle detail (unverified) in source).
+- `AppMenuButton` removed from panel.js. `Meta.Rectangle` (a deprecated alias
+  returning `Mtk.Rectangle` since 45) is removed: use `Mtk.Rectangle` (gjs.guide 49, 45).
 - **X11 backend disabled by default** in mutter (49.alpha.0). The old nested
   mode depended on it. **`gnome-shell --devkit`** was added (NEWS 49.alpha.0).
   The nested window comes from the `mutter-devkit` package.
@@ -208,15 +211,15 @@ const legacyShader = !!Clutter.ShaderEffect.prototype.set_shader_source;
 | 51 | 1.90 | 140 | 1.10 |
 
 The gjs ↔ GNOME pairing comes from gjs NEWS ("First release in the GNOME 51
-series" for 1.90.0, and so on). The libadwaita ↔ GNOME pairing follows the
-usual cycle (unverified for each distro). The widgets listed for each
-libadwaita version come from libadwaita NEWS.
+series" for 1.90.0, and so on). The libadwaita ↔ GNOME pairing for 48–51
+matches Fedora 42–45 builds (Bodhi/mdapi: 1.7.x, 1.8.x, 1.9.x, 1.10.0). The
+widgets listed for each libadwaita version come from libadwaita NEWS.
 
 ## 5. Sources
-- gnome-shell NEWS and sources: https://gitlab.gnome.org/GNOME/gnome-shell (tags 45.0, 46.0, 47.0, 48.0, 49.0, 50.0, 51.0, main = 51.1). Read through the GitHub mirror github.com/GNOME/gnome-shell because gitlab.gnome.org was blocked in the research sandbox.
+- gnome-shell NEWS and sources: https://gitlab.gnome.org/GNOME/gnome-shell (tags 45.0, 46.0, 47.0, 48.0, 49.0, 50.0, 51.0, main = 51.1). Originally read through the GitHub mirror; key items re-checked on gitlab.gnome.org on 2026-10-25.
 - mutter NEWS and headers: https://gitlab.gnome.org/GNOME/mutter (window.h, display.h, meta-cursor-tracker.h, clutter-shader-effect.h, meta-context-main.c)
 - gjs NEWS: https://gitlab.gnome.org/GNOME/gjs/-/blob/master/NEWS
 - libadwaita NEWS: https://gitlab.gnome.org/GNOME/libadwaita/-/blob/main/NEWS
-- Porting guides: https://gjs.guide/extensions/upgrading/gnome-shell-45.html … https://gjs.guide/extensions/upgrading/gnome-shell-51.html (read through search excerpts; some sections were truncated)
+- Porting guides: https://gjs.guide/extensions/upgrading/gnome-shell-45.html … https://gjs.guide/extensions/upgrading/gnome-shell-51.html (full pages re-read 2026-10-25)
 - shexli rule spec (rule IDs EGO-*): https://pypi.org/project/shexli/ (spec.py, SPEC_VERSION 2026-04-02)
-- Fedora: https://fedoramagazine.org/whats-new-fedora-workstation-41/ , https://fedoramagazine.org/whats-new-fedora-workstation-43/ , https://www.phoronix.com/news/Fedora-42-Released , https://linuxiac.com/fedora-44-officially-released-this-is-whats-new/ , https://www.phoronix.com/news/Fedora-45-Beta , https://linuxiac.com/?p=221276
+- Fedora: https://fedorapeople.org/groups/schedule/f-45/f-45-key-tasks.html , https://bodhi.fedoraproject.org/updates/?packages=gnome-shell , https://docs.fedoraproject.org/en-US/releases/lifecycle/ , https://fedoraproject.org/wiki/Releases/43/ChangeSet
