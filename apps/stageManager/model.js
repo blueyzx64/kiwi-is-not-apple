@@ -17,7 +17,7 @@ export const DEFAULTS = Object.freeze({
     padTop: 24,
     padBottom: 24,
     minScale: 0.55,       // cards shrink to this at most, then the strip stops listing more
-    rotation: 0,          // degrees, see cardTilt(); a Y-rotated clone resamples and blurs
+    rotation: 22,         // degrees, see cardTilt(); windows turn to face the stage
     cardPad: 14,          // px between the card's edge and the window inside it (scaled with the card)
     badge: 34,
     stackMax: 3,
@@ -74,20 +74,28 @@ export function cropThumb(frame, buffer, boxW, boxH) {
 }
 
 /**
- * Where a window clone goes so that the window's frame fills `rect` (keeping the aspect ratio,
- * centred). The clone has the buffer's size, pivot (0, 0) and a uniform scale.
- * @param {rect} frame  Meta.Window.get_frame_rect()
- * @param {rect} buffer Meta.Window.get_buffer_rect()
- * @param {rect} rect   where the frame should be drawn
- * @returns {{x: number, y: number, scale: number}|null} null for an empty frame or rect
+ * Pose of a window clone (the clone has the buffer's size) whose frame is drawn in `rect`
+ * (centred, aspect kept), turned about the frame's centre. The pivot is the frame centre, so
+ * position does not depend on scale or rotation and a flight can tween x, y, scale and angle.
+ * @param {rect} frame
+ * @param {rect} buffer
+ * @param {rect} rect
+ * @returns {?{x: number, y: number, pivotX: number, pivotY: number, scale: number}}
+ *   pivot normalised to the buffer size; x, y: clone position in rect's coordinate space
  */
-export function placeClone(frame, buffer, rect) {
-    if (!(frame.width > 0) || !(frame.height > 0) || !(rect.width > 0) || !(rect.height > 0))
+export function clonePose(frame, buffer, rect) {
+    if (!(frame.width > 0) || !(frame.height > 0) || !(buffer.width > 0) || !(buffer.height > 0) ||
+        !(rect.width > 0) || !(rect.height > 0))
         return null;
-    const scale = Math.min(rect.width / frame.width, rect.height / frame.height);
-    const fx = rect.x + (rect.width - frame.width * scale) / 2;
-    const fy = rect.y + (rect.height - frame.height * scale) / 2;
-    return { x: fx + (buffer.x - frame.x) * scale, y: fy + (buffer.y - frame.y) * scale, scale };
+    const px = frame.x - buffer.x + frame.width / 2;
+    const py = frame.y - buffer.y + frame.height / 2;
+    return {
+        x: rect.x + rect.width / 2 - px,
+        y: rect.y + rect.height / 2 - py,
+        pivotX: px / buffer.width,
+        pivotY: py / buffer.height,
+        scale: Math.min(rect.width / frame.width, rect.height / frame.height),
+    };
 }
 
 /**
