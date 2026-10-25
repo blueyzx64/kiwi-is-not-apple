@@ -51,13 +51,9 @@ export class OverlayKeyTakeover {
                 console.warn('[Kiwi] spotlight: no stock overlay-key handler found; the Super tap stays with the overview');
                 return;
             }
-            // Count the handlers (block then unblock all in one tick, nothing can emit between)
-            const count = GObject.signal_handlers_block_matched(display, { signalId: SIGNAL });
-            GObject.signal_handlers_unblock_matched(display, { signalId: SIGNAL });
-            if (count > 1) {
-                console.warn(`[Kiwi] spotlight: ${count} overlay-key handlers found; blocking only the oldest (id ${blocked}, assumed to be the Shell's). ` +
-                    'Another extension also handles the Super tap.');
-            }
+            // No safe way to count handlers (the *_matched calls would also touch handlers other
+            // extensions blocked), so only the id is logged, for diagnosis.
+            console.debug(`[Kiwi] spotlight: blocking the oldest overlay-key handler (id ${blocked}, assumed to be the Shell's)`);
             GObject.signal_handler_block(display, blocked);
             ours = display.connect(SIGNAL, () => this._tap());
         } catch (e) {
