@@ -8,7 +8,7 @@ export const SYSTEM_RIGHT_ORDER = ['minimize', 'maximize', 'close'];
 export const SCOPES = ['all', 'maximized', 'fullscreen'];
 export const POSITIONS = ['system', 'left', 'right'];
 
-/** Old key -> new key. Run through runMigrations (idempotent, never resets the old key). */
+/** Old key -> new key. Run once by lib/migrations.js from extension.js enable(). */
 export const MIGRATIONS = [
     {
         from: 'show-window-controls-fullscreen-only',

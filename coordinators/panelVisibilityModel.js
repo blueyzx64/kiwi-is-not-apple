@@ -6,7 +6,7 @@
 
 export const MODES = ['always', 'fullscreen-hover', 'autohide'];
 
-/** Old key -> new keys. Run through runMigrations (idempotent, never resets the old key). */
+/** Old key -> new keys. Run once by lib/migrations.js from extension.js enable(). */
 export const MIGRATIONS = [
     // The old fullscreen-hover toggle becomes the master switch ...
     { from: 'panel-hover-fullscreen', to: 'panel-autohide' },

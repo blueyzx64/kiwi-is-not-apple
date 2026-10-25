@@ -36,7 +36,7 @@ import * as Layout from 'resource:///org/gnome/shell/ui/layout.js';
 import { KiwiSettings } from '../lib/settings.js';
 import { watchReducedMotion, setUnredirectAllowed, STOCK_PANEL_CHROME } from '../lib/compat.js';
 import {
-    MIGRATIONS, initialState, step, visible, wantsStrut, modeFromSettings,
+    initialState, step, visible, wantsStrut, modeFromSettings,
     edgeSegments, hasMonitorAbove, chromeFlagsFor,
 } from './panelVisibilityModel.js';
 
@@ -145,7 +145,6 @@ export class PanelVisibilityFeature {
         const cleanup = this._cleanup;
         const ks = new KiwiSettings(this._ctx.settings);
         this._ks = ks;
-        ks.migrate(MIGRATIONS);
         ks.attach(cleanup);
 
         this._box = Main.layoutManager.panelBox;

@@ -26,7 +26,7 @@ import { WindowState } from '../coordinators/windowState.js';
 import { isMaximized } from './windowTiling.js';
 import { IconCatalog } from './windowControls/icons.js';
 import {
-    MIGRATIONS, parseButtonLayout, resolvePlacement, shouldShow, resolveIcon,
+    parseButtonLayout, resolvePlacement, shouldShow, resolveIcon,
 } from './windowControls/model.js';
 
 const BUTTONS = ['minimize', 'maximize', 'close'];
@@ -265,7 +265,6 @@ export class WindowControlsFeature {
         const cleanup = this._cleanup;
         const ks = new KiwiSettings(settings);
         this._ks = ks;
-        ks.migrate(MIGRATIONS);
         ks.attach(cleanup);
 
         this._wm = new Gio.Settings({ schema_id: 'org.gnome.desktop.wm.preferences' });
