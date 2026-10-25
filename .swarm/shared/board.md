@@ -13,7 +13,7 @@
 | Control Center | S7 | merged; Now Playing → MprisWatcher after notch | feat/control-center |
 | Notch | S8 | built; R8 review | feat/notch |
 | Stage Manager | S9 | merged; shortcut after clipboard (keybindings) | feat/stage-manager |
-| User files (D1) | D1 | built; R9 review | debt/user-files |
+| User files (D1) | D1 | R9 CHANGES; D1 fixing | debt/user-files |
 | Panel transparency (D2) | D2 | done, merged | debt/panel-transparency |
 | Overview patches (D3) | D3 | done, merged | debt/overview-patches |
 | Window utils (D4) | D4 | done, merged | debt/window-utils |
