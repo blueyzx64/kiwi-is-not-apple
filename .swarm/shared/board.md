@@ -23,7 +23,7 @@
 | Docs (D8) | D8 | pass 1 merged; pass 2 at end | debt/docs |
 | Reviewer 2 | R1 | reviewing S4 | - |
 | Audit fixes (autohide restore, glass contrast/menu destroy) | S6, S3 | done, merged | feat/autohide-fix, feat/liquid-glass-fix2 |
-| Small modules (D9) | D9 | built; R10 review | debt/small-modules |
+| Small modules (D9) | D9 | done, merged (features.js lockIcon ctx.extension → S10 with notch) | debt/small-modules |
 | Window move (D10) | D10 | done, merged | debt/window-move |
 | Lint (L1) | L1 | pass 1 merged (104→101); pass 2 at end | debt/lint |
 | Audit merged CC/SM/clipboard/spotlight (A2) | A2 | doing | - |
