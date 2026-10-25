@@ -8,13 +8,13 @@
 | Window controls | S2 | done, merged | feat/window-controls |
 | Liquid Glass | S3 | done, merged incl. review fixes | feat/liquid-glass |
 | Clipboard | S4 | fixed; R1 re-check | feat/clipboard |
-| Spotlight | S5 | doing (model first; waits S4 modalSurface) | feat/spotlight |
+| Spotlight | S5 | R7 CHANGES; S5 fixing | feat/spotlight |
 | Auto-hide bar | S6 | done, merged | feat/autohide |
 | Control Center | S7 | fixed; queued for S10 integration | feat/control-center |
 | Notch | S8 | built; R8 review | feat/notch |
 | Stage Manager | S9 | fixed; queued for S10 integration | feat/stage-manager |
 | User files (D1) | D1 | built; R9 review | debt/user-files |
-| Panel transparency (D2) | D2 | R3 CHANGES; D2 fixing | debt/panel-transparency |
+| Panel transparency (D2) | D2 | done, merged | debt/panel-transparency |
 | Overview patches (D3) | D3 | done, merged | debt/overview-patches |
 | Window utils (D4) | D4 | done, merged | debt/window-utils |
 | Dock (D5) | D5 | R6 APPROVE; D5 small follow-up | debt/dock |
