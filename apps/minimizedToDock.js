@@ -14,6 +14,7 @@ import Shell from 'gi://Shell';
 import St from 'gi://St';
 import * as AppFavorites from 'resource:///org/gnome/shell/ui/appFavorites.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import { WindowState } from '../coordinators/windowState.js';
 import {
     applyIconOffset, beforeRedraw, cancelBeforeRedraw, dashEndsWithSeparator, dashOf,
     dashItemMatchesDock, disconnectAll, dockSettings, isTrashItem, makeDashItem,
@@ -54,7 +55,8 @@ let separatorSyncLater = 0;
 /* -------------------------------------------------------------- snapshots */
 
 function _isEligible(win) {
-    return !!win && win.window_type === Meta.WindowType.NORMAL && !win.is_skip_taskbar();
+    return !!win && win.window_type === Meta.WindowType.NORMAL && !win.is_skip_taskbar() &&
+        !WindowState.skipsDock(win);
 }
 
 function _captureSnapshot(win) {
@@ -129,6 +131,7 @@ function _addWindow(win) {
         win.set_icon_geometry(_nextSlotRect(info));
 
     order.push(win);
+    WindowState.set(win, 'parkedInDock', true);
     restoring.delete(win);
     _syncDocks();
 }
@@ -138,6 +141,7 @@ function _removeWindow(win) {
         return;
 
     order = order.filter(w => w !== win);
+    WindowState.set(win, 'parkedInDock', false);
     snapshots.delete(win);
 
     if (enabled) {
@@ -820,6 +824,7 @@ function _watchDocks() {
 
 export function disable() {
     enabled = false;
+    WindowState.clearFlag('parkedInDock');
 
     if (trashAdoptionLater) {
         cancelBeforeRedraw(trashAdoptionLater);
