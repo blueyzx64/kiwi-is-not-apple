@@ -158,7 +158,7 @@ export function restoreBuiltinDndToggle() {
 }
 
 export function suppressBuiltinDndIndicator() {
-    if (_suppressedActors.indicator)
+    if (_controlCenterOwnsDnd || _suppressedActors.indicator)
         return true;
 
     const indicators = Main.panel.statusArea.quickSettings._indicators;

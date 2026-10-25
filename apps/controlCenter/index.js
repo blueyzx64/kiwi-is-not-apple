@@ -17,11 +17,9 @@ import St from 'gi://St';
 
 import { Glass } from '../../lib/glass.js';
 import { runMigrations } from '../../lib/settings.js';
-import {
-    restoreBuiltinDndToggle,
-    setControlCenterOwnsDnd,
-    suppressBuiltinDndToggle,
-} from '../quickSettingsDnDRemoval.js';
+import { SHELL_HAS_SYSTEM_DND } from '../../lib/compat.js';
+import { restoreBuiltinDndToggle, setControlCenterOwnsDnd } from '../quickSettingsDnDRemoval.js';
+import { refreshLegacyDnd } from '../quickSettingsNotifications.js';
 import { MORE_HEADER_ID, planLayout } from './model.js';
 import { NowPlaying } from './nowPlaying.js';
 import {
@@ -138,8 +136,14 @@ export class ControlCenter {
 
         cleanup.connect(settings, 'changed::control-center-user-row', () => this._syncUserRow());
         cleanup.connect(settings, 'changed::battery-percentage-always', () => this._syncBattery());
-        this._syncUserRow();
-        this._syncBattery();
+        // The footer extras are optional: a failure there must not stop the layout
+        for (const sync of [() => this._syncUserRow(), () => this._syncBattery()]) {
+            try {
+                sync();
+            } catch (e) {
+                console.error('[Kiwi] Control Center footer extra failed:', e);
+            }
+        }
 
         this._nowPlaying.start().catch(e => console.error('[Kiwi] Control Center: Now Playing failed:', e));
         this._relayout();
@@ -163,7 +167,7 @@ export class ControlCenter {
         grid.add_child(this._header);
 
         // GNOME 49 added the stock toggle; on 48 the Control Center brings its own
-        if (!qs._doNotDisturb)
+        if (!SHELL_HAS_SYSTEM_DND || !qs._doNotDisturb)
             add(createDndToggle(gettext), 'dnd');
 
         add(createSettingTile({
@@ -270,36 +274,36 @@ export class ControlCenter {
     _teardown() {
         if (!this._qs)
             return;
-        const { settings } = this._ctx;
+        try {
+            this._userRow?.destroy();
+            this._battery?.destroy();
+            // Destroys its own actor too
+            this._nowPlaying?.destroy();
+            for (const actor of this._own.keys()) {
+                if (actor !== this._nowPlaying?.actor)
+                    actor.destroy();
+            }
+            this._userRow = this._battery = this._nowPlaying = null;
+            this._own.clear();
+            this._header?.destroy();
+            this._header = null;
 
-        this._userRow?.destroy();
-        this._battery?.destroy();
-        // Destroys its own actor too
-        this._nowPlaying?.destroy();
-        for (const actor of this._own.keys()) {
-            if (actor !== this._nowPlaying?.actor)
-                actor.destroy();
+            const box = this._qs.menu.box;
+            box.remove_style_class_name(MENU_CLASS);
+            box.remove_style_class_name(GLASS_CLASS);
+
+            restoreGrid(this._grid, this._snapshot, this._stockSpans);
+        } finally {
+            // Hand Do Not Disturb back; the legacy module re-applies its own setting
+            setControlCenterOwnsDnd(false);
+            try {
+                refreshLegacyDnd();
+            } catch (e) {
+                console.error('[Kiwi] Control Center: legacy DND refresh failed:', e);
+            }
+            this._qs = this._grid = this._snapshot = this._stockKeys = null;
+            this._stockSpans.clear();
+            this._visibleTokens.clear();
         }
-        this._userRow = this._battery = this._nowPlaying = null;
-        this._own.clear();
-        this._header?.destroy();
-        this._header = null;
-
-        const box = this._qs.menu.box;
-        box.remove_style_class_name(MENU_CLASS);
-        box.remove_style_class_name(GLASS_CLASS);
-
-        restoreGrid(this._grid, this._snapshot);
-
-        // Hand Do Not Disturb back: if the legacy module is configured to replace the stock
-        // toggle, it does so again
-        setControlCenterOwnsDnd(false);
-        if (this._flag('custom-dnd-button', false) && settings.get_boolean('move-calendar-right') &&
-            !settings.get_boolean('keep-notification-panel'))
-            suppressBuiltinDndToggle();
-
-        this._qs = this._grid = this._snapshot = this._stockKeys = null;
-        this._stockSpans.clear();
-        this._visibleTokens.clear();
     }
 }

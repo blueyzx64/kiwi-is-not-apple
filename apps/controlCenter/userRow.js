@@ -137,8 +137,10 @@ export class PanelBattery {
             style_class: 'kiwi-cc-battery-label',
             y_align: Clutter.ActorAlign.CENTER,
         });
-        power.bind_property('title', this._label, 'text', GObject.BindingFlags.SYNC_CREATE);
-        power.bind_property('visible', this._label, 'visible', GObject.BindingFlags.SYNC_CREATE);
+        this._bindings = [
+            power.bind_property('title', this._label, 'text', GObject.BindingFlags.SYNC_CREATE),
+            power.bind_property('visible', this._label, 'visible', GObject.BindingFlags.SYNC_CREATE),
+        ];
         this._qs._indicators.insert_child_above(this._label, this._qs._system);
     }
 
@@ -151,6 +153,8 @@ export class PanelBattery {
     }
 
     _destroyLabel() {
+        this._bindings?.forEach(binding => binding.unbind());
+        this._bindings = null;
         this._label?.destroy();
         this._label = null;
     }

@@ -123,14 +123,16 @@ export function applyPlan(grid, placed) {
 /**
  * Put the grid back as the snapshot saw it. Actors that have left the grid are skipped;
  * the order comes from restoreOrder(), so nothing is inserted into a foreign parent.
+ * `stockSpans` (actor -> span it arrived with) covers actors the snapshot never saw.
  */
-export function restoreGrid(grid, snapshot) {
+export function restoreGrid(grid, snapshot, stockSpans = new Map()) {
     if (!grid || !snapshot)
         return;
     const layout = grid.layout_manager;
     for (const actor of restoreOrder(snapshot.actors, grid.get_children())) {
-        const span = snapshot.spans.get(actor);
-        if (span !== undefined && columnSpan(grid, actor) !== span)
+        // Actors that joined after the snapshot go back to the span they arrived with
+        const span = snapshot.spans.get(actor) ?? stockSpans.get(actor) ?? 1;
+        if (columnSpan(grid, actor) !== span)
             setSpan(grid, actor, span);
         grid.set_child_above_sibling(actor, null);
     }

@@ -280,6 +280,12 @@ function _applyCustomDndSetting() {
     }
 }
 
+/** Re-apply the custom DND setting now (the Control Center just gave Do Not Disturb back). */
+export function refreshLegacyDnd() {
+    if (enabled)
+        _applyCustomDndSetting();
+}
+
 export function enable(gettext, settings) {
     gettextFunc = gettext;
     _kiwiSettings = settings;
@@ -365,7 +371,7 @@ export function disable() {
 }
 
 function ensurePanelMoonIcon(isActive = false) {
-    if (SHELL_HAS_SYSTEM_DND)
+    if (SHELL_HAS_SYSTEM_DND && !controlCenterOwnsDnd())
         suppressBuiltinDndIndicator();
 
     const indicatorsContainer = Main.panel.statusArea.quickSettings._indicators;
