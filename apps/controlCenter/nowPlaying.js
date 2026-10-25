@@ -9,7 +9,8 @@ import St from 'gi://St';
 import { Glass } from '../../lib/glass.js';
 import { MprisWatcher } from '../../coordinators/mprisWatcher.js';
 
-const ART_SIZE = 48;
+const ART_SIZE = 36;
+const SYMBOLIC_ART_SIZE = 20;
 const FADE_MS = 150;
 
 export class NowPlaying {
@@ -27,8 +28,8 @@ export class NowPlaying {
             x_expand: true,
         });
         this._art = new St.Icon({
-            style_class: 'kiwi-cc-np-art',
-            icon_size: ART_SIZE,
+            style_class: 'kiwi-cc-np-art kiwi-cc-np-art-symbolic',
+            icon_size: SYMBOLIC_ART_SIZE,
             icon_name: 'audio-x-generic-symbolic',
             y_align: Clutter.ActorAlign.CENTER,
         });
@@ -109,11 +110,18 @@ export class NowPlaying {
         // Local files and http(s) URLs (St loads a FileIcon asynchronously through GIO/GVfs);
         // the app icon is the fallback if the art cannot load.
         const url = player.trackCoverUrl;
-        const plain = player.app?.get_icon() ?? new Gio.ThemedIcon({ name: 'audio-x-generic-symbolic' });
+        const appIcon = player.app?.get_icon() ?? null;
+        const plain = appIcon ?? new Gio.ThemedIcon({ name: 'audio-x-generic-symbolic' });
         this._art.fallback_gicon = plain;
-        if (typeof url === 'string' && /^(file|https?):\/\//.test(url))
-            return new Gio.FileIcon({ file: Gio.File.new_for_uri(url) });
-        return plain;
+        const cover = typeof url === 'string' && /^(file|https?):\/\//.test(url);
+        // A bare symbolic note sits small in a tinted square instead of filling the art slot
+        const symbolic = !cover && !appIcon;
+        this._art.icon_size = symbolic ? SYMBOLIC_ART_SIZE : ART_SIZE;
+        if (symbolic)
+            this._art.add_style_class_name('kiwi-cc-np-art-symbolic');
+        else
+            this._art.remove_style_class_name('kiwi-cc-np-art-symbolic');
+        return cover ? new Gio.FileIcon({ file: Gio.File.new_for_uri(url) }) : plain;
     }
 
     _show(show) {

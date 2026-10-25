@@ -11,9 +11,14 @@
 //   js/ui/quickSettings.js   QuickSettingsMenu._grid; its layout manager has `nColumns`, a
 //                        per-child `column-span`, and `_overlay` (a placeholder child that the
 //                        layout skips and that must stay in the grid).
+//   js/ui/quickSettings.js   QuickToggle: child `_box` (St.BoxLayout: `_icon`, then a box
+//                        holding `_title` and `_subtitle`). The title box's visibility is
+//                        not bound to anything, so hiding it is safe and reversible.
 //   js/ui/status/system.js   SystemItem.child (St.BoxLayout), powerToggle._proxy (UPower.Device).
 
+import Clutter from 'gi://Clutter';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import { QuickToggle } from 'resource:///org/gnome/shell/ui/quickSettings.js';
 
 import { COLUMNS, restoreOrder } from './model.js';
 
@@ -173,4 +178,75 @@ export function hideLegacyDndButton(qs) {
         button.disconnect(id);
         button.visible = wasVisible;
     };
+}
+
+const COMPACT_CLASS = 'kiwi-cc-compact';
+
+/**
+ * True for a plain QuickToggle (no menu arrow): it can become a 1x1 icon-only square.
+ * QuickMenuToggle is a sibling class, so it is never compactable.
+ */
+export function compactable(actor) {
+    return actor instanceof QuickToggle && !!actor._title?.get_parent() && !!actor._box;
+}
+
+/**
+ * Turns the icon-only look of a plain QuickToggle on or off. `saved` (actor -> what the
+ * stock code had) is filled on the first compaction and emptied on the way back, so the
+ * caller can undo every actor it still holds in one pass on teardown.
+ *
+ * @param {QuickToggle} actor
+ * @param {boolean} on
+ * @param {Map<Clutter.Actor, object>} saved
+ */
+export function setCompact(actor, on, saved) {
+    let was = saved.get(actor);
+    if (on) {
+        if (!was) {
+            const titleBox = actor._title?.get_parent();
+            const box = actor._box;
+            if (!titleBox || !box)
+                return;
+            was = {
+                titleBox, box, dead: false,
+                titleVisible: titleBox.visible,
+                xExpand: box.x_expand,
+                xAlign: box.x_align,
+            };
+            // A toggle destroyed with its grid (Shell shutdown) is never touched again
+            was.destroyId = titleBox.connect('destroy', () => {
+                was.dead = true;
+            });
+            saved.set(actor, was);
+        }
+        if (was.dead)
+            return;
+        was.titleBox.visible = false;
+        was.box.x_expand = false;
+        was.box.x_align = Clutter.ActorAlign.CENTER;
+        actor.add_style_class_name(COMPACT_CLASS);
+        return;
+    }
+    if (!was)
+        return;
+    saved.delete(actor);
+    if (was.dead)
+        return;
+    was.titleBox.disconnect(was.destroyId);
+    was.titleBox.visible = was.titleVisible;
+    was.box.x_expand = was.xExpand;
+    was.box.x_align = was.xAlign;
+    actor.remove_style_class_name(COMPACT_CLASS);
+}
+
+/** Undo setCompact() for every actor in `saved`. */
+export function restoreCompact(saved) {
+    for (const actor of [...saved.keys()]) {
+        try {
+            setCompact(actor, false, saved);
+        } catch (_e) {
+            // Destroyed with its grid
+            saved.delete(actor);
+        }
+    }
 }
