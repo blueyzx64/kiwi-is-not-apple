@@ -32,3 +32,4 @@
 | Now Playing -> MprisWatcher | S8 | done, merged | feat/notch |
 | Cross-feature review (RF) | RF | PASS-WITH-FIXES; fixes dispatched to S10/S4/S2/D5/S5/S3 | - |
 | Smoke-found bugs (fullscreen signal, disposed disconnects, glass group) | S3/S1/S8 | done, merged (smoke: 0 Kiwi CRITICALs) | various |
+| Final PR into main | orchestrator | open: #2 | ccr-f3c1f44c-rv5a8r |
