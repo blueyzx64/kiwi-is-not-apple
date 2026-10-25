@@ -92,11 +92,13 @@ test('the Kiwi module is one full-width block after the toggles', () => {
 
 test('kiwiTiles: the catalogue covers the Kiwi features, never the Control Center', () => {
     const keys = KIWI_TOGGLES.map(t => t.key);
-    for (const key of ['notch', 'stage-manager', 'panel-autohide', 'clipboard-history', 'spotlight',
+    for (const key of ['notch', 'stage-manager', 'clipboard-history', 'spotlight',
         'liquid-glass', 'show-window-controls'])
         if (!keys.includes(key))
             throw new Error(`missing ${key}`);
     eq(keys.includes('control-center'), false);
+    // The auto-hide top bar was removed (the bar houses the notch): no tile for it.
+    eq(keys.includes('panel-autohide'), false);
     eq(kiwiTiles(() => true).some(t => t.key === 'control-center'), false);
     for (const t of KIWI_TOGGLES)
         if (!t.icon || !t.label)

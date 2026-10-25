@@ -140,6 +140,8 @@ Severity: **High** means it will break or block a planned feature, or risks user
 
 ### 1.8 Auto-hide top bar
 
+> **Removed in UX round 1** (the top bar houses the notch). `PanelVisibility` and its feature are gone; the conflicts below no longer apply.
+
 | Collides with | Nature | Sev |
 |---|---|---|
 | `panelHover.js` (whole file) | Already implements reveal-on-hover, **only in fullscreen**. It does this by flipping `layoutManager._trackedActors[].trackFullscreen` and calling private `_updateVisibility()` (`:193-218`), easing `panelBox.translation_y`, keeping a ghost menu to hold the panel for GTK4 (`:156-189`), polling the pointer every 1s (`:71-93`) and using a 1px actor sized to the primary monitor only once (`:220-233`). Two modules driving `panelBox.translation_y` and visibility will flicker. **Extend or replace panelHover rather than adding a second module.** ✔ | High |

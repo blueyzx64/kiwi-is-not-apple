@@ -41,8 +41,7 @@ Optionally, real windows lose their own titlebar buttons.
 `show-window-controls-fullscreen-only` gets migrated to `window-controls-scope=fullscreen`.
 
 ## 5. Interactions
-- **Auto-hide top bar:** the controls go with the bar. When the bar is hidden there are no
-  buttons on screen; that is accepted, the same as on macOS in full screen.
+- **Auto-hide top bar:** removed, so the controls are always on screen with the bar.
 - **Stage Manager:** minimize moves the window to the strip instead of the dock.
 - **Existing `hide-titlebar*.css`:** reuse it; do not add a second copy of this CSS.
 
