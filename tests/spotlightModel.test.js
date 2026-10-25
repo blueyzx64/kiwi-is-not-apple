@@ -188,6 +188,11 @@ test('looksLikeUrl', () => {
     ok(looksLikeUrl('https://gnome.org/a?b=1'));
     ok(!looksLikeUrl('hello world'));
     ok(!looksLikeUrl('file.txt x'));
+    ok(looksLikeUrl('www.example.xyzzy'));
+    ok(looksLikeUrl('example.org/path?q=1'));
+    ok(looksLikeUrl('http://localhost.lan'));
+    for (const name of ['main.py', 'notes.md', 'report.pdf', 'archive.tar.gz', 'a.js', 'v1.2', 'config.json'])
+        ok(!looksLikeUrl(name), name);
 });
 
 // --- SearchSession

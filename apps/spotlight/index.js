@@ -11,13 +11,16 @@
 // It does not route through Main.overview search, so skipOverviewOnLogin and
 // focusOnOverviewExit never see it.
 //
-// TODO(S6/S10): while open, call PanelVisibility.hold(cleanup, 'spotlight') once
-// coordinators/panelVisibility.js is in the base (not yet there).
+// While open it holds the top bar visible (PanelVisibility.hold).
 
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import St from 'gi://St';
 
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+
+import { PanelVisibility } from '../../coordinators/panelVisibility.js';
+import { CleanupRegistry } from '../../lib/disposables.js';
 import { Keybindings } from '../../lib/keybindings.js';
 import { KiwiSettings } from '../../lib/settings.js';
 import { ModalSurface } from '../../lib/modalSurface.js';
@@ -37,6 +40,7 @@ const LOG = '[Kiwi] spotlight:';
 const LAUNCHPAD_DESKTOP_ID = 'org.gnome.Shell.Extensions.Kiwi.Launchpad.desktop';
 const EXTERNAL_DEBOUNCE_MS = 80;
 const WIDTH = 680;
+const OFFSET_TOP = 140;
 const RADIUS = 22;
 
 export class SpotlightFeature {
@@ -49,11 +53,21 @@ export class SpotlightFeature {
         this._session = null;
         this._debounce = 0;
         this._externalReady = false;
+        this._enabled = false;
+        this._loadCancellable = null;
+        this._holds = null;
     }
 
     enable() {
         const { settings, gettext } = this._ctx;
         const cleanup = this._cleanup;
+        this._enabled = true;
+        cleanup.add(() => (this._enabled = false));
+        this._loadCancellable = new Gio.Cancellable();
+        cleanup.add(() => {
+            this._loadCancellable.cancel();
+            this._loadCancellable = null;
+        });
         const ks = new KiwiSettings(settings);
         ks.attach(cleanup);
         this._ks = ks;
@@ -71,12 +85,19 @@ export class SpotlightFeature {
             id: 'spotlight',
             width: WIDTH,
             position: 'top',
+            offsetTop: OFFSET_TOP,
             radius: RADIUS,
             styleClass: 'kiwi-spotlight',
             build: frame => this._build(frame),
             onClosed: () => this._closed(),
         });
         cleanup.add(() => this._closed());
+
+        // The extension is torn down on lock, but close at once on any lock transition too
+        cleanup.connect(Main.sessionMode, 'updated', () => {
+            if (Main.sessionMode.isLocked)
+                this._modal.close({ immediate: true });
+        });
 
         // A Super tap: take over overlay-key while the key is on; give it back when it goes off
         const takeover = new OverlayKeyTakeover(() => this.toggle());
@@ -114,6 +135,8 @@ export class SpotlightFeature {
             onCopy: item => this._copy(item),
             onClose: () => this._modal.close(),
         });
+        this._holds = new CleanupRegistry();
+        PanelVisibility.hold(this._holds, 'spotlight');
         const focus = this._view.build(frame);
         this._settingsProvider.invalidate();
         this._search('');
@@ -121,6 +144,8 @@ export class SpotlightFeature {
     }
 
     _closed() {
+        this._holds?.dispose();
+        this._holds = null;
         this._cancelSearch();
         this._view?.destroy();
         this._view = null;
@@ -197,13 +222,14 @@ export class SpotlightFeature {
     async _startExternal(q) {
         if (!this._externalReady) {
             try {
-                await this._dbus.load();
+                await this._dbus.load(this._loadCancellable);
                 this._externalReady = true;
             } catch (e) {
-                console.warn(`${LOG} could not read search providers: ${e.message}`);
+                if (this._enabled)
+                    console.warn(`${LOG} could not read search providers: ${e.message}`);
                 return;
             }
-            if (this._query !== q || !this._view)
+            if (!this._enabled || this._query !== q || !this._view)
                 return;
         }
         const providers = this._dbus.sessionProviders({ files: this._ks.bool('spotlight-files') });
@@ -281,8 +307,10 @@ export class SpotlightFeature {
                 if (reveal && item.kind === 'file')
                     this._reveal(item);
                 else
-                    this._dbus.activate(item, global.get_current_time()).catch(e =>
-                        console.warn(`${LOG} activate failed: ${e.message}`));
+                    this._dbus.activate(item, global.get_current_time()).catch(e => {
+                        if (this._enabled)
+                            console.warn(`${LOG} activate failed: ${e.message}`);
+                    });
                 break;
             default:
                 break;
@@ -316,6 +344,8 @@ export class SpotlightFeature {
                     conn.call_finish(res);
                 } catch (e) {
                     // No file manager service: open the item itself instead
+                    if (!this._enabled)
+                        return;
                     this._dbus.activate(item, global.get_current_time()).catch(() => {});
                 }
             });

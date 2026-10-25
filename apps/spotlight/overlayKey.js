@@ -7,15 +7,14 @@
 // other key in between, so Super+key shortcuts are unaffected.
 //
 // What we do, with no monkey patch of the Shell:
-//   start(): GObject.signal_handlers_block_matched() on every handler connected to
-//            'overlay-key' at that moment (this silences the stock overview toggle), then
-//            connect our own handler.
-//   stop():  disconnect ours, unblock the handlers we blocked.
-// The overview itself is untouched: hot corner, touchpad gesture, Super+A and the Activities
-// button all keep working, and a Super tap while the overview is open still closes it.
-//
-// Side effect: another extension's 'overlay-key' handler that was connected before start() is
-// blocked while Spotlight owns the key. That is the price of a clean restore.
+//   start(): find the OLDEST handler connected to 'overlay-key' (GLib keeps handlers in connect
+//            order, and the Shell connects its own at startup, before any extension) and block
+//            that one id, then connect our own handler. If no handler is found we do nothing
+//            and the stock behaviour stays; Spotlight is then reachable by its optional shortcut.
+//   stop():  disconnect ours, unblock exactly the id we blocked.
+// Other extensions' overlay-key handlers are not touched. The overview itself is untouched:
+// hot corner, touchpad gesture, Super+A and the Activities button keep working, and a Super
+// tap while the overview is open still closes it.
 
 import Gio from 'gi://Gio';
 import GObject from 'gi://GObject';
@@ -29,7 +28,7 @@ export class OverlayKeyTakeover {
     constructor(onTap) {
         this._onTap = onTap;
         this._handlerId = 0;
-        this._blocked = 0;
+        this._blockedId = 0;
         this._a11y = null;
     }
 
@@ -41,11 +40,30 @@ export class OverlayKeyTakeover {
         if (this.active)
             return;
         const display = global.display;
-        this._blocked = GObject.signal_handlers_block_matched(display, { signalId: SIGNAL });
-        if (this._blocked === 0)
-            console.warn('[Kiwi] spotlight: no stock overlay-key handler found; a Super tap may also open the overview');
-        this._a11y = new Gio.Settings({ schema_id: 'org.gnome.desktop.a11y.keyboard' });
-        this._handlerId = display.connect(SIGNAL, () => this._tap());
+        let a11y = null;
+        let ours = 0;
+        let blocked = 0;
+        try {
+            // Everything that can throw comes first; nothing is blocked until it is all ready
+            a11y = new Gio.Settings({ schema_id: 'org.gnome.desktop.a11y.keyboard' });
+            blocked = GObject.signal_handler_find(display, { signalId: SIGNAL });
+            if (!blocked) {
+                console.warn('[Kiwi] spotlight: no stock overlay-key handler found; the Super tap stays with the overview');
+                return;
+            }
+            GObject.signal_handler_block(display, blocked);
+            ours = display.connect(SIGNAL, () => this._tap());
+        } catch (e) {
+            console.warn(`[Kiwi] spotlight: overlay-key takeover failed: ${e.message}`);
+            if (blocked)
+                GObject.signal_handler_unblock(display, blocked);
+            if (ours)
+                display.disconnect(ours);
+            return;
+        }
+        this._a11y = a11y;
+        this._blockedId = blocked;
+        this._handlerId = ours;
     }
 
     stop() {
@@ -53,10 +71,10 @@ export class OverlayKeyTakeover {
             return;
         const display = global.display;
         display.disconnect(this._handlerId);
+        if (GObject.signal_handler_is_connected(display, this._blockedId))
+            GObject.signal_handler_unblock(display, this._blockedId);
         this._handlerId = 0;
-        if (this._blocked > 0)
-            GObject.signal_handlers_unblock_matched(display, { signalId: SIGNAL });
-        this._blocked = 0;
+        this._blockedId = 0;
         this._a11y = null;
     }
 

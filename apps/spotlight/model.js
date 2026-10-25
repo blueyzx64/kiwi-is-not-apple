@@ -301,9 +301,22 @@ export function webSearchUrl(engine, query) {
     return template.replace('%s', () => encodeURIComponent(q));
 }
 
-/** True when the query looks like a URL or domain the user may want to open directly. */
+const TLDS = new Set(['com', 'org', 'net', 'io', 'dev', 'app', 'edu', 'gov', 'co', 'uk', 'de', 'fr', 'jp',
+    'es', 'it', 'nl', 'ru', 'cn', 'in', 'br', 'au', 'ca', 'ch', 'se', 'no', 'fi', 'pl', 'info', 'me', 'tv',
+    'xyz', 'ai', 'eu', 'us']);
+
+/**
+ * True when the query looks like a web address: it has http(s)://, starts with www., or ends in
+ * a well-known top-level domain. "main.py" and "notes.md" are file names, not addresses.
+ */
 export function looksLikeUrl(query) {
-    return /^(https?:\/\/)?([a-z0-9-]+\.)+[a-z]{2,}(\/\S*)?$/i.test(String(query ?? '').trim());
+    const q = String(query ?? '').trim();
+    if (/^https?:\/\/[^\s/]+\.[a-z]{2,}(\/\S*)?$/i.test(q))
+        return true;
+    const m = /^((?:[a-z0-9-]+\.)+)([a-z]{2,})(?:[/?#]\S*)?$/i.exec(q);
+    if (!m)
+        return false;
+    return /^www\./i.test(q) || TLDS.has(m[2].toLowerCase());
 }
 
 // ---- Search session ------------------------------------------------------------
