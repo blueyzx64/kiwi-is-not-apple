@@ -13,18 +13,23 @@ import { PanelVisibility } from '../coordinators/panelVisibility.js';
 import { Glass } from '../lib/glass.js';
 import { CleanupRegistry } from '../lib/disposables.js';
 
+Gio._promisify(Gio.File.prototype, 'read_async', 'read_finish');
+Gio._promisify(Gio.InputStream.prototype, 'close_async', 'close_finish');
+Gio._promisify(GdkPixbuf.Pixbuf, 'new_from_stream_at_scale_async', 'new_from_stream_finish');
+
 const visibilityCleanup = new CleanupRegistry();
 
 let settings;
 let enabled = false;
 let windowSignals = [];
+let trackedWindows = new WeakSet();
+const workspaceTracked = new Set(); // workspaces with window-added/removed hooked
 let settingsSignals = [];
 let interfaceSettings;
 let originalStyle;
 let isUpdatingStyle = false;
 let interfaceSettingsSignal;
 let timeoutId;
-let safetyIntervalId;
 let lastForcedAlpha = null; // remember last alpha decided by logic (touch/fullscreen)
 let lastFullscreenState = false; // edge-detect fullscreen state changes
 let overviewHiding = false; // overview still 'visible' but animating out
@@ -35,6 +40,7 @@ let themeUpdateIdleId = 0; // one-shot idle in forceThemeUpdate
 let colorSchemeIdleId = 0; // one-shot idle after color-scheme change
 let themeChangedIdleId = 0; // one-shot idle after a stylesheet swap
 let ownBackground = ''; // background declaration we keep on the panel
+let wallpaperCancellable = null; // in-flight wallpaper sample
 let panelStyleSignal;
 let themeContextSignal;
 
@@ -106,35 +112,60 @@ function _wallpaperPath() {
     return Gio.File.new_for_uri(uri).get_path();
 }
 
+function _sampleWallpaper(pixbuf) {
+    const pixels = pixbuf.get_pixels();
+    const stride = pixbuf.get_rowstride();
+    const channels = pixbuf.get_n_channels();
+    const width = pixbuf.get_width();
+    const rows = Math.min(SAMPLE_ROWS, pixbuf.get_height());
+
+    let sum = 0;
+    for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < width; x++) {
+            const i = y * stride + x * channels;
+            sum += (0.2126 * pixels[i] + 0.7152 * pixels[i + 1] + 0.0722 * pixels[i + 2]) / 255;
+        }
+    }
+    return sum / (rows * width);
+}
+
+// Decodes off the main loop (async Gio stream + async pixbuf scale). A newer call
+// cancels the one in flight; the result restyles the panel when it lands.
 function updateWallpaperLightness() {
+    _updateWallpaperLightness().catch(e => console.error(`Kiwi: wallpaper sample failed: ${e}`));
+}
+
+async function _updateWallpaperLightness() {
+    wallpaperCancellable?.cancel();
+    const cancellable = new Gio.Cancellable();
+    wallpaperCancellable = cancellable;
+
     const path = _wallpaperPath();
     if (!path) {
         wallpaperLuminance = 0;
         return;
     }
 
+    let stream = null;
     try {
+        stream = await Gio.File.new_for_path(path).read_async(GLib.PRIORITY_LOW, cancellable);
         // preserve_aspect_ratio false: SAMPLE_ROWS is then a fixed fraction of
         // the image height regardless of its dimensions.
-        const pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, SAMPLE_SIZE, SAMPLE_SIZE, false);
-        const pixels = pixbuf.get_pixels();
-        const stride = pixbuf.get_rowstride();
-        const channels = pixbuf.get_n_channels();
-        const width = pixbuf.get_width();
-        const rows = Math.min(SAMPLE_ROWS, pixbuf.get_height());
-
-        let sum = 0;
-        for (let y = 0; y < rows; y++) {
-            for (let x = 0; x < width; x++) {
-                const i = y * stride + x * channels;
-                sum += (0.2126 * pixels[i] + 0.7152 * pixels[i + 1] + 0.0722 * pixels[i + 2]) / 255;
-            }
-        }
-        wallpaperLuminance = sum / (rows * width);
-    } catch (_e) {
+        const pixbuf = await GdkPixbuf.Pixbuf.new_from_stream_at_scale_async(
+            stream, SAMPLE_SIZE, SAMPLE_SIZE, false, cancellable);
+        if (cancellable.is_cancelled())
+            return;
+        wallpaperLuminance = _sampleWallpaper(pixbuf);
+    } catch (e) {
+        if (cancellable.is_cancelled())
+            return;
         // XML slideshows and unreadable files: keep the theme foreground
         wallpaperLuminance = 0;
+    } finally {
+        stream?.close_async(GLib.PRIORITY_LOW, null).catch(() => {});
     }
+    if (enabled && wallpaperCancellable === cancellable)
+        updatePanelStyle();
 }
 
 // Tray icons come from apps as raster images, so CSS can't recolour them.
@@ -330,9 +361,9 @@ function applyPanelColorFix() {
     const panel = Main.panel;
 
     if (settings.get_boolean('panel-color-inherit')) {
-        panel.add_style_class_name('kiwi-panel-color-inherit');
+        panel.add_style_class_name('kiwi-panel-solid-black');
     } else {
-        panel.remove_style_class_name('kiwi-panel-color-inherit');
+        panel.remove_style_class_name('kiwi-panel-solid-black');
     }
 
     // Clear the inline background so the theme node reports the class colour
@@ -524,36 +555,72 @@ function checkWindowTouchingPanel() {
     }
 }
 
+// Window handlers live on every workspace's windows, not only the active one, so a
+// window that changes while off-screen is already tracked when its workspace shows.
 function handleWindowSignals(connect = true) {
     if (!connect) {
         windowSignals.forEach(({ actor, signals }) => {
             signals.forEach(signalId => actor.disconnect(signalId));
         });
         windowSignals = [];
+        workspaceTracked.clear();
+        trackedWindows = new WeakSet();
         return;
     }
 
-    const workspace = global.workspace_manager.get_active_workspace();
-    const workspaceSignals = [];
+    const wm = global.workspace_manager;
+    windowSignals.push({
+        actor: wm,
+        signals: [
+            wm.connect('workspace-added', () => syncWorkspaceSignals()),
+            wm.connect('workspace-removed', () => syncWorkspaceSignals()),
+            wm.connect('active-workspace-changed', () => {
+                syncWorkspaceSignals();
+                checkWindowTouchingPanel();
+            }),
+        ],
+    });
+    syncWorkspaceSignals();
+}
 
-    workspaceSignals.push(workspace.connect('window-added', (ws, win) => {
-        connectWindowSignals(win);
-        checkWindowTouchingPanel();
-    }));
-
-    workspaceSignals.push(workspace.connect('window-removed', (ws, win) => {
-        disconnectWindowSignals(win);
-        checkWindowTouchingPanel();
-    }));
-
-    windowSignals.push({ actor: workspace, signals: workspaceSignals });
-
-    workspace.list_windows().forEach(win => {
-        connectWindowSignals(win);
+// Idempotent: hooks window-added/removed on workspaces not yet seen, and every window.
+function syncWorkspaceSignals() {
+    const wm = global.workspace_manager;
+    for (let i = 0; i < wm.get_n_workspaces(); i++) {
+        const workspace = wm.get_workspace_by_index(i);
+        if (!workspaceTracked.has(workspace)) {
+            workspaceTracked.add(workspace);
+            windowSignals.push({
+                actor: workspace,
+                signals: [
+                    workspace.connect('window-added', (ws, win) => {
+                        connectWindowSignals(win);
+                        checkWindowTouchingPanel();
+                    }),
+                    // A window moved to another workspace stays tracked; 'unmanaged' drops it
+                    workspace.connect('window-removed', () => checkWindowTouchingPanel()),
+                ],
+            });
+        }
+        workspace.list_windows().forEach(win => connectWindowSignals(win));
+    }
+    // Workspaces that were removed are dead objects; forget their entries
+    const live = new Set();
+    for (let i = 0; i < wm.get_n_workspaces(); i++)
+        live.add(wm.get_workspace_by_index(i));
+    windowSignals = windowSignals.filter(item => {
+        if (item.actor instanceof Meta.Workspace && !live.has(item.actor)) {
+            workspaceTracked.delete(item.actor);
+            return false; // the workspace is gone, its handlers with it
+        }
+        return true;
     });
 }
 
 function connectWindowSignals(metaWindow) {
+    if (trackedWindows.has(metaWindow))
+        return;
+    trackedWindows.add(metaWindow);
     const actorSignals = [];
 
     actorSignals.push(metaWindow.connect('position-changed', () => {
@@ -592,6 +659,7 @@ function disconnectWindowSignals(metaWindow) {
         });
         windowSignals.splice(index, 1);
     }
+    trackedWindows.delete(metaWindow);
 }
 
 function setupSignals() {
@@ -625,6 +693,7 @@ function setupSignals() {
         actor: global.window_manager,
         signals: [
             global.window_manager.connect('switch-workspace', () => {
+                syncWorkspaceSignals();
                 checkWindowTouchingPanel();
             })
         ]
@@ -774,12 +843,6 @@ export function enable(_settings) {
         timeoutId = null;
         return GLib.SOURCE_REMOVE;
     });
-
-    // Lightweight periodic safety check (every 2s) to catch missed transitions (uses full logic)
-    safetyIntervalId = GLib.timeout_add(GLib.PRIORITY_LOW, 2000, () => {
-        checkWindowTouchingPanel();
-        return GLib.SOURCE_CONTINUE;
-    });
 }
 
 export function disable() {
@@ -789,10 +852,6 @@ export function disable() {
     if (timeoutId) {
         GLib.Source.remove(timeoutId);
         timeoutId = null;
-    }
-    if (safetyIntervalId) {
-        GLib.Source.remove(safetyIntervalId);
-        safetyIntervalId = null;
     }
     if (panelStyleSignal) {
         Main.panel.disconnect(panelStyleSignal);
@@ -839,6 +898,8 @@ export function disable() {
     bgSignals.forEach(signal => bgSettings.disconnect(signal));
     bgSignals = [];
     bgSettings = null;
+    wallpaperCancellable?.cancel();
+    wallpaperCancellable = null;
     wallpaperLuminance = 0;
     iconTheme = null;
     monochromeIcons.clear();
@@ -853,7 +914,7 @@ export function disable() {
     // Remove CSS classes and give the panel its pre-Kiwi style back
     const panel = Main.panel;
     panel.remove_style_class_name('kiwi-panel-fullscreen');
-    panel.remove_style_class_name('kiwi-panel-color-inherit');
+    panel.remove_style_class_name('kiwi-panel-solid-black');
     panel.remove_style_class_name('kiwi-panel-no-transition');
     clearForegroundContrast();
     // Only hand back a style we saved; never clobber another extension's
