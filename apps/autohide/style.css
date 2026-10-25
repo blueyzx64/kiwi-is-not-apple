@@ -1,0 +1,6 @@
+/* feature: autohide
+   Merged by S10 under "/* feature: autohide *\/" in stylesheet.css.
+   Revealed bar floats over windows instead of sitting in a strut: give it an edge. */
+#panel.kiwi-panel-autohide {
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08), 0 6px 18px rgba(0, 0, 0, 0.28);
+}

@@ -12,6 +12,8 @@ import Mtk from 'gi://Mtk';
 import St from 'gi://St';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+
+import { CleanupRegistry } from '../lib/disposables.js';
 import { ControlsState } from 'resource:///org/gnome/shell/ui/overviewControls.js';
 import { Workspace, WorkspaceBackground } from 'resource:///org/gnome/shell/ui/workspace.js';
 
@@ -26,14 +28,8 @@ const RELEASE_FASTEST_MS = 350;
 const RELEASE_SLOWEST_MS = 450;
 const RELEASE_MIN_MS = 350;
 
-let _overviewHiddenId = 0;
-let _controlsLayout = null;
-let _origComputeBox = null;
-let _origInit = null;
-let _initPatch = null;
-let _touchpadGesture = null;
-let _controls = null;
-let _smoothTimeline = null;
+// Everything we patch is registered here, so disable() restores it in reverse order.
+let _registry = null;
 let _smoothTarget = 0;
 let _smoothStep = 0;
 
@@ -116,8 +112,8 @@ function restoreWorkspace(workspace) {
 
 // Only reaches anything while the overview is open; workspaces are rebuilt on show.
 function restoreLiveWorkspaces() {
-    const display = Main.overview._overview.controls._workspacesDisplay;
-    for (const view of display._workspacesViews) {
+    const display = Main.overview._overview?.controls?._workspacesDisplay;
+    for (const view of display?._workspacesViews ?? []) {
         const inner = view._workspacesView ?? view;
         const workspaces = inner._workspaces ?? (inner._workspace ? [inner._workspace] : []);
         workspaces.forEach(restoreWorkspace);
@@ -125,44 +121,67 @@ function restoreLiveWorkspaces() {
 }
 
 function applyPatches() {
-    // At ControlsState.HIDDEN the workspace card must cover the whole primary monitor.
-    _controlsLayout = Main.overview._overview.controls.layout_manager;
-    const origComputeBox = _controlsLayout._computeWorkspacesBoxForState;
-    _origComputeBox = origComputeBox;
-    _controlsLayout._computeWorkspacesBoxForState = function (state, ...args) {
-        const box = origComputeBox.call(this, state, ...args);
-        const monitor = Main.layoutManager.primaryMonitor;
-        if (state === ControlsState.HIDDEN && monitor) {
-            const workArea = Main.layoutManager.getWorkAreaForMonitor(monitor.index);
-            box.set_origin(box.x1 - (workArea.x - monitor.x), box.y1 - (workArea.y - monitor.y));
-            box.set_size(monitor.width, monitor.height);
-        }
-        return box;
-    };
+    const registry = _registry;
+    const controls = Main.overview._overview?.controls;
+    if (!registry || !controls) {
+        console.warn('Kiwi overview-seamless-zoom: overview controls missing, not patching');
+        return;
+    }
 
-    _origInit = Workspace.prototype._init;
-    _initPatch = function (metaWorkspace, monitorIndex, overviewAdjustment) {
-        _origInit.call(this, metaWorkspace, monitorIndex, overviewAdjustment);
-        if (monitorIndex === Main.layoutManager.primaryIndex)
-            patchWorkspace(this);
-    };
-    Workspace.prototype._init = _initPatch;
+    // Registered first, so it runs last on dispose: after the injections below are gone.
+    registry.add(restoreLiveWorkspaces);
+
+    // At ControlsState.HIDDEN the workspace card must cover the whole primary monitor.
+    const controlsLayout = controls.layout_manager;
+    if (typeof controlsLayout?._computeWorkspacesBoxForState === 'function') {
+        registry.inject(controlsLayout, '_computeWorkspacesBoxForState',
+            function (orig, state, ...args) {
+                const box = orig.call(this, state, ...args);
+                const monitor = Main.layoutManager.primaryMonitor;
+                if (state === ControlsState.HIDDEN && monitor) {
+                    // The layout's own work-area box: PanelVisibility insets it while the bar auto-hides.
+                    const wb = this._workAreaBox;
+                    const workArea = Main.layoutManager.getWorkAreaForMonitor(monitor.index);
+                    box.set_origin(box.x1 - (wb ? wb.x1 : workArea.x - monitor.x),
+                        box.y1 - (wb ? wb.y1 : workArea.y - monitor.y));
+                    box.set_size(monitor.width, monitor.height);
+                }
+                return box;
+            });
+    } else {
+        console.warn('Kiwi overview-seamless-zoom: _computeWorkspacesBoxForState missing');
+    }
+
+    registry.inject(Workspace.prototype, '_init',
+        function (orig, metaWorkspace, monitorIndex, overviewAdjustment) {
+            orig.call(this, metaWorkspace, monitorIndex, overviewAdjustment);
+            if (monitorIndex === Main.layoutManager.primaryIndex) {
+                try {
+                    patchWorkspace(this);
+                } catch (e) {
+                    console.error('Kiwi overview-seamless-zoom: patchWorkspace failed', e);
+                }
+            }
+        });
 
     // The tracker binds its handlers at construction, so scale the distance where the
     // touchpad gesture emits it. Touchscreen swipes keep 1:1 tracking.
-    _touchpadGesture = Main.overview._swipeTracker._touchpadGesture;
-    const origEmit = _touchpadGesture.emit;
-    _touchpadGesture.emit = function (name, ...args) {
-        if (name === 'update' || name === 'end')
-            args[args.length - 1] *= SWIPE_DISTANCE_SCALE;
-        return origEmit.call(this, name, ...args);
-    };
+    const touchpadGesture = Main.overview._swipeTracker?._touchpadGesture;
+    if (touchpadGesture && typeof touchpadGesture.emit === 'function') {
+        registry.inject(touchpadGesture, 'emit', function (orig, name, ...args) {
+            if ((name === 'update' || name === 'end') && args.length > 0)
+                args[args.length - 1] *= SWIPE_DISTANCE_SCALE;
+            return orig.call(this, name, ...args);
+        });
+    }
 
     // Ease toward the finger position on the frame clock instead of jumping per event.
-    _controls = Main.overview._overview.controls;
-    const adjustment = _controls._stateAdjustment;
-    _smoothTimeline = new Clutter.Timeline({ actor: _controls, duration: 1000, repeat_count: -1 });
-    _smoothTimeline.connect('new-frame', timeline => {
+    const adjustment = controls._stateAdjustment;
+    if (!adjustment)
+        return;
+    const smoothTimeline = new Clutter.Timeline({ actor: controls, duration: 1000, repeat_count: -1 });
+    registry.add(() => smoothTimeline.stop());
+    smoothTimeline.connect('new-frame', timeline => {
         if (!adjustment.gestureInProgress) {
             timeline.stop();
             return;
@@ -177,24 +196,23 @@ function applyPatches() {
         _smoothStep = diff * (1 - Math.exp(-timeline.get_delta() / SWIPE_SMOOTHING_MS));
         adjustment.value += _smoothStep;
     });
-    _controls.gestureProgress = progress => {
+    registry.inject(controls, 'gestureProgress', (_orig, progress) => {
         _smoothTarget = progress;
-        if (!_smoothTimeline.is_playing())
-            _smoothTimeline.start();
-    };
+        if (!smoothTimeline.is_playing())
+            smoothTimeline.start();
+    });
 
     // Stock release duration follows lift-off velocity down to 100ms; keep its speed in range.
-    const origGestureEnd = _controls.gestureEnd;
-    _controls.gestureEnd = function (target, duration, onComplete) {
+    registry.inject(controls, 'gestureEnd', function (orig, target, duration, onComplete) {
         const remaining = target - adjustment.value;
         const distance = Math.abs(remaining);
         if (distance <= 0.001) {
-            origGestureEnd.call(this, target, duration, onComplete);
+            orig.call(this, target, duration, onComplete);
             return;
         }
         duration = Math.max(RELEASE_MIN_MS,
             Math.clamp(duration, distance * RELEASE_FASTEST_MS, distance * RELEASE_SLOWEST_MS));
-        origGestureEnd.call(this, target, duration, onComplete);
+        orig.call(this, target, duration, onComplete);
 
         // Stock EASE_OUT_CUBIC bursts at 3x speed. Snapping back or releasing a still finger
         // starts from rest; continuing the swipe keeps a gentler ease-out.
@@ -203,21 +221,24 @@ function applyPatches() {
             : Clutter.AnimationMode.EASE_IN_OUT_QUAD;
         adjustment.get_transition('value')?.set_progress_mode(mode);
         _smoothStep = 0;
-    };
+    });
 }
 
 export function enable() {
-    if (_origInit || _overviewHiddenId)
+    if (_registry)
         return;
+    _registry = new CleanupRegistry();
+    _smoothTarget = 0;
+    _smoothStep = 0;
 
     // Patching mid-animation would mix patched and unpatched geometry. An interrupted
     // hide also emits 'hidden', but leaves _shown set.
     if (Main.overview.visible) {
-        _overviewHiddenId = Main.overview.connect('hidden', () => {
+        const registry = _registry;
+        const token = registry.connect(Main.overview, 'hidden', () => {
             if (Main.overview._shown)
                 return;
-            Main.overview.disconnect(_overviewHiddenId);
-            _overviewHiddenId = 0;
+            registry.release(token);
             applyPatches();
         });
     } else {
@@ -226,27 +247,6 @@ export function enable() {
 }
 
 export function disable() {
-    if (_overviewHiddenId) {
-        Main.overview.disconnect(_overviewHiddenId);
-        _overviewHiddenId = 0;
-    }
-
-    if (_controlsLayout)
-        _controlsLayout._computeWorkspacesBoxForState = _origComputeBox;
-    if (_initPatch && Workspace.prototype._init === _initPatch)
-        Workspace.prototype._init = _origInit;
-    restoreLiveWorkspaces();
-
-    _smoothTimeline?.stop();
-    delete _controls?.gestureProgress;
-    delete _controls?.gestureEnd;
-    delete _touchpadGesture?.emit;
-
-    _smoothTimeline = null;
-    _controls = null;
-    _touchpadGesture = null;
-    _controlsLayout = null;
-    _origComputeBox = null;
-    _origInit = null;
-    _initPatch = null;
+    _registry?.dispose();
+    _registry = null;
 }

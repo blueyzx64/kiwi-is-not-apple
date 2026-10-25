@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // gjs -m tests/glassParams.test.js
-import { wantsSurface, resolve, tintAlpha, legacySurfaces, worstCaseContrast, tintColor, SETTING_FIELDS }
+import { MIN_TINTED_ALPHA, MIN_TINT_PERCENT, wantsSurface, resolve, tintAlpha, legacySurfaces, worstCaseContrast, tintColor, SETTING_FIELDS }
     from '../lib/glassParams.js';
 
 let failed = 0;
@@ -59,7 +59,12 @@ check('clear + dark no dim', !resolve(snap({ style: 'clear' }), env(), 'panel').
 check('default tint alpha 0.6225', Math.abs(tintAlpha({ style: 'tinted', tint: 55, role: 'small', tier: 'blur' }) - 0.6225) < 1e-9);
 check('large +0.10', Math.abs(tintAlpha({ style: 'tinted', tint: 55, role: 'large', tier: 'blur' }) - 0.7225) < 1e-9);
 check('alpha capped 0.92', tintAlpha({ style: 'tinted', tint: 100, role: 'large', tier: 'light' }) === 0.92);
-check('tint clamped low', tintAlpha({ style: 'tinted', tint: -50, role: 'small', tier: 'blur' }) === 0.10);
+check('tint clamped low to the contrast floor', tintAlpha({ style: 'tinted', tint: -50, role: 'small', tier: 'blur' }) === MIN_TINTED_ALPHA);
+for (const dark of [true, false]) {
+    const c = worstCaseContrast(tintAlpha({ style: 'tinted', tint: 0, role: 'small', tier: 'blur' }), dark);
+    check(`contrast at slider 0 (${dark ? 'dark' : 'light'}) >= 4.5 (got ${c.toFixed(2)})`, c >= 4.5);
+}
+check('floor is below default alpha', MIN_TINTED_ALPHA < 0.6225 && MIN_TINT_PERCENT < 55);
 check('tintColor dim is black', tintColor({ dim: true, dark: false, alpha: 0.1 }) === 'rgba(0, 0, 0, 0.35)');
 check('tintColor dark', tintColor({ dim: false, dark: true, alpha: 0.5 }) === 'rgba(28, 28, 30, 0.500)');
 

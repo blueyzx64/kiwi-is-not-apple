@@ -6,10 +6,20 @@
 | advanced/ fixes + foundation nits | S1 | done, merged | feat/advanced-fixes |
 | Integrator/review | S10 | setup merged; idle until review | feat/integration |
 | Window controls | S2 | done, merged | feat/window-controls |
-| Liquid Glass | S3 | merged; 3 review fixes doing (feat/liquid-glass-fixes) | feat/liquid-glass |
-| Clipboard | S4 | doing | feat/clipboard |
-| Spotlight | S5 | doing (model first; waits S4 modalSurface) | feat/spotlight |
-| Auto-hide bar | S6 | doing | feat/autohide |
-| Control Center | S7 | doing | feat/control-center |
-| Notch | S8 | todo | feat/notch |
-| Stage Manager | S9 | doing (model + strip only) | feat/stage-manager |
+| Liquid Glass | S3 | done, merged incl. review fixes | feat/liquid-glass |
+| Clipboard | S4 | fixed; R1 re-check | feat/clipboard |
+| Spotlight | S5 | R7 CHANGES; S5 fixing | feat/spotlight |
+| Auto-hide bar | S6 | done, merged | feat/autohide |
+| Control Center | S7 | fixed; queued for S10 integration | feat/control-center |
+| Notch | S8 | built; R8 review | feat/notch |
+| Stage Manager | S9 | fixed; queued for S10 integration | feat/stage-manager |
+| User files (D1) | D1 | built; R9 review | debt/user-files |
+| Panel transparency (D2) | D2 | done, merged | debt/panel-transparency |
+| Overview patches (D3) | D3 | done, merged | debt/overview-patches |
+| Window utils (D4) | D4 | done, merged | debt/window-utils |
+| Dock (D5) | D5 | R6 APPROVE; D5 small follow-up | debt/dock |
+| CSS debt (D6) | D6 | done, merged | debt/css-debt |
+| Build/CI (D7) | D7 | done, merged | debt/build-ci |
+| Docs (D8) | D8 | pass 1 merged; pass 2 at end | debt/docs |
+| Reviewer 2 | R1 | reviewing S4 | - |
+| Audit fixes (autohide restore, glass contrast/menu destroy) | S6, S3 | done, merged | feat/autohide-fix, feat/liquid-glass-fix2 |
