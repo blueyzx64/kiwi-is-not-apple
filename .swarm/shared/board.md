@@ -12,7 +12,7 @@
 | Auto-hide bar | S6 | done, merged | feat/autohide |
 | Control Center | S7 | R2 CHANGES; S7 fixing | feat/control-center |
 | Notch | S8 | doing | feat/notch |
-| Stage Manager | S9 | built; R4 review | feat/stage-manager |
+| Stage Manager | S9 | R4 CHANGES; S9 fixing | feat/stage-manager |
 | User files (D1) | D1 | doing | debt/user-files |
 | Panel transparency (D2) | D2 | built; R3 review | debt/panel-transparency |
 | Overview patches (D3) | D3 | built; R3 review | debt/overview-patches |
