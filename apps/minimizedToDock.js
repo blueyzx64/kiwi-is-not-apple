@@ -4,9 +4,7 @@
 // paint_to_content() while the window is still mapped.
 
 import Clutter from 'gi://Clutter';
-import Cogl from 'gi://Cogl';
 import GLib from 'gi://GLib';
-import GObject from 'gi://GObject';
 import Graphene from 'gi://Graphene';
 import Meta from 'gi://Meta';
 import Mtk from 'gi://Mtk';
@@ -14,6 +12,7 @@ import Shell from 'gi://Shell';
 import St from 'gi://St';
 import * as AppFavorites from 'resource:///org/gnome/shell/ui/appFavorites.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import { createShaderEffect } from '../lib/compat.js';
 import { WindowState } from '../coordinators/windowState.js';
 import {
     applyIconOffset, beforeRedraw, cancelBeforeRedraw, dashEndsWithSeparator, dashOf,
@@ -180,44 +179,22 @@ const CORNER_UNIFORMS = `
 // does not stair-step. Leaves the coverage in 'a'.
 const CORNER_COVERAGE = `
     vec2 size = vec2(width, height);
-    vec2 uv = cogl_tex_coord_in[0].xy;
     // How far the pixel reaches past the corner arc, 0 while inside
     vec2 d = max(vec2(radius) - min(uv * size, size - uv * size), vec2(0.0));
     float a = clamp(radius - length(d) + 0.5, 0.0, 1.0);
 `;
 
-// GNOME 48-50, where the effect replaces the fragment program outright and
-// Clutter binds the source texture to 'tex' itself.
-const RoundedCornersEffect = GObject.registerClass(
-class RoundedCornersEffect extends Clutter.ShaderEffect {
-    constructor() {
-        super();
-        this.set_shader_source(`
-            uniform sampler2D tex;
-            ${CORNER_UNIFORMS}
-
-            void main() {
-                ${CORNER_COVERAGE}
-                cogl_color_out = texture2D(tex, uv) * a;
-            }
-        `);
-    }
-});
-
-/**
- * GNOME 51 dropped Clutter.ShaderEffect.set_shader_source for Cogl snippets,
- * which hook into the pipeline instead of replacing it: the actor is already
- * sampled into cogl_color_out by the time the snippet runs.
- */
+// Per-version shader plumbing (48-50 program vs 51 snippet) lives in lib/compat.js.
 function _newRoundedCornersEffect() {
-    if (Clutter.ShaderEffect.prototype.set_shader_source)
-        return new RoundedCornersEffect();
-
-    return Clutter.ShaderEffect.new_with_snippet(
-        Cogl.Snippet.new(Cogl.SnippetHook.FRAGMENT, CORNER_UNIFORMS, `
-            ${CORNER_COVERAGE}
-            cogl_color_out *= a;
-        `));
+    return createShaderEffect({
+        declarations: CORNER_UNIFORMS,
+        effectFn: `
+            vec4 kiwi_effect(vec2 uv, vec4 color) {
+                ${CORNER_COVERAGE}
+                return color * a;
+            }
+        `,
+    });
 }
 
 function _tileBox(dash) {
@@ -236,6 +213,8 @@ function _tileBox(dash) {
  */
 function _roundCorners(actor) {
     const effect = _newRoundedCornersEffect();
+    if (!effect)
+        return;   // no shader support: square corners
     actor.add_effect(effect);
 
     const { width, height } = actor;
