@@ -46,6 +46,7 @@ import { dockActive } from './apps/dockUtils.js';
 import { LiquidGlass } from './apps/liquidGlass/index.js';
 import { ControlCenter } from './apps/controlCenter/index.js';
 import { StageManager } from './apps/stageManager/index.js';
+import { StageManagerShortcut } from './apps/stageManager/shortcut.js';
 import { Glass } from './lib/glass.js';
 import { ClipboardHistory } from './apps/clipboard/index.js';
 import { SpotlightFeature } from './apps/spotlight/index.js';
@@ -291,5 +292,12 @@ export const FEATURES = [
         id: 'stage-manager', setting: 'stage-manager',
         cls: StageManager,
         conflictsWith: ['minimize-to-dock', 'move-window-to-new-workspace', 'tiling-title-menu'],
+    },
+    {
+        // Its own entry so the shortcut still works while Stage Manager is off
+        id: 'stage-manager-shortcut',
+        when: ctx => ctx.settings.get_strv('stage-manager-shortcut').length > 0,
+        restartOn: ['stage-manager-shortcut'],
+        cls: StageManagerShortcut,
     },
 ];

@@ -434,6 +434,11 @@
         <summary>Recent apps in the strip</summary>
         <description>The most thumbnails the strip lists. Fewer are shown when the screen is too short.</description>
       </key>
+      <key name="stage-manager-shortcut" type="as">
+        <default>[]</default>
+        <summary>Stage Manager shortcut</summary>
+        <description>Turns Stage Manager on or off. Empty means no shortcut; prefs has a button for Ctrl+Super+S.</description>
+      </key>
 
       <!-- Clipboard history (apps/clipboard) -->
       <key name="clipboard-history" type="b">
