@@ -35,6 +35,10 @@ export class StageDropTarget {
         this._zone = null;
 
         this._actor = cleanup.actor(new St.Widget({ style_class: 'kiwi-stage-drop', visible: false }));
+        this._dead = false;
+        this._actor.connect('destroy', () => {
+            this._dead = true;
+        });
         this._highlight = new St.Widget({
             style_class: 'kiwi-stage-drop-zone', opacity: 0,
             layout_manager: new Clutter.BinLayout(),
@@ -68,6 +72,8 @@ export class StageDropTarget {
 
     /** Cover the stage area while a drag is on. */
     show(area) {
+        if (this._dead)
+            return;
         this._area = area;
         this._zone = null;
         const a = this._actor;
@@ -79,6 +85,8 @@ export class StageDropTarget {
     }
 
     hide() {
+        if (this._dead)
+            return;
         this._zone = null;
         this._area = null;
         this._actor.visible = false;
@@ -97,7 +105,7 @@ export class StageDropTarget {
     }
 
     _setZone(zone) {
-        if (zone === this._zone)
+        if (this._dead || zone === this._zone)
             return;
         this._zone = zone;
         const h = this._highlight;
