@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Kiwi is not Apple 2.0.0\n"
 "Report-Msgid-Bugs-To: https://github.com/kem-a/kiwi-kemma/issues\n"
-"POT-Creation-Date: 2026-10-25 12:52+0000\n"
+"POT-Creation-Date: 2026-10-25 12:55+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -699,7 +699,7 @@ msgstr ""
 msgid "Auto-hide Top Bar"
 msgstr ""
 
-#: apps/autohide/prefs.js:20 apps/stageManager/prefs.js:56
+#: apps/autohide/prefs.js:20 apps/stageManager/prefs.js:118
 msgid "Auto-hide"
 msgstr ""
 
@@ -821,7 +821,7 @@ msgstr ""
 msgid "Not a valid shortcut. Example: <Super><Shift>v"
 msgstr ""
 
-#: apps/clipboard/prefs.js:45
+#: apps/clipboard/prefs.js:45 apps/stageManager/prefs.js:43
 #, javascript-format
 msgid "Also used by GNOME: %s"
 msgstr ""
@@ -960,8 +960,8 @@ msgid "More"
 msgstr ""
 
 #: apps/controlCenter/index.js:175
-#: apps/spotlight/providers/settingsCatalog.js:38 apps/stageManager/prefs.js:11
-#: apps/stageManager/prefs.js:27
+#: apps/spotlight/providers/settingsCatalog.js:38 apps/stageManager/prefs.js:13
+#: apps/stageManager/prefs.js:88
 msgid "Stage Manager"
 msgstr ""
 
@@ -1461,55 +1461,67 @@ msgid "Top hit"
 msgstr ""
 
 #: apps/stageManager/prefs.js:28
+msgid "Toggle shortcut"
+msgstr ""
+
+#: apps/stageManager/prefs.js:39
+msgid "Not a valid shortcut. Example: <Control><Super>s"
+msgstr ""
+
+#: apps/stageManager/prefs.js:51
+msgid "Use Ctrl+Super+S"
+msgstr ""
+
+#: apps/stageManager/prefs.js:89
 msgid ""
 "Other apps wait as live thumbnails in a strip at the edge of the screen. "
 "Click one to switch to it. While it is on, Minimize to Dock, window tiling "
 "by drag and Move Fullscreen Window are paused; their settings are kept."
 msgstr ""
 
-#: apps/stageManager/prefs.js:30
+#: apps/stageManager/prefs.js:91
 msgid "Show the Stage Manager strip"
 msgstr ""
 
-#: apps/stageManager/prefs.js:34
+#: apps/stageManager/prefs.js:96
 msgid "Strip"
 msgstr ""
 
-#: apps/stageManager/prefs.js:38
+#: apps/stageManager/prefs.js:100
 msgid "Side"
 msgstr ""
 
-#: apps/stageManager/prefs.js:39
+#: apps/stageManager/prefs.js:101
 msgid "Which screen edge holds the strip"
 msgstr ""
 
-#: apps/stageManager/prefs.js:40 apps/windowControls/prefs.js:53
-#: apps/windowTiling.js:314
+#: apps/stageManager/prefs.js:102 apps/windowControls/prefs.js:53
+#: apps/windowTiling.js:319
 msgid "Left"
 msgstr ""
 
-#: apps/stageManager/prefs.js:40 apps/windowControls/prefs.js:53
-#: apps/windowTiling.js:315
+#: apps/stageManager/prefs.js:102 apps/windowControls/prefs.js:53
+#: apps/windowTiling.js:320
 msgid "Right"
 msgstr ""
 
-#: apps/stageManager/prefs.js:57
+#: apps/stageManager/prefs.js:119
 msgid "Hide the strip while a window overlaps it; reveal it at the screen edge"
 msgstr ""
 
-#: apps/stageManager/prefs.js:63
+#: apps/stageManager/prefs.js:125
 msgid "Group windows by app"
 msgstr ""
 
-#: apps/stageManager/prefs.js:64
+#: apps/stageManager/prefs.js:126
 msgid "Windows of one app share a stack"
 msgstr ""
 
-#: apps/stageManager/prefs.js:70
+#: apps/stageManager/prefs.js:132
 msgid "Apps in the strip"
 msgstr ""
 
-#: apps/stageManager/prefs.js:71
+#: apps/stageManager/prefs.js:133
 msgid "The most thumbnails to list"
 msgstr ""
 
@@ -1560,35 +1572,35 @@ msgid ""
 "windows keep theirs"
 msgstr ""
 
-#: apps/windowTiling.js:313
+#: apps/windowTiling.js:318
 msgid "Move & Resize"
 msgstr ""
 
-#: apps/windowTiling.js:316
+#: apps/windowTiling.js:321
 msgid "Top"
 msgstr ""
 
-#: apps/windowTiling.js:317
+#: apps/windowTiling.js:322
 msgid "Bottom"
 msgstr ""
 
-#: apps/windowTiling.js:319
+#: apps/windowTiling.js:324
 msgid "Fill & Arrange"
 msgstr ""
 
-#: apps/windowTiling.js:320
+#: apps/windowTiling.js:325
 msgid "Fill"
 msgstr ""
 
-#: apps/windowTiling.js:327
+#: apps/windowTiling.js:332
 msgid "Left & Right"
 msgstr ""
 
-#: apps/windowTiling.js:330
+#: apps/windowTiling.js:335
 msgid "Right & Left"
 msgstr ""
 
-#: apps/windowTiling.js:333
+#: apps/windowTiling.js:338
 msgid "Quarters"
 msgstr ""
 

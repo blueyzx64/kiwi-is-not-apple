@@ -66,22 +66,6 @@ export function resolvePlacement(position, parsed) {
 }
 
 /**
- * Windows whose title or app id says they are helper/internal windows get no controls.
- * (Same rule as before the rewrite.)
- */
-export function isExcludedWindow({ title, appName }) {
-    if (title !== null && title !== undefined) {
-        const t = title.trim().toLowerCase();
-        if (!t)
-            return true;
-        if (t.startsWith('com.') || t.startsWith('gjs') || t.includes('@!0,0'))
-            return true;
-    }
-    const a = (appName ?? '').trim().toLowerCase();
-    return a.startsWith('com.') || a.startsWith('gjs');
-}
-
-/**
  * Should the panel buttons be on screen?
  *
  * @param {object} s
