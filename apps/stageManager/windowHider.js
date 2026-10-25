@@ -6,9 +6,11 @@
 // clone keeps painting), and hidden from pick so the pointer goes through it. Every change is
 // recorded the first time it is made, and restoreAll() puts back exactly what was recorded.
 //
+// The hider never scales or moves an actor: the visible trip to and from the strip is a clone
+// flown by flight.js (index.js wires the two). Under reduced motion it is a short opacity fade.
+//
 // Private API: none. Shell.util_set_hidden_from_pick (same in 48-51, used by windowPreview.js).
-// Not run on a real shell yet: whether a Clutter.Clone of an opacity-0 actor paints is the
-// first thing to check (skill ref windows-workspaces-and-actors.md section 5 says it does).
+// Checked on GNOME Shell 50.6: a Clutter.Clone of an opacity-0 actor paints.
 
 import Clutter from 'gi://Clutter';
 import Meta from 'gi://Meta';
@@ -16,9 +18,7 @@ import Shell from 'gi://Shell';
 
 import { WindowState } from '../../coordinators/windowState.js';
 
-const SHRINK = 0.22;
-const HIDE_MS = 500;
-const SHOW_MS = 220;
+const FADE_MS = 160;
 
 function sameRect(a, b) {
     return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
@@ -32,12 +32,19 @@ function rectOf(win) {
 export class WindowHider {
     /**
      * @param {import('../../lib/disposables.js').CleanupRegistry} cleanup
-     * @param {{motion: () => boolean, towards: () => ({x: number, y: number}|null)}} env
+     * @param {object} env
+     * @param {() => boolean} env.motion  false under reduced motion
+     * @param {(win: Meta.Window) => void} env.land  a flight of this window must end now
+     * @param {(win: Meta.Window) => void} env.leaving  the window just went off the stage (animated)
+     * @param {(win: Meta.Window, opacity: number) => boolean} env.arriving  it comes back
+     *   (animated): true when a flight took over and will give the actor `opacity` when it lands
      */
-    constructor(cleanup, { motion, towards }) {
+    constructor(cleanup, { motion, land, leaving, arriving }) {
         this._cleanup = cleanup;
         this._motion = motion;
-        this._towards = towards;
+        this._land = land;
+        this._leaving = leaving;
+        this._arriving = arriving;
         this._records = new Map();   // Meta.Window -> record
         cleanup.add(() => this.restoreAll());
     }
@@ -69,17 +76,6 @@ export class WindowHider {
             if (!win.minimized)
                 this.hide(win, { animate });
         }
-    }
-
-    /**
-     * Reveal everything now but keep the records and the minimize intent (overview).
-     * @returns {Meta.Window[]} the windows that were hidden
-     */
-    revealAll() {
-        const was = this.hiddenWindows();
-        for (const win of was)
-            this._showOne(win, false, true);
-        return was;
     }
 
     /** The user asked to minimize this window while Stage Manager is on: remember the intent. */
@@ -233,28 +229,20 @@ export class WindowHider {
         // Remember what "shown" looks like unless a fade is in the middle of it
         if (actor.opacity > 0 && !actor.get_transition('opacity'))
             rec.opacity = actor.opacity;
+        this._land(win);
         rec.hidden = true;
         WindowState.set(win, 'staged', true);
         this._pick(actor, true);
         actor.remove_all_transitions();
 
-        const target = this._towards();
-        if (!animate || !this._motion() || !target || !actor.mapped || actor.width === 0) {
-            actor.opacity = 0;
+        if (animate && actor.mapped && !this._motion()) {
+            // Reduced motion: a short crossfade in place
+            actor.ease({ opacity: 0, duration: FADE_MS, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
             return;
         }
-        actor.set_pivot_point((target.x - actor.x) / actor.width, (target.y - actor.y) / actor.height);
-        actor.ease({
-            scale_x: SHRINK, scale_y: SHRINK, opacity: 0, duration: HIDE_MS,
-            mode: Clutter.AnimationMode.EASE_IN_OUT_CUBIC,
-            onComplete: () => {
-                // Still hidden: leave it whole but invisible so a later show starts clean
-                if (this._records.get(win)?.hidden) {
-                    actor.set_scale(rec.scale[0], rec.scale[1]);
-                    actor.set_pivot_point(rec.pivot[0], rec.pivot[1]);
-                }
-            },
-        });
+        actor.opacity = 0;
+        if (animate && actor.mapped)
+            this._leaving(win);
     }
 
     _reassert(rec, actor) {
@@ -271,29 +259,29 @@ export class WindowHider {
         rec.guard = this._cleanup.connect(actor, 'notify::opacity', () => this._reassert(rec, actor));
     }
 
-    _showOne(win, animate, keepIntent = false) {
+    _showOne(win, animate) {
         const rec = this._records.get(win);
         if (!rec?.hidden)
             return;
         rec.hidden = false;
-        if (!keepIntent)
-            rec.userMinimized = false;  // it is back on a stage: the user chose that
+        rec.userMinimized = false;  // it is back on a stage: the user chose that
         WindowState.set(win, 'staged', false);
         const actor = win.get_compositor_private();
         if (!actor)
             return;
+        this._land(win);
         actor.remove_all_transitions();
         this._pick(actor, false);
         actor.set_scale(rec.scale[0], rec.scale[1]);
         actor.set_pivot_point(rec.pivot[0], rec.pivot[1]);
-        if (animate && this._motion() && actor.mapped) {
+        const opacity = rec.opacity || 255;
+        if (animate && actor.mapped && this._motion() && this._arriving(win, opacity))
+            return;
+        if (animate && actor.mapped) {
             actor.opacity = 0;
-            actor.ease({
-                opacity: rec.opacity || 255, duration: SHOW_MS,
-                mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-            });
+            actor.ease({ opacity, duration: FADE_MS, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
         } else {
-            actor.opacity = rec.opacity || 255;
+            actor.opacity = opacity;
         }
     }
 }

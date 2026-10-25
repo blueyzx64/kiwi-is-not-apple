@@ -7,18 +7,32 @@
 // window to the strip (WindowState.interceptMinimize). Disabling restores every window.
 //
 // Pieces: model.js (pure state + maths), shellAdapter.js (windows), windowHider.js (hide and
-// restore), strip.js (view). Registered in the entry's CleanupRegistry; disable() is empty.
+// restore), strip.js (view), flight.js (the window's trip to its card and back). Registered in
+// the entry's CleanupRegistry; disable() is empty.
+//
+// Motion: when a window leaves the stage (stage switch, panel minimize, a real minimize) a clone
+// of it flies from its frame to its card; when it comes back it flies from the card to its frame.
+// The Shell's own minimize/unminimize effect is skipped for these windows (Main.wm.skipNextEffect,
+// public), so only one animation plays. Reduced motion: a short crossfade in place.
+//
+// Overview: parked windows (in a strip card) get no preview in the Activities overview or its
+// workspace thumbnails: Workspace/WorkspaceThumbnail._isOverviewWindow (private, same in 48-51)
+// are wrapped while the feature is on. Alt-Tab still lists them, as on macOS.
 //
 // The toggle shortcut lives in shortcut.js (its own entry, so it still works while this is off).
 // Control Center and Spotlight toggles belong to the Control Center and Spotlight and flip the same key.
 // A top bar icon would vanish when the feature is off, so none is built here.
 
+import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as Workspace from 'resource:///org/gnome/shell/ui/workspace.js';
+import * as WorkspaceThumbnail from 'resource:///org/gnome/shell/ui/workspaceThumbnail.js';
 
 import { WindowState } from '../../coordinators/windowState.js';
-import { Glass } from '../../lib/glass.js';
+import { watchReducedMotion } from '../../lib/compat.js';
 import { KiwiSettings } from '../../lib/settings.js';
-import { StageModel, fitCount, fitToStage, stageArea } from './model.js';
+import { FADE_MS, Flights } from './flight.js';
+import { StageModel, fitCount, fitToStage, pointRect, stageArea } from './model.js';
 import { StageStrip } from './strip.js';
 import { WindowSource } from './shellAdapter.js';
 import { WindowHider } from './windowHider.js';
@@ -42,8 +56,15 @@ export class StageManager {
         this._overview = false;
         this._stageKey = null;      // id of the stage last laid out
         this._first = true;
-        this._revealed = [];        // windows the overview revealed, to hide again after it
         this._parked = new Set();   // ids sent to the strip by the minimize button, still holding focus
+        this._flights = null;
+        this._leaving = new Map();  // Meta.Window -> frame rect it left from, flown after the strip is rebuilt
+        this._skipped = new Set();  // actors handed to Main.wm.skipNextEffect
+        this._reduced = false;
+    }
+
+    _motion() {
+        return !this._reduced && St.Settings.get().enable_animations;
     }
 
     enable() {
@@ -52,14 +73,42 @@ export class StageManager {
         ks.attach(cleanup);
         this._ks = ks;
 
-        this._strip = new StageStrip(cleanup, { onActivate: id => this._activate(id) });
+        watchReducedMotion(cleanup, reduced => {
+            this._reduced = reduced;
+        });
+        this._strip = new StageStrip(cleanup, {
+            onActivate: id => this._activate(id),
+            motion: () => this._motion(),
+        });
+        // Created after the strip and the hider's records go after it: on disable the hider
+        // restores the windows first, then the clones go, then the strip.
+        this._flights = new Flights(cleanup, { onLanded: win => this._strip?.setFlying(win, false) });
         this._hider = new WindowHider(cleanup, {
-            motion: () => Glass.motion,
-            towards: () => this._strip?.anchor() ?? null,
+            motion: () => this._motion(),
+            land: win => this._flights?.land(win),
+            leaving: win => this._leaving.set(win, this._frame(win)),
+            arriving: (win, opacity) => this._flyFromCard(win, opacity),
         });
         this._source = new WindowSource(cleanup, {
             onChange: () => this._sync(),
             onGeometry: () => this._strip?.setStageRects(this._stageRects()),
+            onMinimized: win => this._minimizedChanged(win),
+        });
+        cleanup.add(() => {
+            // Effects we asked the Shell to skip that never came must not skip someone else's
+            for (const actor of this._skipped)
+                Main.wm._skippedActors?.delete?.(actor);
+            this._skipped.clear();
+            this._leaving.clear();
+        });
+
+        // Parked windows get no overview preview (the overview builds them on each opening)
+        const self = this;
+        cleanup.inject(Workspace.Workspace.prototype, '_isOverviewWindow', function (orig, win) {
+            return orig.call(this, win) && !self._isParked(win);
+        });
+        cleanup.inject(WorkspaceThumbnail.WorkspaceThumbnail.prototype, '_isOverviewWindow', function (orig, actor) {
+            return orig.call(this, actor) && !self._isParked(actor?.get_meta_window?.());
         });
 
         cleanup.add(ks.watch(KEYS, () => {
@@ -72,8 +121,9 @@ export class StageManager {
         }));
         cleanup.connect(Main.overview, 'showing', () => {
             this._overview = true;
-            // The overview shows every window of every workspace, staged or not
-            this._revealed = this._hider.revealAll();
+            // Parked windows stay hidden: the overview gives them no preview (_isParked)
+            this._flights?.cancelAll();
+            this._leaving.clear();
             this._sync();
         });
         cleanup.connect(Main.overview, 'hidden', () => {
@@ -89,6 +139,7 @@ export class StageManager {
             WindowState.setStageActive(false);
             WindowState.clearFlag('staged');
             this._models.clear();
+            this._flights = null;
             this._source = null;
             this._strip = null;
             this._hider = null;
@@ -207,6 +258,128 @@ export class StageManager {
             cards,
         });
         this._first = false;
+        this._launchLeaving();
+    }
+
+    // ---- motion ----------------------------------------------------------------------------
+
+    /** Windows that just left the stage fly to their (new) card, or shrink into the strip. */
+    _launchLeaving() {
+        const leaving = [...this._leaving];
+        this._leaving.clear();
+        if (this._overview || !this._motion())
+            return;
+        for (const [win, from] of leaving) {
+            try {
+                if (!win.get_compositor_private())
+                    continue;
+                let to = this._strip.thumbRect(win);
+                let fade = null;
+                if (!to) {
+                    const anchor = this._strip.anchor();
+                    if (!anchor)
+                        continue;
+                    to = pointRect(anchor, from);
+                    fade = 'out';
+                }
+                if (!fade)
+                    this._strip.setFlying(win, true);
+                if (!this._flights.fly(win, { from, to, fade }) && !fade)
+                    this._strip.setFlying(win, false);
+            } catch (e) {
+                console.error(`[Kiwi] stage flight out: ${e.message}`);
+            }
+        }
+    }
+
+    /**
+     * A window comes back to the stage: fly it from its card (the strip still shows the old
+     * cards here) to its frame. The flight gives the actor `opacity` when it lands.
+     * @returns {boolean} true when a flight took over
+     */
+    _flyFromCard(win, opacity) {
+        if (this._overview)
+            return false;
+        const from = this._strip?.thumbRect(win);
+        if (!from)
+            return false;
+        this._strip.setFlying(win, true);
+        if (this._flights.fly(win, { from, to: this._frame(win), reveal: opacity }))
+            return true;
+        this._strip.setFlying(win, false);
+        return false;
+    }
+
+    /** Is this window parked in the strip (hidden, or minimized with a card)? For the overview. */
+    _isParked(win) {
+        try {
+            if (!win || !this._source || !this._hider)
+                return false;
+            if (this._hider.isHidden(win))
+                return true;
+            if (!win.minimized || !this._source.eligible(win))
+                return false;
+            const model = this._models.get(win.get_workspace());
+            return !!model && model.inStrip(win.get_stable_sequence(), this._cap(model));
+        } catch (e) {
+            console.error(`[Kiwi] stage overview filter: ${e.message}`);
+            return false;
+        }
+    }
+
+    _skipEffect(actor) {
+        Main.wm.skipNextEffect(actor);
+        this._skipped.add(actor);
+        // The effect comes within a frame or two; forget it after that either way
+        this._cleanup.timeout(1000, () => {
+            this._skipped.delete(actor);
+            Main.wm._skippedActors?.delete?.(actor);
+            return false;
+        }, { name: 'stage-manager-skip' });
+    }
+
+    /**
+     * A real minimize or unminimize of a window on this stage: our flight replaces the Shell's
+     * effect. Called synchronously from notify::minimized, before mutter runs the effect.
+     */
+    _minimizedChanged(win) {
+        if (!this._source || this._overview || Main.overview.visible)
+            return;
+        const actor = win.get_compositor_private();
+        const active = global.workspace_manager.get_active_workspace();
+        if (!actor || !win.located_on_workspace(active) || !this._source.eligible(win) ||
+            this._hider.isHidden(win))
+            return;
+        const motion = this._motion();
+        if (win.minimized) {
+            if (!actor.mapped)
+                return;
+            const from = this._flights.land(win) ?? this._frame(win);
+            this._skipEffect(actor);
+            if (!motion) {
+                this._flights.fly(win, { from, to: from, fade: 'out', duration: FADE_MS });
+                return;
+            }
+            // Lay the strip out now so the window has a card to land on
+            this._leaving.set(win, from);
+            this._sync();
+        } else {
+            const frame = this._frame(win);
+            const from = motion ? this._strip.thumbRect(win) : frame;
+            if (!from)
+                return;     // no card: the Shell's own effect plays
+            this._flights.land(win);
+            this._skipEffect(actor);
+            if (motion)
+                this._strip.setFlying(win, true);
+            const ok = this._flights.fly(win, {
+                from, to: frame, reveal: 255,
+                fade: motion ? null : 'in',
+                duration: motion ? undefined : FADE_MS,
+            });
+            if (!ok)
+                this._strip.setFlying(win, false);
+        }
     }
 
     /** A window that became always-on-top, sticky, moved to another monitor, ...: give it back. */
@@ -218,14 +391,11 @@ export class StageManager {
     }
 
     /**
-     * After the overview revealed everything: hide the off-stage windows of the other workspaces
-     * again. A workspace with a model applies it; on one never visited (a staged window was moved
-     * there) the windows the overview revealed go back to hidden as they were.
+     * After the overview (windows may have been dragged to another workspace there): apply each
+     * other workspace's model again.
      */
     _reapplyOtherWorkspaces() {
         const active = global.workspace_manager.get_active_workspace();
-        const revealed = this._revealed ?? [];
-        this._revealed = [];
         for (const [ws, model] of this._models) {
             if (ws === active)
                 continue;
@@ -235,11 +405,6 @@ export class StageManager {
             const vis = model.visibility(this._cap(model));
             const pick = ids => ids.map(id => byId.get(id)).filter(Boolean).map(w => w.win);
             this._hider.apply({ show: pick(vis.show), hide: pick(vis.hide), animate: false });
-        }
-        for (const win of revealed) {
-            const ws = win.get_workspace();
-            if (ws && ws !== active && !this._models.has(ws) && this._source.eligible(win) && !win.minimized)
-                this._hider.hide(win, { animate: false });
         }
     }
 

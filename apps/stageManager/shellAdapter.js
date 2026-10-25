@@ -15,13 +15,15 @@ import { focusRoot, isExempt } from './model.js';
 export class WindowSource {
     /**
      * @param {import('../../lib/disposables.js').CleanupRegistry} cleanup
-     * @param {{onChange: Function, onGeometry: Function}} handlers
+     * @param {{onChange: Function, onGeometry: Function, onMinimized?: Function}} handlers
      *   onChange: the window list, focus or workspace changed. onGeometry: a window moved or resized.
+     *   onMinimized(win): called synchronously on notify::minimized, before mutter runs its effect.
      */
-    constructor(cleanup, { onChange, onGeometry }) {
+    constructor(cleanup, { onChange, onGeometry, onMinimized = () => {} }) {
         this._cleanup = cleanup;
         this._onChange = onChange;
         this._onGeometry = onGeometry;
+        this._onMinimized = onMinimized;
         this._tracked = new Map();   // Meta.Window -> tokens[]
         this._changeIdle = 0;
         this._geometryIdle = 0;
@@ -109,7 +111,14 @@ export class WindowSource {
                 this._queueChange();
             }),
             c.connect(win, 'workspace-changed', () => this._queueChange()),
-            c.connect(win, 'notify::minimized', () => this._queueChange()),
+            c.connect(win, 'notify::minimized', () => {
+                try {
+                    this._onMinimized(win);
+                } catch (e) {
+                    console.error(`[Kiwi] stage minimize: ${e.message}`);
+                }
+                this._queueChange();
+            }),
             c.connect(win, 'notify::skip-taskbar', () => this._queueChange()),
             c.connect(win, 'notify::above', () => this._queueChange()),
             c.connect(win, 'notify::on-all-workspaces', () => this._queueChange()),

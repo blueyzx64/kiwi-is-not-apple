@@ -1,7 +1,7 @@
 // Run: gjs -m tests/stageManagerModel.test.js
 import {
     DEFAULTS, overlaps, thumbFit, cropThumb, stackLayers, cardTilt, fitCount, stripLayout,
-    edgeZone, stageArea, fitToStage, centerOnStage, stripShown, StageModel, focusRoot, isExempt, edgeBarrier,
+    placeClone, pointRect, edgeZone, stageArea, fitToStage, centerOnStage, stripShown, StageModel, focusRoot, isExempt, edgeBarrier,
 } from '../apps/stageManager/model.js';
 
 let failed = 0;
@@ -83,9 +83,33 @@ test('stackLayers shrink and fade', () => {
     eq(l[2].opacity < l[1].opacity, true);
 });
 test('cardTilt flips with side', () => {
-    eq(cardTilt('left'), 24);
-    eq(cardTilt('right'), -24);
+    eq(cardTilt('left', 24), 24);
+    eq(cardTilt('right', 24), -24);
+    eq(cardTilt('left'), DEFAULTS.rotation);
     eq(cardTilt('left', 10), 10);
+});
+
+test('placeClone identity at the frame', () => {
+    const frame = { x: 100, y: 50, width: 400, height: 300 };
+    const buffer = { x: 80, y: 30, width: 440, height: 340 };
+    eq(placeClone(frame, buffer, frame), { x: 80, y: 30, scale: 1 });
+});
+test('placeClone scales the frame into a card and keeps the buffer offset', () => {
+    const frame = { x: 100, y: 50, width: 400, height: 300 };
+    const buffer = { x: 80, y: 30, width: 440, height: 340 };
+    const p = placeClone(frame, buffer, { x: 10, y: 20, width: 100, height: 75 });
+    eq(p, { x: 10 - 5, y: 20 - 5, scale: 0.25 });
+});
+test('placeClone centres a frame of another aspect', () => {
+    const frame = { x: 0, y: 0, width: 200, height: 100 };
+    const p = placeClone(frame, frame, { x: 0, y: 0, width: 100, height: 100 });
+    eq(p, { x: 0, y: 25, scale: 0.5 });
+});
+test('placeClone rejects empty rects', () => {
+    eq(placeClone({ x: 0, y: 0, width: 0, height: 10 }, { x: 0, y: 0, width: 0, height: 10 }, { x: 0, y: 0, width: 5, height: 5 }), null);
+});
+test('pointRect is centred and keeps aspect', () => {
+    eq(pointRect({ x: 50, y: 50 }, { width: 200, height: 100 }, 20), { x: 40, y: 45, width: 20, height: 10 });
 });
 
 // ---- strip layout ----
@@ -209,6 +233,23 @@ test('focus makes the stage current and moves it to the front', () => {
     eq(m.current.id, 'app:b');
     eq(ids(m.stages())[0], 'app:b');
     eq(ids(m.strip()), ['app:a', 'app:c', 'win:5']);
+});
+test('inStrip: current stage windows are not parked, strip ones are', () => {
+    const m = new StageModel();
+    m.sync(SET);
+    m.focus(3);
+    eq(m.inStrip(3), false);
+    eq(m.inStrip(1), true);
+    eq(m.inStrip(2), true);
+});
+test('inStrip honours the card limit', () => {
+    const m = new StageModel();
+    m.sync(SET);
+    m.focus(3);
+    // strip order after focusing b: a, c, win:5
+    eq(m.inStrip(5, 2), false);
+    eq(m.inStrip(4, 2), true);
+    eq(m.inStrip(99), false);
 });
 test('focusing the same stage again is not a change', () => {
     const m = new StageModel();
