@@ -32,7 +32,7 @@ function fakeSettings(types, user = {}, defaults = {}) {
         emit(key) { for (const fn of handlers.values()) fn(gs, key); },
         handlerCount: () => handlers.size,
     };
-    for (const [t, name] of [['b', 'boolean'], ['i', 'int'], ['d', 'double'], ['s', 'string'], ['u', 'uint']]) {
+    for (const name of ['boolean', 'int', 'double', 'string', 'uint']) {
         gs[`get_${name}`] = k => gs._get(k);
         gs[`set_${name}`] = (k, v) => { gs.user[k] = v; };
     }

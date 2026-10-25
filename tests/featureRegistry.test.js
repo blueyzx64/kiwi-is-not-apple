@@ -124,6 +124,15 @@ test('apply() re-evaluates one entry', () => {
     eq(log, ['+a']);
 });
 
+test('apply() does not enable startOnly entries', () => {
+    const { reg, log, ctx } = setup([{ id: 'g', startOnly: true }]);
+    reg.apply('g');
+    eq(log, []);
+    reg.start(ctx);
+    reg.apply('g');
+    eq(log, ['+g']);
+});
+
 test('class entries: construct, enable, disable; cleanup disposed', () => {
     const log = [];
     let cleanupSeen = null;
