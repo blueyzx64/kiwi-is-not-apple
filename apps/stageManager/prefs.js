@@ -23,9 +23,8 @@ function _isAccel(text) {
 
 const SUGGESTED = '<Control><Super>s';
 
-function _shortcutRow(settings, _) {
-    const key = 'stage-manager-shortcut';
-    const row = new Adw.EntryRow({ title: _('Toggle shortcut') });
+function _shortcutRow(settings, _, key = 'stage-manager-shortcut', title = null, suggested = SUGGESTED) {
+    const row = new Adw.EntryRow({ title: title ?? _('Toggle shortcut') });
     const read = () => settings.get_strv(key)[0] ?? '';
     row.text = read();
 
@@ -46,13 +45,13 @@ function _shortcutRow(settings, _) {
         row.title = note ? `${base}: ${note}` : base;
     };
     // Offer the suggestion only when nothing known uses it
-    if (findConflicts([SUGGESTED], KNOWN_DEFAULTS).length === 0) {
+    if (suggested && findConflicts([suggested], KNOWN_DEFAULTS).length === 0) {
         const use = new Gtk.Button({
             label: _('Use Ctrl+Super+S'), valign: Gtk.Align.CENTER, css_classes: ['flat'],
         });
         use.connect('clicked', () => {
-            settings.set_strv(key, [SUGGESTED]);
-            row.text = SUGGESTED;
+            settings.set_strv(key, [suggested]);
+            row.text = suggested;
         });
         row.add_suffix(use);
     }
@@ -68,6 +67,23 @@ function _shortcutRow(settings, _) {
             row.text = read();
     });
     row.connect('destroy', () => settings.disconnect(id));
+    return row;
+}
+
+/** A combo row over a string key with fixed values. */
+function _choiceRow(settings, connect, key, title, subtitle, values, labels) {
+    const row = new Adw.ComboRow({ title, subtitle, model: Gtk.StringList.new(labels) });
+    const sync = () => {
+        const i = values.indexOf(settings.get_string(key));
+        row.selected = i < 0 ? 0 : i;
+    };
+    sync();
+    row.connect('notify::selected', () => {
+        const value = values[row.selected];
+        if (value && settings.get_string(key) !== value)
+            settings.set_string(key, value);
+    });
+    connect(key, sync);
     return row;
 }
 
@@ -115,17 +131,28 @@ export function buildPrefs({ settings, window, extension }) {
     strip.add(side);
 
     const autohide = new Adw.SwitchRow({
-        title: _('Auto-hide'),
-        subtitle: _('Hide the strip while a window overlaps it; reveal it at the screen edge'),
+        title: _('Hide recent apps under windows'),
+        subtitle: _('The strip steps aside while a window overlaps it; push the screen edge to bring it back'),
     });
     settings.bind('stage-manager-autohide', autohide, 'active', Gio.SettingsBindFlags.DEFAULT);
     strip.add(autohide);
 
-    const group = new Adw.SwitchRow({
-        title: _('Group windows by app'),
-        subtitle: _('Windows of one app share a stack'),
+    // "Show windows from an application" (macOS): all at once = one stack per app
+    const group = new Adw.ComboRow({
+        title: _('Windows from an app'),
+        subtitle: _('All at once: one stack per app. One at a time: each window has its own entry'),
+        model: Gtk.StringList.new([_('All at once'), _('One at a time')]),
     });
-    settings.bind('stage-manager-group-by-app', group, 'active', Gio.SettingsBindFlags.DEFAULT);
+    const syncGroup = () => {
+        group.selected = settings.get_boolean('stage-manager-group-by-app') ? 0 : 1;
+    };
+    syncGroup();
+    group.connect('notify::selected', () => {
+        const on = group.selected === 0;
+        if (settings.get_boolean('stage-manager-group-by-app') !== on)
+            settings.set_boolean('stage-manager-group-by-app', on);
+    });
+    connect('stage-manager-group-by-app', syncGroup);
     strip.add(group);
 
     const recent = new Adw.SpinRow({
@@ -136,9 +163,43 @@ export function buildPrefs({ settings, window, extension }) {
     settings.bind('stage-manager-recent-count', recent, 'value', Gio.SettingsBindFlags.DEFAULT);
     strip.add(recent);
 
+    const tilt = new Adw.SpinRow({
+        title: _('Tilt'),
+        subtitle: _('Degrees the windows in the strip turn toward the stage'),
+        adjustment: new Gtk.Adjustment({ lower: 0, upper: 40, step_increment: 2, page_increment: 6 }),
+    });
+    settings.bind('stage-manager-tilt', tilt, 'value', Gio.SettingsBindFlags.DEFAULT);
+    strip.add(tilt);
+
+    const speed = new Adw.SpinRow({
+        title: _('Animation speed'),
+        subtitle: _('1 is normal, 2 twice as fast'),
+        digits: 2,
+        adjustment: new Gtk.Adjustment({ lower: 0.5, upper: 2, step_increment: 0.25, page_increment: 0.5 }),
+    });
+    settings.bind('stage-manager-animation-speed', speed, 'value', Gio.SettingsBindFlags.DEFAULT);
+    strip.add(speed);
+
+    // Window sets and the desktop
+    const sets = new Adw.PreferencesGroup({
+        title: _('Sets'),
+        description: _('Drag an app from the strip onto the stage, or Shift-click it, to use it with the windows already there. Drop it on the left or right side to place them side by side. Drag a window back to the strip to take it out.'),
+    });
+    sets.add(_choiceRow(settings, connect, 'stage-manager-new-windows', _('New windows'),
+        _('What a newly opened app window does'),
+        ['replace', 'join'], [_('Replace the stage'), _('Join the current set')]));
+    sets.add(_shortcutRow(settings, _, 'stage-manager-remove-shortcut', _('Remove from set shortcut'), null));
+    const wallpaper = new Adw.SwitchRow({
+        title: _('Click wallpaper to show the desktop'),
+        subtitle: _('The windows on the stage step into the strip; click again to bring them back'),
+    });
+    settings.bind('stage-manager-wallpaper-click', wallpaper, 'active', Gio.SettingsBindFlags.DEFAULT);
+    sets.add(wallpaper);
+
     // Dim the options while the strip is off
     const sync = () => {
         strip.sensitive = settings.get_boolean('stage-manager');
+        sets.sensitive = strip.sensitive;
     };
     sync();
     connect('stage-manager', sync);
@@ -164,5 +225,5 @@ export function buildPrefs({ settings, window, extension }) {
         'show-window-title', 'show-tiling-title-menu'])
         connect(key, syncPaused);
 
-    return [main, paused, strip];
+    return [main, paused, strip, sets];
 }
