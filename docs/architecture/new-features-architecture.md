@@ -171,7 +171,13 @@ migrations.
 | Versions | Nested shell on GNOME 48, 49, 50, 51 (`--devkit` on 49+) |
 | Interop | Dash to Dock, Blur my Shell, AppIndicator on and off |
 
-## 9. Open questions for the owner
+## 9. Owner decisions (answered)
+
+Answered 2026-10-25; the full list is in `.swarm/shared/decisions.md`. The questions below
+are kept for history. Answers: (1) always save to disk; (2) a Super tap opens Spotlight;
+(3) yes, Phase 0 is its own change, and the Firefox data-loss fix ships first as its own PR.
+
+### Original questions
 1. **Clipboard across lock:** EGO made Kiwi tear down fully on lock. Options:
    (a) history is lost on lock;
    (b) opt-in persistence to disk (`clipboard-persist`);

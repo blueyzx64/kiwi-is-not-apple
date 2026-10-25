@@ -23,14 +23,18 @@ popover and a keyboard-driven **Quick Paste** window (Super+Shift+V).
 
 ## 4. Settings (proposed)
 `clipboard-history` b · `clipboard-shortcut` as=`['<Super><Shift>v']` · `clipboard-panel-icon` b ·
-`clipboard-history-size` i=25 · `clipboard-images` b=true · `clipboard-persist` b=false ·
+`clipboard-history-size` i=25 · `clipboard-images` b=true · `clipboard-persist` b=**true** ·
 `clipboard-ignore-sensitive` b=true
 
 ## 5. Interactions
 - **Spotlight** shows clipboard matches as a result group.
 - **Notch dashboard** shows the three latest items.
-- **Privacy:** skip entries marked `x-kde-passwordManagerHint=secret`. Pause on the lock
-  screen. Persistence is opt-in and stored under `~/.local/share/kiwi/`.
+- **Persistence (owner decision: always saved by default):** Kiwi fully tears down on lock
+  (an EGO requirement), so history is written to `~/.local/share/kiwi/clipboard/` (mode
+  0600, images as separate files) and reloaded on enable. Clear History and Remove delete
+  the files too. Users can turn persistence off.
+- **Privacy:** never record entries marked `x-kde-passwordManagerHint=secret`. Stop
+  recording while locked.
 
 ## 6. Acceptance
 - [ ] Watches `Meta.Selection` `owner-changed` for clipboard changes; no polling.

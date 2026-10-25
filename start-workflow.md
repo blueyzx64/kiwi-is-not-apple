@@ -15,7 +15,10 @@
   Notes and reports are written caveman-style; code, docs and commit messages are written
   normally.
 - **Git:** one branch per Sonnet lead. Only the orchestrator merges into
-  `ccr-f3c1f44c-rv5a8r`. Author is `blueyzx64`, with no AI trailers.
+  `ccr-f3c1f44c-rv5a8r`, and opens one final PR into the fork's `main`. Author is `blueyzx64`,
+  with no AI trailers.
+- **All owner questions are answered** in `.swarm/shared/decisions.md`. Workers never ask the
+  owner; they ask the orchestrator.
 
 ## Contents
 1. [Roles and limits](#1-roles-and-limits)
@@ -103,17 +106,22 @@ a **fragment** through their memory Outbox or a file under their own folder.
 ## 5. Sonnet lead cards
 Each card lists: **Skills** (besides caveman) · **Read** · **Build** · **Depends on** · **Haiku pools to use**.
 
-**S1 Foundation (Phase 0, runs first and alone among leads)**
+**S1 Foundation (Wave 0 + Phase 0, runs first and alone among leads)**
 - Skills: `gnome-shell-extension`, `gjs`, `clean-architecture`
 - Read: architecture doc §2, §3 and §6 Phase 0; `docs/architecture/tech-debt-and-conflicts.md`
   "Phase 0 / blockers" items; `extension.js`.
 - Build:
   1. `lib/disposables.js`, `lib/compat.js`, `lib/settings.js`.
   2. `features.js` registry; move `extension.js:57-277` onto it with **identical behaviour**.
-  3. The Firefox/Thunderbird data-loss fix (`apps/mozillaThemeManager.js:78-85,136`;
-     `extension.js:227,233`).
+  0. **Wave 0, before anything else:** the Firefox/Thunderbird data-loss fix
+     (`apps/mozillaThemeManager.js:78-85,136`; `extension.js:227,233`) on its own branch
+     `fix/mozilla-chrome-dataloss`, kept minimal. The orchestrator opens a PR into `main` for it.
   4. The four cheap bug fixes listed in Phase 0.
 - Then freeze the APIs: write them in your Outbox; the orchestrator copies them to `contracts.md`.
+- **After the contracts are frozen**, fix `advanced/` on branch `feat/advanced-fixes`, with
+  skills swapped to `c-gobject` + `clean-architecture`. Read
+  `c-gobject` → `references/review-of-advanced-module.md` (all items; the event-driven
+  replacement is described there).
 - Haiku: H-recon, H-lint, H-tests.
 
 **S2 Window controls + panelLayout (Phase 1)**
@@ -234,9 +242,10 @@ before committing.
    tested in the Shell unless it really was.
 
 ## 8. Orchestrator run-book
-1. **Seed memory:** make sure `.swarm/shared/*` exists (seeded with this file). Fill
-   `decisions.md` with the owner's answers; open questions keep the defaults written there.
-2. **Wave A:** spawn S1 + S10. Wait for S1's contracts, copy them to `contracts.md`, and post
+1. **Seed memory:** `.swarm/shared/*` already exists and `decisions.md` is complete.
+   Update it only when the owner changes something.
+2. **Wave 0:** spawn S1 for the Firefox fix only. Merge it and open its PR into `main`.
+   **Wave A:** S1 continues with Phase 0; spawn S10. Wait for S1's contracts, copy them to `contracts.md`, and post
    `SHARED UPDATED`.
 3. **Wave B:** spawn S2 and S3. When S3's GlassService API is frozen, add it to `contracts.md`.
 4. **Wave C:** spawn S4, S5, S6, S7 and S9 (model and strip only). Then **Wave D:** S8, and S9 in full.
@@ -251,7 +260,9 @@ before committing.
 6. **Merge:** `git merge --no-ff feat/<name>` into `ccr-f3c1f44c-rv5a8r`. Never force-push.
    Commit author is `blueyzx64`, with no AI trailers.
 7. **Finish:** update `docs/features/README.md` status, `docs/architecture/code-map.md`
-   (H-docs), and the release notes; give the owner the combined manual-test list.
+   (H-docs), and the release notes. Open **one PR** from `ccr-f3c1f44c-rv5a8r` into `main`
+   whose body holds the combined manual-test list, grouped by feature, for the owner to run
+   on GNOME 48–51.
 
 Starting prompt for a lead (fill in the brackets):
 ```

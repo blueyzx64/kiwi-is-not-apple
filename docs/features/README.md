@@ -18,6 +18,11 @@ https://claude.ai/artifact/PJTdauCxK1VKQvpXditZpz (private to the repo owner unt
 | 7 | Auto-hide top bar | [autohide-top-bar.md](autohide-top-bar.md) | S–M | Locked |
 | 8 | Stage Manager | [stage-manager.md](stage-manager.md) | L | Locked |
 
+Owner decisions that apply to all features:
+- **On by default.** Every new feature ships enabled; users opt out in prefs.
+- **GNOME 48–51** only.
+- Testing on a real desktop is done by the owner from each feature's manual test list.
+
 Out of scope (decided):
 - **Global menus** (File / Edit / View… of the app in the top bar): dropped.
 - **App menu:** the top bar shows only the app icon and name, as today.

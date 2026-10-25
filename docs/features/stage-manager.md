@@ -20,12 +20,13 @@ live thumbnails in a strip at the side; clicking one swaps it onto the stage.
 - Auto-hide strip: hides when a stage window overlaps the strip and reveals at the edge.
 
 ## 4. Settings (proposed)
-`stage-manager` b=false · `stage-manager-side` s=`left` · `stage-manager-autohide` b=true ·
+`stage-manager` b=true · `stage-manager-side` s=`left` · `stage-manager-autohide` b=true ·
 `stage-manager-group-by-app` b=true · `stage-manager-recent-count` i=6 ·
 `stage-manager-shortcut` as
 
 ## 5. Interactions
-- While it is on, `minimize-to-dock` is turned off: minimized windows go to the strip.
+- **Stage Manager wins** (owner decision): while it is on, `minimize-to-dock` is paused
+  (its saved value is kept) and minimized windows go to the strip. Prefs shows the pause.
 - `move-window-to-new-workspace` and tiling are paused while it is on.
 - **Window controls:** minimize sends the window to the strip.
 - **Overview:** the strip is hidden in the overview.

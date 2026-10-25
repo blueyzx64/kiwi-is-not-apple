@@ -6,8 +6,10 @@ Settings, Documents, Clipboard, Calculator, Web) and work fully from the keyboar
 
 ## 2. Locked decisions
 - It is a must-have.
-- Shortcut **Super+Space**. Offer to move GNOME's input-source switching to
-  Super+Alt+Space; never take it over silently.
+- Shortcut (owner decision): **a tap of Super opens Spotlight** instead of the Activities
+  overview, by taking over the Shell's `overlay-key` handling. The overview stays reachable
+  through the hot corner, the touchpad gesture, Super+A (app grid) and the Activities
+  button. The original behaviour is restored on disable. Super+Space is untouched.
 - It shares its window component with Quick Paste (feature 3).
 
 ## 3. UI
@@ -21,7 +23,7 @@ Settings, Documents, Clipboard, Calculator, Web) and work fully from the keyboar
   result, Tab jumps to the next group, Esc closes.
 
 ## 4. Settings (proposed)
-`spotlight` b · `spotlight-shortcut` as=`['<Super>space']` · `spotlight-files` b ·
+`spotlight` b=true · `spotlight-on-super` b=true (Super tap) · `spotlight-shortcut` as=`[]` (optional extra binding) · `spotlight-files` b ·
 `spotlight-calculator` b · `spotlight-clipboard` b · `spotlight-web` b · `spotlight-engine` s
 
 ## 5. Interactions

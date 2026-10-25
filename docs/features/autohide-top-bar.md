@@ -5,7 +5,7 @@ The top bar slides out of view so windows get the full height. It slides back in
 the pointer reaches the top edge. Canvas board: "Auto-hide top bar + button-free windows".
 
 ## 2. Locked decisions
-- It is a user toggle, off by default.
+- It is a user toggle, **on by default** (owner decision).
 - It reveals when the pointer **reaches the top edge**, with a short dwell; it hides
   after the pointer leaves.
 - Windows get the full height: no strut while the bar is hidden.
@@ -20,7 +20,7 @@ the pointer reaches the top edge. Canvas board: "Auto-hide top bar + button-free
 - Multi-monitor: only the primary monitor has the panel; other monitors are unaffected.
 
 ## 4. Settings (proposed)
-`panel-autohide` b=false · `panel-autohide-reveal-delay` i=150 (ms) ·
+`panel-autohide` b=true · `panel-autohide-reveal-delay` i=150 (ms) ·
 `panel-autohide-hide-delay` i=600 (ms) · `panel-autohide-keep-on-desktop` b=false
 
 ## 5. Interactions
