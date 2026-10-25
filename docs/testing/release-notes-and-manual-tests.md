@@ -1,19 +1,19 @@
-# Release notes and manual test list (new-features branch)
+# Release notes and manual test list (GNOME 50, Fedora 44)
 
-Brings the 8 planned macOS-style features (window controls, Liquid Glass, auto-hide top bar, clipboard history, Spotlight, Control Center, Stage Manager, notification notch) to GNOME 48–51, on top of a new foundation (feature registry, shared `lib/` services, `coordinators/`) and a round of tech-debt fixes.
+Brings the 8 planned macOS-style features (window controls, Liquid Glass, auto-hide top bar, clipboard history, Spotlight, Control Center, Stage Manager, notification notch) to **GNOME 50 on Fedora 44 Workstation**, the only supported platform for this release (`metadata.json` shell-version `["50"]`; the 48/49/51 code paths in `lib/compat.js` are kept for later releases), on top of a new foundation (feature registry, shared `lib/` services, `coordinators/`) and a round of tech-debt fixes.
 
 **Checks run in the cloud:**
 - `make check`: eslint 0 errors / 0 warnings, strict schema compile, `gjs -m` unit tests green.
 - `make pack`, and the prefs pages smoke-built under Xvfb.
 - `make smoke`: headless Shell 46 with shims.
-- **Headless real GNOME Shell 48.1 and 51.1** (Arch chroot): 20 enable/disable cycles each, 7 functional probes PASS on both, 0 Kiwi errors. See section 4d.
+- **Headless real GNOME Shell 48.1 and 51.1** (Arch chroot): 20 enable/disable cycles each, 7 functional probes PASS on both, 0 Kiwi errors. These were run before the scope narrowed to 50. A GNOME 50 run is in progress. See section 4d.
 
-Headless runs can't check looks, real input, real apps or GNOME 49/50, so please still work through the manual list on real 48 and 51 at least.
+Headless runs can't check looks, real input or real apps, so please work through the manual list on Fedora 44 Workstation with GNOME 50 on Wayland.
 
 ## 1. Summary
 
 - **Firefox/Thunderbird data-loss fix (shipped first).** Kiwi no longer deletes a user's own `chrome/` folder in a Firefox or Thunderbird profile. Wave 0 went to main as its own PR (#1). Later work made all profile file access async, stopped writing empty files, and removes Kiwi's `user.js` line again on disable.
-- **Foundation.** `extension.js` shrank to about 60 lines. A new feature registry (`features.js`, `lib/featureRegistry.js`) starts and stops features in order. Shared helpers cover cleanup (`lib/disposables.js`), settings and migrations (`lib/settings.js`) and Shell-version differences (`lib/compat.js`, 48 to 51). Shell behaviour was meant to stay the same. Four small bug fixes went in separately.
+- **Foundation.** `extension.js` shrank to about 60 lines. A new feature registry (`features.js`, `lib/featureRegistry.js`) starts and stops features in order. Shared helpers cover cleanup (`lib/disposables.js`), settings and migrations (`lib/settings.js`) and Shell-version differences (`lib/compat.js`; GNOME 50 supported now, 48/49/51 paths kept for later). Shell behaviour was meant to stay the same. Four small bug fixes went in separately.
 - **`advanced/` GTK3 module fixes.** No more 800 ms polling; hover state is recomputed so highlights can't stick; `GTK3_MODULES` is appended to instead of overwritten; the `.so` is installed by temp file plus rename; the prebuilt binary gets a sha256 and x86_64 check; README Wayland note fixed.
 - **Window controls in the top bar.** Close, minimize and maximize move into the panel for any focused window, including dialogs. A layout coordinator places them, scope and position are settings, and Kiwi can remove the apps' own titlebar buttons (GTK3/GTK4).
 - **Liquid Glass.** A shared glass service (blur, tint, rim, highlight) used by the panel, menus, dock and overlays. Styles, sliders, high-contrast, reduced-motion and power-saver handling are included; refraction is experimental. Old `panel-blur`/`dock-blur` keys migrate into it.
@@ -76,14 +76,14 @@ New features default to ON (owner decision); users opt out in prefs.
   - Restore Defaults skips internal keys.
 - **Settings migrations run once:** they run before the features start, and each is recorded in the internal key `migrations-done`. If you reset a new key, the old value is not copied back.
 - **Feature registry:** a feature whose enable fails no longer keeps the features it overrides paused.
-- **Reduced motion is detected on GNOME 50/51** (the a11y key is an enum; it was read wrongly before).
+- **Reduced motion is detected on GNOME 50** (the a11y key is an enum; it was read wrongly before).
 - **Minimize-to-dock snapshots:** snapshots are cleared on disable except while locked. After disable and re-enable, a minimized window's tile may fall back to its icon (accepted).
 - **Dock colours:** Dash to Dock original colours are saved in `dock-colors-saved` and restored on disable and after a crash. Keys that were at their default are `reset()`; a colour you change while Kiwi runs is left alone. Launchpad removes only its own id from `favorite-apps`.
 - **Window title:** a whitespace-only title now clears the label instead of showing a blank one.
 
-## 3. Manual test list for GNOME 48 to 51
+## 3. Manual test list (Fedora 44 Workstation, GNOME 50, Wayland)
 
-Run each item on 48, 49, 50 and 51 where possible, on Wayland and X11 where noted. Watch `journalctl -f -o cat /usr/bin/gnome-shell` for `[Kiwi]` errors throughout. Toggling "20x" means flipping the switch in prefs or dconf 20 times.
+Run each item on Fedora 44 Workstation, GNOME 50, in a Wayland session (GNOME 50 has no X11 session). Steps that only apply to other versions are marked **(future)** and can be skipped for this release. Watch `journalctl -f -o cat /usr/bin/gnome-shell` for `[Kiwi]` errors throughout. Toggling "20x" means flipping the switch in prefs or dconf 20 times.
 
 ### Foundation / Phase 0
 - [ ] Enable Kiwi on each Shell version. Expected: no `[Kiwi]` errors in the journal.
@@ -140,9 +140,9 @@ Run each item on 48, 49, 50 and 51 where possible, on Wayland and X11 where note
 - [ ] Switch light/dark scheme. Expected: overview wallpaper blur unchanged; brightness follows.
 - [ ] Move the tint and blur sliders, switch to Clear style, toggle Highlight. Expected: live update; text readable on white and black wallpapers.
 - [ ] Turn on high contrast. Expected: glass goes solid, panel opaque; back to normal when off.
-- [ ] Turn on reduced motion (50+ a11y reduced-motion; 48 to 49 animations off). Expected: no glass fade.
+- [ ] Turn on reduced motion (Settings > Accessibility). Expected: no glass fade. **(future)** On 48 to 49, use animations off instead.
 - [ ] Use Performance mode or Power Saver (with off-in-powersave). Expected: still blurred wallpaper copy, aligned on multi-monitor.
-- [ ] Turn on experimental refraction on 48 to 50 and on 51. Expected: works, or journal says "[Kiwi] shader effect unavailable" and plain glass still works.
+- [ ] Turn on experimental refraction on GNOME 50 (**(future)**: repeat on 51, whose shader API differs). Expected: works, or journal says "[Kiwi] shader effect unavailable" and plain glass still works.
 - [ ] Open Control Center and the calendar. Expected: tinted bubble and blur only while open (note any corner bleed).
 - [ ] Install Blur my Shell. Expected: the prefs notice shows.
 
@@ -163,7 +163,7 @@ Run each item on 48, 49, 50 and 51 where possible, on Wayland and X11 where note
 - [ ] Move a maximized window between workspaces, and add and remove a workspace. Expected: panel state follows with no stall.
 - [ ] Change wallpaper or color scheme. Expected: foreground contrast updates without a stall.
 
-### Clipboard (Wayland and X11)
+### Clipboard
 - [ ] Enable the feature. Expected: top-bar icon shows. Click "Use Super+Shift+V" in prefs, then press it. Expected: Quick Paste opens; copied text from 3 apps appears with app names.
 - [ ] Copy the same text twice. Expected: one row, moved to the top. Pin one, copy 30 others. Expected: pinned stays; the 25-entry cap holds.
 - [ ] Paste from Quick Paste into gedit, Firefox and a terminal. Expected: text lands in the previous window; the terminal gets Ctrl+Shift+V.
@@ -269,7 +269,7 @@ Run each item on 48, 49, 50 and 51 where possible, on Wayland and X11 where note
 - [ ] Hover a window in the overview, then leave. Expected: panel title follows the hover; leaving the overview focuses the hovered window.
 - [ ] Dash to Dock with `dock-blur` on, enabling the dock late. Expected: blur matches the pill, appears when the dock appears; disabling Kiwi blur removes it.
 - [ ] Turn adaptive dock colours on and off (watch dconf). Expected: dot/background colour keys change; originals return when off.
-- [ ] Turn adaptive colours on, kill the Shell hard (`killall -3 gnome-shell` on X11, or force logout), log in. Expected: Dash to Dock keys restored to originals after Kiwi enables.
+- [ ] Turn adaptive colours on, kill the Shell hard (force a logout, or kill `gnome-shell` from a VT), log in. Expected: Dash to Dock keys restored to originals after Kiwi enables.
 - [ ] Turn Launchpad on and off. Expected: icon after the first favourite, click opens the app grid; off removes the icon and cleans favourites.
 - [ ] Turn popup styling off and on. Expected: stock look when off; unchanged when on.
 - [ ] Open the Quick Settings notification list. Expected: Clear button, close/expand and titles unchanged; window-controls hover shows no pill background.
@@ -295,8 +295,9 @@ Run each item on 48, 49, 50 and 51 where possible, on Wayland and X11 where note
 - **Privacy defaults chosen by the orchestrator, you may override:** `notch-show-clipboard` off, and Spotlight empty-query clipboard off.
 
 ### Known limits
+- **Other GNOME versions come later.** This release supports only GNOME 50 on Fedora 44. The 48, 49 and 51 code paths in `lib/compat.js` are kept and were partly exercised headless (48.1, 51.1), but they are not claimed and not supported in this release.
 - **Server-side-decorated windows keep their own buttons.** Kiwi doesn't write the system `button-layout` key (Qt, Electron).
-- **Super-tap takeover:** Kiwi blocks the oldest `overlay-key` handler (assumed to be the Shell's). A Spotlight open/close probe passed on headless 48.1 and 51.1, but the probe did not press a real Super key.
+- **Super-tap takeover:** Kiwi blocks the oldest `overlay-key` handler (assumed to be the Shell's). A Spotlight open/close probe passed on headless 48.1 and 51.1 (GNOME 50 run pending), but the probe did not press a real Super key.
 - **Quick Paste uses a virtual-keyboard Ctrl+V** (Ctrl+Shift+V for terminals). Pasting into a real app window has not been tested.
 - **Liquid Glass refraction is experimental.**
   - It forces the still wallpaper-copy path and cannot bend the live backdrop.
@@ -312,7 +313,7 @@ Run each item on 48, 49, 50 and 51 where possible, on Wayland and X11 where note
 
 ## 4b. EGO submission notes
 
-- **Version coverage:** `metadata.json` lists shell-version 48, 49, 50, 51. Only headless 48.1 and 51.1 were run (section 4d); 49 and 50 were not run at all. The owner must test at least 48 and 51 on a real desktop before uploading to extensions.gnome.org.
+- **Version coverage:** `metadata.json` lists shell-version `["50"]` only. Headless runs so far were on 48.1 and 51.1, and a GNOME 50 run is in progress (section 4d). The owner must test on Fedora 44 Workstation with GNOME 50 before uploading to extensions.gnome.org.
 - **`overlay-key` handler block (Spotlight):** Kiwi finds the oldest `overlay-key` handler on the display (assumed to be the Shell's overview handler) with `signal_handler_find` and blocks only that id, then connects its own. Disable disconnects its own handler and unblocks that id. If not found, it warns and stock behaviour stays. Other extensions' handlers are untouched; the blocked handler id is logged at debug level. The assumption was read from the 51.1 source only.
 - **Dash to Dock settings writes:** the adaptive-colours feature writes Dash to Dock colour keys. Originals are saved to the Kiwi key `dock-colors-saved`, restored on disable, and restored on the next enable after a crash (`restoreStaleColors`). Keys that were at their default are `reset()`, and keys the user changed while Kiwi ran are left alone.
 - **`favorite-apps` write (Launchpad):** `launchpadApp.js` inserts a synthetic Launchpad desktop id into the shell's `favorite-apps` after the first favourite. On disable it removes only its own id, and resets the key when it was the default before and is the default again.
@@ -322,7 +323,7 @@ Run each item on 48, 49, 50 and 51 where possible, on Wayland and X11 where note
   - `osdWindowManager._showOsdWindow` (notch OSD).
   - `Main.overview._overview.controls.layout_manager._updateWorkAreaBox` (auto-hide overview inset).
   - Quick Settings internals (`_backgroundApps`, `_doNotDisturb`) in Control Center, and `AppMenu` privates in window title.
-  - Per-version differences go through `lib/compat.js`. Source was read for 48.0, 49.0, 50.0 and main, not run.
+  - Per-version differences go through `lib/compat.js`. Source was read for 48.0, 49.0, 50.0 and main. The 48/49/51 paths are kept but not claimed in this release.
 - **Other EGO-sensitive points:** a virtual keyboard injects Ctrl+V for Quick Paste; Kiwi writes `gtk.css` (Kiwi block only) and Firefox/Thunderbird profile files (only with the styling key on); the `advanced/` native module is not in the zip.
 - **Packaging:** run `make check` and `make pack`; run `make pot` first (writes `translating/kiwi.pot`).
 
@@ -331,6 +332,8 @@ Run each item on 48, 49, 50 and 51 where possible, on Wayland and X11 where note
 `make smoke` runs `tools/smoke/run-headless.sh`: a headless GNOME Shell (`--headless --wayland --virtual-monitor 1280x800`) with Kiwi enabled in a temp HOME with a private session bus, then disable/enable 10 times (argument sets the count). It never touches your real profile. Exit 0 means no Kiwi-related errors, 1 means errors, 2 means setup failure. It needs `gnome-shell`, `dbus-run-session`, `gsettings`, `glib-compile-schemas`, `gdbus`, `python3`. In the cloud container use `KIWI_SMOKE_SHELL_VERSION=46 KIWI_SMOKE_SHIM=1 make smoke`. Container result: 0 Kiwi CRITICALs; the remaining JS errors come from a Shell-46-only shim. That result is indicative only and not proof for 48 to 51; on your machine run it on 48 and 51 first.
 
 ## 4d. Real GNOME Shell testing
+
+**So far real-Shell runs were on 48.1 and 51.1 only**, before the scope was narrowed to GNOME 50. **A GNOME 50 run is in progress**; results: _to be filled in by the orchestrator_.
 
 Headless real GNOME Shell sessions ran in an Arch Linux chroot (`gnome-shell --headless --wayland --virtual-monitor 1280x800`, surfaceless renderer, no GPU):
 - **GNOME Shell 51.1** (mutter 51.1). Run `/tmp/x2/runs/20261025-185207-kiwi-is-not-apple-arch`.
@@ -369,11 +372,11 @@ Headless can't cover:
 - **Multi-monitor hardware:** the 1280x800 virtual monitor only; S9's 2-virtual-monitor run is not real hardware.
 - **Specific apps and extensions:** Firefox and Thunderbird profile styling, Dash to Dock (dock blur, colours, Launchpad), third-party Quick Settings extensions, password managers.
 - **Lock screen and suspend:** a real session lock, suspend/resume, login.
-- **GNOME 49 and 50:** not run at all. X11 was not run either (both runs are Wayland).
+- **GNOME 50 (the supported version):** pending (see above). GNOME 49 was not run. Fedora 44 packaging and its default extensions were not used (Arch chroot).
 
 ## 5. Not tested
 
-Real GNOME Shell **48.1 and 51.1 ran headless only** (section 4d). Nobody has used these features on a real desktop with a screen, GPU, real input and real apps. **GNOME 49 and 50 were not run at all**, and X11 was not run on any version.
+The supported platform is **Fedora 44 Workstation with GNOME 50**. Real GNOME Shell **48.1 and 51.1 ran headless only** (section 4d), and a **GNOME 50 headless run is in progress**. Nobody has used these features on Fedora 44 or on any real desktop with a screen, GPU, real input and real apps.
 
 Also run in the cloud:
 - Pure-logic unit tests with `gjs -m` (`bash tests/run.sh`).
@@ -383,4 +386,4 @@ Also run in the cloud:
 - A D-Bus fake-provider test for Spotlight.
 - `make smoke` against Shell 46 with shims.
 
-Everything in the section 4d "can't cover" list, and every item in section 3, is for you to run on a real machine on 48 and 51 at least, and on 49 and 50 if you can. CI results on the PR are not confirmed in this document.
+Everything in the section 4d "can't cover" list, and every item in section 3, is for you to run on Fedora 44 Workstation, GNOME 50, Wayland. CI results on the PR are not confirmed in this document.
