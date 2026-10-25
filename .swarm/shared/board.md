@@ -7,17 +7,17 @@
 | Integrator/review | S10 | setup merged; idle until review | feat/integration |
 | Window controls | S2 | done, merged | feat/window-controls |
 | Liquid Glass | S3 | done, merged incl. review fixes | feat/liquid-glass |
-| Clipboard | S4 | R1 APPROVE; nits; then S10 re-integrate | feat/clipboard |
+| Clipboard | S4 | approved; S10 integrating | feat/clipboard |
 | Spotlight | S5 | R7 CHANGES; S5 fixing | feat/spotlight |
 | Auto-hide bar | S6 | done, merged | feat/autohide |
-| Control Center | S7 | fixed; queued for S10 integration | feat/control-center |
+| Control Center | S7 | merged; Now Playing → MprisWatcher after notch | feat/control-center |
 | Notch | S8 | built; R8 review | feat/notch |
-| Stage Manager | S9 | fixed; queued for S10 integration | feat/stage-manager |
+| Stage Manager | S9 | merged; shortcut after clipboard (keybindings) | feat/stage-manager |
 | User files (D1) | D1 | built; R9 review | debt/user-files |
 | Panel transparency (D2) | D2 | done, merged | debt/panel-transparency |
 | Overview patches (D3) | D3 | done, merged | debt/overview-patches |
 | Window utils (D4) | D4 | done, merged | debt/window-utils |
-| Dock (D5) | D5 | R6 APPROVE; D5 small follow-up | debt/dock |
+| Dock (D5) | D5 | done, merged | debt/dock |
 | CSS debt (D6) | D6 | done, merged | debt/css-debt |
 | Build/CI (D7) | D7 | done, merged | debt/build-ci |
 | Docs (D8) | D8 | pass 1 merged; pass 2 at end | debt/docs |
