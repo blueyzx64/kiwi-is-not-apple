@@ -2,8 +2,6 @@
 // Dynamically adjusts top panel transparency based on window and overview state.
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import { PanelVisibility } from '../coordinators/panelVisibility.js';
-import { CleanupRegistry } from '../lib/disposables.js';
 import GLib from 'gi://GLib';
 import St from 'gi://St';
 import Gio from 'gi://Gio';
@@ -11,6 +9,7 @@ import Meta from 'gi://Meta';
 import GdkPixbuf from 'gi://GdkPixbuf';
 import Clutter from 'gi://Clutter';
 
+import { PanelVisibility } from '../coordinators/panelVisibility.js';
 import { Glass } from '../lib/glass.js';
 import { CleanupRegistry } from '../lib/disposables.js';
 
