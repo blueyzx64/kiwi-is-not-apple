@@ -169,7 +169,7 @@ function _updateLabel() {
     }
 
     // Get the current text (what's actually displayed in panel)
-    let currentText = label.text || '';
+    const currentText = label.text || '';
     let nextText = currentText;
 
     // Helpers

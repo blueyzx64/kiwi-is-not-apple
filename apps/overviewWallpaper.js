@@ -36,8 +36,8 @@ let _enabled = false;
 let _group = null;
 let _managers = [];
 let _handles = [];
-let _groupSignals = [];   // reconnected on every rebuild
-let _globalSignals = [];  // live for as long as the module is enabled
+const _groupSignals = [];   // reconnected on every rebuild
+const _globalSignals = [];  // live for as long as the module is enabled
 
 // The effect itself comes from lib/glass.js (surface 'wallpaper': a cached ACTOR-mode
 // blur whose brightness the service re-applies when the colour scheme changes).
