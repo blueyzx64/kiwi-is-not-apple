@@ -9,7 +9,7 @@
 | Liquid Glass | S3 | doing | feat/liquid-glass |
 | Clipboard | S4 | todo | feat/clipboard |
 | Spotlight | S5 | todo | feat/spotlight |
-| Auto-hide bar | S6 | todo | feat/autohide |
+| Auto-hide bar | S6 | doing | feat/autohide |
 | Control Center | S7 | todo | feat/control-center |
 | Notch | S8 | todo | feat/notch |
 | Stage Manager | S9 | todo | feat/stage-manager |
