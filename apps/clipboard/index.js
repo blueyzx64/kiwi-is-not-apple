@@ -73,6 +73,7 @@ export class ClipboardHistory {
         this._indicator = null;
         this._iconCleanup = null;
         this._ownerSerial = 0;      // bumps on every clipboard owner change
+        this._selfToken = 0;
         this._selfHash = null;      // hash of what we just wrote ourselves
     }
 
@@ -263,8 +264,10 @@ export class ClipboardHistory {
         if (type !== Meta.SelectionType.SELECTION_CLIPBOARD)
             return;
         this._ownerSerial++;
-        if (!this._canRecord())
+        if (!this._canRecord()) {
+            this._selfHash = null;
             return;
+        }
         // Who copied: the focused window now. The read happens a moment later.
         const win = global.display.focus_window;
         const shellApp = win ? Shell.WindowTracker.get_default().get_window_app(win) : null;
@@ -469,6 +472,14 @@ export class ClipboardHistory {
 
     async _setClipboard(entry) {
         this._selfHash = entry.hash;      // the owner-changed that follows is ours
+        // Forget it after a second, so a genuine identical copy later is not skipped
+        if (this._selfToken)
+            this._cleanup.release(this._selfToken);
+        this._selfToken = this._cleanup.timeout(1000, () => {
+            this._selfToken = 0;
+            this._selfHash = null;
+            return GLib.SOURCE_REMOVE;
+        }, { name: 'clipboard-self-write' });
         if (entry.kind === 'text') {
             this._clipboard.set_text(St.ClipboardType.CLIPBOARD, entry.text);
             return true;

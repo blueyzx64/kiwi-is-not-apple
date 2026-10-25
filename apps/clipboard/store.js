@@ -64,7 +64,8 @@ export class ClipboardStore {
             const path = this._images.get_path();
             if (GLib.mkdir_with_parents(path, 0o700) !== 0)
                 throw new Error(`cannot create ${path}`);
-            // kiwi/, kiwi/clipboard/ and images/ are Kiwi's own; the XDG data dir is not
+            // kiwi/, kiwi/clipboard/ and images/ are Kiwi's own. chmod of ~/.local/share/kiwi is OK
+            // only while kiwi/ holds Kiwi-only data. The XDG data dir itself is never touched.
             const own = [this._images, this._dir, this._dir.get_parent()];
             for (const dir of own) {
                 const info = await dir.query_info_async(
