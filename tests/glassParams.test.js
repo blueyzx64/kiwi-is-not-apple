@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // gjs -m tests/glassParams.test.js
-import { POWER_PROFILE_SERVICES, pickPowerProxy, isPowerSaver, followRect, readSnapshot, MIN_TINTED_ALPHA, MIN_TINT_PERCENT, wantsSurface, resolve, tintAlpha, legacySurfaces, worstCaseContrast, tintColor, SETTING_FIELDS, fillAlpha, fillClasses, FILL_STEP }
+import { POWER_PROFILE_SERVICES, pickPowerProxy, isPowerSaver, followRect, readSnapshot, MIN_TINTED_ALPHA, MIN_TINT_PERCENT, wantsSurface, resolve, tintAlpha, legacySurfaces, worstCaseContrast, tintColor, SETTING_FIELDS, fillAlpha, fillClasses, FILL_STEP, SURFACE_MIN_ALPHA }
     from '../lib/glassParams.js';
 
 let failed = 0;
@@ -133,7 +133,7 @@ check('power-saver semantics', isPowerSaver('power-saver') && !isPowerSaver('bal
     const bucket = c.find(x => /^kiwi-glass-a\d+$/.test(x));
     check('fill: base classes', c.includes('kiwi-glass-fill') && c.includes('kiwi-glass-menus') && c.includes('kiwi-glass-dark'));
     check('fill: one alpha bucket on the step', !!bucket && Number(bucket.slice(12)) % FILL_STEP === 0);
-    check('fill: bucket near the alpha', Math.abs(Number(bucket.slice(12)) / 100 - fillAlpha(p)) <= FILL_STEP / 200 + 1e-9);
+    check('fill: bucket near the alpha, never under the surface floor', Math.abs(Number(bucket.slice(12)) / 100 - Math.max(fillAlpha(p), SURFACE_MIN_ALPHA.menus)) <= FILL_STEP / 200 + 1e-9);
     check('fill: highlight follows the setting', c.includes('kiwi-glass-highlight') &&
         !fillClasses(resolve(snap({ highlight: false }), env(), 'menus'), 'menus').includes('kiwi-glass-highlight'));
     check('fill: off -> no classes', fillClasses(resolve(snap({ surfaces: [] }), env(), 'menus'), 'menus').length === 0);
