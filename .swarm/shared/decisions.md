@@ -106,3 +106,6 @@ All answered by the owner on 2026-10-25. Do not ask the owner again; ask the orc
   started" and your probe answered.
 - Test fixtures must never contain full literal secret-shaped strings (GitHub push protection blocks
   the push). Split them at runtime, e.g. `'glpat-xYz' + '123…'`.
+- Real Shell test roots: 51.1 (/tmp/x2/arch, arch2: `/tmp/x2/run-real.sh N`) and 48.1 (/tmp/x2/arch48:
+  `/tmp/x2/run-real48.sh N`). Both take `KIWI_SRC=` and `KIWI_ONLY="feature …"`. They print PROBE PASS/FAIL,
+  and print INVALID RUN when the Shell or the probe never came up. Verify a fix on both.
