@@ -200,6 +200,7 @@ export class PanelVisibilityFeature {
         cleanup.connect(Main.layoutManager, 'monitors-changed', () => {
             this._rebuildBarrier();
             this._refreshEnv();
+            this._repark();
         });
         cleanup.connect(Main.overview, 'showing', () =>
             this._dispatch({ type: 'set', patch: { overview: true } }));
@@ -297,13 +298,21 @@ export class PanelVisibilityFeature {
     _sync(animate) {
         const want = visible(this._s);
         const strut = wantsStrut(this._s);
-        if (strut !== this._strut)
-            this._applyChrome(strut);
-
         const changed = want !== this._shown;
+        if (strut !== this._strut) {
+            // A strut is only wanted while the bar is shown in place (wantsStrut implies
+            // visible). The Shell computes the strut from the transformed rect, translation
+            // included, and does not redo it when an ease ends, so land the bar at its resting
+            // place first, then re-track.
+            if (strut) {
+                this._shown = true;
+                this._animate(true, false);
+            }
+            this._applyChrome(strut);
+        }
         if (changed || !animate) {
             this._shown = want;
-            this._animate(want, animate);
+            this._animate(want, animate && !(strut && changed));
         }
 
         const wantUnredirectOff = want && this._s.fullscreen && this._s.mode !== 'always';
@@ -320,9 +329,29 @@ export class PanelVisibilityFeature {
     // is never passed (see lib/compat.js STOCK_PANEL_CHROME).
     _applyChrome(strut) {
         const lm = Main.layoutManager;
+        // Set first: the overview inset and any workareas-changed handler read it.
+        this._strut = strut;
         lm.untrackChrome(this._box);
         lm.trackChrome(this._box, { affectsStruts: strut, trackFullscreen: false });
-        this._strut = strut;
+        // trackChrome already queues a region update; make sure one is pending (private,
+        // guarded: same name in layout.js 48.0 to main).
+        lm._queueUpdateRegions?.();
+        this._refreshOverviewLayout();
+    }
+
+    // Monitors changed while parked: the bar may now sit over a new monitor above the primary
+    // (hide it), or no longer (keep it mapped for keyboard reach), and its height may differ.
+    _repark() {
+        if (this._shown)
+            return;
+        const box = this._box;
+        box.remove_all_transitions();
+        box.translation_y = -this._panelHeight();
+        box.opacity = 0;
+        if (this._monitorAbove())
+            box.hide();
+        else
+            box.show();
     }
 
     _panelHeight() {
@@ -539,7 +568,8 @@ export class PanelVisibilityFeature {
 
     // -- overview ---------------------------------------------------------------------------------
     // The overview lays itself out inside the work area. Without the strut that starts at the
-    // very top, under the bar, so push it down by the bar height while auto-hiding.
+    // very top, under the bar (which the overview always shows), so push it down by the bar
+    // height whenever the strut is off: autohide, and fullscreen-hover over a fullscreen window.
     _overviewLayout() {
         const layout = Main.overview?._overview?.controls?.layout_manager;
         return typeof layout?._updateWorkAreaBox === 'function' ? layout : null;
@@ -554,7 +584,7 @@ export class PanelVisibilityFeature {
         this._cleanup.add(() => this._refreshOverviewLayout(layout));
         this._cleanup.inject(layout, '_updateWorkAreaBox', function (orig, ...args) {
             orig.apply(this, args);
-            const inset = self._mode === 'autohide' ? self._panelHeight() : 0;
+            const inset = self._strut ? 0 : self._panelHeight();
             const box = this._workAreaBox;
             if (inset > 0 && box) {
                 const [x, y] = box.get_origin();
