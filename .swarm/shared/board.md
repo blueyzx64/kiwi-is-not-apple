@@ -11,7 +11,7 @@
 | Spotlight | S5 | done, merged | feat/spotlight |
 | Auto-hide bar | S6 | done, merged | feat/autohide |
 | Control Center | S7 | merged; Now Playing → MprisWatcher after notch | feat/control-center |
-| Notch | S8 | fixed; R8 re-check | feat/notch |
+| Notch | S8 | R8 APPROVE; S10 integrating; S8 small follow-up | feat/notch |
 | Stage Manager | S9 | done, merged incl. shortcut | feat/stage-manager |
 | User files (D1) | D1 | done, merged | debt/user-files |
 | Panel transparency (D2) | D2 | done, merged | debt/panel-transparency |
