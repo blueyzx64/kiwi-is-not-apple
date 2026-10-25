@@ -99,3 +99,5 @@ All answered by the owner on 2026-10-25. Do not ask the owner again; ask the orc
   /tmp/x2/shell.log. Probe JS with `gdbus call --session --dest org.x2.Probe --object-path /org/x2/Probe
   --method org.x2.Probe.Eval "<js>"` (from /tmp/x2/enter.sh). Every fix must be verified there.
 - Shell 48+ has no `vertical:` on St.BoxLayout. Use `orientation: Clutter.Orientation.VERTICAL`.
+- `/tmp/x2/run-real.sh` is serialized with flock. Outputs go per run to /tmp/x2/runs/<ts>-<src>/, and the
+  path is printed at the end. Expect to wait in the queue. Read your own run dir, not last-run.txt.
