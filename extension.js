@@ -22,6 +22,7 @@ import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 import { CleanupRegistry } from './lib/disposables.js';
 import { FeatureRegistry } from './lib/featureRegistry.js';
 import { FEATURES } from './features.js';
+import { Glass } from './lib/glass.js';
 import { isDockExtension, resetDockSettings } from './apps/dockUtils.js';
 
 export default class KiwiExtension extends Extension {
@@ -29,6 +30,7 @@ export default class KiwiExtension extends Extension {
         this._cleanup = new CleanupRegistry();
         this._settings = this.getSettings();
         this._interfaceSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.interface' });
+        Glass.configure(this._settings);
 
         this._features = new FeatureRegistry(CleanupRegistry);
         this._features.registerAll(FEATURES);
@@ -59,6 +61,7 @@ export default class KiwiExtension extends Extension {
         this._cleanup = null;
         this._features?.stop();
         this._features = null;
+        Glass.configure(null);
         this._interfaceSettings = null;
         resetDockSettings();
         this._settings = null;
