@@ -7,7 +7,17 @@
 > 4. App theming works by writing outside the extension. `gtkThemeManager.js` injects `@import` lines into `~/.config/gtk-{3,4}.0/gtk.css`. `mozillaThemeManager.js` rewrites the Firefox and Thunderbird profile `chrome/` folders and `user.js`. `dockColors.js` writes Dash-to-Dock's GSettings and `launchpadApp.js` writes a `.desktop` file plus `favorite-apps`.
 > 5. There is no build system beyond `gnome-extensions pack` in a release-only GitHub Action. There is no lint, no tests and no session-modes declaration, so the whole extension is torn down and rebuilt on every screen lock.
 
+> **Status note (docs card D8).** Sections below that describe the original code keep their
+> line numbers from commit `c2f3d0f`. The merged foundation work is described in
+> **section 0 (merged since)** and the rows marked *merged* in sections 1 to 7. Everything
+> here is "merged, untested on Shell" unless stated otherwise: it passes `bash tests/run.sh`
+> and eslint, but no feature has been run on a real GNOME Shell by the swarm.
+> Branches still in progress (clipboard, Spotlight, Control Center, notch, Stage Manager and
+> the debt cards D1 to D7) are **not** described as done anywhere in this file.
+
 ## Table of contents
+
+0. [Merged since the first map](#0-merged-since-the-first-map)
 
 1. [Repository layout](#1-repository-layout)
 2. [Boot flow](#2-boot-flow)
@@ -24,27 +34,87 @@ All line numbers refer to commit `c2f3d0f` (HEAD at time of writing).
 
 ---
 
+## 0. Merged since the first map
+
+Base: `ccr-f3c1f44c-rv5a8r` at `f2ab596`. Merged features: foundation (S1), window controls (S2),
+Liquid Glass (S3), auto-hide top bar (S6). Frozen APIs are in `.swarm/shared/contracts.md`.
+
+### 0.1 `lib/` (shared, no feature logic)
+
+| File (lines) | Role | Used by |
+|---|---|---|
+| `lib/disposables.js` (239) | `CleanupRegistry`: `add`, `connect`, `timeout`, `idle`, `inject`, `actor`, `file`, `release`, `dispose` (newest first, safe twice) | `extension.js`, `featureRegistry`, `glass`, `windowControls`, `panelTransparency`, `gtkThemeManager` |
+| `lib/settings.js` (153) | `KiwiSettings` wrapper (typed getters/setters, `watch`, `attach`) and `runMigrations(gs, list)` (copy old key to new key, never resets the old one) | `glass`, `windowControls`, `panelVisibility` |
+| `lib/compat.js` (170) | The only place that compares Shell versions: `SHELL_MAJOR`, `atLeast`, `SHELL_HAS_SYSTEM_DND`, `maximizeWindow/unmaximizeWindow`, `MENU_CLOSE_ARGS`, `reducedMotion`, `watchReducedMotion`, `SHADER_API`, `createShaderEffect`, `setUnredirectAllowed`, `STOCK_PANEL_CHROME` | `windowControls`, `glass`, `panelVisibility` |
+| `lib/featureRegistry.js` (230) | `FeatureRegistry`: `register/registerAll/start/refresh/apply/stop/status/isActive`. Edge-triggered enable and disable, per-feature `CleanupRegistry`, errors caught per feature, `needs`, `conflictsWith`, `restartOn`, `startOnly` | `extension.js` |
+| `lib/glass.js` (780) | `Glass` singleton (GlassService): `attach`, `wants`, `watch`, `configure`, `motion`, `snapshot`; tiers, still-wallpaper path, repaint throttle, legacy blur-key migration | `liquidGlass`, `panelTransparency`, `dockBlur`, `overviewWallpaper` |
+| `lib/glassParams.js` (169) | Pure functions that turn a settings snapshot into blur, tint and contrast parameters | `glass`, `liquidGlass`, tests |
+| `lib/glassRefraction.js` (73) | Refraction shader effect through `createShaderEffect` | `glass` |
+| `lib/blurPaintSignal.js` (39) | Moved here from `apps/`; repaint hook for blur | `glass` |
+
+### 0.2 `coordinators/`
+
+| File (lines) | Role |
+|---|---|
+| `coordinators/panelLayout.js` (175) and `panelLayoutModel.js` (31) | `PanelLayout.claim(cleanup, {id, actor, box, anchor})` places a panel actor with anchors (`first`, `last`, `before`, `after`) and re-sorts in one idle when a claimed box gets a child. Only claimant today: `window-controls` |
+| `coordinators/panelVisibility.js` (569) and `panelVisibilityModel.js` (208) | `PanelVisibility`: `hold`, `reveal`, `isVisible`, `autoHiding`, `mode`, `connect`. `PanelVisibilityFeature` is the `panel-autohide` feature: pressure barrier on the top edge, struts, slide animation, `kiwi-panel-autohide` class. The pure state machine and edge-segment math are in the model file |
+
+`panelHover.js` was **removed** by the auto-hide merge. Its job (reveal in fullscreen) is mode
+`fullscreen-hover` of `PanelVisibility`. The old key `panel-hover-fullscreen` stays in the schema only so
+`runMigrations` can copy it to `panel-autohide` and `panel-autohide-fullscreen-only`.
+
+### 0.3 Feature folders
+
+| Path | Role |
+|---|---|
+| `apps/windowControls.js` (428) plus `apps/windowControls/{model,icons,prefs}.js` | Panel window controls as a `cls` feature (`WindowControlsFeature`). Shown for every focused window by default (`window-controls-scope`: all, maximized, fullscreen). Position `window-controls-position`: system, left, right, resolved by the pure `model.js` against the WM `button-layout`. `titlebarHideSheet()` picks which `css/hide-titlebar*.css` removes real titlebar buttons (`remove-titlebar-buttons`). `icons.js` caches the icon directory listing |
+| `apps/liquidGlass/{index,prefs}.js` | `LiquidGlass` feature (`liquid-glass` key). Attaches glass to the panel (only while Panel Transparency is off, class `kiwi-glass-panel`) and to the Quick Settings and date menus. The dock is attached by `dockBlur.js` and the overview wallpaper by `overviewWallpaper.js`; the `overlays` surface is for future features to attach themselves. Prefs page *Liquid Glass* |
+| `apps/autohide/{prefs.js,style.css}` | Prefs page *Auto-hide Top Bar*; `style.css` is the source of the `/* feature: autohide */` block in `stylesheet.css` |
+| `features.js` (267) | `FEATURES` array that replaces the dispatcher. Order is start order |
+| `tests/*.test.js`, `tests/run.sh` | Seven pure-logic test files run with `gjs -m` (disposables, featureRegistry, settings, glassParams, panelLayoutModel, panelVisibilityModel, windowControlsModel) |
+
+---
+
 ## 1. Repository layout
 
 | Path | Lines | Role |
 |---|---|---|
-| `extension.js` | 365 | Entry point, module registry, settings dispatcher |
-| `prefs.js` | 1107 | Adw preferences window (6 pages), all in one `fillPreferencesWindow()` |
+| `extension.js` | 69 | *Merged:* thin entry point. Builds a `FeatureRegistry` from `features.js`, forwards `changed` signals, hands over `ctx`. The old 365-line dispatcher is gone |
+| `features.js` | 267 | *Merged:* feature list (see 0.3) |
+| `lib/`, `coordinators/` | ~2.6k | *Merged:* see section 0 |
+| `tests/` | — | *Merged:* `run.sh` plus seven `*.test.js` files |
+| `prefs.js` | 1133 | Adw preferences window. Original pages inline in `fillPreferencesWindow()`; feature pages come from `apps/<feature>/prefs.js` (`FEATURE_PREFS`) |
 | `metadata.json` | 19 | uuid `kiwi@kemma`, shell 48–51, gettext-domain `kiwi@kemma`, **no `session-modes`** |
-| `apps/*.js` | ~12.8k | 37 modules (feature modules plus helpers) |
-| `stylesheet.css` | 899 | Shell (St) styles, mostly gated behind `kiwi-*` classes |
-| `css/*.css` | ~2.9k | GTK3/GTK4 titlebutton themes, hide-titlebar rules, app fixes, Firefox/Thunderbird userChrome, prefs.css |
+| `apps/*.js` | ~12k | 35 modules (`panelHover.js` and `blurPaintSignal.js` left; `windowControls.js` shrank to 428 lines) plus the folders `windowControls/`, `liquidGlass/`, `autohide/` |
+| `stylesheet.css` | 965 | Shell (St) styles, mostly gated behind `kiwi-*` classes |
+| `css/*.css` (29 files) | ~3.3k | GTK3/GTK4 titlebutton themes, hide-titlebar rules, app fixes, Firefox/Thunderbird userChrome, prefs.css |
 | `icons/` | — | PNG titlebuttons (`titlebuttons/`, `titlebuttons-glass/`, @2 variants), SVG symbolic icons |
-| `schemas/…kiwi.gschema.xml` | 284 | 47 keys, ordered like the prefs pages |
+| `schemas/…kiwi.gschema.xml` | 388 | 64 keys (17 added: 3 window controls, 9 Liquid Glass, 5 auto-hide) |
 | `po/*.po`, `translating/` | — | 17 languages, `kiwi.pot` (193 msgids), compile script |
 | `advanced/` | — | Optional GTK3 module `titlebuttons_hover.c` with a **committed prebuilt `.so`** and install scripts |
-| `.github/workflows/pack-release.yml` | 60 | Packs the zip on release |
+| `.github/workflows/pack-release.yml` | 60 | Packs the zip on release (debt card D7 may change CI; not described here until merged) |
 
 ---
 
 ## 2. Boot flow
 
-### 2.1 `enable()` — `extension.js:289-311`
+> **Merged, untested on Shell.** The dispatcher described in 2.1 to 2.4 was replaced by
+> `FeatureRegistry` plus `features.js`. Read 2.0 first; 2.1 to 2.4 are kept as history of what
+> each feature's old conditions were (the `when`/`setting` fields in `features.js` carry them now).
+
+### 2.0 Current flow (`extension.js`, 69 lines)
+
+1. `enable()` creates a `CleanupRegistry`, gets the settings, opens `org.gnome.desktop.interface`, calls `Glass.configure(settings)`.
+2. A `FeatureRegistry` registers every entry of `FEATURES` (`features.js`).
+3. The registry is wired to three sources: the Kiwi settings `changed` signal runs `refresh(key)`; `interface changed::show-battery-percentage` runs `apply('battery-percentage')`; `Main.extensionManager extension-state-changed` runs `refresh(null)` when the dock extension (`isDockExtension`) changes state.
+4. `start(ctx)` with `ctx = {extension, settings, gettext, interfaceSettings}` starts every wanted feature in list order.
+5. `disable()` disposes the extension registry, calls `stop()` (reverse order, each feature's own cleanup registry is disposed after its `disable()`), unconfigures Glass, resets the cached dock settings.
+
+Entries in `features.js`: 34 ids. Two are `startOnly` (`gtk-theme`, `focus-new-windows`). Three use `cls` (`window-controls`, `panel-autohide`, `liquid-glass`) and own their signals through the cleanup registry they are given. The rest are the old modules with `reapply: true` (legacy: `enable()` re-runs on every settings change while wanted). `conflictsWith` and `needs` exist in the engine but no merged entry uses them yet. `panel-hover-fullscreen` is no longer an id; `panel-autohide` replaced it.
+
+Order matters in two places: `minimize-to-dock` is registered before `downloads-in-dock` so the stack lets go first on stop; `calendar` is registered before `window-controls`, and `PanelLayout` keeps the controls last when the calendar moves the date menu.
+
+### 2.1 `enable()` — `extension.js:289-311` (old, replaced)
 
 1. `this._settings = this.getSettings()` and a `changed` handler that forwards any key to `_on_settings_changed(key)` (`:290-291`).
 2. `org.gnome.desktop.interface` settings watch `show-battery-percentage` so that Kiwi's battery label steps aside when GNOME shows its own (`:292-294`, `_applyBatteryPercentage` `:280-287`).
@@ -53,7 +123,7 @@ All line numbers refer to commit `c2f3d0f` (HEAD at time of writing).
 5. `focusLaunchedWindowEnable()` runs only at enable. Changing `focus-new-windows` needs a reload, as the schema description says (`:307-308`).
 6. `_on_settings_changed(null)` applies every module (`:310`).
 
-### 2.2 The dispatcher — `_on_settings_changed(key)` (`extension.js:57-277`)
+### 2.2 The dispatcher — `_on_settings_changed(key)` (`extension.js:57-277`) (old, replaced by `features.js`)
 
 The dispatcher is a single linear function that evaluates **every** module on **every** key change. There is no per-key routing except a few special cases:
 
@@ -71,13 +141,13 @@ The dispatcher is a single linear function that evaluates **every** module on **
 
 **Contract implied for every module:** `enable()` must be a no-op when already enabled, and `disable()` must be safe when never enabled. Most modules guard with an `enabled`/instance flag. See `panelTransparency.js:854-858` and `panelHover.js:353-359` for the comments explaining why.
 
-### 2.3 `disable()` — `extension.js:313-364`
+### 2.3 `disable()` — `extension.js:313-364` (old, replaced by `FeatureRegistry.stop()`)
 
 `disable()` disconnects its three signals, then calls every module's `disable()` in a fixed order. `downloadsStackDisable()` must run before `minimizedToDockDisable()` because the stack borrows the minimized strip (`:356-359`). `resetDockSettings()` drops the cached Dash-to-Dock `Gio.Settings` (`dockUtils.js:190`).
 
 Because `metadata.json` declares no `session-modes`, GNOME Shell calls `disable()` on every screen lock and `enable()` on unlock. Commit `bbeac23` ("comply with EGO review guidelines") **removed** a `Main.sessionMode.isLocked` early-return in `launchpadApp.disable()`, so reviewers expect full teardown on lock.
 
-### 2.4 Module registration
+### 2.4 Module registration (old)
 
 There is no registry. Each module is imported by name (`extension.js:22-54`) and called explicitly. Module call signatures differ:
 
@@ -94,7 +164,10 @@ There is no registry. Each module is imported by name (`extension.js:22-54`) and
 
 ## 3. Preferences (`prefs.js`)
 
-`KiwiPreferences.fillPreferencesWindow()` (`prefs.js:111-1106`) builds everything inline. Helpers: `_createLinkRow` (`:38`), `_addSwitchRows` (`:56`), `_withDockActive` (D-Bus `ListExtensions` to the shell, `:77-91`), `_createEnumComboRow` (`:94-109`).
+`KiwiPreferences.fillPreferencesWindow()` (`prefs.js:111-1106`) builds everything inline.
+
+> **Merged, untested on Shell.** Page order now: About, Panel, Dock, Buttons, Options, **Liquid Glass**, **Auto-hide Top Bar**, Advanced (last, with *Restore Defaults*). `FEATURE_PREFS` imports `apps/liquidGlass/prefs.js`, `apps/windowControls/prefs.js` and `apps/autohide/prefs.js`; each exports `PAGE` and `buildPrefs()` (contract in `.swarm/shared/contracts.md`). The window controls groups join the Buttons page (`PAGE.into: 'windowControls'`) and replace the old *fullscreen-only* row. The `panel-hover-fullscreen` row is gone (the Auto-hide page replaces it). The panel-blur and dock-blur rows defer to Liquid Glass. Line numbers in the table below are the original ones.
+ Helpers: `_createLinkRow` (`:38`), `_addSwitchRows` (`:56`), `_withDockActive` (D-Bus `ListExtensions` to the shell, `:77-91`), `_createEnumComboRow` (`:94-109`).
 
 | Page (icon) | Line | Groups → rows (keys) |
 |---|---|---|
@@ -166,6 +239,22 @@ The `schema` column gives the line in `schemas/org.gnome.shell.extensions.kiwi.g
 | `reduce-window-animations` (true) | 273 | ext:263 | `Main.wm._shouldAnimateActor` override with a one-shot `actor.ease` swap |
 | `transparent-move` (true) | 278 | ext:92 | opacity of window surface actors during `grab-op-begin/end` |
 
+**Keys added by merged features** (schema lines at `f2ab596`; all *merged, untested on Shell*):
+
+| Key (default) | Owner | Effect |
+|---|---|---|
+| `window-controls-scope` ('all') | `windowControls`, `gtkThemeManager` | which windows get panel buttons: all, maximized, fullscreen. Migrated once from `show-window-controls-fullscreen-only` |
+| `window-controls-position` ('system') | `windowControls` | system (follow WM `button-layout`), left, right |
+| `remove-titlebar-buttons` (true) | `gtkThemeManager` | picks `hide-titlebar{,-fullscreen,-always}{3,4}.css` through `titlebarHideSheet()` |
+| `liquid-glass` (true) | `liquidGlass`, `glass` | master switch |
+| `liquid-glass-style` ('tinted'), `-blur` (30), `-tint` (55), `-highlight` (true), `-refraction` (false) | `glass` | look of the glass layers |
+| `liquid-glass-surfaces` (panel, menus, dock, overlays) | `glass`, `liquidGlass`, `dockBlur` | which surfaces get glass. Seeded from the legacy `panel-blur` and `dock-blur` |
+| `liquid-glass-performance` (false), `-off-in-powersave` (true) | `glass` | still-wallpaper path and power-saver behaviour |
+| `panel-autohide` (true), `panel-autohide-fullscreen-only` (false) | `panelVisibility` | mode: always, fullscreen-hover or autohide. Migrated once from `panel-hover-fullscreen` |
+| `panel-autohide-reveal-delay` (150), `-hide-delay` (600), `-keep-on-desktop` (false) | `panelVisibility` | timings and desktop behaviour |
+
+**Deprecated, still in the schema:** `panel-hover-fullscreen` and `show-window-controls-fullscreen-only` are read only by the one-time migrations. `panel-blur` and `dock-blur` are legacy inputs to Liquid Glass (`Glass.wants`).
+
 External settings that Kiwi reads or writes:
 
 | Setting | Access | Where |
@@ -187,13 +276,15 @@ Legend: **Cleanup** grades come from reading `disable()`. A = everything created
 
 ### 5.1 Panel modules
 
+Rows for `windowControls.js` and `panelHover.js` were updated for merged work. The other rows still describe the original code unless they say *Merged*.
+
 | File (lines) | Purpose | Shell internals touched | Keys | Cleanup |
 |---|---|---|---|---|
-| `windowControls.js` (577) | Close/min/max buttons in the panel for maximized or fullscreen focused windows | `PanelMenu.Button` via `addToStatusArea('window-controls')` at `_rightBox` end or `_leftBox` len-1 (`:554-570`); re-parents its container on button-layout side change (`:536-552`); `global.display notify::focus-window`; per-window `notify::maximized-horizontally/vertically/fullscreen` (`:265-267`); `Main.overview showing/hidden`; `Main.screenShield active-changed`; 100ms and 3000ms timeouts (`:163,:415`) | enable-app-window-buttons, button-type, button-size, show-window-controls(-fullscreen-only), WM button-layout | A- (signals tracked; new `St.Icon` on every hover; sync `query_exists` file probing `:460-501`) |
+| `windowControls.js` (428) + `windowControls/` | *Merged, untested on Shell.* Close/min/max buttons in the panel for the focused window (scope setting). Rewritten as `WindowControlsFeature` (class entry). See section 0.3 | Panel button added to the status area and placed by `PanelLayout.claim` (`window-controls`, left before `window-title`, or right last); `global.display notify::focus-window`; per-window maximize/fullscreen signals; `Main.overview showing/hidden`; `Main.screenShield active-changed`; all in one `CleanupRegistry` | enable-app-window-buttons, button-type, button-size, show-window-controls, window-controls-scope, window-controls-position, remove-titlebar-buttons, WM button-layout | A (by design; icon lookups use a cached directory listing) |
 | `windowTitle.js` (456) | App name and window title in `_leftBox`, AppMenu plus Kiwi items (tiling grid, Fullscreen, Restore, Always on Top) | `addToStatusArea('window-title', …, -1, 'left')`; `AppMenu` private fields `_newWindowItem`, `_actionSection`, `_quitItem`, `_app`, `_arrowAlignment` (`:279-298,:411`); `global.stage captured-event` while in the overview (`:147`); idles (`:202,:266`) | show-window-title*, show-tiling-title-menu | A |
 | `windowTiling.js` (399) | Tiling engine (`move_resize_frame` on work-area fractions), glyph grid, drag-to-restore | `global.display grab-op-begin` (`:263`); expando `win._kiwiRestore`; version branch `MAXIMIZE_ARGS` 48 vs 49+ (`:51`); `isMaximized` uses the `maximized_horizontally/vertically` properties (`:62`) | — | A (stashes cleared `:269`) |
-| `panelHover.js` (490) | Reveal panel on top-edge hover **only in fullscreen** | `layoutManager.addChrome(1px actor, {trackFullscreen:false})` (`:364`); `layoutManager._trackedActors[].trackFullscreen` and `lm._updateVisibility()` (`:198-217,:484-487`); `panelBox.translation_y` easing; **ghost PopupMenu** registered in `Main.panel.menuManager` to keep the panel up for GTK4 (`:156-189`); 1s poll (`:73`); per-window `notify::fullscreen`; stage `button-release-event` | panel-hover-fullscreen | B (restores `trackFullscreen`; hover actor sized once to the primary monitor) |
-| `panelTransparency.js` (995) | Translucent panel, optional blur, adaptive dark/light foreground, tray icon inversion | Owns `Main.panel.style` background and re-asserts it on `notify::style` (`:511-525,:863-866`); `Main.layoutManager._backgroundGroup` children (`:137`); `Meta.BackgroundGroup` inserted at `panelBox` index 0 (`:79-101`); `St.ThemeContext changed`; per-window signals on the **enable-time workspace only** (`:669-686`); `notify::fullscreened` (non-existent property, `:701`); **2s poll** (`:910`); sync `GdkPixbuf` wallpaper decode (`:260`) | panel-transparency* | B |
+| `panelHover.js` | **Removed** (merged with auto-hide). Replaced by `coordinators/panelVisibility.js`, see section 0.2 | — | panel-autohide* | — |
+| `panelTransparency.js` (995) | Translucent panel, optional blur, adaptive dark/light foreground, tray icon inversion | Owns `Main.panel.style` background and re-asserts it on `notify::style` (`:511-525,:863-866`); `Main.layoutManager._backgroundGroup` children (`:137`); `Meta.BackgroundGroup` inserted at `panelBox` index 0 (`:79-101`); `St.ThemeContext changed`; per-window signals on the **enable-time workspace only** (`:669-686`); `notify::fullscreened` (non-existent property, `:701`); **2s poll** (`:910`); sync `GdkPixbuf` wallpaper decode (`:260`). *Merged:* blur now goes through `Glass.attach` (no private `BlurEffect`), and it reads `PanelVisibility.autoHiding()` / `connect()` to drop its "opaque when a window touches" rule while the bar auto-hides | panel-transparency* | B |
 | `panelStyling.js` (25) | Adds the gate classes `.kiwi-panel-styled` (panel) and `.kiwi-popup-styled` (uiGroup) | `Main.panel`, `Main.uiGroup` style classes | panel-styling, popup-menu-styling | A |
 | `calendar.js` (289) | Moves the clock to the right, hides the dateMenu message list, moves banners to the top-right, notification dot | `dateMenu.container` `_centerBox`→`_rightBox` (`:198-201`); `dateMenu._messageList.hide()`, `dateMenu._calendar`, `dateMenu.menu.box.style` (`:206-215`); **`Main.messageTray._bannerBin` x/y align** (`:220-228`); dot into `quickSettings._indicators` or `_rightBox` (`:54-56,:86`); `messageTray source-added/removed`, `_sources`, `_notificationQueue` (`:163,:280-287`); 500ms and **5s poll** (`:75,:167`) | move-calendar-right, keep-notification-panel, notification-indicator-style | A- |
 | `quickSettingsNotifications.js` (382) | Notification list inside Quick Settings, custom DnD button and panel moon | `quickSettings.menu._grid.add_child` + `layout_manager.child_set_property(column-span 2)` (`:276-286`); `quickSettings.menu.actor.set_style(max-height 90%)` (`:278-280`); `_system._systemItem.child` (`:46`); subclass of `MessageList.MessageView` with `_setupMpris(){}` (`:163-167`); `Main.messageTray.connectObject`; **unbounded 200ms retry** (`:131-137`); writes `show-banners` | custom-dnd-button | A- |
@@ -210,8 +301,8 @@ Legend: **Cleanup** grades come from reading `disable()`. A = everything created
 
 | File (lines) | Purpose | Shell internals touched | Keys | Cleanup |
 |---|---|---|---|---|
-| `overviewWallpaper.js` (138) | GPU-blurred wallpaper (ACTOR blur, radius 60) behind the overview | `Meta.BackgroundGroup` at `layoutManager.overviewGroup` index 0; `Background.BackgroundManager({controlPosition:false})`; re-sinks on `child-added` (`:105-108`); `monitors-changed` rebuild | overview-wallpaper-background | A |
-| `overviewSeamlessZoom.js` (252) | Whole-monitor zoom into the overview; touchpad swipe smoothing | **Direct** `Workspace.prototype._init` replacement (`:143-149`); `Object.defineProperty(layout,'_workarea')` (`:71-89`); `controls.layout_manager._computeWorkspacesBoxForState` (`:129-141`); `Main.overview._swipeTracker._touchpadGesture.emit` (`:153-159`); `controls.gestureProgress/gestureEnd` own-property overrides (`:180-206`); custom `WorkspaceBackground` subclass | overview-seamless-zoom | B (restores only if nobody else re-patched, `:236`) |
+| `overviewWallpaper.js` (138) | GPU-blurred wallpaper behind the overview. *Merged:* blur through `Glass.attach` (surface `wallpaper`) | `Meta.BackgroundGroup` at `layoutManager.overviewGroup` index 0; `Background.BackgroundManager({controlPosition:false})`; re-sinks on `child-added` (`:105-108`); `monitors-changed` rebuild | overview-wallpaper-background | A |
+| `overviewSeamlessZoom.js` (252) | Whole-monitor zoom into the overview; touchpad swipe smoothing | **Direct** `Workspace.prototype._init` replacement (`:143-149`); *merged:* its box math starts from the layout's own `_workAreaBox`, which `PanelVisibility` insets while the bar auto-hides; `Object.defineProperty(layout,'_workarea')` (`:71-89`); `controls.layout_manager._computeWorkspacesBoxForState` (`:129-141`); `Main.overview._swipeTracker._touchpadGesture.emit` (`:153-159`); `controls.gestureProgress/gestureEnd` own-property overrides (`:180-206`); custom `WorkspaceBackground` subclass | overview-seamless-zoom | B (restores only if nobody else re-patched, `:236`) |
 | `focusOnOverviewExit.js` (109) | Focus the window under the pointer on overview exit | `ControlsManager.prototype.prepareToLeaveOverview` (InjectionManager); stage `captured-event` | focus-on-overview-exit | A |
 | `skipOverviewOnLogin.js` (67) | No overview at login | Replaces `Main.overview.show` as an own property (`:13-21`); `layoutManager._startingUp`, `startup-complete` | skip-overview-on-login | B (re-patches on every unlock because `firstLogin` resets at `:66`) |
 | `hideMinimizedWindows.js` (36) | Minimized windows hidden from overview and alt-tab | InjectionManager on `Workspace._isOverviewWindow`, `WindowCyclerPopup/GroupCyclerPopup._getWindows`, `WindowSwitcherPopup._getWindowList` | hide-minimized-windows (or minimize-to-dock) | A |
@@ -225,7 +316,7 @@ Legend: **Cleanup** grades come from reading `disable()`. A = everything created
 | File (lines) | Purpose | Shell or D2D internals touched | Keys | Cleanup |
 |---|---|---|---|---|
 | `dockUtils.js` (322) | Shared D2D discovery, item building, separators, press darkening, schema lookup | `dockContainer._slider`, `dash._box`, `_boxContainer`, `_isHorizontal`, `_position`, `_hookUpLabel`, `iconSize`, `child._delegate.app/icon` (`:68-304`); `ExtensionState.ACTIVE` | — | n/a |
-| `dockBlur.js` (325) | Blur behind the dash pill | `Meta.BackgroundGroup` at dashBox index 0; repaint signals on `restacked`, wm map/destroy/…, `_backgroundGroup`; own `uiGroup child-added` plus a 1s × 10 retry (**duplicates `watchDocks`**, `:281-304`); 200ms × 25 allocation retry | dock-blur | A |
+| `dockBlur.js` (325) | Blur behind the dash pill. *Merged:* blur through `Glass.attach` (surface `dock`); runs when `Glass.wants('dock')` | `Meta.BackgroundGroup` at dashBox index 0; repaint signals on `restacked`, wm map/destroy/…, `_backgroundGroup`; own `uiGroup child-added` plus a 1s × 10 retry (**duplicates `watchDocks`**, `:281-304`); 200ms × 25 allocation retry | dock-blur | A |
 | `dockStyling.js` (125) | `.kiwi-dock-styled`, press darkening, tooltip scheme classes | uiGroup `child-added`, `dash._box child-added`, `St.Settings notify::color-scheme`; `button._kiwiPressId` expando | dock-styling | A |
 | `dockColors.js` (422) | Indicator and separator colours follow the content behind the dock | `Shell.Screenshot.screenshot_area` (`:212`); **writes D2D GSettings** (`:273,:283`), restored only in `disable()` (`:412`) | dock-adaptive-colors | B (crash leaves D2D keys changed) |
 | `minimizedToDock.js` (856) | Minimized-window thumbnails in a strip before the trash; adopts the D2D trash item | `paint_to_content` snapshots (`:76`); `win.set_icon_geometry` on **every** eligible window (`:641-664`); `notify::minimized` on all windows; moves `dash._separator`, reads `_dragPlaceholder` (`:472-489`); re-parents the trash item (`:535-551`); `Clutter.ShaderEffect` vs `new_with_snippet` (51) branch (`:208-217`) | minimize-to-dock | B (snapshot map deliberately survives disable, `:794-800`) |
@@ -236,9 +327,9 @@ Legend: **Cleanup** grades come from reading `disable()`. A = everything created
 
 | File (lines) | Purpose | Writes | Cleanup |
 |---|---|---|---|
-| `gtkThemeManager.js` (191) | Managed `@import` block in `~/.config/gtk-{3,4}.0/gtk.css` | Creates the directories, prepends the block, deletes the file if only Kiwi content is left (`:90-137`) | A- (async removal on disable is not awaited; overlaps the next enable) |
+| `gtkThemeManager.js` (191) | Managed `@import` block in `~/.config/gtk-{3,4}.0/gtk.css`. *Merged:* titlebar-removal sheet chosen by `titlebarHideSheet()`; file jobs share one queue (`createJobQueue`) | Creates the directories, prepends the block, deletes the file if only Kiwi content is left (`:90-137`) | A- (async removal on disable is not awaited; overlaps the next enable) |
 | `mozillaThemeManager.js` (293) + `firefoxThemeManager.js` (26), `thunderbirdThemeManager.js` (26) | Firefox and Thunderbird `chrome/userChrome.css` imports | Moves the user's `chrome/` to `chrome.bak`, writes `chrome/` plus a `.kiwi-managed` marker, appends `toolkit.legacyUserProfileCustomizations.stylesheets` to `user.js`, deletes `chrome/` and restores `.bak` on disable (`:48-146`) | **C** (deletes directories it may not own; never reverts `user.js`; all sync IO) |
-| `blurPaintSignal.js` (39) | Clutter.Effect that emits `update-blur` on paint (blur-my-shell hack for GNOME Shell #2857) | — | n/a |
+| `blurPaintSignal.js` (39), now `lib/blurPaintSignal.js` | Clutter.Effect that emits `update-blur` on paint (blur-my-shell hack for GNOME Shell #2857) | — | n/a |
 
 ---
 
@@ -260,25 +351,42 @@ panelMedia ─► mediaPlayback (MediaItem, Source)
 firefoxThemeManager, thunderbirdThemeManager ─► mozillaThemeManager
 ```
 
+*Merged, untested on Shell.* Current graph:
+
+```
+extension.js ──► features.js, lib/featureRegistry, lib/disposables, lib/glass, dockUtils
+features.js ──► every apps/ module, apps/windowControls.js, apps/liquidGlass/index.js,
+                coordinators/panelVisibility, lib/glass
+apps/windowControls.js ──► lib/{disposables,settings,compat}, coordinators/panelLayout,
+                           windowTiling, windowControls/{model,icons}
+apps/gtkThemeManager.js ──► lib/{disposables,settings}, windowControls/model
+apps/panelTransparency.js ──► lib/{disposables,glass}, coordinators/panelVisibility
+apps/dockBlur.js, apps/overviewWallpaper.js, apps/liquidGlass/index.js ──► lib/glass
+lib/glass.js ──► lib/{disposables,settings,compat,blurPaintSignal,glassRefraction,glassParams}
+coordinators/panelVisibility.js ──► lib/{settings,compat}, panelVisibilityModel
+```
+
 ### 6.2 Implicit couplings (no import, but behaviour depends on another module)
 
 | Coupling | Evidence |
 |---|---|
-| windowControls needs to be the last child of `_rightBox`, after calendar's `dateMenu` | extension.js:121-127; windowControls.js:559-562 |
-| windowControls on the left assumes windowTitle is the last `_leftBox` child | windowControls.js:548-550, 564-567; windowTitle.js:446 |
+| ~~windowControls needs to be the last child of `_rightBox`~~ *Merged:* `PanelLayout` re-sorts the claim in one idle when the calendar re-adds the date menu, so the destroy-and-recreate hack in the old dispatcher is gone | coordinators/panelLayout.js |
+| windowControls on the left is anchored `before` the `window-title` role through `PanelLayout` | apps/windowControls.js (claim), coordinators/panelLayout.js |
 | downloadsStack joins minimizedToDock's `kiwi-minimized-strip` by actor name | downloadsStack.js:864-878 |
 | downloadsStack reads dockStyling's `.kiwi-dock-styled` class to decide press darkening | downloadsStack.js:830-832 |
-| minimize-to-dock forces hideMinimizedWindows | extension.js:178 |
+| minimize-to-dock forces hideMinimizedWindows | features.js (`hide-minimized-windows` `when`) |
 | panelTransparency's `.kiwi-panel-dark-text` / `-light-text` restyle keyboardIndicator's label | stylesheet.css:749-768 |
 | calendar's dot placement depends on `keep-notification-panel` and on dateMenu's index in `_rightBox` | calendar.js:53-56, 81-85 |
-| quickSettingsNotifications and the custom DnD only exist when calendar is moved and the panel is not kept | extension.js:106-119 |
-| panelHover counts *any* `statusArea[*].menu.isOpen` to stay revealed | panelHover.js:53-55 |
+| quickSettingsNotifications and the custom DnD only exist when calendar is moved and the panel is not kept | features.js (`when` of both entries) |
+| ~~panelHover counts any open status menu~~ *Merged:* `PanelVisibility` tracks every panel menu (`Main.panel.menuManager` `addMenu` is injected) and holds the bar while one is open; other features use `PanelVisibility.hold(cleanup, name)` | coordinators/panelVisibility.js |
+| panelTransparency reads `PanelVisibility.autoHiding()` and re-checks on its changes. overviewSeamlessZoom relies on the layout work-area box that PanelVisibility insets | apps/panelTransparency.js:483,770; apps/overviewSeamlessZoom.js:136 |
+| blur: panelTransparency, dockBlur, overviewWallpaper and liquidGlass all share `lib/glass.js`; `Glass.wants()` decides between the legacy `panel-blur`/`dock-blur` keys and Liquid Glass | lib/glass.js |
 | panelMedia's redraw callback exists for Blur My Shell's dynamic popup blur | panelMedia.js:139-144 |
 
 ### 6.3 Global and expando state
 
-* Module-level `let` singletons in every module. There are no classes on the extension object.
-* Expandos on Shell or Mutter objects: `win._kiwiRestore` (windowTiling), `win._kiwi_isolated` / `_kiwi_fullscreenWorkspaceIndex` / `_kiwi_originalWorkspaceIndex` (moveFullscreenWindow), `actor._kiwiEasePatched` (reduceWindowAnimations), `label._kiwiOriginalText` (keyboardIndicator), `button._kiwiPressId` (dockStyling), `button._currentSystemIcon` (windowControls), `_ghostMenu._ghostAnchor` (panelHover).
+* Module-level `let` singletons in the legacy modules. Merged features use classes with a `CleanupRegistry` (`WindowControlsFeature`, `LiquidGlass`, `PanelVisibilityFeature`). Module singletons that other code imports: `Glass` (lib/glass.js), `PanelLayout`, `PanelVisibility`.
+* Expandos on Shell or Mutter objects: `win._kiwiRestore` (windowTiling), `win._kiwi_isolated` / `_kiwi_fullscreenWorkspaceIndex` / `_kiwi_originalWorkspaceIndex` (moveFullscreenWindow), `actor._kiwiEasePatched` (reduceWindowAnimations), `label._kiwiOriginalText` (keyboardIndicator), `button._kiwiPressId` (dockStyling), `button._currentSystemIcon` (old windowControls, gone with the rewrite), `_ghostMenu._ghostAnchor` (old panelHover, gone).
 * `Gio._promisify` is called at module load in `launchpadApp.js:12-16` and `mediaPlayback.js:27-28`, and in `gtkThemeManager.enable()` (`:179`).
 
 ---
@@ -287,19 +395,19 @@ firefoxThemeManager, thunderbirdThemeManager ─► mozillaThemeManager
 
 ```
 Main.panel
-├─ _leftBox:   [activities (maybe hidden)] … [window-controls if layout is left, at len-1] [window-title (-1)]
+├─ _leftBox:   [activities (maybe hidden)] … [window-controls if placed left: PanelLayout, before window-title] [window-title (-1)]
 ├─ _centerBox: [dateMenu]  ← removed by calendar.js when move-calendar-right=true (default)
 └─ _rightBox:  [lock-indicator @0] [kiwi-media @1] … [keyboard] [quickSettings]
-               [dateMenu (moved here)] [notification dot if keep-notification-panel] [window-controls (last)]
+               [dateMenu (moved here)] [notification dot if keep-notification-panel] [window-controls if placed right: PanelLayout, last]
 
 quickSettings._indicators (panel side): [username @0] … stock indicators … [battery % label] [DnD moon] [notification dot]
 quickSettings.menu._grid: stock toggles (built-in DnD toggle removed on 49+) … [NotificationWidget (col-span 2)]
 quickSettings._system._systemItem.child: … [Kiwi DnD button] [LockItem] …
 quickSettings.menu.actor style: "max-height: 90% of monitor"
 Main.messageTray._bannerBin: x_expand, x_align END, y_align START (top-right banners)
-Main.layoutManager.panelBox: [kiwi-panel-blur-group @0] [panel]; translation_y driven by panelHover
+Main.layoutManager.panelBox: [glass layer from Glass.attach, when the panel surface is on] [panel]; visibility, strut and translation_y driven by PanelVisibility (merged)
 Main.layoutManager.overviewGroup: [kiwi-overview-blur-group @0] …
-Main.uiGroup: [panel-hover-area (chrome)] [kiwi-downloads-fan (top chrome, modal)] [ghost menu + anchor]
+Main.uiGroup: [kiwi-downloads-fan (top chrome, modal)]   (the old panel-hover chrome and ghost menu are gone; PanelVisibility adds edge pressure-barrier segments instead)
 ```
 
 ---
@@ -311,14 +419,15 @@ Main.uiGroup: [panel-hover-area (chrome)] [kiwi-downloads-fan (top chrome, modal
 1. `_stylesheetsFor(version)` (`:38-79`) picks files in this order:
    * `titlebuttons{,-alt}{3,4}.css`, plus `titlebuttons-glass{3,4}.css` for glass
    * `titlebuttons-size-small{3,4}.css` (+ glass small)
-   * `hide-titlebar{,-fullscreen}{3,4}.css` when `show-window-controls`
+   * *Merged:* one of `hide-titlebar-always{3,4}.css` (scope all), `hide-titlebar{3,4}.css` (scope maximized) or `hide-titlebar-fullscreen{3,4}.css` (scope fullscreen), only when `show-window-controls && remove-titlebar-buttons` (`titlebarHideSheet()`)
+   * *original rule, now replaced:* `hide-titlebar{,-fullscreen}{3,4}.css` when `show-window-controls`
    * `fixes{3,4}.css` when `popup-menu-styling`
 2. `_buildManagedBlock()` wraps `@import url("file:///…/kiwi@kemma/css/<f>")` lines between `MARKER_BEGIN`/`MARKER_END` (`:12-13,:81-88`).
 3. `processUserGtkFile()` (`:104-137`) loads `~/.config/gtk-N.0/gtk.css` asynchronously. It strips the old block (`MANAGED_BLOCK_REGEX`) and any legacy line containing `@import … kiwi@kemma` (`LEGACY_IMPORT_REGEX`, for versions ≤1.9.1), **prepends** the new block so user rules win, then writes it back with *sync* `replace_contents`. If only Kiwi content was in the file, the file is deleted.
 4. The update re-runs when any of 6 keys changes (`:151`). On disable it is called with an empty block (`:139-146`). The returned promise is not awaited.
 5. The imported CSS uses relative `url("../icons/titlebuttons/…png")` with `-gtk-scaled()` @2 variants, so it resolves inside the extension directory.
 
-**What hides titlebar buttons today:** `hide-titlebar3.css` moves `headerbar > box.left/right` 200px off-screen at opacity 0 for `.maximized`/`.fullscreen`, and does the same for `.titlebar.default-decoration` (SSD fallback). `hide-titlebar4.css` targets `headerbar windowcontrols.start/.end`. Both are conditioned on `.maximized`/`.fullscreen` window classes. There are no unconditional variants yet. Firefox and Thunderbird use `*Hidden.css` keyed on `:root[sizemode="maximized"]` only.
+**What hides titlebar buttons today:** `hide-titlebar3.css` moves `headerbar > box.left/right` 200px off-screen at opacity 0 for `.maximized`/`.fullscreen`, and does the same for `.titlebar.default-decoration` (SSD fallback). `hide-titlebar4.css` targets `headerbar windowcontrols.start/.end`. Both are conditioned on `.maximized`/`.fullscreen` window classes. *Merged:* the unconditional `hide-titlebar-always{3,4}.css` variants now exist and are the default (scope `all`). Firefox and Thunderbird use `*Hidden.css` keyed on `:root[sizemode="maximized"]` only.
 
 **What is restored on disable:** the GTK managed block is removed. Mozilla `chrome/` is deleted and `chrome.bak` moved back, but `user.js` is left modified. D2D colour keys and `favorite-apps` are restored by their modules. Nothing restores files if the shell crashes. The `.gitignore` notes that the old generated `css/gtk3.css`/`gtk4.css` files are no longer written (issue #86).
 
@@ -340,6 +449,8 @@ The profile is resolved from `installs.ini`, then `profiles.ini`, in `~/.mozilla
 | 545-723 | QS notifications, media cards, **ungated** `.message-title`, `.message-group-title`, `.message .message-*-button`, `.message-list-clear-button` (`:656-692`) | mixed |
 | 726-768 | Keyboard indicator | `.kiwi-input-themed/-en` |
 | 770-899 | Minimized strip, Downloads stack and fan | Kiwi ids and classes |
+| 905-960 | *Merged:* `/* feature: liquid-glass */` glass layers, rim, highlight, `kiwi-glass-panel` | `.kiwi-glass-*` classes |
+| 961-965 | *Merged:* `/* feature: autohide */` revealed-bar shadow (source `apps/autohide/style.css`) | `#panel.kiwi-panel-autohide` |
 
 ---
 
@@ -354,8 +465,8 @@ The profile is resolved from `installs.ini`, then `profiles.ini`, in `~/.mozilla
 
 ## 10. i18n, build, packaging, CI
 
-* **i18n:** `metadata.json` declares `gettext-domain: kiwi@kemma`. Shell modules receive `this.gettext` from `extension.js` (`:58`); prefs uses `gettext as _` from the prefs module. `translating/kiwi.pot` (193 msgids, POT-Creation 2026-10-01) and 17 `po/*.po` files exist. There is no `xgettext` regeneration script; `translating/compile-translations.sh` only validates and compiles `.mo` files into an ignored `locale/` folder. One plural string (`'%d More in Files'`, downloadsStack.js:455) uses `.replace` instead of `ngettext`.
+* **i18n:** `metadata.json` declares `gettext-domain: kiwi@kemma`. Shell modules receive `this.gettext` from `extension.js` (`:58`); prefs uses `gettext as _` from the prefs module. `translating/kiwi.pot` (regenerated by the merged features; 238 `msgid` lines at `f2ab596`) and 17 `po/*.po` files exist (plus `POTFILES`). `translating/compile-translations.sh` has no `xgettext` step; `translating/compile-translations.sh` only validates and compiles `.mo` files into an ignored `locale/` folder. One plural string (`'%d More in Files'`, downloadsStack.js:455) uses `.replace` instead of `ngettext`.
 * **Schemas:** XML only. `*.compiled` is git-ignored (`.gitignore`), and commit `9ec6053` removed the compiled file. `gnome-extensions pack` compiles or includes schemas.
 * **Build/packaging:** there is no Makefile or zip script. `gnome-extensions pack --extra-source=icons --extra-source=apps --extra-source=css --podir=po .` runs in CI only.
-* **CI:** `.github/workflows/pack-release.yml` runs on `release: published` or manually. It apt-installs `gnome-shell` to get `gnome-extensions`, renames the zip with `version-name`, and uploads it with `actions/upload-release-asset@v1` (archived action). There is no lint (ESLint config absent), no `glib-compile-schemas --strict` check and no tests. `.github/ISSUE_TEMPLATE/bug_report.md` and `FUNDING.yml` are present.
+* **CI:** `.github/workflows/pack-release.yml` runs on `release: published` or manually. It apt-installs `gnome-shell` to get `gnome-extensions`, renames the zip with `version-name`, and uploads it with `actions/upload-release-asset@v1` (archived action). *Merged:* the repo now has `eslint.config.js` (prefs files get no Shell globals) and `tests/run.sh`, but CI does not run them yet (card D7 is open; this file does not describe its result). The workflow still has no `glib-compile-schemas --strict` check. `.github/ISSUE_TEMPLATE/bug_report.md` and `FUNDING.yml` are present.
 * **Docs drift:** the README badge says "GNOME Shell 48–50" (`README.md:2`), but `metadata.json` says 48–51. Shell 46 and 47 were dropped in `e7b10f1` (2026-10-01).
