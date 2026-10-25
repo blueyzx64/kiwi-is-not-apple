@@ -14,3 +14,6 @@ tests/
 !.claude/
 !.claude/**
 !docs/**
+!.swarm/**
+!start-workflow.md
+!CLAUDE.md
