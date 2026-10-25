@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Kiwi is not Apple 2.0.0\n"
 "Report-Msgid-Bugs-To: https://github.com/kem-a/kiwi-kemma/issues\n"
-"POT-Creation-Date: 2026-10-25 12:50+0000\n"
+"POT-Creation-Date: 2026-10-25 12:51+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -69,6 +69,208 @@ msgstr ""
 
 #: apps/autohide/prefs.js:57
 msgid "How long after the pointer leaves the top bar"
+msgstr ""
+
+#: apps/clipboard/index.js:583 apps/clipboard/prefs.js:104
+msgid "Clipboard History"
+msgstr ""
+
+#: apps/clipboard/popover.js:54 apps/clipboard/prefs.js:13
+msgid "Clipboard"
+msgstr ""
+
+#: apps/clipboard/popover.js:60
+msgid "Search"
+msgstr ""
+
+#: apps/clipboard/popover.js:70
+msgid "All"
+msgstr ""
+
+#: apps/clipboard/popover.js:70 apps/clipboard/quickPaste.js:199
+msgid "Text"
+msgstr ""
+
+#: apps/clipboard/popover.js:70
+msgid "Links"
+msgstr ""
+
+#: apps/clipboard/popover.js:70
+msgid "Images"
+msgstr ""
+
+#: apps/clipboard/popover.js:102
+msgid "Clear History"
+msgstr ""
+
+#: apps/clipboard/popover.js:141 apps/clipboard/quickPaste.js:136
+msgid "Pinned"
+msgstr ""
+
+#: apps/clipboard/popover.js:145 apps/clipboard/quickPaste.js:140
+msgid "Recent"
+msgstr ""
+
+#: apps/clipboard/popover.js:150 apps/clipboard/quickPaste.js:145
+msgid "No matches"
+msgstr ""
+
+#: apps/clipboard/popover.js:150 apps/clipboard/quickPaste.js:145
+msgid "Nothing copied yet"
+msgstr ""
+
+#: apps/clipboard/popover.js:156 apps/clipboard/prefs.js:109
+msgid "Recording"
+msgstr ""
+
+#: apps/clipboard/popover.js:156
+msgid "Paused"
+msgstr ""
+
+#: apps/clipboard/popover.js:158
+#, javascript-format
+msgid "Quick Paste %s"
+msgstr ""
+
+#: apps/clipboard/prefs.js:32
+msgid "Quick Paste shortcut"
+msgstr ""
+
+#: apps/clipboard/prefs.js:42
+msgid "Not a valid shortcut. Example: <Super><Shift>v"
+msgstr ""
+
+#: apps/clipboard/prefs.js:45
+#, javascript-format
+msgid "Also used by GNOME: %s"
+msgstr ""
+
+#: apps/clipboard/prefs.js:53
+msgid "Use Super+Shift+V"
+msgstr ""
+
+#: apps/clipboard/prefs.js:77
+msgid "History size"
+msgstr ""
+
+#: apps/clipboard/prefs.js:78
+msgid "Entries kept. Pinned items do not count and never expire."
+msgstr ""
+
+#: apps/clipboard/prefs.js:87
+msgid "Also ignore copies from these apps"
+msgstr ""
+
+#: apps/clipboard/prefs.js:105
+msgid ""
+"Keeps what you copy so you can paste it again. Open it from the top bar or "
+"with the shortcut."
+msgstr ""
+
+#: apps/clipboard/prefs.js:107
+msgid "Clipboard history"
+msgstr ""
+
+#: apps/clipboard/prefs.js:108
+msgid "Record text, links, colours and images that you copy."
+msgstr ""
+
+#: apps/clipboard/prefs.js:110
+msgid "Turn off to pause without losing the history."
+msgstr ""
+
+#: apps/clipboard/prefs.js:111
+msgid "Show in the top bar"
+msgstr ""
+
+#: apps/clipboard/prefs.js:112
+msgid "Keep images"
+msgstr ""
+
+#: apps/clipboard/prefs.js:113
+msgid "Images over 5 MB are never kept."
+msgstr ""
+
+#: apps/clipboard/prefs.js:118
+msgid "Privacy"
+msgstr ""
+
+#: apps/clipboard/prefs.js:119
+msgid "Nothing is recorded while the screen is locked."
+msgstr ""
+
+#: apps/clipboard/prefs.js:121
+msgid "Save history to disk"
+msgstr ""
+
+#: apps/clipboard/prefs.js:122
+msgid ""
+"Kept in ~/.local/share/kiwi/clipboard/, readable only by you. Needed to keep "
+"history across lock and log out."
+msgstr ""
+
+#: apps/clipboard/prefs.js:124
+msgid "Ignore passwords"
+msgstr ""
+
+#: apps/clipboard/prefs.js:125
+msgid "Skip copies marked as secret and copies from password managers."
+msgstr ""
+
+#: apps/clipboard/quickPaste.js:62
+msgid "Search Clipboard"
+msgstr ""
+
+#: apps/clipboard/quickPaste.js:95
+msgid "Paste"
+msgstr ""
+
+#: apps/clipboard/quickPaste.js:97 apps/clipboard/quickPaste.js:170
+#: apps/clipboard/quickPaste.js:173 apps/clipboard/view.js:124
+msgid "Pin"
+msgstr ""
+
+#: apps/clipboard/quickPaste.js:105
+msgid "↑↓ Select    ↵ Paste    Ctrl+P Pin    Ctrl+D Remove    Esc Close"
+msgstr ""
+
+#: apps/clipboard/quickPaste.js:173 apps/clipboard/view.js:124
+msgid "Unpin"
+msgstr ""
+
+#: apps/clipboard/quickPaste.js:199
+msgid "Link"
+msgstr ""
+
+#: apps/clipboard/quickPaste.js:199
+msgid "Colour"
+msgstr ""
+
+#: apps/clipboard/quickPaste.js:199 apps/clipboard/view.js:56
+msgid "Image"
+msgstr ""
+
+#: apps/clipboard/view.js:34
+msgid "Just now"
+msgstr ""
+
+#: apps/clipboard/view.js:35
+#, javascript-format
+msgid "%d min ago"
+msgstr ""
+
+#: apps/clipboard/view.js:36
+#, javascript-format
+msgid "%d h ago"
+msgstr ""
+
+#: apps/clipboard/view.js:37
+#, javascript-format
+msgid "%d d ago"
+msgstr ""
+
+#: apps/clipboard/view.js:125
+msgid "Remove"
 msgstr ""
 
 #: apps/controlCenter/index.js:163
@@ -155,20 +357,20 @@ msgstr ""
 msgid "%s until full"
 msgstr ""
 
-#: apps/downloadsStack.js:453
+#: apps/downloadsStack.js:455
 msgid "Open in Files"
 msgstr ""
 
-#: apps/downloadsStack.js:455
+#: apps/downloadsStack.js:457
 #, javascript-format
 msgid "%d More in Files"
 msgstr ""
 
-#: apps/downloadsStack.js:457
+#: apps/downloadsStack.js:459
 msgid "Empty"
 msgstr ""
 
-#: apps/downloadsStack.js:837
+#: apps/downloadsStack.js:841
 msgid "Downloads"
 msgstr ""
 
@@ -188,7 +390,7 @@ msgstr ""
 msgid "Menus and Control Center"
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:19 prefs.js:651
+#: apps/liquidGlass/prefs.js:19 prefs.js:652
 msgid "Dock"
 msgstr ""
 
@@ -459,71 +661,71 @@ msgstr ""
 msgid "Quarters"
 msgstr ""
 
-#: apps/windowTitle.js:330
+#: apps/windowTitle.js:312
 msgid "Leave Fullscreen"
 msgstr ""
 
-#: apps/windowTitle.js:330
+#: apps/windowTitle.js:312
 msgid "Fullscreen"
 msgstr ""
 
-#: apps/windowTitle.js:338
+#: apps/windowTitle.js:320
 msgid "Restore Window"
 msgstr ""
 
-#: apps/windowTitle.js:344
+#: apps/windowTitle.js:326
 msgid "Always on Top"
 msgstr ""
 
-#: prefs.js:124
+#: prefs.js:125
 msgid "Kiwi (is not Apple)"
 msgstr ""
 
-#: prefs.js:144
+#: prefs.js:145
 msgid "About"
 msgstr ""
 
-#: prefs.js:193
+#: prefs.js:194
 msgid "Change log"
 msgstr ""
 
-#: prefs.js:229
+#: prefs.js:230
 msgid "Website"
 msgstr ""
 
-#: prefs.js:233
+#: prefs.js:234
 msgid "Report an Issue"
 msgstr ""
 
-#: prefs.js:238
+#: prefs.js:239
 msgid "Credits"
 msgstr ""
 
-#: prefs.js:241 prefs.js:256
+#: prefs.js:242 prefs.js:257
 msgid "Legal"
 msgstr ""
 
-#: prefs.js:264
+#: prefs.js:265
 msgid "License"
 msgstr ""
 
-#: prefs.js:265
+#: prefs.js:266
 msgid "Kiwi is free and open source software"
 msgstr ""
 
-#: prefs.js:270
+#: prefs.js:271
 msgid "GNU General Public License v3.0"
 msgstr ""
 
-#: prefs.js:272
+#: prefs.js:273
 msgid "View the full license text on GitHub"
 msgstr ""
 
-#: prefs.js:279 prefs.js:280
+#: prefs.js:280 prefs.js:281
 msgid "Copyright"
 msgstr ""
 
-#: prefs.js:280
+#: prefs.js:281
 msgid ""
 "This program is free software: you can redistribute it and/or modify it "
 "under the terms of the GNU General Public License as published by the Free "
@@ -531,540 +733,540 @@ msgid ""
 "any later version."
 msgstr ""
 
-#: prefs.js:334
+#: prefs.js:335
 msgid "Become a sponsor on GitHub"
 msgstr ""
 
-#: prefs.js:347
+#: prefs.js:348
 msgid "Support Me ♡"
 msgstr ""
 
-#: prefs.js:373
+#: prefs.js:374
 msgid "Panel"
 msgstr ""
 
-#: prefs.js:379 prefs.js:392
+#: prefs.js:380 prefs.js:393
 msgid "Panel Transparency"
 msgstr ""
 
-#: prefs.js:380
+#: prefs.js:381
 msgid "Configure panel transparency and appearance"
 msgstr ""
 
-#: prefs.js:393
+#: prefs.js:394
 msgid "Make the top panel transparent"
 msgstr ""
 
-#: prefs.js:400
+#: prefs.js:401
 msgid "Transparency Level"
 msgstr ""
 
-#: prefs.js:401
+#: prefs.js:402
 msgid "Set panel transparency (0-100)"
 msgstr ""
 
-#: prefs.js:415
+#: prefs.js:416
 msgid "Opaque When Window Maximized"
 msgstr ""
 
-#: prefs.js:416
+#: prefs.js:417
 msgid "Make panel opaque when a maximized window touches it"
 msgstr ""
 
-#: prefs.js:424
+#: prefs.js:425
 msgid "Panel Blur"
 msgstr ""
 
-#: prefs.js:425 prefs.js:471
+#: prefs.js:426 prefs.js:472
 msgid "Blur the background behind the panel"
 msgstr ""
 
-#: prefs.js:433
+#: prefs.js:434
 msgid "Panel Color Fix"
 msgstr ""
 
-#: prefs.js:434
+#: prefs.js:435
 msgid "Fix white panel on some themes (e.g., Ubuntu Yaru)"
 msgstr ""
 
-#: prefs.js:441
+#: prefs.js:442
 msgid "Invert Tray Icons on Light Wallpapers"
 msgstr ""
 
-#: prefs.js:442
+#: prefs.js:443
 msgid ""
 "Darken white monochrome tray icons when the panel adapts to a light "
 "wallpaper. Colored icons are left untouched"
 msgstr ""
 
-#: prefs.js:470 prefs.js:834
+#: prefs.js:471 prefs.js:835
 msgid "Handled by Liquid Glass"
 msgstr ""
 
-#: prefs.js:485
+#: prefs.js:486
 msgid "Panel Items"
 msgstr ""
 
-#: prefs.js:486
+#: prefs.js:487
 msgid "Choose what the top panel and its menus show"
 msgstr ""
 
-#: prefs.js:493
+#: prefs.js:494
 msgid "Show Window Title"
 msgstr ""
 
-#: prefs.js:494
+#: prefs.js:495
 msgid "Display current window title in the top panel"
 msgstr ""
 
-#: prefs.js:503
+#: prefs.js:504
 msgid "Hide App Icon"
 msgstr ""
 
-#: prefs.js:504
+#: prefs.js:505
 msgid "Do not show the application icon next to the window title"
 msgstr ""
 
-#: prefs.js:511
+#: prefs.js:512
 msgid "Hide Window Subtitle"
 msgstr ""
 
-#: prefs.js:512
+#: prefs.js:513
 msgid "Show only the application name, without the window's own title"
 msgstr ""
 
-#: prefs.js:519
+#: prefs.js:520
 msgid "Disable Window Tiling"
 msgstr ""
 
-#: prefs.js:520
+#: prefs.js:521
 msgid ""
 "Drop the tiling layouts from the window title menu, and stop restoring tiled "
 "windows when their titlebar is dragged"
 msgstr ""
 
-#: prefs.js:546
+#: prefs.js:547
 msgid "Move Calendar to Right"
 msgstr ""
 
-#: prefs.js:547
+#: prefs.js:548
 msgid "Move calendar to right side and hide notifications"
 msgstr ""
 
-#: prefs.js:556
+#: prefs.js:557
 msgid "Keep GNOME Notification Panel"
 msgstr ""
 
-#: prefs.js:557
+#: prefs.js:558
 msgid "Don't split notification and calendar layout"
 msgstr ""
 
-#: prefs.js:563
+#: prefs.js:564
 msgid "Indicator Style"
 msgstr ""
 
-#: prefs.js:564
+#: prefs.js:565
 msgid "Notification dot recolor"
 msgstr ""
 
-#: prefs.js:567 prefs.js:895
+#: prefs.js:568 prefs.js:896
 msgid "Default"
 msgstr ""
 
-#: prefs.js:567
+#: prefs.js:568
 msgid "Accent"
 msgstr ""
 
-#: prefs.js:567
+#: prefs.js:568
 msgid "Symbolic"
 msgstr ""
 
-#: prefs.js:576
+#: prefs.js:577
 msgid "Battery Percentage"
 msgstr ""
 
-#: prefs.js:588
+#: prefs.js:589
 msgid ""
 "Unavailable while GNOME Settings shows the battery percentage in the top bar"
 msgstr ""
 
-#: prefs.js:589
+#: prefs.js:590
 msgid "Show battery percentage in the top bar when below 20%"
 msgstr ""
 
-#: prefs.js:595
+#: prefs.js:596
 msgid "Custom Do Not Disturb Button"
 msgstr ""
 
-#: prefs.js:595
+#: prefs.js:596
 msgid ""
 "Replace the system Do Not Disturb button with Kiwi's custom implementation"
 msgstr ""
 
-#: prefs.js:596
+#: prefs.js:597
 msgid "Caps Lock and Num Lock"
 msgstr ""
 
-#: prefs.js:596
+#: prefs.js:597
 msgid "Show Caps Lock and Num Lock icon"
 msgstr ""
 
-#: prefs.js:597
+#: prefs.js:598
 msgid "Hide Activities Button"
 msgstr ""
 
-#: prefs.js:597
+#: prefs.js:598
 msgid "Hide the Activities button in the top panel"
 msgstr ""
 
-#: prefs.js:601 prefs.js:811
+#: prefs.js:602 prefs.js:812
 msgid "Styling"
 msgstr ""
 
-#: prefs.js:602
+#: prefs.js:603
 msgid ""
 "Restyle stock GNOME Shell elements and GTK apps. Log out and back in for "
 "changes to take effect"
 msgstr ""
 
-#: prefs.js:607
+#: prefs.js:608
 msgid "Panel Styling"
 msgstr ""
 
-#: prefs.js:607
+#: prefs.js:608
 msgid ""
 "Tighter button spacing, smaller status icons, no dropdown arrows and a "
 "transparent panel in the overview"
 msgstr ""
 
-#: prefs.js:608
+#: prefs.js:609
 msgid "Menu and App Styling"
 msgstr ""
 
-#: prefs.js:608
+#: prefs.js:609
 msgid ""
 "Narrower shell menu items with accent-colored hover and selection, plus the "
 "GTK app fixes"
 msgstr ""
 
-#: prefs.js:614
+#: prefs.js:615
 msgid "Style Keyboard Indicator"
 msgstr ""
 
-#: prefs.js:615
+#: prefs.js:616
 msgid ""
 "Slightly style keyboard/input source indicator by converting to uppercase "
 "and adding border"
 msgstr ""
 
-#: prefs.js:622
+#: prefs.js:623
 msgid "Hide keyboard indicator"
 msgstr ""
 
-#: prefs.js:623
+#: prefs.js:624
 msgid "Completely hide the indicator from the panel"
 msgstr ""
 
-#: prefs.js:660
+#: prefs.js:661
 msgid "These options need the Dash to Dock extension installed and enabled"
 msgstr ""
 
-#: prefs.js:668
+#: prefs.js:669
 msgid "Dock Items"
 msgstr ""
 
-#: prefs.js:669
+#: prefs.js:670
 msgid "Add extra items to Dash-to-Dock"
 msgstr ""
 
-#: prefs.js:674
+#: prefs.js:675
 msgid "Minimize Windows to Dock"
 msgstr ""
 
-#: prefs.js:674
+#: prefs.js:675
 msgid ""
 "Park minimized windows as thumbnails in Dash-to-Dock, after the apps and "
 "before the trash"
 msgstr ""
 
-#: prefs.js:678
+#: prefs.js:679
 msgid "Downloads Folder in Dock"
 msgstr ""
 
-#: prefs.js:679
+#: prefs.js:680
 msgid ""
 "Add a Downloads folder before the trash that fans its newest files out over "
 "the desktop"
 msgstr ""
 
-#: prefs.js:688
+#: prefs.js:689
 msgid "Stack Behind Folder"
 msgstr ""
 
-#: prefs.js:689
+#: prefs.js:690
 msgid ""
 "Show the newest files sticking out of the folder icon instead of piled on "
 "top of it"
 msgstr ""
 
-#: prefs.js:707
+#: prefs.js:708
 msgid "Launchpad Application"
 msgstr ""
 
-#: prefs.js:708
+#: prefs.js:709
 msgid ""
 "Add custom Launchpad icon to dock that opens application overview. "
 "Recommended to hide default app launcher."
 msgstr ""
 
-#: prefs.js:718
+#: prefs.js:719
 msgid "Custom Icon"
 msgstr ""
 
-#: prefs.js:721 prefs.js:806
+#: prefs.js:722 prefs.js:807
 msgid "Using default icon"
 msgstr ""
 
-#: prefs.js:729
+#: prefs.js:730
 msgid "Reset to default icon"
 msgstr ""
 
-#: prefs.js:740
+#: prefs.js:741
 msgid "Browse for icon"
 msgstr ""
 
-#: prefs.js:745
+#: prefs.js:746
 msgid "Select Launchpad Icon"
 msgstr ""
 
-#: prefs.js:749
+#: prefs.js:750
 msgid "Images (PNG, SVG)"
 msgstr ""
 
-#: prefs.js:777
+#: prefs.js:778
 msgid "Icon Too Large"
 msgstr ""
 
-#: prefs.js:778
+#: prefs.js:779
 msgid ""
 "The selected image exceeds 512×512 pixels. Please choose a smaller image."
 msgstr ""
 
-#: prefs.js:780
+#: prefs.js:781
 msgid "OK"
 msgstr ""
 
-#: prefs.js:816
+#: prefs.js:817
 msgid "Dock Styling"
 msgstr ""
 
-#: prefs.js:816
+#: prefs.js:817
 msgid ""
 "Tighten icon spacing, drop the icon highlight and darken icons while pressed"
 msgstr ""
 
-#: prefs.js:817
+#: prefs.js:818
 msgid "Dock Blur"
 msgstr ""
 
-#: prefs.js:817
+#: prefs.js:818
 msgid ""
 "Blur the background behind Dash-to-Dock. Recommended fixed dock opacity 10% "
 "- 30%, min 1%."
 msgstr ""
 
-#: prefs.js:818
+#: prefs.js:819
 msgid "Adaptive Dock Colors"
 msgstr ""
 
-#: prefs.js:818
+#: prefs.js:819
 msgid ""
 "Flip the running indicators and separators to suit whatever is behind the "
 "dock, wallpaper or window"
 msgstr ""
 
-#: prefs.js:854
+#: prefs.js:855
 msgid "Buttons"
 msgstr ""
 
-#: prefs.js:860
+#: prefs.js:861
 msgid "Window Control Button Style"
 msgstr ""
 
-#: prefs.js:861
+#: prefs.js:862
 msgid ""
 "Choose the window control button style. Log out to apply it across all apps."
 msgstr ""
 
-#: prefs.js:869
+#: prefs.js:870
 msgid "Enable macOS Window Buttons"
 msgstr ""
 
-#: prefs.js:870
+#: prefs.js:871
 msgid "Replace window control buttons in application windows with macOS style"
 msgstr ""
 
-#: prefs.js:891
+#: prefs.js:892
 msgid "Button Type"
 msgstr ""
 
-#: prefs.js:892
+#: prefs.js:893
 msgid "Choose the button icon set"
 msgstr ""
 
-#: prefs.js:895
+#: prefs.js:896
 msgid "Alternative"
 msgstr ""
 
-#: prefs.js:895
+#: prefs.js:896
 msgid "Glass"
 msgstr ""
 
-#: prefs.js:901
+#: prefs.js:902
 msgid "Button Size"
 msgstr ""
 
-#: prefs.js:902
+#: prefs.js:903
 msgid "Choose button size"
 msgstr ""
 
-#: prefs.js:905
+#: prefs.js:906
 msgid "Small"
 msgstr ""
 
-#: prefs.js:905
+#: prefs.js:906
 msgid "Normal"
 msgstr ""
 
-#: prefs.js:911
+#: prefs.js:912
 msgid "Firefox Styling"
 msgstr ""
 
-#: prefs.js:912
+#: prefs.js:913
 msgid ""
 "Apply macOS window control styling for Firefox. Recommended to use with "
 "vertical tabs."
 msgstr ""
 
-#: prefs.js:920
+#: prefs.js:921
 msgid "Thunderbird Styling"
 msgstr ""
 
-#: prefs.js:921
+#: prefs.js:922
 msgid "Apply macOS window control styling for Thunderbird."
 msgstr ""
 
-#: prefs.js:945
+#: prefs.js:946
 msgid "Show Window Controls on Panel"
 msgstr ""
 
-#: prefs.js:946
+#: prefs.js:947
 msgid ""
 "Display close, minimize, maximize buttons in the top panel for the focused "
 "window"
 msgstr ""
 
-#: prefs.js:955
+#: prefs.js:956
 msgid "Options"
 msgstr ""
 
-#: prefs.js:961
+#: prefs.js:962
 msgid "Kiwi"
 msgstr ""
 
-#: prefs.js:962
+#: prefs.js:963
 msgid ""
 "Kiwi is not like Apple, it's free open source project that brings macOS-like "
 "feel for GNOME"
 msgstr ""
 
-#: prefs.js:967
+#: prefs.js:968
 msgid "Overview Wallpaper Blur"
 msgstr ""
 
-#: prefs.js:967
+#: prefs.js:968
 msgid "Use blurred current wallpaper as overview background"
 msgstr ""
 
-#: prefs.js:968
+#: prefs.js:969
 msgid "Seamless Overview Zoom"
 msgstr ""
 
-#: prefs.js:968
+#: prefs.js:969
 msgid ""
 "Zoom the whole desktop, including the strip behind the panel, in and out of "
 "the overview"
 msgstr ""
 
-#: prefs.js:969
+#: prefs.js:970
 msgid "Focus on Overview Exit"
 msgstr ""
 
-#: prefs.js:969
+#: prefs.js:970
 msgid ""
 "Focus the window under the cursor instead of the previously focused one when "
 "leaving the overview"
 msgstr ""
 
-#: prefs.js:970
+#: prefs.js:971
 msgid "Skip to Desktop"
 msgstr ""
 
-#: prefs.js:970
+#: prefs.js:971
 msgid "Do not show the overview when logging in. Animation is still visible"
 msgstr ""
 
-#: prefs.js:971
+#: prefs.js:972
 msgid "Hide Minimized Windows"
 msgstr ""
 
-#: prefs.js:971
+#: prefs.js:972
 msgid "Hide minimized windows in the overview"
 msgstr ""
 
-#: prefs.js:972
+#: prefs.js:973
 msgid "Move Window to New Workspace"
 msgstr ""
 
-#: prefs.js:972
+#: prefs.js:973
 msgid "Move fullscreen window to a new workspace"
 msgstr ""
 
-#: prefs.js:973
+#: prefs.js:974
 msgid "Reduce App Animations"
 msgstr ""
 
-#: prefs.js:973
+#: prefs.js:974
 msgid "Mimic macOS window opening and closing with a subtle scale and fade"
 msgstr ""
 
-#: prefs.js:974
+#: prefs.js:975
 msgid "Focus New Windows"
 msgstr ""
 
-#: prefs.js:974
+#: prefs.js:975
 msgid ""
 "Automatically focus new windows instead of showing window-ready alerts. "
 "Requires extension reload"
 msgstr ""
 
-#: prefs.js:975
+#: prefs.js:976
 msgid "Transparent Move"
 msgstr ""
 
-#: prefs.js:975
+#: prefs.js:976
 msgid "Move window with transparency"
 msgstr ""
 
-#: prefs.js:982
+#: prefs.js:983
 msgid "Advanced"
 msgstr ""
 
-#: prefs.js:1012
+#: prefs.js:1013
 msgid "Titlebuttons Hover Effect for GTK3 apps"
 msgstr ""
 
-#: prefs.js:1025
+#: prefs.js:1026
 msgid ""
 "The titlebuttons hover module provides macOS-like hover effects for window "
 "controls in GTK3 applications. GTK3 apps cannot natively show hover effects "
@@ -1076,75 +1278,75 @@ msgid ""
 "is possible."
 msgstr ""
 
-#: prefs.js:1041
+#: prefs.js:1042
 msgid "Installation Guide on GitHub"
 msgstr ""
 
-#: prefs.js:1043
+#: prefs.js:1044
 msgid "Open the advanced module build instructions"
 msgstr ""
 
-#: prefs.js:1049
+#: prefs.js:1050
 msgid "More of my work..."
 msgstr ""
 
-#: prefs.js:1053
+#: prefs.js:1054
 msgid "Kiwi Menu"
 msgstr ""
 
-#: prefs.js:1053
+#: prefs.js:1054
 msgid "MacOS style menu for GNOME"
 msgstr ""
 
-#: prefs.js:1054
+#: prefs.js:1055
 msgid "AppManager"
 msgstr ""
 
-#: prefs.js:1054
+#: prefs.js:1055
 msgid "MacOS style AppImage installer and management application"
 msgstr ""
 
-#: prefs.js:1055
+#: prefs.js:1056
 msgid "Catalina Reloaded Icon Pack"
 msgstr ""
 
-#: prefs.js:1055
+#: prefs.js:1056
 msgid "macOS Tahoe icon theme for Linux"
 msgstr ""
 
-#: prefs.js:1056
+#: prefs.js:1057
 msgid "GDM Wallpaper"
 msgstr ""
 
-#: prefs.js:1056
+#: prefs.js:1057
 msgid "Set custom GDM login screen wallpaper"
 msgstr ""
 
-#: prefs.js:1068
+#: prefs.js:1069
 msgid "Other Recommended Extensions"
 msgstr ""
 
-#: prefs.js:1069
+#: prefs.js:1070
 msgid "Extensions that are compatible with Kiwi"
 msgstr ""
 
-#: prefs.js:1106 prefs.js:1120
+#: prefs.js:1107 prefs.js:1121
 msgid "Restore Defaults"
 msgstr ""
 
-#: prefs.js:1110
+#: prefs.js:1111
 msgid "Reset every Kiwi setting to its default value"
 msgstr ""
 
-#: prefs.js:1116
+#: prefs.js:1117
 msgid "Restore Default Settings?"
 msgstr ""
 
-#: prefs.js:1117
+#: prefs.js:1118
 msgid ""
 "Every Kiwi setting will be reset to its default value. This cannot be undone."
 msgstr ""
 
-#: prefs.js:1119
+#: prefs.js:1120
 msgid "Cancel"
 msgstr ""

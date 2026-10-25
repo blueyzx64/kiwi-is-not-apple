@@ -1,4 +1,9 @@
 apps/autohide/prefs.js
+apps/clipboard/index.js
+apps/clipboard/popover.js
+apps/clipboard/prefs.js
+apps/clipboard/quickPaste.js
+apps/clipboard/view.js
 apps/controlCenter/index.js
 apps/controlCenter/nowPlaying.js
 apps/controlCenter/prefs.js

@@ -47,6 +47,7 @@ import { LiquidGlass } from './apps/liquidGlass/index.js';
 import { ControlCenter } from './apps/controlCenter/index.js';
 import { StageManager } from './apps/stageManager/index.js';
 import { Glass } from './lib/glass.js';
+import { ClipboardHistory } from './apps/clipboard/index.js';
 
 // ctx: { extension, settings (Gio.Settings), gettext, interfaceSettings (Gio.Settings) }
 const bool = (ctx, key) => ctx.settings.get_boolean(key);
@@ -143,6 +144,11 @@ export const FEATURES = [
         // so no restartOn keys are needed. Reacts to its own settings keys.
         id: 'window-controls', setting: 'show-window-controls',
         cls: WindowControlsFeature,
+    },
+    {
+        // Local clipboard history; its panel icon claims a slot through PanelLayout
+        id: 'clipboard-history', setting: 'clipboard-history',
+        cls: ClipboardHistory,
     },
     {
         // Modes always / fullscreen-hover / autohide; runs for the last two. Reacts to its own
