@@ -244,7 +244,7 @@ export const FEATURES = [
         // Dock colors that follow the wallpaper behind the dock
         id: 'dock-adaptive-colors', reapply: true,
         when: ctx => dockActive() && bool(ctx, 'dock-adaptive-colors'),
-        enable: () => dockColorsEnable(),
+        enable: ctx => dockColorsEnable(ctx.settings),
         disable: () => dockColorsDisable(),
     },
     {

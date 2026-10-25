@@ -384,5 +384,11 @@
         <description>Do not hide the top bar while no window is showing on the primary monitor.</description>
       </key>
 
+      <key name="dock-colors-saved" type="s">
+        <default>''</default>
+        <summary>Dash-to-Dock colours saved while Kiwi adaptive colours run</summary>
+        <description>Internal. JSON of the user's original Dash-to-Dock indicator and background colours, written while dock adaptive colours are on and cleared when they are turned off. Restores the colours after a shell crash. Do not edit.</description>
+      </key>
+
     </schema>
 </schemalist>
