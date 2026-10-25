@@ -58,6 +58,25 @@ test('connect disconnects on dispose', () => {
     eq(n, 1);
 });
 
+test('connect disconnects a plain JS emitter (not a GObject) on dispose', () => {
+    // Shape of Signals.EventEmitter (PopupMenu, PressureBarrier)
+    class JsEmitter {
+        constructor() { this._h = new Map(); this._n = 1; }
+        connect(_sig, fn) { const id = this._n++; this._h.set(id, fn); return id; }
+        disconnect(id) { this._h.delete(id); }
+        emit() { for (const fn of this._h.values()) fn(); }
+    }
+    const e = new JsEmitter();
+    const r = new CleanupRegistry();
+    let n = 0;
+    r.connect(e, 'open-state-changed', () => n++);
+    e.emit();
+    r.dispose();
+    e.emit();
+    eq(n, 1);
+    eq(e._h.size, 0);
+});
+
 test('release runs one cleanup now', () => {
     const e = new Emitter();
     const r = new CleanupRegistry();
