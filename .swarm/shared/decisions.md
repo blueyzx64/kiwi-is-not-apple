@@ -84,3 +84,7 @@ All answered by the owner on 2026-10-25. Do not ask the owner again; ask the orc
 - The notch forces the calendar-right layout (clock moves right; notifications list in Quick Settings).
   Prefs must say so: the notch master row gets a subtitle, and the move-calendar-right row is greyed
   out with "On while the notch is on".
+- The notch live activity replaces the panel media button (panel-media is hidden while the notch shows
+  media). The Control Center Now Playing tile stays.
+- Smoke harness: `make smoke` (tools/smoke). Leads run it after enable/disable changes. In this
+  container use KIWI_SMOKE_SHELL_VERSION=46 KIWI_SMOKE_SHIM=1. Results there are indicative only.
