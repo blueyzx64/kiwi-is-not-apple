@@ -50,6 +50,7 @@ function _onIndicatorDestroyed() {
     _state.indicator = null;
     _state.indicatorDestroyId = 0;
     _state.visibilityChangedId = 0;
+    _state.settersTracked = false;
     _state.label = null;
     _state.labelChangedId = 0;
     _state.labelDestroyId = 0;
@@ -211,11 +212,53 @@ function _updateLabel() {
     _applyVisibility();
 }
 
+// The Shell decides the indicator's visibility only through show()/hide() in
+// InputSourceIndicator._currentSourceChanged (keyboard.js, 48-51). While Kiwi keeps the
+// indicator hidden, a hide() (the user dropped to one source) changes nothing and emits no
+// notify::visible, so watching the property alone would leave shellVisible stale. Record
+// the Shell's intent from these calls instead. Own-property overrides on this instance
+// only; removed again in _disconnect().
+function _trackShellSetters() {
+    if (_state.settersTracked)
+        return;
+    const indicator = _state.indicator;
+    for (const [name, value] of [['show', true], ['hide', false]]) {
+        const original = indicator[name];
+        indicator[name] = function (...args) {
+            if (!_state || _state.indicator !== this)
+                return original.apply(this, args);
+            _state.shellVisible = value;
+            // Let the Shell's own call run (it may have side effects), then apply our rule.
+            _state.updatingVisibility = true;
+            let result;
+            try {
+                result = original.apply(this, args);
+            } finally {
+                _state.updatingVisibility = false;
+            }
+            _syncIndicatorState();
+            return result;
+        };
+    }
+    _state.settersTracked = true;
+}
+
+function _untrackShellSetters() {
+    if (!_state.settersTracked)
+        return;
+    if (_state.indicator) {
+        delete _state.indicator.show;
+        delete _state.indicator.hide;
+    }
+    _state.settersTracked = false;
+}
+
 function _connect() {
     if (!_state?.indicator)
         return;
     // Ensure we are connected to the current label actor
     _ensureLabelRef();
+    _trackShellSetters();
     if (!_state.visibilityChangedId)
         _state.visibilityChangedId = _state.indicator.connect('notify::visible', actor => {
             if (!_state || _state.updatingVisibility)
@@ -230,6 +273,7 @@ function _connect() {
 }
 
 function _disconnect() {
+    _untrackShellSetters();
     if (_state.label && _state.labelChangedId) {
         _state.label.disconnect(_state.labelChangedId);
         _state.labelChangedId = 0;
@@ -272,6 +316,7 @@ export function enable(settings) {
         visibilityChangedId: 0,
         shellVisible: indicator.visible,
         updatingVisibility: false,
+        settersTracked: false,
         idleId: 0,
         indicatorDestroyId: 0,
     };
