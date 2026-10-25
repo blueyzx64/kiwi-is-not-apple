@@ -101,3 +101,18 @@ Attach in `enable()` and add `cleanup.add(() => h.destroy())`. Check `Glass.moti
   moveFullscreenWindow and windowTiling pause while it is true.
 - `watch(cleanup|fn, fn(win, flag, on)) -> stop`. The stage-mode event is `(null, 'stageActive', on)`.
 - `win._kiwiStaged` mirrors staged. Flags drop when the window emits 'unmanaged'.
+
+## lib/modalSurface.js and lib/keybindings.js (frozen from S4, feat/clipboard)
+- `new ModalSurface(cleanup, {id, build(frame, modal)->focusActor?, width?, height?, position:'center'|'top',
+  radius=24, styleClass?, onKeyPress?(event, modal)->Clutter.EVENT_STOP|PROPAGATE, onClosed?})`
+  - `build` runs on every open with a fresh `St.BoxLayout` frame (class `kiwi-modal`). Glass 'overlays' is
+    already behind it, so do not attach again. Esc or an outside click closes it. It also closes on cleanup dispose.
+  - `open()->bool` (false if already open), `close({immediate?})`, `toggle()`, `isOpen`, `frame`, `id`.
+  - Static: `registerForeign(id, closeFn)->unregister`, `closeAll()`, `openId`. Opening one modal closes the
+    open one and every registered foreign overlay (the Downloads fan is registered).
+- `Keybindings` (module singleton):
+  - `add(cleanup, name, rawGSettings, handler, {flags?, modes?})->bool`. `name` is an `as` key in Kiwi's schema.
+    Defaults: IGNORE_AUTOREPEAT, NORMAL|OVERVIEW. Removed on dispose.
+  - `remove(name)`, `removeAll()`, `has(name)`, `names()`, `conflicts([accels])->[{accel, with}]`.
+- `clipboardService()` from apps/clipboard/index.js is null when the feature is off. Otherwise it has
+  `.search(q, n)`, `.latest(n)`, `.copy(entry)`, `.connectChanged(fn)`, `.connectCopied(fn(entry))`.
