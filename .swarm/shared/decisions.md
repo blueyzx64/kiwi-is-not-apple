@@ -101,3 +101,6 @@ All answered by the owner on 2026-10-25. Do not ask the owner again; ask the orc
 - Shell 48+ has no `vertical:` on St.BoxLayout. Use `orientation: Clutter.Orientation.VERTICAL`.
 - `/tmp/x2/run-real.sh` is serialized with flock. Outputs go per run to /tmp/x2/runs/<ts>-<src>/, and the
   path is printed at the end. Expect to wait in the queue. Read your own run dir, not last-run.txt.
+- Real-Shell runs between about 14:20 and 14:30 UTC are INVALID (stale bus socket: "Connection refused", probe
+  never up, "Kiwi errors: 0" is meaningless). Re-run. A run counts only if shell.log has "GNOME Shell
+  started" and your probe answered.
