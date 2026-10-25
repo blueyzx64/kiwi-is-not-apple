@@ -97,8 +97,15 @@ export class SpotlightView {
         // any accelerator mutter or the Shell runs in between (Super+Space never reaches the
         // stage as a press). The overlay is the grab actor, so the stage itself gets nothing.
         const overlay = frame.get_parent();
-        if (overlay)
-            this._signals.push([overlay, overlay.connect('captured-event', (_a, event) => this._captured(event))]);
+        if (overlay) {
+            const entry = [overlay, overlay.connect('captured-event', (_a, event) => this._captured(event))];
+            this._signals.push(entry);
+            // The modal destroys the overlay before onClosed runs; its handlers die with it, so
+            // drop the entry rather than disconnect a disposed actor later
+            overlay.connect('destroy', () => {
+                this._signals = this._signals.filter(e => e !== entry);
+            });
+        }
         this._signals.push([global.display, global.display.connect('accelerator-activated', () => this._superTap.other())]);
         this._superTap.reset();
         this._ui = { entry, text, list, scroll };
@@ -123,13 +130,9 @@ export class SpotlightView {
     }
 
     destroy() {
-        for (const [obj, id] of this._signals) {
-            try {
-                obj.disconnect(id);
-            } catch (_e) {
-                // actor already destroyed with the modal
-            }
-        }
+        // Only live objects are left here (global.display, and the overlay if it still exists)
+        for (const [obj, id] of this._signals)
+            obj.disconnect(id);
         this._signals = [];
         this._superTap.reset();
         this._ui = null;
