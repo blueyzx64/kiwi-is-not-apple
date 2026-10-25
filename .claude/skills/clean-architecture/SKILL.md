@@ -103,8 +103,8 @@ Allowed imports: `index → {model, view, shellAdapter, settings, lib, coordinat
 
 ## Sources
 
-- R. C. Martin, "The Clean Architecture" (2012): https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html ; *Clean Architecture* (2017, ISBN 9780134494166). Not fetched this session (host blocked); content from the book and secondary summaries.
-- A. Cockburn, "Hexagonal Architecture" (2005): https://alistair.cockburn.us/hexagonal-architecture/ (not fetched; URL unverified).
+- R. C. Martin, "The Clean Architecture" (2012): https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html ; *Clean Architecture* (2017, ISBN 9780134494166). Post fetched 2026-10-25 (Dependency Rule quote checked).
+- A. Cockburn, "Hexagonal Architecture" (2005): https://alistair.cockburn.us/hexagonal-architecture/ (fetched 2026-10-25; original 2005 article).
 - G. Bernhardt, "Boundaries" talk: https://www.destroyallsoftware.com/talks/boundaries ; "Functional Core, Imperative Shell" screencast (DAS season 4).
 - GNOME Shell `InjectionManager`: https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/main/js/extensions/extension.js (read via GitHub mirror).
-- gjs.guide extension docs & review guidelines: https://gjs.guide/extensions/ (unverified this session).
+- gjs.guide extension docs & review guidelines: https://gjs.guide/extensions/review-guidelines/review-guidelines.html (fetched 2026-10-25).

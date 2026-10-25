@@ -91,8 +91,8 @@ idle-exit). If the extension *spawned* the helper itself (fallback when no servi
 file can be installed), it must `force_exit()` the `Gio.Subprocess` on disable — and
 note that spawning from the Shell is a review-sensitive pattern.
 
-**Shell restarts / lock screen:** extensions are disabled on lock and re-enabled on
-unlock (session-modes); the helper survives, so state persists — one reason to have it.
+**Shell restarts / lock screen:** extensions without `unlock-dialog` in
+`session-modes` are disabled on lock and re-enabled on unlock; the helper survives, so state persists — one reason to have it.
 
 ## 6. Degraded mode
 
@@ -108,8 +108,9 @@ Express this as a port in the feature's model (`HistoryStore` with `MemoryStore`
 ## 7. Sandbox and security
 
 - Session bus is per-user but **any** process of that user can call the helper. Do not
-  expose destructive methods without validation; consider `GetConnectionCredentials`
-  only if a method must be restricted (unverified need).
+  expose destructive methods without validation. If a method must be restricted, the
+  bus's `org.freedesktop.DBus.GetConnectionCredentials(sender)` returns the caller's
+  UnixUserID/ProcessID (D-Bus spec); a design choice — not needed for v1.
 - Store data in `$XDG_STATE_HOME/kiwi/` (history) or `$XDG_CACHE_HOME/kiwi/` (index),
   mode 0600. Offer "Clear history" and honour a GSettings "pause" key.
 - Respect password managers: skip entries whose source app sets the
@@ -134,8 +135,8 @@ Interface sketch: `AddText(s text, s mime) → t id`, `AddImage(h fd, s mime) �
 
 ## 9. Worked example: Spotlight file index
 
-First choice: query LocalSearch (formerly Tracker Miner FS, renamed in GNOME 47 —
-unverified exact release) over its own D-Bus/SPARQL endpoint; no helper needed. Only
+First choice: query LocalSearch (formerly Tracker Miners; renamed in 3.8.alpha,
+first stable 3.8.0 = GNOME 47, Sept 2024) over its own D-Bus/SPARQL endpoint; no helper needed. Only
 if that is unavailable or too slow, `kiwi-indexd` offers
 `Query(s text, u limit, a{sv} options) → a(sssd)` (uri, display name, mime, score) and
 a `Reindex()` method, using `notify`-style inotify watching plus a fuzzy matcher.
@@ -143,9 +144,10 @@ The Shell side implements a search provider in GJS that calls `QueryAsync` with 
 cancellable per keystroke (cancel the previous one).
 
 Sources: freedesktop D-Bus specification (activation, naming) —
-https://dbus.freedesktop.org/doc/dbus-specification.html (unverified this session);
+https://dbus.freedesktop.org/doc/dbus-specification.html ;
 gtk-rs book *Building with Meson* (service file, `DBusActivatable`) —
 https://gtk-rs.org/gtk4-rs/stable/latest/book/meson.html ; GJS `Gio.bus_watch_name`
-and DBus proxy overrides — https://gjs.guide/guides/gio/dbus.html (unverified, host
-blocked); GNOME Shell session modes and extension disable on lock —
-https://gjs.guide/extensions/topics/session-modes.html (unverified).
+and `makeProxyWrapper` — https://gjs.guide/guides/gio/dbus.html ; session modes ("when
+the session mode changes between user and unlock-dialog, GNOME Shell may call disable()
+and enable()") — https://gjs.guide/extensions/topics/session-modes.html ; LocalSearch
+rename — https://gitlab.gnome.org/GNOME/localsearch/-/blob/main/NEWS .

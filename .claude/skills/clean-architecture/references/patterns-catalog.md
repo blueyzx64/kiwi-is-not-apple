@@ -118,11 +118,12 @@ export function pick(table) {            // { 48: implA, 50: implB } → highest
 // apps/windowControls/shellAdapter.js
 const maximize = pick({
     48: w => w.maximize(Meta.MaximizeFlags.BOTH),
-    49: w => w.maximize(),              // illustrative: verify actual API change per version
+    49: w => w.maximize(),              // Mutter 49 dropped the MaximizeFlags argument
 });
 ```
 
-Prefer **feature detection** (`'set_maximize_flags' in w`) when the API surface itself
+(GNOME 49 also removed `get_maximized()` → `is_maximized()` and added
+`set_maximize_flags()`.) Prefer **feature detection** (`'set_maximize_flags' in w`) when the API surface itself
 is detectable; use version tables when behaviour changed without a visible API change.
 `apps/windowTiling.js` already isolates `isMaximized/maximizeWindow/unmaximizeWindow`
 (imported at `apps/windowControls.js:14`) — that is the right seam; move it to `lib/`.
@@ -215,5 +216,5 @@ Sources: Gamma et al., *Design Patterns* (1994) — adapter, facade, observer, s
 mediator; Martin, *Clean Architecture* ch. 22 (boundaries/adapters); GNOME Shell
 `InjectionManager` and `misc/config.js` — https://gitlab.gnome.org/GNOME/gnome-shell
 (read via GitHub mirror); gjs.guide "Extension anatomy"/"Session modes" —
-https://gjs.guide/extensions/ (unverified). The `maximize()` signature change in §4 is
-illustrative only, not verified.
+https://gjs.guide/extensions/overview/anatomy.html , https://gjs.guide/extensions/topics/session-modes.html ;
+`maximize()` change in §4 — https://gjs.guide/extensions/upgrading/gnome-shell-49.html .

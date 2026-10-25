@@ -33,7 +33,8 @@ glib-build-tools = "0.22"   # only if resources are compiled in build.rs (not wi
 ```
 
 Feature flags (`v4_14`, `v1_8`) gate newer API; pick the oldest GTK/libadwaita your
-target distros ship (GNOME 48 ships GTK 4.18 / libadwaita 1.7 — verify per distro).
+target distros ship (GNOME 48 ships GTK 4.18 / libadwaita 1.7 — release.gnome.org/48;
+distros may lag).
 Re-export glib/gio through gtk: `use gtk::{gio, glib};` so versions never diverge.
 
 ## 2. Application and window
@@ -228,12 +229,17 @@ fn main() -> glib::ExitCode {
         let row = adw::SwitchRow::builder().title("Keep history").build();
         group.add(&row);
         page.add(&group);
-        adw::PreferencesWindow::builder().application(app).build().add(&page);
+        let view = adw::ToolbarView::new();
+        view.add_top_bar(&adw::HeaderBar::new());
+        view.set_content(Some(&page));
+        adw::ApplicationWindow::builder().application(app).content(&view).build().present();
     });
     app.run()
 }
 ```
 
+`adw::PreferencesWindow` is deprecated since libadwaita 1.6 (a warning, so it fails
+`clippy -D warnings`); for a dialog use `adw::PreferencesDialog` + `.present(Some(&parent))`.
 `adw::Application` initialises libadwaita styling automatically. The widget set
 (`PreferencesPage/Group`, `SwitchRow`, `ComboRow`, `ExpanderRow`) matches what
 `prefs.js` already uses in GJS, so UX stays consistent.
@@ -282,7 +288,7 @@ Async/background work: relm4 *Workers* and *Commands* (book: "Threads and async"
 
 Sources: gtk-rs book chapters *GObject Subclassing / Properties / Signals*,
 *Composite Templates*, *Libadwaita* — https://gtk-rs.org/gtk4-rs/stable/latest/book/
-(listings read from github.com/gtk-rs/gtk4-rs/tree/main/book/listings);
-relm4 `examples/simple.rs` — https://github.com/Relm4/Relm4; relm4 book
-https://relm4.org/book/stable/ (TOC read from github.com/Relm4/book). `closure_local!`
-connect example and GNOME 48 toolkit versions: unverified.
+(`closure_local!` connect example: https://gtk-rs.org/gtk4-rs/stable/latest/book/g_object_signals.html);
+relm4 book https://relm4.org/book/stable/ (*Your first app*); GNOME 48 = GTK 4.18 /
+libadwaita 1.7 — https://release.gnome.org/48/developers/ ; `PreferencesWindow`
+deprecation — https://docs.rs/libadwaita/0.9.2/libadwaita/struct.PreferencesWindow.html .

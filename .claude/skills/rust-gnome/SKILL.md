@@ -10,7 +10,7 @@ the compositor process; nothing compiled may be loaded there. Rust is only ever 
 **separate process** that the extension talks to over **D-Bus**, and the extension
 must keep working (degraded) when that process is absent.
 
-Versions checked 2026-10-25 against the crates.io index and upstream repos:
+Versions checked 2026-10-25 against crates.io and docs.rs:
 `gtk4 0.11.5`, `glib`/`gio 0.22.10`, `libadwaita 0.9.2`, `relm4 0.11.0`,
 `zbus 6.1.0` (MSRV 1.89), gtk-rs MSRV 1.92, `thiserror 2`, `anyhow 1`,
 `async-channel 2.5`. Re-check before pinning.
@@ -85,8 +85,9 @@ hence `kem_a`.
 
 ## Sources
 
-- gtk-rs book: https://gtk-rs.org/gtk4-rs/stable/latest/book/ (source read from github.com/gtk-rs/gtk4-rs `book/`)
-- zbus book: https://dbus2.github.io/zbus/ (source read from github.com/dbus2/zbus `book/src/`)
-- relm4 book: https://relm4.org/book/stable/ · libadwaita-rs: https://world.pages.gitlab.gnome.org/Rust/libadwaita-rs/ (unverified this session)
+- gtk-rs book: https://gtk-rs.org/gtk4-rs/stable/latest/book/ (fetched 2026-10-25)
+- zbus book: https://z-galaxy.github.io/zbus/ (moved from dbus2.github.io, which now 404s; linked from docs.rs/zbus 6.1.0)
+- API docs: https://docs.rs/zbus/6.1.0 · https://docs.rs/glib/0.22.10 · https://docs.rs/gio/0.22.10 · https://docs.rs/libadwaita/0.9.2
+- relm4 book: https://relm4.org/book/stable/ (its install snippet still says 0.9.1; crate is 0.11.0) · libadwaita-rs: https://world.pages.gitlab.gnome.org/Rust/libadwaita-rs/
 - flatpak-cargo-generator: https://github.com/flatpak/flatpak-builder-tools/tree/master/cargo
-- Rust API Guidelines: https://rust-lang.github.io/api-guidelines/ (unverified this session; host blocked)
+- Rust API Guidelines: https://rust-lang.github.io/api-guidelines/

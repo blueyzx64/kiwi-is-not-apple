@@ -114,8 +114,10 @@ const reply = await proxy.call('EnumerateDevices', null,
 const [devices] = reply.deep_unpack();
 ```
 
-(GJS's own overrides only promisify `init_async` on `Gio.DBusProxy`; whether the
-Shell environment already promisifies `call` is unverified, so do it explicitly.)
+(GJS's own overrides only promisify `init_async` on `Gio.DBusProxy`; gnome-shell's
+`ui/environment.js` adds `DBusConnection.call`, `DBusProxy.new` and
+`DBusProxy.call_with_unix_fd_list` but **not** `DBusProxy.prototype.call`, so do it
+explicitly.)
 Same rule for files (`load_contents_async`), subprocesses (`communicate_utf8_async`)
 and any future Rust helper (`…Async` proxy methods only).
 
@@ -180,7 +182,9 @@ model receives `{ charging: boolean }`.
   blocks only; cleans legacy output.
 
 Sources: gnome-shell `InjectionManager` — https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/main/js/extensions/extension.js
-(read via GitHub mirror); gjs.guide review guidelines (cleanup on disable, no sync I/O
-in Shell) — https://gjs.guide/extensions/review-guidelines/review-guidelines.html
-(not fetched this session; host blocked — verify wording before citing in reviews).
+and `js/ui/environment.js` (promisified methods) — https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/main/js/ui/environment.js ;
+GJS overrides — https://gitlab.gnome.org/GNOME/gjs/-/blob/master/modules/core/overrides/Gio.js ;
+gjs.guide review guidelines ("Use disable() to cleanup anything done in enable()";
+they recommend async/await but have no explicit sync-I/O rule) —
+https://gjs.guide/extensions/review-guidelines/review-guidelines.html .
 Line numbers verified against this checkout on 2026-10-25.

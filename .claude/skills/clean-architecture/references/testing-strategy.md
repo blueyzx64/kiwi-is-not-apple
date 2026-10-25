@@ -27,9 +27,9 @@ manual matrix in a nested/devkit Shell.
 | Integration (light) | `lib/` wrappers with real GLib (timeouts cleared, signals disconnected) | gjs | every commit |
 | System (manual) | real Shell, nested/devkit session, matrix below | human, checklist | per release / per feature PR |
 
-There is no maintained headless harness for running extension code inside gnome-shell
-in CI (unverified; gnome-shell's own tests use its internal test framework), so the
-system level stays manual — which is exactly why the lower levels must carry the logic.
+gnome-shell's own CI runs jasmine unit tests (`tests/unit/`) and
+`gnome-shell-test-tool --headless` scripts (`tests/shell/`) from its build tree; neither
+is packaged as a harness for third-party extensions, so for Kiwi the system level stays manual — which is exactly why the lower levels must carry the logic.
 
 ## 2. What goes in model.js
 
@@ -82,15 +82,15 @@ export function emptyFallsBack() {
 }
 ```
 
-Alternative: jasmine-gjs (`jasmine` runner for GJS, used in the GNOME JS ecosystem —
-https://github.com/ptomato/jasmine-gjs, unverified current status) if you want
-`describe/it/expect`.
+Alternative: jasmine-gjs (`jasmine` runner for GJS — https://github.com/ptomato/jasmine-gjs)
+if you want `describe/it/expect`; gnome-shell itself uses it (`find_program('jasmine')`
+in its `meson.build`, specs in `tests/unit/`). Upstream repo activity: unverified (github.com blocked for this repo).
 
 ## 4. Pure tests under node
 
 Because models have no GI imports, `node --test` also works and gives watch mode and
 coverage (`--experimental-test-coverage`). Node must see `.js` as ESM: either Node
-≥ 22.12 (ESM syntax detection on by default — unverified exact version) or a
+≥ 22.7 or ≥ 20.19 (ESM syntax detection on by default since then) or a
 `package.json` with `"type": "module"` at the repo root (not packed: `gnome-extensions
 pack` only includes listed sources).
 
@@ -129,7 +129,8 @@ Shared contract suite: write `historyStoreContract(makeStore)` once and run it a
 
 ## 6. Lifecycle tests
 
-Leaks are the #1 review rejection reason for extensions (unverified ranking). Make
+The review guidelines make cleanup a MUST ("Any objects or widgets created by an
+extension MUST be destroyed in disable()"); leaks are what reviewers check. Make
 them visible:
 
 - `lib/` wrappers count live resources in dev builds: `SignalTracker.live`,
@@ -157,9 +158,9 @@ Order-insensitive comparison may be needed (zbus may sort members differently).
 
 ## 8. Manual matrix (nested / devkit Shell)
 
-Start a disposable Shell: GNOME ≤ 48 `dbus-run-session -- gnome-shell --nested --wayland`;
-GNOME 49+ replaced `--nested` with `gnome-shell --devkit` (mutter-devkit) — unverified,
-check `gnome-shell --help` on your version. Run with `MUTTER_DEBUG_DUMMY_MODE_SPECS=1920x1080`
+Start a disposable Shell: GNOME ≤ 48 `dbus-run-session gnome-shell --nested --wayland`;
+GNOME 49+ (X11 off, nested gone) `dbus-run-session gnome-shell --devkit --wayland`
+(needs `mutter-devkit`). Run with `MUTTER_DEBUG_DUMMY_MODE_SPECS=1920x1080`
 for a fixed size.
 
 | Scenario | Check |
@@ -193,6 +194,8 @@ helpers exist.
 
 Sources: Bernhardt, "Boundaries" (isolated unit tests on values) —
 https://www.destroyallsoftware.com/talks/boundaries ; Cockburn's test-driven ports —
-https://alistair.cockburn.us/hexagonal-architecture/ (unverified); GJS ESM —
-https://gjs.guide/guides/gjs/intro.html (unverified); Node test runner —
-https://nodejs.org/api/test.html ; gnome-shell devkit/nested flags: unverified.
+https://alistair.cockburn.us/hexagonal-architecture/ ; GJS ESM (since GJS 1.68) —
+https://gjs.guide/guides/gjs/intro.html ; Node test runner — https://nodejs.org/api/test.html ;
+syntax detection — https://nodejs.org/api/packages.html#syntax-detection ; devkit/nested —
+https://gjs.guide/extensions/development/debugging.html ; gnome-shell tests —
+https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/main/tests/meson.build .

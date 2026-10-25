@@ -65,7 +65,7 @@ Never return `anyhow::Error` from a library function or from an `#[interface]` m
 
 ```rust
 #[derive(Debug, thiserror::Error, zbus::DBusError)]
-#[zbus(prefix = "io.github.kem_a.Kiwi.Clipboard1.Error")]   // unverified attr name in 6.x
+#[zbus(prefix = "io.github.kem_a.Kiwi.Clipboard1.Error")]   // type-level attr, per DBusError docs
 pub enum ClipError {
     #[zbus(error)] ZBus(zbus::Error),
     NotFound(String),
@@ -140,7 +140,8 @@ fn list_after_add() -> anyhow::Result<()> {
         let name = format!("io.github.kem_a.Kiwi.Test{}", std::process::id());
         let _srv = kiwi_clipboardd::build_connection(&name, test_store()).await?;
         let conn = zbus::Connection::session().await?;
-        let p = ClipboardProxy::builder(&conn).destination(name.as_str())?.build().await?;
+        // zbus 6: builder setters are infallible; an invalid name surfaces at build()
+        let p = ClipboardProxy::builder(&conn).destination(name.as_str()).build().await?;
         let id = p.add_text("hello".into(), "text/plain".into()).await?;
         assert_eq!(p.list(1).await?[0].0, id);
         Ok(())
@@ -149,8 +150,9 @@ fn list_after_add() -> anyhow::Result<()> {
 ```
 
 `dbus-run-session` gives each run a throwaway session bus, so tests never touch the
-developer's real one. zbus also has a `p2p` connection mode for bus-less tests
-(unverified API in 6.x). The **contract test** (XML diff) lives in
+developer's real one. For bus-less tests zbus 6 has `connection::Builder::p2p()` /
+`::server(guid)` / `::authenticated_socket(..)`, behind the non-default `p2p` cargo
+feature (docs.rs/zbus/6.1.0 `connection::Builder`). The **contract test** (XML diff) lives in
 `interop-with-gjs.md`.
 
 ## 8. Lints and formatting
@@ -189,7 +191,8 @@ helpers:
 ```
 
 Sources: Rust API Guidelines (C-GOOD-ERR) — https://rust-lang.github.io/api-guidelines/interoperability.html
-(unverified this session); The Rust Book ch. 9 & 11 — https://doc.rust-lang.org/book/ ;
+; The Rust Book ch. 9 & 11 — https://doc.rust-lang.org/book/ ;
 thiserror — https://docs.rs/thiserror ; anyhow — https://docs.rs/anyhow ; zbus
-`DBusError` — https://docs.rs/zbus/latest/zbus/trait.DBusError.html ; clippy lints —
-https://rust-lang.github.io/rust-clippy/ . Proxy `builder().destination()` shape in 6.x: unverified.
+`DBusError` derive — https://docs.rs/zbus/6.1.0/zbus/derive.DBusError.html ; proxy
+`Builder::destination` (infallible) — https://docs.rs/zbus/6.1.0/zbus/proxy/struct.Builder.html ;
+clippy lints — https://rust-lang.github.io/rust-clippy/ .

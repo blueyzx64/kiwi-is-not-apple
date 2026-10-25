@@ -80,9 +80,9 @@ glib::spawn_future_local(async move {
 });
 ```
 
-Bounded channels give back-pressure. `glib::MainContext::channel` was removed in
-recent glib releases; do not use old tutorials that rely on it (unverified exact
-version of removal).
+Bounded channels give back-pressure. `glib::MainContext::channel` (and its
+Sender/Receiver) was removed in gtk-rs-core 0.19 (glib 0.19, Feb 2024); do not use old
+tutorials that rely on it.
 
 ## 5. Tokio alongside GLib
 
@@ -188,7 +188,9 @@ then run a `glib::MainLoop` and spawn zbus futures on it instead of `block_on`.
 - [ ] Widgets captured `#[weak]`; channels `#[strong]`.
 - [ ] Exactly one runtime per role; no nested `block_on`.
 
-Sources: gtk-rs book *The Main Event Loop* — https://gtk-rs.org/gtk4-rs/stable/latest/book/main_event_loop.html
-(listings 6 and 9 read from GitHub); zbus book *Establishing connections* and *FAQ* —
-https://dbus2.github.io/zbus/ ; zbus *Upgrading to 6.0*. `MainContext::channel`
-removal version and `load_contents_future` signature: unverified.
+Sources: gtk-rs book *The Main Event Loop* — https://gtk-rs.org/gtk4-rs/stable/latest/book/main_event_loop.html ;
+zbus book *Establishing connections*, *FAQ*, *Upgrading to 6.0* — https://z-galaxy.github.io/zbus/ ;
+channel removal — https://gtk-rs.org/blog/2024/06/01/new-release.html ;
+`load_contents_future() -> Result<(Slice<u8>, Option<GString>), glib::Error>` —
+https://docs.rs/gio/0.22.10/gio/prelude/trait.FileExtManual.html ; `spawn_future_local` /
+`JoinHandle::abort` — https://docs.rs/glib/0.22.10/glib/fn.spawn_future_local.html .

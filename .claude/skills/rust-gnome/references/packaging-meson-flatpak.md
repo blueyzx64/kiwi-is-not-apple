@@ -130,8 +130,10 @@ configure_file(input: 'io.github.kem_a.Kiwi.Clipboard.service.in',
 
 Optional systemd user unit (`Type=dbus`, `BusName=io.github.kem_a.Kiwi.Clipboard`)
 installed to `prefix/lib/systemd/user`. With `--prefix ~/.local` the service file lands
-in `~/.local/share/dbus-1/services`, which the session bus scans (both dbus-daemon and
-dbus-broker — unverified for every distro; test on Fedora and Ubuntu).
+in `~/.local/share/dbus-1/services`, which the session bus scans: dbus-daemon's
+`<standard_session_servicedirs/>` starts with `$XDG_DATA_HOME/dbus-1/services`
+(dbus-daemon(1)), and dbus-broker-launch reads the same config files (dbus-broker-launch(1)).
+A distro with a customised `session.conf` could differ — still smoke-test on Fedora and Ubuntu.
 
 ## 7. Flatpak
 
@@ -165,7 +167,8 @@ Notes:
 - `CARGO_HOME` must point at the vendored dir (`/run/build/<module>/cargo`) or the
   generated `.cargo/config.toml` must be installed — README explains both.
 - A Flatpak may own its app-id and names below it on the session bus; Flatpak exports
-  `.service` files for D-Bus-activatable apps (verify for non-GApplication daemons).
+  any `/app/share/dbus-1/services/<app-id>[.sub].service` whose `Name=` equals the
+  file name (docs.flatpak.org *Conventions*) — GApplication not required.
 - Sandboxed data lives in `~/.var/app/<app-id>/`; an indexer needs
   `--filesystem=home:ro` (or xdg dirs), which Flathub reviewers will question. For
   Spotlight, a native package may be the honest choice.
@@ -180,6 +183,8 @@ Notes:
 Sources: gtk-rs book *Building with Meson* + `listings/todo/9/{meson.build,src/meson.build,src/config.rs,data/*.service.in}` —
 https://gtk-rs.org/gtk4-rs/stable/latest/book/meson.html ; flatpak-cargo-generator —
 https://github.com/flatpak/flatpak-builder-tools/blob/master/cargo/README.md ;
-GNOME Rust app template (unverified this session, gitlab blocked):
-https://gitlab.gnome.org/World/Rust/gtk-rust-template ; D-Bus `SystemdService=` key:
-https://dbus.freedesktop.org/doc/dbus-daemon.1.html (unverified).
+GNOME Rust app template (Rust + GTK + Meson + Flatpak boilerplate, active 2026):
+https://gitlab.gnome.org/World/Rust/gtk-rust-template ; D-Bus `SystemdService=` key and
+session service dirs: https://dbus.freedesktop.org/doc/dbus-daemon.1.html ; dbus-broker:
+https://github.com/bus1/dbus-broker/blob/main/docs/dbus-broker-launch.rst ; Flatpak D-Bus
+service files: https://docs.flatpak.org/en/latest/conventions.html .

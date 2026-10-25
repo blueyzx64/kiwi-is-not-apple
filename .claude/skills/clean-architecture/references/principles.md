@@ -62,9 +62,9 @@ components; keep mutation and I/O at the edges. For Kiwi this gives four boundar
 
 ## 4. Ports & adapters
 
-Cockburn's aim: an application "equally driven by users, programs, automated test or
-batch scripts, and developed and tested in isolation from its eventual run-time
-devices". Kiwi ports:
+Cockburn's intent: "Allow an application to equally be driven by users, programs,
+automated test or batch scripts, and to be developed and tested in isolation from its
+eventual run-time devices and databases." Kiwi ports:
 
 | Port (owned by feature) | Production adapter | Test adapter |
 |---|---|---|
@@ -115,8 +115,8 @@ BATTERY_TRIGGER_PERCENTAGE && state === 2`) and the animation live in one method
 ## 7. Lifecycle
 
 GNOME Shell's extension contract: `enable()` may be called many times per session
-(lock/unlock), and `disable()` must undo everything `enable()` did (gjs.guide review
-guidelines; unverified exact wording). Architecturally this means:
+(lock/unlock), and `disable()` must undo everything `enable()` did — gjs.guide review
+guidelines: "Use disable() to cleanup anything done in enable()". Architecturally this means:
 
 - Effects are *owned* — each has a registered undo at creation time (DisposableStack).
 - Teardown order is the reverse of setup order, automatically (LIFO stack).
@@ -133,8 +133,9 @@ guidelines; unverified exact wording). Architecturally this means:
 - Do not build an event bus for direct parent→child calls inside a feature.
 
 Sources: Martin, "The Clean Architecture", https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html
-(quote via secondary sources; not fetched); Martin, *Clean Architecture* (2017);
-Cockburn, "Hexagonal architecture", https://alistair.cockburn.us/hexagonal-architecture/
-(quote via https://herbertograca.com/2017/09/14/ports-adapters-architecture/);
+(Dependency Rule quote checked 2026-10-25); Martin, *Clean Architecture* (2017);
+Cockburn, "Hexagonal architecture" (2005), https://alistair.cockburn.us/hexagonal-architecture/
+(Intent quote checked 2026-10-25); review guidelines —
+https://gjs.guide/extensions/review-guidelines/review-guidelines.html ;
 Bernhardt, "Boundaries", https://www.destroyallsoftware.com/talks/boundaries ;
 SOLID — Martin, *Agile Software Development: Principles, Patterns, and Practices* (2002).

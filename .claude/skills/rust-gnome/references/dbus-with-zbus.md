@@ -139,7 +139,9 @@ impl Clipboard { /* … */ }
 ```
 
 Limitation: service methods must return owned, `DeserializeOwned` types for the proxy.
-For a third-party XML, generate a proxy with `zbus-xmlgen` (unverified CLI flags).
+For a third-party XML, generate a proxy with `zbus-xmlgen` (crate `zbus_xmlgen` 6.0.0):
+`zbus-xmlgen file interface.xml` (or `-` for stdin), or `zbus-xmlgen session <name> <path>`
+to introspect a live service (https://docs.rs/crate/zbus_xmlgen/6.0.0).
 
 ## 6. Calling from GJS (the Kiwi side)
 
@@ -226,8 +228,9 @@ dbus-monitor --session "interface='io.github.kem_a.Kiwi.Clipboard1'"
 - Signals are broadcast; never put clipboard *contents* in a signal — send ids.
 
 Sources: zbus book *Writing a service interface*, *Upgrading to zbus 6.0*, *FAQ* —
-https://dbus2.github.io/zbus/ (read from github.com/dbus2/zbus/tree/main/book/src);
-GJS `Gio.DBusProxy.makeProxyWrapper` implementation —
-https://gitlab.gnome.org/GNOME/gjs/-/blob/master/modules/core/overrides/Gio.js (read
-via GitHub mirror). `#[zbus(prefix)]` on `DBusError` and `iface.get().await` access
-pattern in 6.x: unverified — check https://docs.rs/zbus/latest/zbus/.
+https://z-galaxy.github.io/zbus/ (the old dbus2.github.io/zbus URL 404s);
+GJS `Gio.DBusProxy.makeProxyWrapper` — https://gjs.guide/guides/gio/dbus.html and
+https://gitlab.gnome.org/GNOME/gjs/-/blob/master/modules/core/overrides/Gio.js.
+`#[zbus(prefix = …)]` on `DBusError` — https://docs.rs/zbus/6.1.0/zbus/derive.DBusError.html ;
+`InterfaceRef::get/get_mut/signal_emitter` — https://docs.rs/zbus/6.1.0/zbus/object_server/struct.InterfaceRef.html ;
+generated `<Iface>Signals` trait on `InterfaceRef` and `SignalEmitter` — https://docs.rs/zbus/6.1.0/zbus/attr.interface.html .
