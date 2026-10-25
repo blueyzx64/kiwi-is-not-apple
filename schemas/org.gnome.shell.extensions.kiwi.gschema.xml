@@ -524,6 +524,11 @@
         <summary>Spotlight: clipboard</summary>
         <description>Show recent Clipboard history entries. Needs Clipboard history to be on.</description>
       </key>
+      <key name="spotlight-recent-clipboard" type="b">
+        <default>false</default>
+        <summary>Spotlight: recent clipboard on an empty search</summary>
+        <description>Show the latest Clipboard history entries when the search field is empty. Off by default so copied text is not shown to anyone glancing at the screen. Typing still searches the clipboard when Spotlight: clipboard is on.</description>
+      </key>
       <key name="spotlight-web" type="b">
         <default>true</default>
         <summary>Spotlight: web search</summary>

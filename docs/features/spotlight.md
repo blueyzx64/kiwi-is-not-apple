@@ -14,7 +14,7 @@ Settings, Documents, Clipboard, Calculator, Web) and work fully from the keyboar
 
 ## 3. UI
 - 680px wide, 140px from the top, radius 22, 58px input with a 22px font.
-- Empty query: **Suggestions** (recent apps) + **Recent clipboard**.
+- Empty query: **Suggestions** (recent apps). **Recent clipboard** only when `spotlight-recent-clipboard` is on (off by default, privacy).
 - With a query: the first group is labelled "Top hit · …" and its first row is selected
   and drawn larger.
 - Calculator: plain arithmetic plus `N km in miles`-style unit conversions. Currency
