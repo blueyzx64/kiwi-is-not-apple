@@ -5,10 +5,16 @@
 //   - `placeholder` sits in the panel's centre box (PanelLayout) and only reserves room.
 //   - `island` is the black pill. It lives in the top chrome so it can grow below the bar and
 //     take input there. It is centred on the primary monitor and glued to its top edge.
+//   - two `ears` flank the island's top corners: the small concave fillets where a MacBook
+//     notch flares into the screen's top edge. They are siblings of the island (it clips to its
+//     allocation), pinned to its edges by snap constraints so they follow every frame of the
+//     grow and shrink animations, and painted in the island's own background colour.
 
+import Cairo from 'cairo';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import GObject from 'gi://GObject';
 import Pango from 'gi://Pango';
 import Shell from 'gi://Shell';
 import St from 'gi://St';
@@ -23,6 +29,7 @@ const SHRINK_MS = 260;   // ease-out
 const FADE_MS = 160;
 const BARS = 3;
 const BAR_TICK_MS = 380;
+const EAR_RADIUS = 10;   // the fillet where the notch meets the top edge, logical px
 
 const label = (text, styleClass, opts = {}) => {
     const l = new St.Label({
@@ -73,6 +80,7 @@ export class NotchView {
         this._barTimer = 0;
         this._size = SIZES.idle;
         this._glass = null;
+        this._ears = null;
         this._glassShown = false;
         this._grab = null;          // Main.pushModal grab while the dashboard is open
         this._wantGrab = false;
@@ -129,6 +137,7 @@ export class NotchView {
         });
         cleanup.connect(Main.layoutManager, 'monitors-changed', () => this._place(this._size, false));
 
+        this._addEars();
         this._attachGlass();
         this._place(SIZES.idle, false);
     }
@@ -214,6 +223,72 @@ export class NotchView {
             }
         }
         return Clutter.EVENT_PROPAGATE;
+    }
+
+    // ---- ears -----------------------------------------------------------------------------
+    // Each ear is an EAR_RADIUS square just outside one top corner of the island, filled with
+    // the island's background colour minus a quarter circle centred on the ear's outer bottom
+    // corner. The island's top corners are square, so ear and island share one straight edge
+    // and the black runs from the island's side into the top edge along a smooth arc.
+    // The ears touch the island but never overlap it, so a translucent fill is not doubled
+    // along the seam. Snap constraints put both edges of each ear on the island's allocation
+    // (fractional while it eases), so there is no gap at any width.
+
+    _addEars() {
+        const parent = this._island.get_parent();
+        const edge = Clutter.SnapEdge;
+        const snap = (ear, from, to, offset) => ear.add_constraint(new Clutter.SnapConstraint({
+            source: this._island, from_edge: from, to_edge: to, offset,
+        }));
+        this._ears = ['left', 'right'].map(side => {
+            const ear = new St.DrawingArea({
+                name: `kiwi-notch-ear-${side}`,
+                style_class: 'kiwi-notch-ear',
+                reactive: false,
+            });
+            ear.connect('repaint', () => this._paintEar(ear, side));
+            parent.insert_child_below(ear, this._island);
+            if (side === 'left') {
+                snap(ear, edge.RIGHT, edge.LEFT, 0);
+                snap(ear, edge.LEFT, edge.LEFT, -EAR_RADIUS);
+            } else {
+                snap(ear, edge.LEFT, edge.RIGHT, 0);
+                snap(ear, edge.RIGHT, edge.RIGHT, EAR_RADIUS);
+            }
+            snap(ear, edge.TOP, edge.TOP, 0);
+            snap(ear, edge.BOTTOM, edge.TOP, EAR_RADIUS);
+            // Shown, hidden and faded with the island
+            this._island.bind_property('visible', ear, 'visible', GObject.BindingFlags.SYNC_CREATE);
+            this._island.bind_property('opacity', ear, 'opacity', GObject.BindingFlags.SYNC_CREATE);
+            return ear;
+        });
+        // A theme or Glass change to the island's fill repaints the ears in the same colour
+        this._cleanup.connect(this._island, 'style-changed', () => this._ears?.forEach(e => e.queue_repaint()));
+        this._cleanup.add(() => {
+            this._ears?.forEach(e => e.destroy());
+            this._ears = null;
+        });
+    }
+
+    _paintEar(ear, side) {
+        const cr = ear.get_context();
+        try {
+            const [w, h] = ear.get_surface_size();
+            const c = this._island.get_theme_node().get_background_color();
+            cr.setOperator(Cairo.Operator.CLEAR);
+            cr.paint();
+            cr.setOperator(Cairo.Operator.OVER);
+            // The square, minus the circle of radius w centred on the outer bottom corner
+            const cx = side === 'left' ? 0 : w;
+            cr.newPath();
+            cr.rectangle(0, 0, w, h);
+            cr.arc(cx, h, w, 0, 2 * Math.PI);
+            cr.setFillRule(Cairo.FillRule.EVEN_ODD);
+            cr.setSourceRGBA(c.red / 255, c.green / 255, c.blue / 255, c.alpha / 255);
+            cr.fill();
+        } finally {
+            cr.$dispose();
+        }
     }
 
     /** Glass blur behind the large cards; the small pill is plain black. */

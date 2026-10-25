@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Rounded window corners (features.js: `cls: RoundedCorners`, key `rounded-corners`).
+// Rounded window corners (features.js: `cls: RoundedCorners`, key `rounded-corners`, on by
+// default). `rounded-corners-which` picks the corners: the top two (default) or all four.
 //
 // One KiwiRoundedCornersEffect (effect.js) per window actor, added on enable and for every
 // window created later (display `window-created`). The effect is disabled, not removed, while
@@ -15,7 +16,7 @@ import Shell from 'gi://Shell';
 
 import { KiwiSettings } from '../../lib/settings.js';
 import { EFFECT_NAME, effectClass } from './effect.js';
-import { clampRadius, frameInActor, qualifies } from './model.js';
+import { clampRadius, cornerMask, frameInActor, qualifies } from './model.js';
 
 const TYPES = new Map([
     [Meta.WindowType.NORMAL, 'normal'],
@@ -36,7 +37,7 @@ export class RoundedCorners {
         this._ctx = ctx;
         this._cleanup = cleanup;
         this._windows = new Map();   // Meta.WindowActor -> {win, effect}
-        this._config = { radius: 12, blacklist: [] };
+        this._config = { radius: 12, blacklist: [], corners: cornerMask('top') };
         this._Effect = null;
         this._pending = new Map();   // Meta.Window without an actor yet -> stop()
     }
@@ -53,10 +54,11 @@ export class RoundedCorners {
             this._config = {
                 radius: clampRadius(ks.int('rounded-corners-radius')),
                 blacklist: ks.strv('rounded-corners-blacklist'),
+                corners: cornerMask(ks.string('rounded-corners-which')),
             };
         };
         read();
-        ks.watch(['rounded-corners-radius', 'rounded-corners-blacklist'], () => {
+        ks.watch(['rounded-corners-radius', 'rounded-corners-blacklist', 'rounded-corners-which'], () => {
             read();
             this._syncAll();
         });
@@ -158,7 +160,8 @@ export class RoundedCorners {
         const { win, effect } = rec;
         const on = qualifies(this._info(win), this._config);
         if (on)
-            effect.setGeometry(frameInActor(win.get_frame_rect(), win.get_buffer_rect()), this._config.radius);
+            effect.setGeometry(frameInActor(win.get_frame_rect(), win.get_buffer_rect()),
+                this._config.radius, this._config.corners);
         if (effect.enabled !== on)
             effect.enabled = on;
     }
