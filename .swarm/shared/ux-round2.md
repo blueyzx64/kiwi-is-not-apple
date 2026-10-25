@@ -3,7 +3,7 @@
 Read-only for workers. The orchestrator merges every `r2/*` branch into `ccr-f3c1f44c-rv5a8r`, then into main.
 The rules, harness and evidence standards from `.swarm/shared/ux-round.md` still apply (read it).
 
-The owner's latest screenshot: `/tmp/claude-0/-home-user-kiwi-is-not-apple/1c9cfc23-1f6c-5ceb-aec3-03f023179fb0/scratchpad/user-shots/r2-overview-strip.png`. It shows the overview on another workspace, with the Stage Manager floor floating awkwardly over the left workspace thumbnail.
+The owner's latest screenshot showed the overview on another workspace, with the Stage Manager floor floating awkwardly over the left workspace thumbnail.
 
 ## The owner's items (verbatim intent)
 1. **Stage Manager window grouping.** Windows should be able to appear side by side: drag a window onto another in Stage Manager, or drag a strip window onto the left or right part of the stage to group the two. "How does macOS handle this? And when I open a new app, will the group be minimized?"
@@ -24,3 +24,6 @@ The owner's latest screenshot: `/tmp/claude-0/-home-user-kiwi-is-not-apple/1c9cf
 - Enable and disable stay exact mirrors.
 - GNOME 50 only. Don't break `lib/compat.js`.
 - `make check` must pass. Real-Shell screenshots are the evidence.
+
+## Never commit screenshots
+Screenshots stay in /tmp only. Never add PNG/JPG files to the repo, except Kiwi's own icon assets.
