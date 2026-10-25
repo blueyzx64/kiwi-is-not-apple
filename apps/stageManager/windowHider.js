@@ -71,10 +71,15 @@ export class WindowHider {
         }
     }
 
-    /** Reveal everything now but keep the records (overview). */
+    /**
+     * Reveal everything now but keep the records and the minimize intent (overview).
+     * @returns {Meta.Window[]} the windows that were hidden
+     */
     revealAll() {
-        for (const win of [...this._records.keys()])
+        const was = this.hiddenWindows();
+        for (const win of was)
             this._showOne(win, false, true);
+        return was;
     }
 
     /** The user asked to minimize this window while Stage Manager is on: remember the intent. */
@@ -103,15 +108,27 @@ export class WindowHider {
         const rec = this._records.get(win);
         if (!rec)
             return;
+        this._cleanup.release(rec.guard);
         this._cleanup.release(rec.token);
         this._records.delete(win);
         WindowState.set(win, 'staged', false);
+    }
+
+    /** Windows this hider keeps hidden right now. */
+    hiddenWindows() {
+        return [...this._records].filter(([, rec]) => rec.hidden).map(([win]) => win);
     }
 
     /** Put every window back exactly as found. Sync, safe to call twice. */
     restoreAll() {
         const minimizeAfter = [];
         for (const [win, rec] of [...this._records]) {
+            rec.hidden = false;
+            try {
+                this._cleanup.release(rec.guard);    // before the opacity write it would undo
+            } catch (_e) {
+                // already released
+            }
             try {
                 const actor = win.get_compositor_private();
                 if (actor) {
@@ -195,6 +212,7 @@ export class WindowHider {
             frame: null,
             userMinimized: false,
             token: 0,
+            guard: 0,          // notify::opacity on the actor while hidden
         };
         rec.token = this._cleanup.connect(win, 'unmanaged', () => this.forget(win));
         this._records.set(win, rec);
@@ -206,8 +224,12 @@ export class WindowHider {
         if (!actor)
             return;
         const rec = this._record(win);
-        if (rec.hidden)
+        this._watchOpacity(win, rec, actor);
+        if (rec.hidden) {
+            // The Shell's minimize/unminimize effects end by writing opacity 255: assert again
+            this._reassert(rec, actor);
             return;
+        }
         // Remember what "shown" looks like unless a fade is in the middle of it
         if (actor.opacity > 0 && !actor.get_transition('opacity'))
             rec.opacity = actor.opacity;
@@ -233,6 +255,20 @@ export class WindowHider {
                 }
             },
         });
+    }
+
+    _reassert(rec, actor) {
+        if (!rec.hidden || actor.get_transition('opacity'))
+            return;
+        if (actor.opacity !== 0)
+            actor.opacity = 0;
+        this._pick(actor, true);
+    }
+
+    _watchOpacity(win, rec, actor) {
+        if (rec.guard)
+            return;
+        rec.guard = this._cleanup.connect(actor, 'notify::opacity', () => this._reassert(rec, actor));
     }
 
     _showOne(win, animate, keepIntent = false) {

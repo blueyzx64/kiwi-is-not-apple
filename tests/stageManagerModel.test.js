@@ -1,7 +1,7 @@
 // Run: gjs -m tests/stageManagerModel.test.js
 import {
     DEFAULTS, overlaps, thumbFit, cropThumb, stackLayers, cardTilt, fitCount, stripLayout,
-    edgeZone, stageArea, fitToStage, centerOnStage, stripShown, StageModel,
+    edgeZone, stageArea, fitToStage, centerOnStage, stripShown, StageModel, focusRoot, isExempt, edgeBarrier,
 } from '../apps/stageManager/model.js';
 
 let failed = 0;
@@ -375,6 +375,103 @@ test('split of the only window of the current stage keeps it current', () => {
     eq(m.current.windows, [3]);
     eq(m.stages().length, 4);
 });
+test('visibility never hides a stage past recentCount (no card)', () => {
+    const m = new StageModel({ recentCount: 2 });
+    m.sync(SET);
+    m.focus(1);
+    const v = m.visibility();
+    eq(v.hide, [3, 4]);
+    eq(v.show, [1, 2, 5]);
+});
+test('visibility honours the strip limit (cards that fit on screen)', () => {
+    const m = new StageModel();
+    m.sync(SET);
+    m.focus(4);
+    eq(m.visibility(1), { show: [4, 3, 5], hide: [1, 2] });
+    eq(m.visibility(0).hide, []);
+});
+test('visibility: hidden set equals the stages the strip lists', () => {
+    const m = new StageModel({ recentCount: 3 });
+    m.sync([...SET, W(6, 'd'), W(7, 'e')]);
+    m.focus(7);
+    const cards = m.strip().slice(0, 2).flatMap(st => st.windows);
+    eq(m.visibility(2).hide, cards);
+});
+test('leadForApp gives the most recent window of the app', () => {
+    const m = new StageModel();
+    m.sync(SET);
+    m.focus(2);
+    m.focus(1);
+    m.focus(3);
+    eq(m.leadForApp('a'), 1);
+    eq(m.leadForApp('zzz'), null);
+    eq(m.leadForApp(null), null);
+});
+test('leadForApp without grouping picks the most recent window stage of the app', () => {
+    const m = new StageModel({ groupByApp: false });
+    m.sync(SET);
+    m.focus(2);
+    eq(m.leadForApp('a'), 2);
+});
+
+// ---- focus roots ----
+const node = (name, parent = null, listed = false) => ({ name, parent, listed });
+const up = w => w.parent;
+const listed = w => w.listed;
+test('focusRoot: a listed window is its own root', () => {
+    const a = node('a', null, true);
+    eq(focusRoot(a, up, listed).name, 'a');
+});
+test('focusRoot: dialog maps to its listed parent', () => {
+    const a = node('a', null, true);
+    const d = node('d', a);
+    eq(focusRoot(d, up, listed).name, 'a');
+});
+test('focusRoot: nested dialogs walk up', () => {
+    const a = node('a', null, true);
+    const d1 = node('d1', a);
+    const d2 = node('d2', d1);
+    eq(focusRoot(d2, up, listed).name, 'a');
+});
+test('focusRoot: no listed ancestor gives null', () => {
+    eq(focusRoot(node('d', node('p')), up, listed), null);
+    eq(focusRoot(null, up, listed), null);
+});
+test('focusRoot: a transient loop ends', () => {
+    const x = node('x');
+    const y = node('y', x);
+    x.parent = y;
+    eq(focusRoot(x, up, listed), null);
+});
+
+// ---- edge barrier ----
+const MON = { x: 0, y: 0, width: 1920, height: 1080 };
+test('edgeBarrier left edge of a lone monitor', () =>
+    eq(edgeBarrier(WA, MON, [], 'left'), { x1: 0, x2: 0, y1: 32, y2: 1080, direction: 'positive' }));
+test('edgeBarrier right edge', () =>
+    eq(edgeBarrier(WA, MON, [], 'right'), { x1: 1920, x2: 1920, y1: 32, y2: 1080, direction: 'negative' }));
+test('edgeBarrier none where a monitor continues past the edge', () => {
+    eq(edgeBarrier(WA, MON, [{ x: -1280, y: 0, width: 1280, height: 1024 }], 'left'), null);
+    eq(edgeBarrier(WA, MON, [{ x: 1920, y: 200, width: 1280, height: 1024 }], 'right'), null);
+});
+test('edgeBarrier ignores a monitor on the other side or not overlapping vertically', () => {
+    eq(edgeBarrier(WA, MON, [{ x: 1920, y: 0, width: 1280, height: 1024 }], 'left') !== null, true);
+    eq(edgeBarrier(WA, MON, [{ x: -1280, y: 2000, width: 1280, height: 1024 }], 'left') !== null, true);
+});
+
+// ---- exempt windows ----
+const plainWin = { above: false, sticky: false, title: 'Notes', monitor: 0, primary: 0 };
+test('isExempt: a plain window on the primary monitor is managed', () => eq(isExempt(plainWin), false));
+test('isExempt: always on top', () => eq(isExempt({ ...plainWin, above: true }), true));
+test('isExempt: on all workspaces', () => eq(isExempt({ ...plainWin, sticky: true }), true));
+test('isExempt: picture-in-picture titles', () => {
+    eq(isExempt({ ...plainWin, title: 'Picture-in-Picture' }), true);
+    eq(isExempt({ ...plainWin, title: 'Picture in picture' }), true);
+    eq(isExempt({ ...plainWin, title: 'Pictures' }), false);
+    eq(isExempt({ ...plainWin, title: null }), false);
+});
+test('isExempt: other monitor', () => eq(isExempt({ ...plainWin, monitor: 1 }), true));
+
 test('views are copies', () => {
     const m = new StageModel();
     m.sync(SET);
