@@ -41,8 +41,10 @@ New features default to ON (owner decision); users opt out in prefs.
 
 - **Window controls:**
   - Controls appear in the top bar for any focused normal window, not only maximized ones. New settings are scope (all / maximized / fullscreen), position and `remove-titlebar-buttons`.
-  - `remove-titlebar-buttons` defaults to ON, so GTK apps lose their own titlebar buttons.
-  - Dialogs and modal dialogs also get panel controls, greyed per capability.
+  - `remove-titlebar-buttons` defaults to ON. With scope `all`, Kiwi saves your `org.gnome.desktop.wm.preferences button-layout` in `saved-button-layout` and sets it to the same layout without close/minimize/maximize (stock `appmenu:close` becomes `appmenu:`), so **every** app that follows it loses its own buttons: GTK 3, GTK 4/libadwaita, Chromium/Electron (GTK titlebar) and Mutter's server-side frames. Turning the controls off, turning `remove-titlebar-buttons` off, switching the scope to maximized/fullscreen or disabling Kiwi writes your layout back exactly; open windows get their buttons back live. A layout you change while Kiwi owns it becomes the new saved original, and position `system` follows the saved layout. After a crash the saved layout is written back when Kiwi next starts. With scope maximized/fullscreen the layout is left alone and the GTK CSS hides GTK buttons in those states only.
+  - The master switch is now labelled "Window controls in top bar (removes them from app windows)".
+  - **Minimize and maximize are forced for every window** (owner request), never greyed out. Close still follows the window. Mutter refuses `minimize()` for windows that are not NORMAL (dialogs, modal dialogs) and skip-taskbar windows (dialogs with a parent), so a dialog is minimized together with its nearest minimizable parent; mutter hides the transients of a minimized window and shows them again when it is restored. A window with no such parent is lowered behind the others instead. Maximize: `meta_window_maximize()` does not check `can_maximize()`, so resizable dialogs (for example the Extensions app's prefs window, a modal dialog attached to its parent) are really maximized and restored. A resizable window that mutter still does not maximize is resized to the work area and put back on the next click. A fixed-size window (min size = max size, GTK `resizable=false`) cannot grow, so maximize centres it in the work area.
+- **Activities button hidden by default:** `hide-activities-button` now defaults to ON. On GNOME 50 this removes the whole workspace-indicator pill (pill and dots) at the top left; the window controls then start at the left edge. Turning it off or disabling Kiwi shows it again.
   - `show-window-controls-fullscreen-only` migrates to scope `fullscreen`.
 - **Firefox/Thunderbird styling gate:** their profiles are touched only when the per-app styling key is on. Hiding Firefox's native buttons (`Hidden.css`) now also needs that key plus window controls plus `remove-titlebar-buttons`. Deferred by the owner; revisit in a later release.
 - **Super tap opens Spotlight, not the overview.**
@@ -124,11 +126,17 @@ Run each item on Fedora 44 Workstation, GNOME 50, in a Wayland session (GNOME 50
 - [ ] Fresh install on stock Fedora 44 (`button-layout` `appmenu:close`), focus any window. Expected: close, minimize and maximize show on the left of the top bar, in that order, before the app name.
 - [ ] Set position left, right and system, and set `button-layout` to `appmenu:minimize,maximize,close` with position system. Expected: controls sit right, last slot; with calendar-right on they are still last.
 - [ ] Play a fullscreen video. Expected: minimize greyed, close inert for 3 s.
-- [ ] Open a GTK3 app and a GTK4 app (Files). Expected: own titlebar buttons gone and the window is still draggable. Turn remove-titlebar-buttons off. Expected: buttons return.
+- [ ] Open a GTK3 app and a GTK4 app (Files). Expected: own titlebar buttons gone and the window is still draggable. Turn remove-titlebar-buttons off. Expected: buttons return in the open windows, without restarting them.
+- [ ] Note `gsettings get org.gnome.desktop.wm.preferences button-layout`, then enable Kiwi. Expected: the same layout without close/minimize/maximize, and `saved-button-layout` holds the original. Turn `show-window-controls` off, then disable Kiwi. Expected: each time the layout is exactly the original and `saved-button-layout` is empty; every app shows its own buttons again.
+- [ ] While Kiwi runs, set a different layout in Tweaks. Expected: the titlebars stay empty; turn the controls off and that new layout is the one restored.
+- [ ] Open Chrome/Chromium (GTK titlebar) or an Electron app. Expected: no own buttons while on, back when off.
 - [ ] Check `gtk-3.0/gtk.css` and `gtk-4.0/gtk.css`. Expected: Kiwi block only, your rules intact; after disable the block is gone and a file Kiwi wrote alone is removed.
 - [ ] Try a Flatpak GTK app with the README override. Expected: same as the GTK result above.
-- [ ] Open a Qt, Electron or server-side-decorated window. Expected: it keeps its own buttons (known limit).
-- [ ] Open a file chooser or GTK dialog. Expected: panel buttons show, greyed per capability; closing via the panel works.
+- [ ] Open a Qt window. Expected: it keeps its own buttons if it draws its own decorations (known limit); server-side frames follow the layout and lose theirs.
+- [ ] Open Extensions, then a Kiwi/extension prefs window. Expected: minimize and maximize are not greyed. Maximize fills the screen and restores; minimize hides the prefs window together with Extensions, and restoring Extensions brings both back.
+- [ ] Open a file chooser or GTK dialog. Expected: panel buttons show and are not greyed; closing via the panel works.
+- [ ] Open a fixed-size window (an About dialog, or GTK `resizable=false`), drag it to a corner, click maximize. Expected: it moves to the centre of the screen; minimize works.
+- [ ] Fresh install. Expected: no Activities pill (workspace dots) at the top left; the traffic lights sit at the left edge. Turn "Hide Activities Button" off. Expected: the pill comes back in its place.
 - [ ] Toggle `show-window-controls` 20x, then lock and unlock. Expected: no leaks, panel box unchanged, buttons return.
 - [ ] Upgrade with `show-window-controls-fullscreen-only=true`. Expected: scope reads fullscreen.
 - [ ] Enable Dash to Dock and Blur my Shell. Expected: no overlap.
@@ -298,7 +306,8 @@ Run each item on Fedora 44 Workstation, GNOME 50, in a Wayland session (GNOME 50
 
 ### Known limits
 - **Other GNOME versions come later.** This release supports only GNOME 50 on Fedora 44. The 48, 49 and 51 code paths in `lib/compat.js` are kept and were partly exercised headless (48.1, 51.1), but they are not claimed and not supported in this release.
-- **Server-side-decorated windows keep their own buttons.** Kiwi doesn't write the system `button-layout` key (Qt, Electron).
+- **Titlebar buttons are removed through the system `button-layout` (scope `all`).** Apps that hard-code their own button layout or draw their own decorations without following GNOME's (some Qt apps, some games) keep their buttons. GTK CSS is no longer used for scope `all`: GTK reads gtk.css only at start, so windows opened while it was imported stayed without buttons after the controls were turned off (seen on GNOME 50.6).
+- **Forced minimize/maximize limits.** Mutter has no way to minimize a dialog on its own, so it goes down with its parent; a parentless window mutter will not minimize (a skip-taskbar window) is lowered instead. A fixed-size window cannot be maximized (the app sets min size = max size), so it is centred instead. Maximize on an attached modal dialog resizes the dialog, not its parent.
 - **Super-tap takeover:** Kiwi blocks the oldest `overlay-key` handler (assumed to be the Shell's). A Spotlight open/close probe passed on headless 50.6, 48.1 and 51.1, but the probe did not press a real Super key.
 - **Quick Paste uses a virtual-keyboard Ctrl+V** (Ctrl+Shift+V for terminals). Pasting into a real app window has not been tested.
 - **Liquid Glass refraction is experimental.**

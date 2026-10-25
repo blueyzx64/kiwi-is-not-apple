@@ -94,7 +94,12 @@ export function shouldShow({ scope, hasWindow, maximized, fullscreen, overview, 
  * The scope decides where the panel shows the buttons, and the windows lose theirs in the
  * same cases, so no window is ever left without buttons.
  *
- * @returns {string|null} file name in css/, or null when removal is off
+ * Scope 'all' needs no sheet: Kiwi then owns the WM button-layout (ownsButtonLayout), which
+ * GTK follows live through the settings portal. A sheet would be worse there: GTK reads
+ * gtk.css once at start, so windows opened while it was imported would stay without buttons
+ * after the controls are turned off, until restarted (seen in the real Shell, GNOME 50.6).
+ *
+ * @returns {string|null} file name in css/, or null when no sheet is needed
  */
 export function titlebarHideSheet({ showOnPanel, remove, scope, gtkVersion }) {
     if (!showOnPanel || !remove)
@@ -105,7 +110,7 @@ export function titlebarHideSheet({ showOnPanel, remove, scope, gtkVersion }) {
     case 'maximized':
         return `hide-titlebar${gtkVersion}.css`;
     default:
-        return `hide-titlebar-always${gtkVersion}.css`;
+        return null;
     }
 }
 

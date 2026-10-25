@@ -195,7 +195,7 @@ test('owner after a crash keeps the saved original, not the stripped live value'
 
 // --- titlebarHideSheet
 const sheet = (o) => titlebarHideSheet({ showOnPanel: true, remove: true, scope: 'all', gtkVersion: '4', ...o });
-test('all -> always sheet', () => eq(sheet({}), 'hide-titlebar-always4.css'));
+test('all -> no sheet (the button-layout does it, live)', () => eq(sheet({}), null));
 test('maximized -> classic sheet', () => eq(sheet({ scope: 'maximized', gtkVersion: '3' }), 'hide-titlebar3.css'));
 test('fullscreen -> fullscreen sheet', () => eq(sheet({ scope: 'fullscreen' }), 'hide-titlebar-fullscreen4.css'));
 test('remove off -> none', () => eq(sheet({ remove: false }), null));

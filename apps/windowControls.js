@@ -10,8 +10,8 @@
 // Titlebar-button removal for real windows: while the controls show for all windows and
 // remove-titlebar-buttons is on, ButtonLayoutOwner replaces the WM button-layout with one
 // without buttons (saved in saved-button-layout, restored exactly on disable / toggle-off).
-// The GTK CSS in gtkThemeManager.js stays as the fallback for apps that ignore the layout and
-// for the maximized / fullscreen scopes, where floating windows keep their buttons.
+// The GTK CSS in gtkThemeManager.js is used for the maximized / fullscreen scopes, where
+// floating windows keep their buttons (see titlebarHideSheet for why not for 'all').
 
 import GObject from 'gi://GObject';
 import Gio from 'gi://Gio';

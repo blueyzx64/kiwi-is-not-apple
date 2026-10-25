@@ -252,7 +252,7 @@
       <key name="remove-titlebar-buttons" type="b">
         <default>true</default>
         <summary>Remove titlebar buttons from windows</summary>
-        <description>While the panel shows window controls for all windows, remove the close, minimize and maximize buttons from every app's own titlebar. Kiwi sets the GNOME window button layout (org.gnome.desktop.wm.preferences button-layout) to one without them, which GTK 3, GTK 4/libadwaita, Chromium/Electron and server-side frames honour, and restores the saved original when the controls or this option are turned off or Kiwi is disabled. GTK CSS in the user's gtk.css covers apps that ignore the layout and the maximized/fullscreen scopes.</description>
+        <description>While the panel shows window controls for all windows, remove the close, minimize and maximize buttons from every app's own titlebar. Kiwi sets the GNOME window button layout (org.gnome.desktop.wm.preferences button-layout) to one without them, which GTK 3, GTK 4/libadwaita, Chromium/Electron and server-side frames honour, and restores the saved original when the controls or this option are turned off or Kiwi is disabled. With the maximized or fullscreen scope the layout is left alone and GTK CSS in the user's gtk.css hides the buttons of GTK windows in those states.</description>
       </key>
       <key name="saved-button-layout" type="s">
         <default>''</default>
