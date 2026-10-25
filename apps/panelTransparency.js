@@ -49,7 +49,7 @@ let bgSettings;
 let bgSignals = [];
 let wallpaperLuminance = 0;
 let iconTheme;
-let monochromeIcons = new Map(); // gicon string -> 'light' | 'dark' | null
+const monochromeIcons = new Map(); // gicon string -> 'light' | 'dark' | null
 let contentIcons = new WeakMap(); // St.ImageContent | Gio.BytesIcon -> 'light' | 'dark' | null
 
 const SAMPLE_SIZE = 32; // wallpaper is downscaled to this before sampling

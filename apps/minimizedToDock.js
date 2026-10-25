@@ -39,10 +39,10 @@ const TILE_GROW_TIME = 240;   // ms for the thumbnail itself to grow or shrink
 let enabled = false;
 let docks = [];                 // [{ dash, strip, iconSize, signals, tiles, trashItem }]
 let order = [];                 // Meta.Window[], in minimize order (newest last)
-let snapshots = new Map();      // Meta.Window -> { content, width, height }
-let windowSignals = new Map();  // Meta.Window -> [signal ids]
+const snapshots = new Map();      // Meta.Window -> { content, width, height }
+const windowSignals = new Map();  // Meta.Window -> [signal ids]
 let globalSignals = [];         // [[object, id]]
-let restoring = new Set();      // windows whose restore animation is still running
+const restoring = new Set();      // windows whose restore animation is still running
 let d2dSettings = null;
 const sources = {
     dockSearch: 0, restoreGrace: 0, geometryUpdate: 0,

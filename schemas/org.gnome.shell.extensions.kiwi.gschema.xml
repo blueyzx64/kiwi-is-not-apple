@@ -535,5 +535,33 @@
         <description>One of duckduckgo, google, bing, brave, startpage, ecosia, or an https address that contains %s for the search words.</description>
       </key>
 
+      <!-- Notch (apps/notch) -->
+      <key name="notch" type="b">
+        <default>true</default>
+        <summary>Notification notch</summary>
+        <description>Show notifications, live activities and volume or brightness changes in a pill at the top centre of the screen. Turning it off restores the standard banners and on-screen display. The notification history stays in the calendar menu.</description>
+      </key>
+      <key name="notch-notifications" type="b">
+        <default>true</default>
+        <summary>Notch shows notifications</summary>
+        <description>Show notification banners in the notch instead of the standard banner.</description>
+      </key>
+      <key name="notch-live-activities" type="b">
+        <default>true</default>
+        <summary>Notch shows live activities</summary>
+        <description>Show what is happening now, such as the playing song, in the notch.</description>
+      </key>
+      <key name="notch-osd" type="b">
+        <default>true</default>
+        <summary>Notch shows volume and brightness</summary>
+        <description>Show volume and brightness changes in the notch instead of the standard on-screen display.</description>
+      </key>
+      <key name="notch-timeout" type="i">
+        <default>5</default>
+        <range min="2" max="30"/>
+        <summary>Notification time (seconds)</summary>
+        <description>How long a notification stays in the notch. Hovering keeps it open and urgent ones stay until dismissed.</description>
+      </key>
+
     </schema>
 </schemalist>

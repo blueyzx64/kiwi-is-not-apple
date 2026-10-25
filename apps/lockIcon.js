@@ -63,7 +63,7 @@ class LockIcon extends PanelMenu.Button {
     _animateIcon(icon, show) {
         icon.remove_all_transitions();
 
-        let [, naturalWidth] = icon.get_preferred_width(-1);
+        const [, naturalWidth] = icon.get_preferred_width(-1);
 
         if (show) {
             icon.visible = true;

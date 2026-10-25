@@ -30,11 +30,12 @@ import * as autohidePrefs from './apps/autohide/prefs.js';
 import * as controlCenterPrefs from './apps/controlCenter/prefs.js';
 import * as clipboardPrefs from './apps/clipboard/prefs.js';
 import * as spotlightPrefs from './apps/spotlight/prefs.js';
+import * as notchPrefs from './apps/notch/prefs.js';
 import * as stageManagerPrefs from './apps/stageManager/prefs.js';
 
 // Feature prefs modules (see apps/<feature>/prefs.js): PAGE says where, buildPrefs() makes the groups
 // New pages appear in this order, after Options and before Advanced (Liquid Glass first).
-const FEATURE_PREFS = [liquidGlassPrefs, windowControlsPrefs, autohidePrefs, controlCenterPrefs, clipboardPrefs, spotlightPrefs, stageManagerPrefs];
+const FEATURE_PREFS = [liquidGlassPrefs, windowControlsPrefs, autohidePrefs, controlCenterPrefs, clipboardPrefs, spotlightPrefs, notchPrefs, stageManagerPrefs];
 
 const D2D_UUIDS = ['dash-to-dock@micxgx.gmail.com', 'ubuntu-dock@ubuntu.com'];
 const EXTENSION_ACTIVE = 1;
@@ -391,16 +392,16 @@ export default class KiwiPreferences extends ExtensionPreferences {
             settings.get_boolean('panel-color-inherit') ||
             settings.get_boolean('panel-invert-tray-icons');
         const transparencyExpander = new Adw.ExpanderRow({
-            title: _("Panel Transparency"),
-            subtitle: _("Make the top panel transparent"),
+            title: _('Panel Transparency'),
+            subtitle: _('Make the top panel transparent'),
             expanded: settings.get_boolean('panel-transparency') && transparencyHasNonDefault,
             show_enable_switch: true,
         });
 
         // Transparency level spinbox
         const transparencySpinRow = new Adw.SpinRow({
-            title: _("Transparency Level"),
-            subtitle: _("Set panel transparency (0-100)"),
+            title: _('Transparency Level'),
+            subtitle: _('Set panel transparency (0-100)'),
             adjustment: new Gtk.Adjustment({
                 lower: 0,
                 upper: 100,
@@ -414,8 +415,8 @@ export default class KiwiPreferences extends ExtensionPreferences {
 
         // Opaque on maximized window switch
         const opaqueOnWindowSwitch = new Adw.SwitchRow({
-            title: _("Opaque When Window Maximized"),
-            subtitle: _("Make panel opaque when a maximized window touches it"),
+            title: _('Opaque When Window Maximized'),
+            subtitle: _('Make panel opaque when a maximized window touches it'),
             active: settings.get_boolean('panel-opaque-on-window'),
             sensitive: settings.get_boolean('panel-transparency'),
         });
@@ -423,8 +424,8 @@ export default class KiwiPreferences extends ExtensionPreferences {
 
         // Panel blur
         const panelBlurRow = new Adw.SwitchRow({
-            title: _("Panel Blur"),
-            subtitle: _("Blur the background behind the panel"),
+            title: _('Panel Blur'),
+            subtitle: _('Blur the background behind the panel'),
             active: settings.get_boolean('panel-blur'),
             sensitive: settings.get_boolean('panel-transparency'),
         });
@@ -432,16 +433,16 @@ export default class KiwiPreferences extends ExtensionPreferences {
 
         // Panel color inherit fix
         const panelColorFixRow = new Adw.SwitchRow({
-            title: _("Panel Color Fix"),
-            subtitle: _("Fix white panel on some themes (e.g., Ubuntu Yaru)"),
+            title: _('Panel Color Fix'),
+            subtitle: _('Fix white panel on some themes (e.g., Ubuntu Yaru)'),
             active: settings.get_boolean('panel-color-inherit'),
         });
         transparencyExpander.add_row(panelColorFixRow);
 
         // Tray icon inversion for light wallpapers
         const invertTrayIconsRow = new Adw.SwitchRow({
-            title: _("Invert Tray Icons on Light Wallpapers"),
-            subtitle: _("Darken white monochrome tray icons when the panel adapts to a light wallpaper. Colored icons are left untouched"),
+            title: _('Invert Tray Icons on Light Wallpapers'),
+            subtitle: _('Darken white monochrome tray icons when the panel adapts to a light wallpaper. Colored icons are left untouched'),
             active: settings.get_boolean('panel-invert-tray-icons'),
             sensitive: settings.get_boolean('panel-transparency'),
         });
@@ -469,8 +470,8 @@ export default class KiwiPreferences extends ExtensionPreferences {
             const glass = settings.get_boolean('liquid-glass');
             panelBlurRow.sensitive = settings.get_boolean('panel-transparency') && !glass;
             panelBlurRow.subtitle = glass
-                ? _("Handled by Liquid Glass")
-                : _("Blur the background behind the panel");
+                ? _('Handled by Liquid Glass')
+                : _('Blur the background behind the panel');
         };
         syncPanelBlurRow();
         const panelBlurSyncIds = ['panel-transparency', 'liquid-glass']
@@ -492,8 +493,8 @@ export default class KiwiPreferences extends ExtensionPreferences {
         // Tiling lives under the window title because the layouts are reached from its
         // menu; without the title in the panel there is no way to open them.
         const windowTitleExpander = new Adw.ExpanderRow({
-            title: _("Show Window Title"),
-            subtitle: _("Display current window title in the top panel"),
+            title: _('Show Window Title'),
+            subtitle: _('Display current window title in the top panel'),
             show_enable_switch: true,
         });
         windowTitleGroup.add(windowTitleExpander);
@@ -502,15 +503,15 @@ export default class KiwiPreferences extends ExtensionPreferences {
 
         // The sub-options are stored as positive keys, so their rows invert them.
         const titleIconRow = new Adw.SwitchRow({
-            title: _("Hide App Icon"),
-            subtitle: _("Do not show the application icon next to the window title"),
+            title: _('Hide App Icon'),
+            subtitle: _('Do not show the application icon next to the window title'),
         });
         windowTitleExpander.add_row(titleIconRow);
         settings.bind('show-window-title-icon', titleIconRow, 'active',
             Gio.SettingsBindFlags.DEFAULT | Gio.SettingsBindFlags.INVERT_BOOLEAN);
 
         const subtitleRow = new Adw.SwitchRow({
-            title: _("Hide Window Subtitle"),
+            title: _('Hide Window Subtitle'),
             subtitle: _("Show only the application name, without the window's own title"),
         });
         windowTitleExpander.add_row(subtitleRow);
@@ -518,8 +519,8 @@ export default class KiwiPreferences extends ExtensionPreferences {
             Gio.SettingsBindFlags.DEFAULT | Gio.SettingsBindFlags.INVERT_BOOLEAN);
 
         const tilingTitleMenuRow = new Adw.SwitchRow({
-            title: _("Disable Window Tiling"),
-            subtitle: _("Drop the tiling layouts from the window title menu, and stop restoring tiled windows when their titlebar is dragged"),
+            title: _('Disable Window Tiling'),
+            subtitle: _('Drop the tiling layouts from the window title menu, and stop restoring tiled windows when their titlebar is dragged'),
         });
         windowTitleExpander.add_row(tilingTitleMenuRow);
         settings.bind('show-tiling-title-menu', tilingTitleMenuRow, 'active',
@@ -545,8 +546,8 @@ export default class KiwiPreferences extends ExtensionPreferences {
             settings.get_boolean('keep-notification-panel') ||
             settings.get_string('notification-indicator-style') !== 'default';
         const calendarExpander = new Adw.ExpanderRow({
-            title: _("Move Calendar to Right"),
-            subtitle: _("Move calendar to right side and hide notifications"),
+            title: _('Move Calendar to Right'),
+            subtitle: _('Move calendar to right side and hide notifications'),
             expanded: settings.get_boolean('move-calendar-right') && calendarHasNonDefault,
             show_enable_switch: true,
         });
@@ -555,7 +556,7 @@ export default class KiwiPreferences extends ExtensionPreferences {
             Gio.SettingsBindFlags.DEFAULT);
 
         const keepPanelRow = new Adw.SwitchRow({
-            title: _("Keep GNOME Notification Panel"),
+            title: _('Keep GNOME Notification Panel'),
             subtitle: _("Don't split notification and calendar layout"),
         });
         settings.bind('keep-notification-panel', keepPanelRow, 'active', Gio.SettingsBindFlags.DEFAULT);
@@ -575,7 +576,7 @@ export default class KiwiPreferences extends ExtensionPreferences {
         // Battery percentage clashes with GNOME's own top bar percentage, so
         // the row is greyed out while that setting is on
         const batteryRow = new Adw.SwitchRow({
-            title: _("Battery Percentage"),
+            title: _('Battery Percentage'),
             active: settings.get_boolean('battery-percentage'),
         });
         windowTitleGroup.add(batteryRow);
@@ -587,16 +588,16 @@ export default class KiwiPreferences extends ExtensionPreferences {
             const gnomeShowsPercentage = interfaceSettings.get_boolean('show-battery-percentage');
             batteryRow.sensitive = !gnomeShowsPercentage;
             batteryRow.subtitle = gnomeShowsPercentage
-                ? _("Unavailable while GNOME Settings shows the battery percentage in the top bar")
-                : _("Show battery percentage in the top bar when below 20%");
+                ? _('Unavailable while GNOME Settings shows the battery percentage in the top bar')
+                : _('Show battery percentage in the top bar when below 20%');
         };
         syncBatteryRow();
         interfaceSettings.connect('changed::show-battery-percentage', syncBatteryRow);
 
         this._addSwitchRows(settings, windowTitleGroup, [
-            { key: 'custom-dnd-button', title: _("Custom Do Not Disturb Button"), subtitle: _("Replace the system Do Not Disturb button with Kiwi's custom implementation") },
-            { key: 'lock-icon', title: _("Caps Lock and Num Lock"), subtitle: _("Show Caps Lock and Num Lock icon") },
-            { key: 'hide-activities-button', title: _("Hide Activities Button"), subtitle: _("Hide the Activities button in the top panel") },
+            { key: 'custom-dnd-button', title: _('Custom Do Not Disturb Button'), subtitle: _("Replace the system Do Not Disturb button with Kiwi's custom implementation") },
+            { key: 'lock-icon', title: _('Caps Lock and Num Lock'), subtitle: _('Show Caps Lock and Num Lock icon') },
+            { key: 'hide-activities-button', title: _('Hide Activities Button'), subtitle: _('Hide the Activities button in the top panel') },
         ]);
 
         const panelStylingGroup = new Adw.PreferencesGroup({
@@ -606,23 +607,23 @@ export default class KiwiPreferences extends ExtensionPreferences {
         panelPage.add(panelStylingGroup);
 
         this._addSwitchRows(settings, panelStylingGroup, [
-            { key: 'panel-styling', title: _("Panel Styling"), subtitle: _("Tighter button spacing, smaller status icons, no dropdown arrows and a transparent panel in the overview") },
-            { key: 'popup-menu-styling', title: _("Menu and App Styling"), subtitle: _("Narrower shell menu items with accent-colored hover and selection, plus the GTK app fixes") },
+            { key: 'panel-styling', title: _('Panel Styling'), subtitle: _('Tighter button spacing, smaller status icons, no dropdown arrows and a transparent panel in the overview') },
+            { key: 'popup-menu-styling', title: _('Menu and App Styling'), subtitle: _('Narrower shell menu items with accent-colored hover and selection, plus the GTK app fixes') },
         ]);
 
         // Keyboard indicator feature with sub-options
         const kbHasNonDefault = settings.get_boolean('hide-keyboard-indicator');
         const kbExpander = new Adw.ExpanderRow({
-            title: _("Style Keyboard Indicator"),
-            subtitle: _("Slightly style keyboard/input source indicator by converting to uppercase and adding border"),
+            title: _('Style Keyboard Indicator'),
+            subtitle: _('Slightly style keyboard/input source indicator by converting to uppercase and adding border'),
             expanded: settings.get_boolean('keyboard-indicator') && kbHasNonDefault,
             show_enable_switch: true,
         });
 
         // We need individual child rows for toggles
         const hideRow = new Adw.SwitchRow({
-            title: _("Hide keyboard indicator"),
-            subtitle: _("Completely hide the indicator from the panel"),
+            title: _('Hide keyboard indicator'),
+            subtitle: _('Completely hide the indicator from the panel'),
             active: settings.get_boolean('hide-keyboard-indicator'),
             sensitive: settings.get_boolean('keyboard-indicator'),
         });
@@ -659,7 +660,7 @@ export default class KiwiPreferences extends ExtensionPreferences {
         // nothing at all while it is not there. Those rows are held shut rather
         // than left looking as though they still do something.
         const dockBanner = new Adw.Banner({
-            title: _("These options need the Dash to Dock extension installed and enabled"),
+            title: _('These options need the Dash to Dock extension installed and enabled'),
         });
         const dockBannerGroup = new Adw.PreferencesGroup();
         dockBannerGroup.add(dockBanner);
@@ -673,12 +674,12 @@ export default class KiwiPreferences extends ExtensionPreferences {
         dockPage.add(dockGroup);
 
         dockRows.push(...this._addSwitchRows(settings, dockGroup, [
-            { key: 'minimize-to-dock', title: _("Minimize Windows to Dock"), subtitle: _("Park minimized windows as thumbnails in Dash-to-Dock, after the apps and before the trash") },
+            { key: 'minimize-to-dock', title: _('Minimize Windows to Dock'), subtitle: _('Park minimized windows as thumbnails in Dash-to-Dock, after the apps and before the trash') },
         ]));
 
         const downloadsExpander = new Adw.ExpanderRow({
-            title: _("Downloads Folder in Dock"),
-            subtitle: _("Add a Downloads folder before the trash that fans its newest files out over the desktop"),
+            title: _('Downloads Folder in Dock'),
+            subtitle: _('Add a Downloads folder before the trash that fans its newest files out over the desktop'),
             show_enable_switch: true,
         });
         dockGroup.add(downloadsExpander);
@@ -687,8 +688,8 @@ export default class KiwiPreferences extends ExtensionPreferences {
             Gio.SettingsBindFlags.DEFAULT);
 
         const downloadsBehindRow = new Adw.SwitchRow({
-            title: _("Stack Behind Folder"),
-            subtitle: _("Show the newest files sticking out of the folder icon instead of piled on top of it"),
+            title: _('Stack Behind Folder'),
+            subtitle: _('Show the newest files sticking out of the folder icon instead of piled on top of it'),
         });
         downloadsExpander.add_row(downloadsBehindRow);
         settings.bind('downloads-behind-folder', downloadsBehindRow, 'active', Gio.SettingsBindFlags.DEFAULT);
@@ -706,8 +707,8 @@ export default class KiwiPreferences extends ExtensionPreferences {
         // Launchpad Application with custom icon option
         const launchpadHasNonDefault = settings.get_string('launchpad-app-custom-icon') !== '';
         const launchpadExpander = new Adw.ExpanderRow({
-            title: _("Launchpad Application"),
-            subtitle: _("Add custom Launchpad icon to dock that opens application overview. Recommended to hide default app launcher."),
+            title: _('Launchpad Application'),
+            subtitle: _('Add custom Launchpad icon to dock that opens application overview. Recommended to hide default app launcher.'),
             expanded: settings.get_boolean('enable-launchpad-app') && launchpadHasNonDefault,
             show_enable_switch: true,
         });
@@ -717,10 +718,10 @@ export default class KiwiPreferences extends ExtensionPreferences {
 
         const customIconPath = settings.get_string('launchpad-app-custom-icon');
         const launchpadIconRow = new Adw.ActionRow({
-            title: _("Custom Icon"),
+            title: _('Custom Icon'),
             subtitle: customIconPath
                 ? GLib.path_get_basename(customIconPath)
-                : _("Using default icon"),
+                : _('Using default icon'),
             sensitive: settings.get_boolean('enable-launchpad-app'),
         });
         settings.bind('enable-launchpad-app', launchpadIconRow, 'sensitive', Gio.SettingsBindFlags.GET);
@@ -728,7 +729,7 @@ export default class KiwiPreferences extends ExtensionPreferences {
         const clearIconButton = new Gtk.Button({
             icon_name: 'edit-clear-symbolic',
             valign: Gtk.Align.CENTER,
-            tooltip_text: _("Reset to default icon"),
+            tooltip_text: _('Reset to default icon'),
             visible: customIconPath !== '',
         });
         clearIconButton.add_css_class('flat');
@@ -739,16 +740,16 @@ export default class KiwiPreferences extends ExtensionPreferences {
         const browseButton = new Gtk.Button({
             icon_name: 'document-open-symbolic',
             valign: Gtk.Align.CENTER,
-            tooltip_text: _("Browse for icon"),
+            tooltip_text: _('Browse for icon'),
         });
         browseButton.add_css_class('flat');
         browseButton.connect('clicked', () => {
             const dialog = new Gtk.FileDialog({
-                title: _("Select Launchpad Icon"),
+                title: _('Select Launchpad Icon'),
             });
 
             const filter = new Gtk.FileFilter();
-            filter.set_name(_("Images (PNG, SVG)"));
+            filter.set_name(_('Images (PNG, SVG)'));
             filter.add_mime_type('image/png');
             filter.add_mime_type('image/svg+xml');
 
@@ -776,10 +777,10 @@ export default class KiwiPreferences extends ExtensionPreferences {
                             const pixbuf = GdkPixbuf.Pixbuf.new_from_file(filePath);
                             if (pixbuf.get_width() > 512 || pixbuf.get_height() > 512) {
                                 const errorDialog = new Adw.AlertDialog({
-                                    heading: _("Icon Too Large"),
-                                    body: _("The selected image exceeds 512×512 pixels. Please choose a smaller image."),
+                                    heading: _('Icon Too Large'),
+                                    body: _('The selected image exceeds 512×512 pixels. Please choose a smaller image.'),
                                 });
-                                errorDialog.add_response('ok', _("OK"));
+                                errorDialog.add_response('ok', _('OK'));
                                 errorDialog.present(window);
                                 return;
                             }
@@ -805,7 +806,7 @@ export default class KiwiPreferences extends ExtensionPreferences {
             const path = settings.get_string('launchpad-app-custom-icon');
             launchpadIconRow.subtitle = path
                 ? GLib.path_get_basename(path)
-                : _("Using default icon");
+                : _('Using default icon');
             clearIconButton.visible = path !== '';
         });
 
@@ -815,9 +816,9 @@ export default class KiwiPreferences extends ExtensionPreferences {
         dockPage.add(dockStylingGroup);
 
         const dockStylingRows = this._addSwitchRows(settings, dockStylingGroup, [
-            { key: 'dock-styling', title: _("Dock Styling"), subtitle: _("Tighten icon spacing, drop the icon highlight and darken icons while pressed") },
-            { key: 'dock-blur', title: _("Dock Blur"), subtitle: _("Blur the background behind Dash-to-Dock. Recommended fixed dock opacity 10% - 30%, min 1%.") },
-            { key: 'dock-adaptive-colors', title: _("Adaptive Dock Colors"), subtitle: _("Flip the running indicators and separators to suit whatever is behind the dock, wallpaper or window") },
+            { key: 'dock-styling', title: _('Dock Styling'), subtitle: _('Tighten icon spacing, drop the icon highlight and darken icons while pressed') },
+            { key: 'dock-blur', title: _('Dock Blur'), subtitle: _('Blur the background behind Dash-to-Dock. Recommended fixed dock opacity 10% - 30%, min 1%.') },
+            { key: 'dock-adaptive-colors', title: _('Adaptive Dock Colors'), subtitle: _('Flip the running indicators and separators to suit whatever is behind the dock, wallpaper or window') },
         ]);
         dockRows.push(...dockStylingRows);
         // While Liquid Glass is on it decides the dock blur (surface list), so this switch steps aside
@@ -833,7 +834,7 @@ export default class KiwiPreferences extends ExtensionPreferences {
         });
         const syncDockBlurRow = () => {
             const glass = settings.get_boolean('liquid-glass');
-            dockBlurRow.subtitle = glass ? _("Handled by Liquid Glass") : dockBlurSubtitle;
+            dockBlurRow.subtitle = glass ? _('Handled by Liquid Glass') : dockBlurSubtitle;
             syncDockRows();
         };
         syncDockBlurRow();
@@ -868,8 +869,8 @@ export default class KiwiPreferences extends ExtensionPreferences {
         // pickers are the point of this page, so the expander stays open for as
         // long as the feature is on, whatever the sub-options are set to.
         const buttonsExpander = new Adw.ExpanderRow({
-            title: _("Enable macOS Window Buttons"),
-            subtitle: _("Replace window control buttons in application windows with macOS style"),
+            title: _('Enable macOS Window Buttons'),
+            subtitle: _('Replace window control buttons in application windows with macOS style'),
             expanded: settings.get_boolean('enable-app-window-buttons'),
             show_enable_switch: true,
             enable_expansion: settings.get_boolean('enable-app-window-buttons'),
@@ -910,8 +911,8 @@ export default class KiwiPreferences extends ExtensionPreferences {
 
         // Firefox styling switch
         const firefoxStylingSwitch = new Adw.SwitchRow({
-            title: _("Firefox Styling"),
-            subtitle: _("Apply macOS window control styling for Firefox. Recommended to use with vertical tabs."),
+            title: _('Firefox Styling'),
+            subtitle: _('Apply macOS window control styling for Firefox. Recommended to use with vertical tabs.'),
             active: settings.get_boolean('enable-firefox-styling'),
         });
         buttonsExpander.add_row(firefoxStylingSwitch);
@@ -919,8 +920,8 @@ export default class KiwiPreferences extends ExtensionPreferences {
 
         // Thunderbird styling switch
         const thunderbirdStylingSwitch = new Adw.SwitchRow({
-            title: _("Thunderbird Styling"),
-            subtitle: _("Apply macOS window control styling for Thunderbird."),
+            title: _('Thunderbird Styling'),
+            subtitle: _('Apply macOS window control styling for Thunderbird.'),
             active: settings.get_boolean('enable-thunderbird-styling'),
         });
         buttonsExpander.add_row(thunderbirdStylingSwitch);
@@ -944,8 +945,8 @@ export default class KiwiPreferences extends ExtensionPreferences {
         windowControlsPage.add(panelControlsGroup);
 
         const controlsRow = new Adw.SwitchRow({
-            title: _("Show Window Controls on Panel"),
-            subtitle: _("Display close, minimize, maximize buttons in the top panel for the focused window"),
+            title: _('Show Window Controls on Panel'),
+            subtitle: _('Display close, minimize, maximize buttons in the top panel for the focused window'),
         });
         panelControlsGroup.add(controlsRow);
         settings.bind('show-window-controls', controlsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
@@ -966,15 +967,15 @@ export default class KiwiPreferences extends ExtensionPreferences {
         settingsPage.add(group);
 
         this._addSwitchRows(settings, group, [
-            { key: 'overview-wallpaper-background', title: _("Overview Wallpaper Blur"), subtitle: _("Use blurred current wallpaper as overview background") },
-            { key: 'overview-seamless-zoom', title: _("Seamless Overview Zoom"), subtitle: _("Zoom the whole desktop, including the strip behind the panel, in and out of the overview") },
-            { key: 'focus-on-overview-exit', title: _("Focus on Overview Exit"), subtitle: _("Focus the window under the cursor instead of the previously focused one when leaving the overview") },
-            { key: 'skip-overview-on-login', title: _("Skip to Desktop"), subtitle: _("Do not show the overview when logging in. Animation is still visible") },
-            { key: 'hide-minimized-windows', title: _("Hide Minimized Windows"), subtitle: _("Hide minimized windows in the overview") },
-            { key: 'move-window-to-new-workspace', title: _("Move Window to New Workspace"), subtitle: _("Move fullscreen window to a new workspace") },
-            { key: 'reduce-window-animations', title: _("Reduce App Animations"), subtitle: _("Mimic macOS window opening and closing with a subtle scale and fade") },
-            { key: 'focus-new-windows', title: _("Focus New Windows"), subtitle: _("Automatically focus new windows instead of showing window-ready alerts. Requires extension reload") },
-            { key: 'transparent-move', title: _("Transparent Move"), subtitle: _("Move window with transparency") },
+            { key: 'overview-wallpaper-background', title: _('Overview Wallpaper Blur'), subtitle: _('Use blurred current wallpaper as overview background') },
+            { key: 'overview-seamless-zoom', title: _('Seamless Overview Zoom'), subtitle: _('Zoom the whole desktop, including the strip behind the panel, in and out of the overview') },
+            { key: 'focus-on-overview-exit', title: _('Focus on Overview Exit'), subtitle: _('Focus the window under the cursor instead of the previously focused one when leaving the overview') },
+            { key: 'skip-overview-on-login', title: _('Skip to Desktop'), subtitle: _('Do not show the overview when logging in. Animation is still visible') },
+            { key: 'hide-minimized-windows', title: _('Hide Minimized Windows'), subtitle: _('Hide minimized windows in the overview') },
+            { key: 'move-window-to-new-workspace', title: _('Move Window to New Workspace'), subtitle: _('Move fullscreen window to a new workspace') },
+            { key: 'reduce-window-animations', title: _('Reduce App Animations'), subtitle: _('Mimic macOS window opening and closing with a subtle scale and fade') },
+            { key: 'focus-new-windows', title: _('Focus New Windows'), subtitle: _('Automatically focus new windows instead of showing window-ready alerts. Requires extension reload') },
+            { key: 'transparent-move', title: _('Transparent Move'), subtitle: _('Move window with transparency') },
         ]);
 
         //

@@ -11,7 +11,7 @@
 | Spotlight | S5 | done, merged | feat/spotlight |
 | Auto-hide bar | S6 | done, merged | feat/autohide |
 | Control Center | S7 | merged; Now Playing → MprisWatcher after notch | feat/control-center |
-| Notch | S8 | R8 APPROVE; S10 integrating; S8 small follow-up | feat/notch |
+| Notch | S8 | done, merged | feat/notch |
 | Stage Manager | S9 | done, merged incl. shortcut | feat/stage-manager |
 | User files (D1) | D1 | done, merged | debt/user-files |
 | Panel transparency (D2) | D2 | done, merged | debt/panel-transparency |
@@ -25,8 +25,8 @@
 | Audit fixes (autohide restore, glass contrast/menu destroy) | S6, S3 | done, merged | feat/autohide-fix, feat/liquid-glass-fix2 |
 | Small modules (D9) | D9 | done, merged (features.js lockIcon ctx.extension → S10 with notch) | debt/small-modules |
 | Window move (D10) | D10 | done, merged | debt/window-move |
-| Lint (L1) | L1 | pass 1 merged (104→101); pass 2 at end | debt/lint |
+| Lint (L1) | L1 | done: 0 warnings, merged | debt/lint |
 | Audit merged CC/SM/clipboard/spotlight (A2) | A2 | doing | - |
 | Shell smoke harness (X1) | X1 | doing | - |
 | PR notes + manual test list (P1) | P1 | draft 1 committed; refresh at end | - |
-| Now Playing -> MprisWatcher | S8 | doing inside notch fixes | feat/notch |
+| Now Playing -> MprisWatcher | S8 | done, merged | feat/notch |
