@@ -85,6 +85,7 @@ export class StageManager {
         cleanup.add(() => {
             WindowState.setMinimizeInterceptor(null);
             WindowState.setStageActive(false);
+            WindowState.clearFlag('staged');
             this._models.clear();
             this._source = null;
             this._strip = null;
@@ -201,7 +202,7 @@ export class StageManager {
         if (!next)
             return;
         model.activateStage(next.id);
-        const lead = byId.get(next.windows.find(id => !byId.get(id).minimized));
+        const lead = byId.get(next.windows.find(id => !byId.get(id)?.minimized));
         if (lead && !this._overview)
             this._cleanup.idle(() => Main.activateWindow(lead.win), { name: 'stage-manager-focus' });
     }
@@ -261,7 +262,7 @@ export class StageManager {
 
         this._hider.markUserMinimized(win);
         this._parked.add(me.id);
-        const others = model.current.windows.filter(id => id !== me.id && !byId.get(id).minimized);
+        const others = model.current.windows.filter(id => id !== me.id && !byId.get(id)?.minimized);
         const before = model.current.id;
         model.split(me.id);
 
@@ -271,10 +272,10 @@ export class StageManager {
             model.activateStage(before);
             target = byId.get(model.current.lead === me.id ? others[0] : model.current.lead);
         } else {
-            const next = model.strip().find(st => st.windows.some(id => !byId.get(id).minimized));
+            const next = model.strip().find(st => st.windows.some(id => !byId.get(id)?.minimized));
             if (next) {
                 model.activateStage(next.id);
-                target = byId.get(next.windows.find(id => !byId.get(id).minimized));
+                target = byId.get(next.windows.find(id => !byId.get(id)?.minimized));
             } else {
                 model.unfocus();
             }

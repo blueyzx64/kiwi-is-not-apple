@@ -74,7 +74,7 @@ export class WindowHider {
     /** Reveal everything now but keep the records (overview). */
     revealAll() {
         for (const win of [...this._records.keys()])
-            this._showOne(win, false);
+            this._showOne(win, false, true);
     }
 
     /** The user asked to minimize this window while Stage Manager is on: remember the intent. */
@@ -112,27 +112,53 @@ export class WindowHider {
     restoreAll() {
         const minimizeAfter = [];
         for (const [win, rec] of [...this._records]) {
-            const actor = win.get_compositor_private();
-            if (actor) {
-                actor.remove_all_transitions();
-                actor.opacity = rec.opacity;
-                actor.set_scale(rec.scale[0], rec.scale[1]);
-                actor.set_pivot_point(rec.pivot[0], rec.pivot[1]);
-                Shell.util_set_hidden_from_pick(actor, false);
+            try {
+                const actor = win.get_compositor_private();
+                if (actor) {
+                    actor.remove_all_transitions();
+                    actor.opacity = rec.opacity || 255;
+                    actor.set_scale(rec.scale[0], rec.scale[1]);
+                    actor.set_pivot_point(rec.pivot[0], rec.pivot[1]);
+                    this._pick(actor, false);
+                }
+            } catch (e) {
+                console.error(`[Kiwi] stage restore actor: ${e.message}`);
             }
-            if (rec.frame && !win.minimized && sameRect(rectOf(win), rec.frame.set)) {
-                const o = rec.frame.orig;
-                win.move_resize_frame(true, o.x, o.y, o.width, o.height);
+            try {
+                if (rec.frame && !win.minimized && sameRect(rectOf(win), rec.frame.set)) {
+                    const o = rec.frame.orig;
+                    win.move_resize_frame(true, o.x, o.y, o.width, o.height);
+                }
+            } catch (e) {
+                console.error(`[Kiwi] stage restore frame: ${e.message}`);
             }
-            WindowState.set(win, 'staged', false);
-            this._cleanup.release(rec.token);
-            if (rec.userMinimized && !win.minimized)
+            try {
+                this._cleanup.release(rec.token);
+            } catch (_e) {
+                // already released
+            }
+            if (rec.userMinimized)
                 minimizeAfter.push(win);
         }
         this._records.clear();
+        WindowState.clearFlag('staged');
         // The user pressed minimize on these: keep that, now that the actor is whole again
-        for (const win of minimizeAfter)
-            win.minimize();
+        for (const win of minimizeAfter) {
+            try {
+                if (!win.minimized)
+                    win.minimize();
+            } catch (e) {
+                console.error(`[Kiwi] stage restore minimize: ${e.message}`);
+            }
+        }
+    }
+
+    _pick(actor, hidden) {
+        try {
+            Shell.util_set_hidden_from_pick(actor, hidden);
+        } catch (_e) {
+            // actor already disposed
+        }
     }
 
     // ---- internals -----------------------------------------------------------------------
@@ -158,11 +184,14 @@ export class WindowHider {
         if (rec)
             return rec;
         const actor = win.get_compositor_private();
+        // A baseline taken mid-animation or at opacity 0 would restore an invisible window
+        const clean = actor && actor.opacity > 0 && !actor.get_transition('opacity') &&
+            !actor.get_transition('scale-x');
         rec = {
             hidden: false,
-            opacity: actor ? actor.opacity : 255,
-            scale: actor ? [actor.scale_x, actor.scale_y] : [1, 1],
-            pivot: actor ? actor.get_pivot_point() : [0, 0],
+            opacity: clean ? actor.opacity : 255,
+            scale: clean ? [actor.scale_x, actor.scale_y] : [1, 1],
+            pivot: clean ? actor.get_pivot_point() : [0, 0],
             frame: null,
             userMinimized: false,
             token: 0,
@@ -184,7 +213,7 @@ export class WindowHider {
             rec.opacity = actor.opacity;
         rec.hidden = true;
         WindowState.set(win, 'staged', true);
-        Shell.util_set_hidden_from_pick(actor, true);
+        this._pick(actor, true);
         actor.remove_all_transitions();
 
         const target = this._towards();
@@ -206,28 +235,29 @@ export class WindowHider {
         });
     }
 
-    _showOne(win, animate) {
+    _showOne(win, animate, keepIntent = false) {
         const rec = this._records.get(win);
         if (!rec?.hidden)
             return;
         rec.hidden = false;
-        rec.userMinimized = false;      // it is back on a stage: the user chose that
+        if (!keepIntent)
+            rec.userMinimized = false;  // it is back on a stage: the user chose that
         WindowState.set(win, 'staged', false);
         const actor = win.get_compositor_private();
         if (!actor)
             return;
         actor.remove_all_transitions();
-        Shell.util_set_hidden_from_pick(actor, false);
+        this._pick(actor, false);
         actor.set_scale(rec.scale[0], rec.scale[1]);
         actor.set_pivot_point(rec.pivot[0], rec.pivot[1]);
         if (animate && this._motion() && actor.mapped) {
             actor.opacity = 0;
             actor.ease({
-                opacity: rec.opacity, duration: SHOW_MS,
+                opacity: rec.opacity || 255, duration: SHOW_MS,
                 mode: Clutter.AnimationMode.EASE_OUT_QUAD,
             });
         } else {
-            actor.opacity = rec.opacity;
+            actor.opacity = rec.opacity || 255;
         }
     }
 }

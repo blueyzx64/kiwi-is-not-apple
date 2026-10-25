@@ -51,6 +51,7 @@ class WindowControlsIndicator extends PanelMenu.Button {
      */
     _init({ catalog, settings, cleanup, onAction }) {
         super._init(0.0, 'window-controls', true);
+        this.add_style_class_name('kiwi-window-controls-indicator');
         this._catalog = catalog;
         this._settings = settings;
         this._onAction = onAction;
