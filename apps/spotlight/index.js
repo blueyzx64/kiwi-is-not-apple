@@ -21,7 +21,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import { PanelVisibility } from '../../coordinators/panelVisibility.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
-import { Keybindings } from '../../lib/keybindings.js';
+import { Keybindings, MODAL_MODES } from '../../lib/keybindings.js';
 import { KiwiSettings } from '../../lib/settings.js';
 import { ModalSurface } from '../../lib/modalSurface.js';
 
@@ -113,7 +113,7 @@ export class SpotlightFeature {
 
         // Optional extra shortcut (empty by default). Registered always; an empty list binds nothing.
         if (ks.has('spotlight-shortcut'))
-            Keybindings.add(cleanup, 'spotlight-shortcut', settings, () => this.toggle());
+            Keybindings.add(cleanup, 'spotlight-shortcut', settings, () => this.toggle(), { modes: MODAL_MODES });
     }
 
     disable() {

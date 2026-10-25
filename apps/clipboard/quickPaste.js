@@ -234,6 +234,10 @@ export class QuickPaste {
     }
 
     _onKey(event) {
+        // While an input method is composing (preedit), its keys belong to the entry
+        const text = this._ui?.entry.clutter_text;
+        if (text?.has_preedit?.())
+            return Clutter.EVENT_PROPAGATE;
         const sym = event.get_key_symbol();
         const ctrl = (event.get_state() & Clutter.ModifierType.CONTROL_MASK) !== 0;
         switch (sym) {

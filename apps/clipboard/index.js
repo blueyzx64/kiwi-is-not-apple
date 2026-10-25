@@ -20,7 +20,7 @@ import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import { PanelLayout } from '../../coordinators/panelLayout.js';
 import { MENU_CLOSE_ARGS } from '../../lib/compat.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
-import { Keybindings } from '../../lib/keybindings.js';
+import { Keybindings, MODAL_MODES } from '../../lib/keybindings.js';
 import { KiwiSettings } from '../../lib/settings.js';
 import {
     DEFAULTS, History, checkDimensions, imageDimensions, looksSecret, TEXT_MIME, checkSize, historyFrom, imageFileName, isBlankText,
@@ -95,7 +95,7 @@ export class ClipboardHistory {
         cleanup.connect(this._selection, 'owner-changed', (_s, type) => this._onOwnerChanged(type));
 
         this._quick = new QuickPaste(cleanup, this, this._);
-        Keybindings.add(cleanup, SHORTCUT_KEY, this._ctx.settings, () => this._onShortcut());
+        Keybindings.add(cleanup, SHORTCUT_KEY, this._ctx.settings, () => this._onShortcut(), { modes: MODAL_MODES });
         cleanup.idle(() => this._warnConflicts(), { name: 'clipboard-conflicts' });
 
         this._ks.watch('clipboard-history-size', () => this._applyCap());

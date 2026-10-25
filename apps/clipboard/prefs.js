@@ -76,7 +76,7 @@ function _sizeRow(settings, _) {
     const row = new Adw.SpinRow({
         title: _('History size'),
         subtitle: _('Entries kept. Pinned items do not count and never expire.'),
-        adjustment: new Gtk.Adjustment({ lower: 5, upper: 200, step_increment: 5, page_increment: 25 }),
+        adjustment: new Gtk.Adjustment({ lower: 1, upper: 500, step_increment: 1, page_increment: 5 }),
     });
     settings.bind('clipboard-history-size', row, 'value', Gio.SettingsBindFlags.DEFAULT);
     return row;
@@ -85,11 +85,21 @@ function _sizeRow(settings, _) {
 function _excludedRow(settings, _) {
     const key = 'clipboard-excluded-apps';
     const row = new Adw.EntryRow({ title: _('Also ignore copies from these apps') });
+    const parse = text => text.split(',').map(s => s.trim()).filter(Boolean);
+    const same = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
     row.text = settings.get_strv(key).join(', ');
     row.connect('changed', () => {
-        const list = row.text.split(',').map(s => s.trim()).filter(Boolean);
-        settings.set_strv(key, list);
+        const list = parse(row.text);
+        if (!same(list, settings.get_strv(key)))
+            settings.set_strv(key, list);
     });
+    // Changed elsewhere (dconf, another window): show it, unless it is what we just typed
+    const id = settings.connect(`changed::${key}`, () => {
+        const list = settings.get_strv(key);
+        if (!same(list, parse(row.text)))
+            row.text = list.join(', ');
+    });
+    row.connect('destroy', () => settings.disconnect(id));
     return row;
 }
 
