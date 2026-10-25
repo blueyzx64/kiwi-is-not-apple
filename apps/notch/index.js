@@ -85,7 +85,7 @@ export class NotchFeature {
 
         // Shared inputs
         NotificationRouter.connect(cleanup, () => this._syncExternal());
-        cleanup.connect(Main.layoutManager, 'in-fullscreen-changed', () => this._syncExternal());
+        cleanup.connect(global.display, 'in-fullscreen-changed', () => this._syncExternal());
         PanelVisibility.connect(cleanup, () => this._sync());
         this._syncExternal(true);
 
