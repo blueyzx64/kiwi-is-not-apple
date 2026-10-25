@@ -10,6 +10,7 @@ import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Pango from 'gi://Pango';
+import Shell from 'gi://Shell';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as Util from 'resource:///org/gnome/shell/misc/util.js';
@@ -57,7 +58,8 @@ export class NotchView {
     /**
      * @param {CleanupRegistry} cleanup everything made here is released on dispose
      * @param {object} handlers {onClick, onDismiss, onHover(bool), onAction(id, index),
-     *   onMedia('previous'|'toggle'|'next'), onToggleDnd, onCopy(entryId)}
+     *   onMedia('previous'|'toggle'|'next'), onToggleDnd, onCopy(entryId), onCollapse,
+     *   onOpenNotification(notification)}
      * @param {function(string): string} gettext
      */
     constructor(cleanup, handlers, gettext) {
@@ -72,6 +74,10 @@ export class NotchView {
         this._size = SIZES.idle;
         this._glass = null;
         this._glassShown = false;
+        this._grab = null;          // Main.pushModal grab while the dashboard is open
+        this._wantGrab = false;
+        this._captureId = 0;
+        this._pressOnSurface = false;
 
         this.placeholder = new St.Widget({
             style_class: 'kiwi-notch-placeholder',
@@ -97,13 +103,24 @@ export class NotchView {
         cleanup.add(() => {
             this._destroyed = true;
             this._page = null;
+            this._releaseGrab();
             Main.layoutManager.removeChrome(this._island);
             this._island.destroy();
         });
 
         cleanup.connect(this._island, 'notify::hover', () => this._h.onHover(this._island.hover));
-        cleanup.connect(this._island, 'button-press-event', () => Clutter.EVENT_STOP);
+        // A press or release on a button inside the card belongs to that button. Bubbling up
+        // here it used to count as a click on the notch too, which collapsed the dashboard
+        // and destroyed the button before it could emit 'clicked'.
+        cleanup.connect(this._island, 'button-press-event', (_a, event) => {
+            this._pressOnSurface = !this._onControl(this._eventActor(event));
+            return this._pressOnSurface ? Clutter.EVENT_STOP : Clutter.EVENT_PROPAGATE;
+        });
         cleanup.connect(this._island, 'button-release-event', (_a, event) => {
+            const own = this._pressOnSurface && !this._onControl(this._eventActor(event));
+            this._pressOnSurface = false;
+            if (!own)
+                return Clutter.EVENT_PROPAGATE;
             if (event.get_button() === Clutter.BUTTON_SECONDARY)
                 this._h.onDismiss();
             else
@@ -118,6 +135,85 @@ export class NotchView {
 
     get actor() {
         return this._island;
+    }
+
+    // The actor the pointer is on. Clutter.Event.get_source() is gone since GNOME 45.
+    _eventActor(event) {
+        return global.stage.get_event_actor?.(event) ?? event.get_source?.() ?? null;
+    }
+
+    /** True if `actor` is, or sits inside, a reactive button of the current page. */
+    _onControl(actor) {
+        for (let a = actor; a && a !== this._island; a = a.get_parent()) {
+            if (a instanceof St.Button && a.reactive)
+                return true;
+        }
+        return false;
+    }
+
+    // ---- outside click and Escape ---------------------------------------------------------
+    // While the dashboard is open the notch holds a Shell grab (like a panel menu): every
+    // pointer and key event comes to the island first, so a press anywhere outside it, on a
+    // window or the desktop, and Escape collapse it. The grab goes with the dashboard.
+
+    _syncGrab() {
+        if (this._wantGrab && this._island.visible)
+            this._takeGrab();
+        else
+            this._releaseGrab();
+    }
+
+    _takeGrab() {
+        if (this._grab || this._destroyed)
+            return;
+        let grab = null;
+        try {
+            grab = Main.pushModal(this._island, { actionMode: Shell.ActionMode.POPUP });
+        } catch (e) {
+            console.warn(`[Kiwi] notch: no grab for the dashboard: ${e.message}`);
+        }
+        if (!grab)
+            return; // another grab is active; the dashboard still closes on leave
+        this._grab = grab;
+        this._captureId = this._island.connect('captured-event', (_a, event) => this._onCaptured(event));
+        this._island.grab_key_focus();
+    }
+
+    _releaseGrab() {
+        if (this._captureId) {
+            this._island.disconnect(this._captureId);
+            this._captureId = 0;
+        }
+        const grab = this._grab;
+        this._grab = null;
+        if (!grab)
+            return;
+        try {
+            Main.popModal(grab);
+        } catch (e) {
+            console.warn(`[Kiwi] notch: popModal failed: ${e.message}`);
+        }
+    }
+
+    _contains(x, y) {
+        const [ok, lx, ly] = this._island.transform_stage_point(x, y);
+        return ok && lx >= 0 && ly >= 0 && lx < this._island.width && ly < this._island.height;
+    }
+
+    _onCaptured(event) {
+        const type = event.type();
+        if (type === Clutter.EventType.KEY_PRESS && event.get_key_symbol() === Clutter.KEY_Escape) {
+            this._h.onCollapse?.();
+            return Clutter.EVENT_STOP;
+        }
+        if (type === Clutter.EventType.BUTTON_PRESS || type === Clutter.EventType.TOUCH_BEGIN) {
+            const [x, y] = event.get_coords();
+            if (!this._contains(x, y)) {
+                this._h.onCollapse?.();
+                return Clutter.EVENT_STOP;
+            }
+        }
+        return Clutter.EVENT_PROPAGATE;
     }
 
     /** Glass blur behind the large cards; the small pill is plain black. */
@@ -174,6 +270,7 @@ export class NotchView {
         if (this._destroyed)
             return;
         this._island.visible = show;
+        this._syncGrab();
         this._glass?.setVisible(show && this._glassShown);
     }
 
@@ -189,7 +286,9 @@ export class NotchView {
         const signature = JSON.stringify([
             vm.kind, vm.content, vm.notificationId, vm.badge,
             vm.activity?.data ?? null, vm.osd?.kind, vm.osd?.level, vm.osd?.label,
-            vm.content === 'dashboard' ? [mediaPlain, ctx.dnd, ctx.count, ctx.clipboard] : null,
+            vm.content === 'dashboard'
+                ? [mediaPlain, ctx.dnd, ctx.count, ctx.clipboard, (ctx.recent ?? []).map(r => [r.title, r.app, r.when])]
+                : null,
             n ? [n.title, n.body, n.actions?.length ?? 0] : null,
         ]);
         if (signature === this._signature)
@@ -201,6 +300,8 @@ export class NotchView {
         this._glassShown = vm.kind === 'expanded';
         this._glass?.setVisible(this._island.visible && this._glassShown);
         this._place(vm.size, true);
+        this._wantGrab = vm.kind === 'expanded' && vm.content === 'dashboard';
+        this._syncGrab();
 
         const old = this._page;
         this._page = null;
@@ -433,9 +534,31 @@ export class NotchView {
 
         const notifications = new St.BoxLayout({ style_class: 'kiwi-notch-panel', orientation: Clutter.Orientation.VERTICAL, x_expand: true });
         notifications.add_child(label(this._('Notifications'), 'kiwi-notch-meta'));
-        notifications.add_child(label(
-            ctx.count > 0 ? this._('%d in the message list').format(ctx.count) : this._('No notifications'),
-            'kiwi-notch-card-title'));
+        const recent = ctx.recent ?? [];
+        if (!recent.length)
+            notifications.add_child(label(this._('No notifications'), 'kiwi-notch-title'));
+        for (const item of recent) {
+            const button = new St.Button({
+                style_class: 'kiwi-notch-clip kiwi-notch-recent',
+                can_focus: true,
+                x_expand: true,
+                x_align: Clutter.ActorAlign.FILL,
+                accessible_name: item.title,
+            });
+            const row = new St.BoxLayout({ style_class: 'kiwi-notch-recent-row', x_expand: true });
+            row.add_child(icon(item.gicon ?? themed('dialog-information-symbolic'), 16));
+            const text = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, x_expand: true });
+            text.add_child(label(item.title, 'kiwi-notch-title'));
+            text.add_child(label([item.app, item.when].filter(Boolean).join(' · '), 'kiwi-notch-meta'));
+            row.add_child(text);
+            button.set_child(row);
+            button.connect('clicked', () => this._h.onOpenNotification?.(item.notification));
+            notifications.add_child(button);
+        }
+        if (ctx.count > recent.length) {
+            notifications.add_child(label(
+                this._('%d more in the message list').format(ctx.count - recent.length), 'kiwi-notch-meta'));
+        }
         const dnd = new St.Button({
             style_class: 'kiwi-notch-action',
             label: ctx.dnd ? this._('Do Not Disturb: on') : this._('Do Not Disturb: off'),
