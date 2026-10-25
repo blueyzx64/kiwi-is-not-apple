@@ -78,7 +78,12 @@ export class NotchFeature {
             onHover: value => this._dispatch({ type: 'hover', value }),
             onAction: (id, index) => this._action(id, index),
             onMedia: command => this._media(command),
-            onCopy: id => clipboardService()?.copy(clipboardService().get(id)),
+            onCopy: id => {
+                const service = clipboardService();
+                const entry = service?.get(id);
+                if (entry)
+                    service.copy(entry);
+            },
             onToggleDnd: () => NotificationRouter.setDnd(!NotificationRouter.state().dnd),
         }, gettext);
 
@@ -94,6 +99,7 @@ export class NotchFeature {
         // The clipboard feature can start or stop after the notch
         this._clipSvc = null;
         this._clipOff = [];
+        ks.watch('notch-show-clipboard', () => this._sync());
         ks.watch('clipboard-history', () => cleanup.idle(() => this._syncClipboard(), { name: 'notch clipboard' }));
         cleanup.add(() => this._dropClipboard());
         this._syncClipboard();
@@ -426,7 +432,7 @@ export class NotchFeature {
     }
 
     _clipboardEntries() {
-        if (!this._clipSvc)
+        if (!this._clipSvc || !this._ks.bool('notch-show-clipboard'))
             return null;
         return this._clipSvc.latest(3).map(e => ({
             id: e.id,

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Kiwi is not Apple 2.0.0\n"
 "Report-Msgid-Bugs-To: https://github.com/kem-a/kiwi-kemma/issues\n"
-"POT-Creation-Date: 2026-10-25 13:23+0000\n"
+"POT-Creation-Date: 2026-10-25 13:25+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -941,7 +941,7 @@ msgid "Colour"
 msgstr ""
 
 #: apps/clipboard/quickPaste.js:199 apps/clipboard/view.js:56
-#: apps/notch/index.js:433 apps/spotlight/providers/clipboard.js:17
+#: apps/notch/index.js:439 apps/spotlight/providers/clipboard.js:17
 msgid "Image"
 msgstr ""
 
@@ -1189,7 +1189,7 @@ msgid ""
 "shader."
 msgstr ""
 
-#: apps/notch/index.js:421
+#: apps/notch/index.js:427
 msgid "Copied"
 msgstr ""
 
@@ -1251,6 +1251,14 @@ msgid ""
 "dismissed"
 msgstr ""
 
+#: apps/notch/prefs.js:51
+msgid "Show clipboard in the dashboard"
+msgstr ""
+
+#: apps/notch/prefs.js:52
+msgid "Turn off to keep copied text off the screen while sharing it"
+msgstr ""
+
 #: apps/notch/view.js:324
 msgid "Dismiss"
 msgstr ""
@@ -1304,7 +1312,7 @@ msgstr ""
 msgid "Clear all notifications"
 msgstr ""
 
-#: apps/quickSettingsNotifications.js:384
+#: apps/quickSettingsNotifications.js:386
 msgid "Do Not Disturb Indicator"
 msgstr ""
 
