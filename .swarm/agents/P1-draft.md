@@ -2,10 +2,7 @@
 
 Sources: `.swarm/agents/*.md` on this branch, the notch lead's newer `S8.md` from the worktree `/home/user/kiwi-notch`, `.swarm/shared/decisions.md`, `board.md`, `docs/features/README.md` and `git log main..ccr-f3c1f44c-rv5a8r`.
 
-Status at the time of writing (per `board.md`):
-- Merged on the branch: Wave 0 Firefox fix, foundation, advanced/ fixes, window controls, Liquid Glass (plus two audit fixes), clipboard, Spotlight, auto-hide (plus fix), Control Center, Stage Manager, debt modules D1 to D8.
-- **Notch (S8): NOT merged yet.** The board says "R8 CHANGES; S8 fixing". Its code and manual list live only in the `feat/notch` worktree. Everything about the notch below is conditional on that merge.
-- **Still open in the board:** D9 (small modules), D10 (window move), L1 (lint), A2 (audit of Control Center, Stage Manager, clipboard, Spotlight), X1 (Shell smoke harness). Their branches exist but there is no report for them, so this draft does not describe their changes. Add them when they land.
+Status (refreshed, per `board.md` and `decisions.md`): every feature and every D-series debt card (D1 to D10) is merged, including the notch (with the clipboard dashboard panel, the "Copied" pill, critical-notification requeue and transient expiry), the Stage Manager shortcut, and the lint pass (0 warnings). Cross-feature review fixes landed (hide-minimized vs Stage Manager, media shown once, modal closes menus first, panel claim order). Still open on the board at last read: A2 (audit) and a few smoke-found bug fixes; D10, X1 and A2 have no memory file, so their detail is not described here beyond the board line.
 
 ## 1. Summary
 
@@ -20,7 +17,7 @@ Status at the time of writing (per `board.md`):
   - Spotlight: apps, files, settings, calculator and unit conversion, clipboard, web search. A Super tap opens it.
   - Control Center: the Quick Settings menu rearranged into a 4-column macOS-style layout.
   - Stage Manager: a left-edge strip of app cards; other apps' windows are hidden, not minimized.
-- **Notification notch (pending merge).** A black pill at top centre for notifications, volume and brightness feedback and Now Playing, built on a new notification router and a shared MPRIS watcher.
+- **Notification notch.** A black pill at top centre for notifications, volume and brightness feedback and Now Playing, built on a new notification router and a shared MPRIS watcher.
 - **Debt fixes.**
   - D1: Firefox/Thunderbird/GTK theme managers moved to async I/O.
   - D2: panel transparency tracks windows on all workspaces; the 2 s poll and sync wallpaper read are gone.
@@ -57,7 +54,12 @@ New features default to ON (owner decision); users opt out in prefs.
 - **Stage Manager is ON and wins over minimize-to-dock.**
   - While it is on, `minimize-to-dock`, `move-window-to-new-workspace` and `tiling-title-menu` are paused. Their saved values are kept.
   - Windows are hidden (opacity 0), never minimized.
-- **Notch (once merged) replaces stock banners and the stock OSD** on the primary monitor. History stays in the calendar menu. Do Not Disturb still rules. Turning the notch off restores stock banners.
+- **Notch replaces stock banners and the stock OSD** on the primary monitor. History stays in the calendar menu. Do Not Disturb still rules. Turning the notch off restores stock banners.
+- **Media is shown once:** with the notch on, the notch live activity replaces the panel media button (the Control Center Now Playing tile stays).
+- **Notch forces the calendar-right layout** (clock on the right, notifications in Quick Settings); the move-calendar-right row is greyed with "On while the notch is on".
+- **Clipboard in the notch:** a "Copied" pill and a Clipboard dashboard panel. Critical notifications are requeued; transient ones expire.
+- **Stage Manager shortcut:** new key, empty by default (prefs suggests Ctrl+Super+S only if no known conflict). The binding lives even while Stage Manager is off.
+- **Hide-minimized-windows** is aware of Stage Manager; opening a modal (Spotlight, Quick Paste) closes open menus first.
 - **Panel transparency** now reacts to windows on all workspaces; the 2 s poll is gone.
 - **Prefs:** new pages in this order after the existing ones: Liquid Glass, Window Controls, Auto-hide Top Bar, Control Center, Clipboard, Spotlight, Notch, Stage Manager; Advanced stays last. The old fullscreen-hover row and the username row are removed.
 - **Minimize-to-dock snapshots:** snapshots are cleared on disable except while locked. After disable and re-enable, a minimized window's tile may fall back to its icon (accepted).
@@ -201,7 +203,7 @@ Run each item on 48, 49, 50 and 51 where possible, on Wayland and X11 where note
 - [ ] Toggle stage-manager 20x and lock/unlock. Expected: no window stuck invisible; sizes and places unchanged.
 - [ ] Check conflicts. Expected: with Stage Manager on, minimize-to-dock, move-window-to-new-workspace and tiling-title-menu are paused with saved values kept; alt-tab to a hidden window switches to its stage.
 
-### Notch (only once feat/notch is merged)
+### Notch
 - [ ] Log in fresh with the notch on. Expected: black 190x32 pill at top centre, clock at right, no overlap.
 - [ ] Run `notify-send "Hi" "body"`. Expected: card grows (spring), stays 5 s, shrinks; no banner at top right; the notification is still listed in the calendar and Quick Settings menus.
 - [ ] Run `notify-send -u critical`, then `-u low`, then 3 quick sends. Expected: critical stays until dismissed; low shows compact; newest shown with a "+2" badge.
@@ -215,8 +217,16 @@ Run each item on 48, 49, 50 and 51 where possible, on Wayland and X11 where note
 - [ ] Toggle the notch 20x. Expected: no leftover actors, no double banner, banner position back; Looking Glass shows no kiwi notch actors; no errors.
 - [ ] Set calendar-right off with the notch on, then disable Kiwi. Expected: date menu still goes right; with Kiwi off the banner position and bin alignment are stock.
 - [ ] Turn on reduced motion. Expected: no spring and no bar movement.
+- [ ] Copy text with the clipboard feature on. Expected: a "Copied" pill appears; the dashboard shows a Clipboard panel with the latest entries.
+- [ ] Send a critical notification, then others, then dismiss it. Expected: the critical card is requeued rather than lost; transient notifications expire on their own.
+- [ ] With the notch on, check the panel. Expected: no separate panel media button (media only in the notch); move-calendar-right is greyed "On while the notch is on".
 
-### Debt modules (D2 to D7)
+### Stage Manager shortcut
+- [ ] Set a Stage Manager shortcut in prefs (try the Ctrl+Super+S suggestion). Expected: it toggles Stage Manager; the field is empty by default.
+- [ ] Turn Stage Manager off, then press the shortcut. Expected: it still works (binding lives while the feature is off); clearing it removes the binding.
+- [ ] With Stage Manager on and hide-minimized-windows on, minimize and restore windows. Expected: no window stuck hidden or visible; paused features are noted in prefs.
+
+### Debt modules (D2 to D10)
 - [ ] Toggle `overview-seamless-zoom` off and on in the overview and use a touchpad swipe. Expected: normal; wallpaper strip stock after off.
 - [ ] Lock and unlock, and log in fresh. Expected: overview not forced shown or hidden; no overview on first login.
 - [ ] Toggle `reduce-window-animations` while opening a window. Expected: no stuck scale or opacity.
@@ -228,6 +238,10 @@ Run each item on 48, 49, 50 and 51 where possible, on Wayland and X11 where note
 - [ ] Turn Launchpad on and off. Expected: icon after the first favourite, click opens the app grid; off removes the icon and cleans favourites.
 - [ ] Turn popup styling off and on. Expected: stock look when off; unchanged when on.
 - [ ] Open the Quick Settings notification list. Expected: Clear button, close/expand and titles unchanged; window-controls hover shows no pill background.
+- [ ] Open the Downloads fan. Expected: thumbnails appear after a brief generic icon; "N More in Files" is pluralised correctly.
+- [ ] Log in and toggle Caps/Num Lock. Expected: indicators show at login and on toggle (no fixed delay).
+- [ ] Battery at or below 20% discharging, then plug in, and start at 15%. Expected: label slides in, slides out when plugged, and shows at start.
+- [ ] Move a fullscreen window to a new workspace and use tiling drag-restore, with and without Stage Manager. Expected: normal when off; paused while Stage Manager is on.
 - [ ] Push a PR. Expected: CI is green on the Ubuntu runner (eslint@9, strict schema check, tests, `make pack`).
 - [ ] Publish a test release. Expected: the zip is attached by the new `gh release upload` step.
 
@@ -240,15 +254,35 @@ Run each item on 48, 49, 50 and 51 where possible, on Wayland and X11 where note
 - **Quick Paste uses a virtual-keyboard Ctrl+V** (Ctrl+Shift+V for terminals), against the skill note. The spec wins by decision. Whether it pastes into the right window is untested.
 - **Liquid Glass refraction is experimental.** A shader can only see its own texture, so refraction forces the still wallpaper-copy path and cannot bend the live backdrop. The 51 shader snippet facts were not verified against a real Shell 51. Blur rects are square, so rounded corners can bleed slightly. Tinted style floors alpha at 0.62 for the 4.5:1 contrast, but a slider below 55 can break it by user choice. Reduced motion drops fades, not blur (a deliberate deviation from the design reference).
 - **Shell-version coverage:** facts for 48 to 51 were checked from source reads of the GNOME gitlab (48.0, 49.0, 50.0, main) but no run on those versions. Verification was on Shell 46 typelibs only.
-- **Stage Manager details unseen on a real Shell:** whether the clone of an opacity-0 window paints, tilt sign, clone clip, overview with hidden windows. Chrome root is pill-sized only (not the whole strip). The stage shortcut waits for the keybinding service and was left out until Wave D; it is not in the reports as done.
-- **Control Center:** small tiles are not 1x1 icon-only (stock toggles keep labels); the footer width has a risk with avatar, name, battery and 4 buttons in 4 columns. Now Playing used its own source (to be replaced by the shared MPRIS watcher after the notch lands).
-- **Notch is not merged.** Review round R8 asked for changes; S8 is fixing, including the Now Playing port. Deferred in the notch itself: timer, recording and charging activities, clipboard and up-next in the dashboard (the "Copied" pill hook exists in the clipboard service but isn't built), hardware-notch alignment, a second activity circle, a per-app absorb list. S6 also noted that drag-and-drop hold and banner offset belong to the notch.
+- **Stage Manager details unseen on a real Shell:** whether the clone of an opacity-0 window paints, tilt sign, clone clip, overview with hidden windows. Chrome root is pill-sized only (not the whole strip). 
+- **Control Center:** small tiles are not 1x1 icon-only (stock toggles keep labels); the footer width has a risk with avatar, name, battery and 4 buttons in 4 columns. Now Playing used its own source (the board says it moved to the shared MPRIS watcher with the notch merge).
+- **Notch deferrals (per decisions):** the "Up next" dashboard panel (MPRIS has no reliable queue API), timer/recording/charging live activities, and "toggle changed" confirmations. S8's earlier notes also list hardware-notch alignment, a second activity circle and a per-app absorb list as not done.
 - **Auto-hide:** the panel is parked by translation and opacity, not hidden, so Ctrl+Alt+Tab still finds it. The overview inset injects a private `_updateWorkAreaBox`, guarded and to be checked on 48 to 51.
 - **Crash leftovers:** Dash to Dock colours stay changed if Kiwi is switched off after a crash before the next enable (restore only runs in enable).
 - **Order differences in the new registry** (no known effect): stop runs in reverse registration order; the registry catches errors per feature where old code aborted the whole refresh.
 - **Open leftovers from D1 and D2:** a prefs "Remove Kiwi GTK changes" button needs a shared cleanup helper that D1 did not export; D1 asks the orchestrator whether it is wanted. A dangling gtk.css import after an uninstall or crash is documented, not fully fixed.
-- **Release chores:** run `make pot` before release (CI doesn't); lint baseline is 150 to 161 warnings, 0 errors. D8's docs pass 2 is still to run after the last merges.
-- **Unreported work:** D9, D10, L1, A2 and X1 had no memory files when this was written. This draft does not describe them.
+- **Release chores:** `make pot` now writes `translating/kiwi.pot`; run it before release (CI doesn't); lint baseline is 150 to 161 warnings, 0 errors. D8's docs pass 2 is still to run after the last merges.
+- **Not described:** D10, X1 and A2 have no memory file; A2 was still running at last read of the board.
+
+## 4b. EGO submission notes
+
+- **Version coverage:** `metadata.json` lists shell-version 48, 49, 50, 51. None of them has been run with these features. The owner must test at least 48 and 51 (oldest and newest) before uploading to extensions.gnome.org.
+- **`overlay-key` handler block (Spotlight):** Kiwi finds the oldest `overlay-key` handler on the display (assumed to be the Shell's overview handler) with `signal_handler_find` and blocks only that id, then connects its own. Disable disconnects its own handler and unblocks that id. If not found, it warns and stock behaviour stays. Other extensions' handlers are untouched; with others present the journal shows an "N overlay-key handlers" warning. The assumption was read from the 51.1 source only.
+- **Dash to Dock settings writes:** the adaptive-colours feature writes Dash to Dock colour keys. Originals are saved to the Kiwi key `dock-colors-saved`, restored on disable, and restored on the next enable after a crash (`restoreStaleColors`). If the Kiwi key is missing it falls back to memory only.
+- **`favorite-apps` write (Launchpad):** `launchpadApp.js` inserts a synthetic Launchpad desktop id into the shell's `favorite-apps` after the first favourite, and removes it on disable ("favorites cleaned").
+- **Clipboard:** history is persisted to disk by default (`~/.local/share/kiwi/clipboard/`, dir 0700, files 0600). The `metadata.json` description declares clipboard access and local storage. The shortcut default is empty (EGO rule). Password-manager entries are skipped and nothing is recorded while locked. One sync `mkdir_with_parents` in enable is a documented exception.
+- **Private Shell APIs used (guarded, with feature detection):**
+  - `MessageTray._showNotification`, `_notificationQueue`, `_updateState`, `_bannerBin` (notification router, via `lib/compat.js`).
+  - `osdWindowManager._showOsdWindow` (notch OSD).
+  - `Main.overview._overview.controls.layout_manager._updateWorkAreaBox` (auto-hide overview inset).
+  - Quick Settings internals (`_backgroundApps`, `_doNotDisturb`) in Control Center, and `AppMenu` privates in window title.
+  - Per-version differences go through `lib/compat.js`. Source was read for 48.0, 49.0, 50.0 and main, not run.
+- **Other EGO-sensitive points:** a virtual keyboard injects Ctrl+V for Quick Paste; Kiwi writes `gtk.css` (Kiwi block only) and Firefox/Thunderbird profile files (only with the styling key on); the `advanced/` native module is not in the zip.
+- **Packaging:** run `make check` and `make pack`; run `make pot` first (writes `translating/kiwi.pot`).
+
+## 4c. How to smoke test locally: `make smoke`
+
+`make smoke` runs `tools/smoke/run-headless.sh`: a headless GNOME Shell (`--headless --wayland --virtual-monitor 1280x800`) with Kiwi enabled in a temp HOME with a private session bus, then disable/enable 10 times (argument sets the count). It never touches your real profile. Exit 0 means no Kiwi-related errors, 1 means errors, 2 means setup failure. It needs `gnome-shell`, `dbus-run-session`, `gsettings`, `glib-compile-schemas`, `gdbus`, `python3`. In the cloud container use `KIWI_SMOKE_SHELL_VERSION=46 KIWI_SMOKE_SHIM=1 make smoke`. Container result reported by the orchestrator: 0 Kiwi CRITICALs and 11 errors that come from a Shell-46-only shim. That result is indicative only and not proof for 48 to 51; on your machine run it on 48 and 51 first.
 
 ## 5. Not tested
 
@@ -260,5 +294,6 @@ Run each item on 48, 49, 50 and 51 where possible, on Wayland and X11 where note
 - Prefs smoke tests under Xvfb on libadwaita.
 - A gcc build and Xvfb hover smoke test of the `advanced/` module (no valgrind run).
 - One D-Bus fake-provider test for Spotlight.
+- `make smoke` in the container against Shell 46 with a shim (0 Kiwi CRITICALs, 11 shim-only errors per the orchestrator): a load/toggle check, not a feature check.
 
 The container only has GNOME Shell 46 typelibs, which is older than the 48 to 51 floor, so even those checks are not proof that any feature works on a supported Shell. CI results are not yet known. Every item in section 3 is for you to run on a real machine.
