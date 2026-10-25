@@ -89,3 +89,15 @@ Attach in `enable()` and add `cleanup.add(() => h.destroy())`. Check `Glass.moti
 - `connect(cleanup, fn({visible, autoHiding, mode}))` fires on visibility or mode changes.
 - Feature id `panel-autohide`. Style class `kiwi-panel-autohide` is on Main.panel while it runs.
 - Not done: no banner-offset hold and no drag-and-drop hold.
+
+## coordinators/windowState.js (frozen from S9, feat/stage-manager; not merged yet)
+`import { WindowState } from '../coordinators/windowState.js'` is a singleton. `WindowStateRegistry` is the class, for tests.
+- FLAGS: `staged | isolatedFullscreen | tiled | parkedInDock`.
+- `set(win, flag, on=true) -> changed`, `has(win, flag)`, `flags(win)`, `list(flag)`, `clear(win)`.
+  Call `clearFlag(flag)` in your disable().
+- `skipsDock(win)` is true for staged windows, and minimizedToDock skips them.
+  `hiddenFromSwitcher(win)` = parkedInDock && !staged, and only those are hidden by hideMinimizedWindows.
+- The `stageActive` getter and `setStageActive(bool)` are for Stage Manager only.
+  moveFullscreenWindow and windowTiling pause while it is true.
+- `watch(cleanup|fn, fn(win, flag, on)) -> stop`. The stage-mode event is `(null, 'stageActive', on)`.
+- `win._kiwiStaged` mirrors staged. Flags drop when the window emits 'unmanaged'.

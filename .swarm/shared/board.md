@@ -12,4 +12,4 @@
 | Auto-hide bar | S6 | done, merged | feat/autohide |
 | Control Center | S7 | doing | feat/control-center |
 | Notch | S8 | doing | feat/notch |
-| Stage Manager | S9 | doing (model + strip only) | feat/stage-manager |
+| Stage Manager | S9 | model+strip done; Wave D full doing | feat/stage-manager |
