@@ -1612,14 +1612,14 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
 }
 
 .kiwi-modal-dark {
-  background-color: rgba(32, 32, 36, 0.84);
+  background-color: rgba(32, 32, 36, 0.93);
   border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 14px 44px rgba(0, 0, 0, 0.40);
   color: #f5f5f7;
 }
 
 .kiwi-modal-light {
-  background-color: rgba(240, 240, 244, 0.88);
+  background-color: rgba(240, 240, 244, 0.94);
   border: 1px solid rgba(0, 0, 0, 0.12);
   box-shadow: 0 14px 44px rgba(0, 0, 0, 0.24);
   color: #1d1d1f;
