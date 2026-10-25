@@ -25,7 +25,7 @@
 | Audit fixes (autohide restore, glass contrast/menu destroy) | S6, S3 | done, merged | feat/autohide-fix, feat/liquid-glass-fix2 |
 | Small modules (D9) | D9 | done, merged (features.js lockIcon ctx.extension → S10 with notch) | debt/small-modules |
 | Window move (D10) | D10 | done, merged | debt/window-move |
-| Lint (L1) | L1 | pass 1 merged (104→101); pass 2 at end | debt/lint |
+| Lint (L1) | L1 | done: 0 warnings, merged | debt/lint |
 | Audit merged CC/SM/clipboard/spotlight (A2) | A2 | doing | - |
 | Shell smoke harness (X1) | X1 | doing | - |
 | PR notes + manual test list (P1) | P1 | draft 1 committed; refresh at end | - |
