@@ -764,7 +764,7 @@ class FullscreenWorkspaceManager {
         }
 
         // Get final index
-        let finalTargetIndex = targetWs.index();
+        const finalTargetIndex = targetWs.index();
 
         const leavingWorkspaceIndex = currentIndex;
 
