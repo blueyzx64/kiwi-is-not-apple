@@ -1371,72 +1371,133 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
 }
 
 /* feature: spotlight
-   Only kiwi- classes. The glass comes from
-   lib/glass.js behind the frame (no second blur here). Frame radius 22, padding 8, so rows
-   are 14 (concentric). The frame is 680px wide (set by ModalSurface). */
+   Only kiwi- classes. ModalSurface (lib/modalSurface.js) draws no blur: the frame itself is
+   the backing, a rounded translucent fill with a 1px rim and a soft shadow, dense enough
+   that text stays legible over a white window. Quick Paste shares the .kiwi-modal* rules.
+   Spotlight frame: radius 24 (inline from ModalSurface), padding 8, rows radius 10. The frame
+   is 680px wide (set by ModalSurface). */
+
+/* Subtle dim behind any Kiwi modal */
+.kiwi-modal-overlay {
+  background-color: rgba(0, 0, 0, 0.12);
+}
+
+.kiwi-modal {
+  border-radius: 24px;
+}
+
+.kiwi-modal-dark {
+  background-color: rgba(32, 32, 36, 0.84);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.40);
+  color: #f5f5f7;
+}
+
+.kiwi-modal-light {
+  background-color: rgba(240, 240, 244, 0.88);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.24);
+  color: #1d1d1f;
+}
+
+/* High contrast: no see-through, a firmer rim */
+.kiwi-modal-dark.kiwi-modal-opaque {
+  background-color: #1e1e22;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+}
+
+.kiwi-modal-light.kiwi-modal-opaque {
+  background-color: #fafafa;
+  border: 1px solid rgba(0, 0, 0, 0.55);
+}
 
 .kiwi-spotlight {
   padding: 8px;
-  spacing: 4px;
+  spacing: 0;
 }
 
 .kiwi-spotlight-bar {
   spacing: 12px;
   padding: 0 14px;
-  height: 58px;
+  height: 56px;
 }
 
 .kiwi-spotlight-glass-icon {
-  color: rgba(128, 128, 128, 0.95);
+  color: rgba(255, 255, 255, 0.62);
 }
 
-.kiwi-spotlight-entry {
+.kiwi-modal-light .kiwi-spotlight-glass-icon {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.kiwi-spotlight-entry,
+.kiwi-spotlight-entry:focus,
+.kiwi-spotlight-entry:hover {
   font-size: 22px;
-  min-height: 58px;
+  min-height: 56px;
   padding: 0;
   border: none;
   box-shadow: none;
   background-color: transparent;
+  color: #ffffff;
   caret-color: -st-accent-color;
   selection-background-color: -st-accent-color;
   selected-color: -st-accent-fg-color;
-  hint-color: rgba(128, 128, 128, 0.8);
+  hint-color: rgba(255, 255, 255, 0.45);
 }
 
-.kiwi-spotlight-entry:focus {
-  border: none;
-  box-shadow: none;
-  background-color: transparent;
+.kiwi-modal-light .kiwi-spotlight-entry,
+.kiwi-modal-light .kiwi-spotlight-entry:focus,
+.kiwi-modal-light .kiwi-spotlight-entry:hover {
+  color: #1d1d1f;
+  hint-color: rgba(0, 0, 0, 0.4);
 }
 
+/* Hairline between the field and the results, as on macOS */
 .kiwi-spotlight-scroll {
+  border-top: 1px solid rgba(255, 255, 255, 0.10);
   padding-top: 4px;
+  margin: 0 6px;
+}
+
+.kiwi-modal-light .kiwi-spotlight-scroll {
+  border-top: 1px solid rgba(0, 0, 0, 0.10);
 }
 
 .kiwi-spotlight-list {
   spacing: 1px;
-  padding: 0 0 4px 0;
+  padding: 0 0 2px 0;
 }
 
 .kiwi-spotlight-section {
   font-size: 11px;
   font-weight: bold;
-  color: rgba(128, 128, 128, 0.95);
-  padding: 8px 14px 2px 14px;
+  color: rgba(255, 255, 255, 0.55);
+  padding: 8px 10px 3px 10px;
+}
+
+.kiwi-modal-light .kiwi-spotlight-section {
+  color: rgba(0, 0, 0, 0.5);
 }
 
 .kiwi-spotlight-row {
-  border-radius: 14px;
-  padding: 6px 10px;
+  border-radius: 10px;
+  padding: 6px 8px;
   spacing: 12px;
 }
 
 .kiwi-spotlight-row:hover {
-  background-color: rgba(128, 128, 128, 0.14);
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.kiwi-modal-light .kiwi-spotlight-row:hover {
+  background-color: rgba(0, 0, 0, 0.06);
 }
 
 .kiwi-spotlight-row:selected,
-.kiwi-spotlight-row:selected:hover {
+.kiwi-spotlight-row:selected:hover,
+.kiwi-modal-light .kiwi-spotlight-row:selected,
+.kiwi-modal-light .kiwi-spotlight-row:selected:hover {
   background-color: -st-accent-color;
   color: -st-accent-fg-color;
 }
@@ -1451,12 +1512,11 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
 
 .kiwi-spotlight-subtitle {
   font-size: 11px;
-  color: rgba(128, 128, 128, 0.95);
+  color: rgba(255, 255, 255, 0.6);
 }
 
-.kiwi-spotlight-row:selected .kiwi-spotlight-subtitle,
-.kiwi-spotlight-row:selected .kiwi-spotlight-return {
-  color: -st-accent-fg-color;
+.kiwi-modal-light .kiwi-spotlight-subtitle {
+  color: rgba(0, 0, 0, 0.55);
 }
 
 .kiwi-spotlight-return {
@@ -1464,13 +1524,16 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
   color: transparent;
 }
 
-.kiwi-spotlight-row:selected .kiwi-spotlight-return {
+.kiwi-spotlight-row:selected .kiwi-spotlight-subtitle,
+.kiwi-spotlight-row:selected .kiwi-spotlight-return,
+.kiwi-modal-light .kiwi-spotlight-row:selected .kiwi-spotlight-subtitle,
+.kiwi-modal-light .kiwi-spotlight-row:selected .kiwi-spotlight-return {
   color: -st-accent-fg-color;
 }
 
 /* Top hit: larger */
 .kiwi-spotlight-top {
-  padding: 10px 12px;
+  padding: 8px 8px;
 }
 
 .kiwi-spotlight-top .kiwi-spotlight-title {
