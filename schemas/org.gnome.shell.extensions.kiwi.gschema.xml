@@ -302,6 +302,16 @@
         <summary>Seamless Overview Zoom</summary>
         <description>Zoom the whole monitor in and out of the overview, including the desktop strip behind the top panel.</description>
       </key>
+      <key name="overview-gestures-workspace-only" type="b">
+        <default>true</default>
+        <summary>Swipe up only to the workspace overview</summary>
+        <description>The overview swipe (three fingers on the touchpad or the touchscreen) stops at the workspace overview and never goes on into the app grid. The app grid stays on the apps button, Super+A and the Launchpad.</description>
+      </key>
+      <key name="disable-hot-corner" type="b">
+        <default>true</default>
+        <summary>Disable the hot corner</summary>
+        <description>No hot corner opens the overview while Kiwi runs. The GNOME setting enable-hot-corners is left as it is and applies again when this is off.</description>
+      </key>
       <key name="focus-on-overview-exit" type="b">
         <default>true</default>
         <summary>Focus Window Under Cursor on Overview Exit</summary>

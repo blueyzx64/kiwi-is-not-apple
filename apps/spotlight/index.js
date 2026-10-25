@@ -96,7 +96,11 @@ export class SpotlightFeature {
 
         // A Super tap: take over overlay-key while the key is on; give it back when it goes off
         const takeover = new OverlayKeyTakeover(() => this.toggle());
-        cleanup.add(() => takeover.stop());
+        this._takeover = takeover;
+        cleanup.add(() => {
+            takeover.stop();
+            this._takeover = null;
+        });
         const applySuper = () => {
             if (ks.bool('spotlight-on-super'))
                 takeover.start();
@@ -131,12 +135,15 @@ export class SpotlightFeature {
             onClose: () => this._modal.close(),
         });
         const focus = this._view.build(frame);
+        // A second Super tap closes it (overlay-key is filtered in the modal's POPUP mode otherwise)
+        this._takeover?.allowInModal();
         this._settingsProvider.invalidate();
         this._search('');
         return focus;
     }
 
     _closed() {
+        this._takeover?.restoreModes();
         this._cancelSearch();
         this._view?.destroy();
         this._view = null;

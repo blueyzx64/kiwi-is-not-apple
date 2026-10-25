@@ -52,6 +52,7 @@ import { Glass } from './lib/glass.js';
 import { ClipboardHistory } from './apps/clipboard/index.js';
 import { SpotlightFeature } from './apps/spotlight/index.js';
 import { RoundedCorners } from './apps/roundedCorners/index.js';
+import { ShellBehaviour } from './apps/shellBehaviour/index.js';
 
 // ctx: { extension, settings (Gio.Settings), gettext, interfaceSettings (Gio.Settings) }
 const bool = (ctx, key) => ctx.settings.get_boolean(key);
@@ -294,6 +295,13 @@ export const FEATURES = [
         // Frosted panel and menus; the dock and wallpaper blur ride on the same service
         id: 'liquid-glass', setting: 'liquid-glass',
         cls: LiquidGlass,
+    },
+    {
+        // Overview swipes stop at the workspace overview; no hot corner. Each part has its key.
+        id: 'shell-behaviour',
+        when: ctx => bool(ctx, 'overview-gestures-workspace-only') || bool(ctx, 'disable-hot-corner'),
+        restartOn: ['overview-gestures-workspace-only', 'disable-hot-corner'],
+        cls: ShellBehaviour,
     },
     {
         // macOS-style rounded corners: one shader effect per window actor
