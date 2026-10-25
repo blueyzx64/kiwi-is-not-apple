@@ -93,6 +93,9 @@ export class OverlayKeyTakeover {
         }
         if (Main.sessionMode.isLocked || Main.sessionMode.isGreeter)
             return;
+        // A window move or resize (or another grab) is in progress: do not pop up over it
+        if (global.display.is_grabbed?.())
+            return;
         this._onTap();
     }
 }

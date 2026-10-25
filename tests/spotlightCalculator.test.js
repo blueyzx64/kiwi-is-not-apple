@@ -40,8 +40,9 @@ test('percent of', () => eq(val('200*10%'), 20));
 test('modulo', () => eq(val('10 % 3'), 1));
 test('functions', () => eq(val('sqrt(16)+abs(-2)'), 6));
 test('constants', () => near(val('2*pi'), 2 * Math.PI));
-test('pi symbol', () => near(val('2π'), 2 * Math.PI));
+test('pi symbol', () => near(val('2*π'), 2 * Math.PI));
 test('implicit multiply', () => eq(val('2(3+4)'), 14));
+test('implicit product alone is not math', () => eq(calculate('2pi'), null));
 test('trig', () => near(val('sin(0)+cos(0)'), 1));
 test('log', () => eq(val('log(1000)'), 3));
 test('spaces', () => eq(val('  1 +   1  '), 2));
@@ -86,6 +87,34 @@ test('undefined', () => eq(calculate(undefined), null));
 test('object prototype keys as function names', () => {
     for (const name of ['valueOf', 'constructor', 'toString', '__proto__', '__defineGetter__'])
         eq(calculate(`${name}(2)`), null);
+});
+
+// --- V5: non-finite and ambiguous queries
+test('1e999% gives no result', () => eq(calculate('1e999%'), null));
+test('-1e999% gives no result', () => eq(calculate('-1e999%'), null));
+test('1e999 literal rejected', () => eq(calculate('1e999+1'), null));
+test('result is never non-finite', () => {
+    for (const q of ['1e308*10', '1e308+1e308', '-1e308*10', '1e999%', '10^309'])
+        eq(calculate(q), null);
+});
+test('bare constants are not math', () => {
+    for (const q of ['e', 'pi', 'tau', 'E', 'PI', 'pi e'])
+        eq(calculate(q), null);
+});
+test('times are not math', () => {
+    eq(calculate('10:30'), null);
+    eq(calculate('9:05:30'), null);
+});
+test('dates are not math', () => {
+    eq(calculate('2024-10-25'), null);
+    eq(calculate('2024-1-5'), null);
+});
+test('colon is not division', () => eq(calculate('10:2'), null));
+test('constants with an operator and a digit still work', () => near(val('pi*2'), 2 * Math.PI));
+test('function call counts as math', () => eq(val('sqrt(16)'), 4));
+test('evaluateQuery: no calc for a plain word, date or constant', () => {
+    for (const q of ['e', 'pi', '2024-10-25', '10:30', 'firefox'])
+        eq(evaluateQuery(q), null);
 });
 
 // --- formatting
