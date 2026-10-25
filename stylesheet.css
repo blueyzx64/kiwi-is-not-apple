@@ -1777,21 +1777,20 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
     background: transparent;
 }
 
+/* Type scale (macOS-like, never below 12px): 15 semibold media title, 14 semibold primary,
+   13 secondary, 12 captions and times. Secondary text is white at 60 %. Spacing is a 4px grid;
+   the dashboard grid itself (paddings, column widths) is in apps/notch/dashboardModel.js. */
+
+/* ---- pills: idle, live activity, confirmation, compact notification ---- */
 .kiwi-notch-row {
-    spacing: 8px;
-    padding: 0 14px;
+    spacing: 10px;
+    padding: 0 12px;
 }
 
-.kiwi-notch-title {
-    font-size: 13px;
+.kiwi-notch-pill-title {
+    font-size: 14px;
     font-weight: 600;
     color: #ffffff;
-}
-
-.kiwi-notch-meta {
-    font-size: 11px;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.62);
 }
 
 .kiwi-notch-value {
@@ -1800,32 +1799,43 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
     color: rgba(255, 255, 255, 0.8);
     min-width: 24px;
     text-align: right;
+    font-feature-settings: "tnum";
 }
 
 .kiwi-notch-badge {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 700;
     color: #ffffff;
-    background-color: rgba(255, 255, 255, 0.22);
+    background-color: rgba(255, 255, 255, 0.18);
     border-radius: 999px;
-    padding: 0 7px;
+    padding: 1px 7px;
 }
 
 .kiwi-notch-icon {
     color: #ffffff;
 }
 
-.kiwi-notch-art {
-    border-radius: 5px;
+/* cover art: St clips a background image to the radius */
+.kiwi-notch-artwork {
+    background-color: transparent;
 }
 
-.kiwi-notch-art-large {
-    border-radius: 10px;
+.kiwi-notch-artwork-small {
+    border-radius: 6px;
 }
 
-/* equalizer glyph */
+.kiwi-notch-artwork-large {
+    border-radius: 12px;
+}
+
+.kiwi-notch-artwork-empty {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+/* waveform at the right of the music pill */
 .kiwi-notch-bars {
-    spacing: 2px;
+    spacing: 3px;
+    min-height: 16px;
 }
 
 .kiwi-notch-bar {
@@ -1834,11 +1844,15 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
     background-color: -st-accent-color;
 }
 
+.kiwi-notch-bars-paused .kiwi-notch-bar {
+    background-color: rgba(255, 255, 255, 0.4);
+}
+
 /* volume / brightness bar */
 .kiwi-notch-track {
     height: 6px;
     border-radius: 3px;
-    background-color: rgba(255, 255, 255, 0.24);
+    background-color: rgba(255, 255, 255, 0.22);
 }
 
 .kiwi-notch-fill {
@@ -1846,106 +1860,305 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
     background-color: #ffffff;
 }
 
-/* notification card: 14px padding, inner radii concentric with the 32px outer radius */
+/* ---- notification card: 20px sides, inner radii concentric with the 32px outer ---- */
 .kiwi-notch-card {
-    padding: 12px 18px 14px 18px;
+    padding: 12px 20px 16px 20px;
     spacing: 4px;
 }
 
 .kiwi-notch-card-header {
     spacing: 8px;
-    height: 22px;
+    height: 26px;
+}
+
+.kiwi-notch-card-app {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.kiwi-notch-card-time {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+    font-feature-settings: "tnum";
 }
 
 .kiwi-notch-card-title {
-    font-size: 14px;
-    font-weight: 700;
+    font-size: 15px;
+    font-weight: 600;
     color: #ffffff;
 }
 
 .kiwi-notch-card-body {
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.82);
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.78);
 }
 
 .kiwi-notch-close {
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
     border-radius: 999px;
-    color: rgba(255, 255, 255, 0.7);
-    background-color: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.6);
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
 .kiwi-notch-close:hover,
 .kiwi-notch-close:focus {
-    background-color: rgba(255, 255, 255, 0.24);
+    background-color: rgba(255, 255, 255, 0.22);
     color: #ffffff;
 }
 
 .kiwi-notch-actions {
     spacing: 8px;
-    padding-top: 4px;
+    padding-top: 6px;
 }
 
 .kiwi-notch-action {
     height: 28px;
     padding: 0 14px;
     border-radius: 999px;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     color: #ffffff;
-    background-color: rgba(255, 255, 255, 0.16);
+    background-color: rgba(255, 255, 255, 0.14);
     text-align: center;
 }
 
 .kiwi-notch-action:hover,
-.kiwi-notch-action:focus,
-.kiwi-notch-action:checked {
-    background-color: rgba(255, 255, 255, 0.28);
+.kiwi-notch-action:focus {
+    background-color: rgba(255, 255, 255, 0.26);
 }
 
-/* dashboard */
-.kiwi-notch-dashboard {
-    padding: 16px 22px;
-    spacing: 24px;
+/* ---- dashboard ---- */
+/* header band, level with the top bar */
+.kiwi-notch-dash-header {
+    height: 32px;
+    padding: 0 14px 0 20px;
 }
 
-.kiwi-notch-panel {
-    spacing: 8px;
+.kiwi-notch-dash-date {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.6);
+    font-feature-settings: "tnum";
 }
 
-.kiwi-notch-nowplaying {
-    spacing: 12px;
+/* Do Not Disturb: a small moon in the corner */
+.kiwi-notch-dnd {
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.kiwi-notch-dnd:hover,
+.kiwi-notch-dnd:focus {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.kiwi-notch-dnd:checked {
+    color: -st-accent-fg-color;
+    background-color: -st-accent-color;
+}
+
+.kiwi-notch-dash-body {
+    padding: 4px 20px 20px 20px;
+    spacing: 20px;
+}
+
+.kiwi-notch-col {
+    spacing: 10px;
+}
+
+/* media hero */
+.kiwi-notch-media-top {
+    spacing: 14px;
+    height: 68px;
+}
+
+.kiwi-notch-media-text {
+    spacing: 2px;
+}
+
+.kiwi-notch-media-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.kiwi-notch-media-artist {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.kiwi-notch-media-app {
+    margin-top: 2px;
+}
+
+.kiwi-notch-scrub {
+    spacing: 10px;
+    height: 16px;
+}
+
+.kiwi-notch-scrub-time {
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.6);
+    font-feature-settings: "tnum";
+    min-width: 36px;
+}
+
+.kiwi-notch-scrub-remaining {
+    text-align: right;
+}
+
+.kiwi-notch-scrub-track {
+    height: 4px;
+    border-radius: 2px;
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.kiwi-notch-scrub-fill {
+    border-radius: 2px;
+    background-color: rgba(255, 255, 255, 0.85);
 }
 
 .kiwi-notch-controls {
-    spacing: 14px;
+    spacing: 28px;
 }
 
+/* white glyphs, no discs; a soft circle only on hover */
 .kiwi-notch-control {
-    width: 34px;
-    height: 34px;
+    width: 32px;
+    height: 32px;
     border-radius: 999px;
     color: #ffffff;
-    background-color: rgba(255, 255, 255, 0.14);
 }
 
 .kiwi-notch-control:hover,
 .kiwi-notch-control:focus {
-    background-color: rgba(255, 255, 255, 0.26);
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
-/* the Notifications column: the newest entries of the message list */
+.kiwi-notch-control:active {
+    background-color: rgba(255, 255, 255, 0.18);
+}
+
+/* clock, when nothing is playing */
+.kiwi-notch-clock {
+    spacing: 2px;
+}
+
+.kiwi-notch-clock-row {
+    spacing: 4px;
+}
+
+.kiwi-notch-clock-time {
+    font-size: 40px;
+    font-weight: 600;
+    color: #ffffff;
+    font-feature-settings: "tnum";
+}
+
+.kiwi-notch-clock-suffix {
+    font-size: 15px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.6);
+    padding-bottom: 7px;
+}
+
+.kiwi-notch-clock-date {
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* notification list: 44px rows, icon 20 */
+.kiwi-notch-list {
+    spacing: 0;
+}
+
 .kiwi-notch-recent {
-    padding: 2px 6px;
-    border-radius: 10px;
-}
-
-.kiwi-notch-recent-row {
-    spacing: 8px;
+    height: 44px;
+    padding: 0 8px;
+    border-radius: 12px;
 }
 
 .kiwi-notch-recent:hover,
 .kiwi-notch-recent:focus {
-    background-color: rgba(255, 255, 255, 0.12);
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.kiwi-notch-recent-row {
+    spacing: 10px;
+}
+
+.kiwi-notch-recent-line {
+    spacing: 8px;
+}
+
+.kiwi-notch-recent-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.kiwi-notch-recent-time,
+.kiwi-notch-recent-sub {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.kiwi-notch-recent-time {
+    font-feature-settings: "tnum";
+}
+
+.kiwi-notch-more {
+    height: 24px;
+    padding: 0 8px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.kiwi-notch-more:hover,
+.kiwi-notch-more:focus {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.kiwi-notch-empty-text {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+/* level with the middle of the large clock and of the cover art */
+.kiwi-notch-list-empty {
+    padding-top: 14px;
+}
+
+/* clipboard column */
+.kiwi-notch-caption {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.6);
+    padding: 0 8px;
+}
+
+.kiwi-notch-clip {
+    height: 32px;
+    padding: 0 8px;
+    border-radius: 10px;
+}
+
+.kiwi-notch-clip:hover,
+.kiwi-notch-clip:focus {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.kiwi-notch-clip-text {
+    font-size: 14px;
+    color: #ffffff;
 }

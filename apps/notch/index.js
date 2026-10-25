@@ -40,6 +40,7 @@ function mediaInfo(player) {
         title: player.trackTitle ?? '',
         artist: (player.trackArtists ?? []).join(', '),
         art: player.trackCoverUrl,
+        length: player.length ?? null,
         playing: player.isPlaying(),
         canPrevious: player.canGoPrevious,
         canNext: player.canGoNext,
@@ -89,6 +90,8 @@ export class NotchFeature {
             onToggleDnd: () => NotificationRouter.setDnd(!NotificationRouter.state().dnd),
             onCollapse: () => this._dispatch({ type: 'collapse' }),
             onOpenNotification: notification => this._openNotification(notification),
+            onOpenList: () => this._openMessageList(),
+            getPosition: () => this._bestPlayer()?.position ?? Promise.resolve(null),
         }, gettext);
 
         // Room in the centre of the bar so the clock and others keep clear of the pill
@@ -445,6 +448,7 @@ export class NotchFeature {
                 entries.push({
                     notification,
                     title: notification.title ?? '',
+                    body: notification.body ?? '',
                     app: source.title ?? '',
                     when: datetime?.format?.('%H:%M') ?? '',
                     time: datetime?.to_unix?.() ?? null,
@@ -461,6 +465,19 @@ export class NotchFeature {
             notification?.activate();
         } catch (e) {
             console.error('[Kiwi] notch could not open a notification:', e);
+        }
+    }
+
+    // The full list: in Quick Settings while the notch is on (calendarRight), else the
+    // calendar menu.
+    _openMessageList() {
+        this._dispatch({ type: 'collapse' });
+        const area = Main.panel.statusArea;
+        const menu = area.quickSettings?.menu ?? area.dateMenu?.menu;
+        try {
+            menu?.open();
+        } catch (e) {
+            console.error('[Kiwi] notch could not open the message list:', e);
         }
     }
 
