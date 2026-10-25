@@ -97,7 +97,7 @@ gnome-extensions upload <zip>           # 49+
 - Smoke-test in CI: GitHub's `ubuntu-latest` has gnome-shell available (Kiwi's
   pack workflow installs it). Headless shell tests are possible with
   `gnome-shell --headless --virtual-monitor 1280x800` under
-  `dbus-run-session` (unverified on CI runners).
+  `dbus-run-session` (unverified on CI runners: needs a real GitHub Actions run, not a source check).
 
 ## 6. Lint and types
 - GNOME's own config: gnome-shell `tools/eslint.config.js` (flat config) uses

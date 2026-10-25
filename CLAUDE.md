@@ -10,6 +10,7 @@ Supported shell versions: 48–51 (`metadata.json`).
 | Known conflicts, legacy patches, tech debt | `docs/architecture/tech-debt-and-conflicts.md` |
 | How the new features will be built (layout, owners, phases) | `docs/architecture/new-features-architecture.md` |
 | Locked spec for one planned feature | `docs/features/README.md` → one feature file |
+| Run the build with an agent swarm | `start-workflow.md` |
 
 ## Skills (`.claude/skills/`)
 Load them by task: `gnome-shell-extension` (Shell APIs, GNOME 45–51 changes, EGO review),

@@ -7,14 +7,17 @@ Manager strip. One switch turns it all off.
 
 ## 2. Locked decisions
 - It must be possible to turn it off. Off means solid surfaces that look the same as today.
-- It covers shell surfaces only. App windows stay opaque, because Mutter has no
-  blur-behind for clients.
+- It covers shell surfaces only. App windows stay opaque on GNOME 48–50. GNOME 51's
+  Mutter adds `global.compositor.set_background_blur_params()` (background-effect
+  protocol). Blur behind app windows on 51 is a **possible v2**: investigate it, don't promise it.
 - It takes over the existing Panel Blur and Dock Blur while it is on, so there is never a
   double blur.
 
 ## 3. UI
 - Layers, from the back: blur of what is behind → tint (light or dark, following
   `color-scheme`) → a 1px inner highlight on the top edge → a soft drop shadow.
+  St draws only **one** `box-shadow` per element, so the highlight and the drop shadow go
+  on separate actors (a wrapper plus an inner child). `lib/glass.js` builds that structure.
 - Style: **Tinted** (default, easier to read) or **Clear**.
 - Corner radii are concentric (inner radius = outer − padding). Exact tokens are in the `apple-design` skill and override the canvas mock-ups.
 - Refraction at the edges (GLSL) is **experimental and off by default**. GNOME 51 removed
