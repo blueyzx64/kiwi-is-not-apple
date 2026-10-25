@@ -64,7 +64,7 @@ These features work only when [Dash to Dock](https://extensions.gnome.org/extens
 - [**Weather or Not**](https://extensions.gnome.org/extension/5660/) by somepaulo
 </details>
 
-## New in this version (preview, not yet tested on a real GNOME session)
+## New in this version
 
 All of these are on by default and can be turned off in Kiwi's preferences.
 
@@ -77,35 +77,86 @@ All of these are on by default and can be turned off in Kiwi's preferences.
 - **Stage Manager**: a strip of other apps at the screen edge; other apps' windows are hidden, not minimized.
 - **Notification notch**: notifications, volume, brightness and Now Playing in a pill at the top centre.
 
-## Install from source
+## Installation
 
-Requirements: GNOME Shell 50 (tested target: Fedora 44 Workstation), `git`, `make`, `gettext`, and `gnome-extensions` (comes with GNOME Shell).
+Kiwi supports **GNOME Shell 50**, tested on **Fedora 44 Workstation** (Wayland). Other GNOME versions will come in later releases.
 
-1. Back up your current Kiwi settings, so you can roll back:
-   ```sh
-   dconf dump /org/gnome/shell/extensions/kiwi/ > ~/kiwi-settings-backup.ini
-   ```
-2. Get the code and install it for your user:
-   ```sh
-   git clone https://github.com/blueyzx64/kiwi-is-not-apple.git
-   cd kiwi-is-not-apple
-   git checkout ccr-f3c1f44c-rv5a8r   # the preview branch; skip once it is merged into main
-   make install                        # packs the zip into dist/ and runs gnome-extensions install --force
-   ```
-3. Restart GNOME Shell so it loads the new code: log out and back in. GNOME 50 is Wayland-only, so Alt+F2 `r` does not work.
-4. Enable it, if it is not already enabled:
-   ```sh
-   gnome-extensions enable kiwi@kemma
-   ```
-   Preferences: `gnome-extensions prefs kiwi@kemma`.
-5. Watch for errors while you try things out:
-   ```sh
-   journalctl -f -o cat /usr/bin/gnome-shell | grep -i kiwi
-   ```
+### 1. Install the tools
 
-Optional: `make smoke` runs a headless GNOME Shell and turns Kiwi off and on repeatedly to catch load and teardown errors without touching your session (see `tools/smoke/README.md`).
+```sh
+sudo dnf install git make gettext
+```
 
-**Roll back:** `gnome-extensions disable kiwi@kemma`, or uninstall with `make uninstall`, then log out and in. To restore your old settings: `dconf load /org/gnome/shell/extensions/kiwi/ < ~/kiwi-settings-backup.ini`. Clipboard history lives in `~/.local/share/kiwi/clipboard/` and can be deleted.
+`gnome-extensions` already comes with GNOME Shell. For the Dash to Dock features, also install [Dash to Dock](https://extensions.gnome.org/extension/307/) (optional).
+
+### 2. Back up your current Kiwi settings (optional, for rolling back)
+
+```sh
+dconf dump /org/gnome/shell/extensions/kiwi/ > ~/kiwi-settings-backup.ini
+```
+
+### 3. Download and install
+
+```sh
+git clone https://github.com/blueyzx64/kiwi-is-not-apple.git
+cd kiwi-is-not-apple
+make install    # builds the zip in dist/ and installs it for your user
+```
+
+### 4. Log out and back in
+
+GNOME 50 runs on Wayland only, so the Shell has to restart through a new login. Alt+F2 `r` does not work.
+
+### 5. Enable Kiwi
+
+```sh
+gnome-extensions enable kiwi@kemma
+```
+
+You can also use the Extensions app. To open Kiwi's preferences, run `gnome-extensions prefs kiwi@kemma`.
+
+### What you get on first login
+
+All new features are on by default. Each one can be turned off in preferences.
+
+- Close, minimize and maximize sit on the left of the top bar.
+- The top bar hides automatically. Push the pointer against the top edge to bring it back.
+- A tap on Super opens Spotlight. The overview is still on the hot corner, Super+A and the Activities button.
+- Notifications, volume and brightness show in the notch at the top centre.
+- Stage Manager and clipboard history are on. Clipboard history has no shortcut until you set one in preferences.
+
+### Update
+
+```sh
+cd kiwi-is-not-apple
+git pull
+make install
+```
+
+Then log out and back in.
+
+### Report a problem
+
+Watch the log while you use Kiwi:
+
+```sh
+journalctl -f -o cat /usr/bin/gnome-shell | grep -i kiwi
+```
+
+Include any `[Kiwi]` lines when you open an issue.
+
+### Uninstall or roll back
+
+```sh
+gnome-extensions disable kiwi@kemma   # turn it off
+make uninstall                        # or remove it completely
+```
+
+Then log out and back in. To restore your old settings, run `dconf load /org/gnome/shell/extensions/kiwi/ < ~/kiwi-settings-backup.ini`. Clipboard history is stored in `~/.local/share/kiwi/clipboard/`, and you can delete that folder.
+
+### For developers
+
+`make check` runs lint, the schema check and the unit tests. `make smoke` starts a headless GNOME Shell and turns Kiwi on and off many times to catch errors, without touching your session (see `tools/smoke/README.md`).
 
 ## Known Issues
 
