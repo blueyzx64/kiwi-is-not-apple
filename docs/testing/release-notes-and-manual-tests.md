@@ -44,7 +44,7 @@ New features default to ON (owner decision); users opt out in prefs.
   - `remove-titlebar-buttons` defaults to ON, so GTK apps lose their own titlebar buttons.
   - Dialogs and modal dialogs also get panel controls, greyed per capability.
   - `show-window-controls-fullscreen-only` migrates to scope `fullscreen`.
-- **Firefox/Thunderbird styling gate:** their profiles are touched only when the per-app styling key is on. Hiding Firefox's native buttons (`Hidden.css`) now also needs that key plus window controls plus `remove-titlebar-buttons`. This is an orchestrator default; the owner should confirm.
+- **Firefox/Thunderbird styling gate:** their profiles are touched only when the per-app styling key is on. Hiding Firefox's native buttons (`Hidden.css`) now also needs that key plus window controls plus `remove-titlebar-buttons`. Deferred by the owner; revisit in a later release.
 - **Super tap opens Spotlight, not the overview.**
   - The overview stays on the hot corner, gesture, Super+A and the Activities button.
   - Super+Space is untouched. Spotlight can be turned off, or the tap setting alone, in prefs.
@@ -289,9 +289,9 @@ Run each item on Fedora 44 Workstation, GNOME 50, in a Wayland session (GNOME 50
 ## 4. Known limits / needs your decision
 
 ### Owner decisions still open
-- **Firefox `Hidden.css` gate:** hiding Firefox's native buttons now needs the per-app styling key (plus window controls and `remove-titlebar-buttons`). This is an orchestrator default; please confirm.
-- **Defaults that differ from main:** `panel-transparency` true → false, `keyboard-indicator` false → true, `dock-blur` false → true. Confirm or revert.
-- **Auto-hide plus titlebar removal:** both are on by default, so a window has no titlebar buttons and its panel controls sit in a hidden bar until you push the top edge. Decide whether one default should change.
+- **Firefox `Hidden.css` gate:** hiding Firefox's native buttons now needs the per-app styling key (plus window controls and `remove-titlebar-buttons`). Deferred by the owner (Firefox not in use); revisit in a later release.
+- **Defaults that differ from main:** `panel-transparency` true → false, `keyboard-indicator` false → true, `dock-blur` false → true. Kept by the owner.
+- **Auto-hide plus titlebar removal:** both are on by default, so a window has no titlebar buttons and its panel controls sit in a hidden bar until you push the top edge. Kept by the owner for a distraction-free (zen) layout.
 - **Window controls default to the left:** `window-controls-position` now defaults to `left`, so stock GNOME 50 (`appmenu:close`) shows close, minimize and maximize on the left. Position `system` still follows GNOME's layout (close only on stock Fedora).
 - **Clipboard persisted to disk by default** (owner decision, kept): the secret detection is a heuristic, so the metadata wording must not promise more. The shortcut stays empty by default (EGO); the spec asked for `<Super><Shift>v`.
 - **Privacy defaults chosen by the orchestrator, you may override:** `notch-show-clipboard` off, and Spotlight empty-query clipboard off.
