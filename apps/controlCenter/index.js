@@ -4,8 +4,10 @@
 // Nothing GNOME builds is replaced. The grid becomes 4 columns wide, the stock items are
 // reordered into blocks (connectivity, focus, display, sound, media, toggles, footer) and
 // given new column spans, and a style class lets stylesheet.css restyle them. Items from
-// other extensions go under a "More" heading. Kiwi adds Stage Manager and Liquid Glass tiles
-// (bound to their settings keys), Now Playing, the user row, and Do Not Disturb on GNOME 48.
+// other extensions go under a "More" heading. Secondary on/off toggles (Dark Style, Night
+// Light, Airplane Mode, ...) become 1x1 icon-only squares. Kiwi adds a "Kiwi" module with a
+// tile per Kiwi feature (bound to its settings key), Now Playing, the user row, and Do Not
+// Disturb on GNOME 48.
 //
 // Disable puts the order, spans and column count back from a snapshot of the actors, so a
 // grid rebuilt in between never receives stale {parent, index} pairs.
@@ -22,14 +24,15 @@ import { refreshLegacyDnd } from '../quickSettingsNotifications.js';
 import { MORE_HEADER_ID, planLayout } from './model.js';
 import { NowPlaying } from './nowPlaying.js';
 import {
-    applyPlan, columnSpan, gridAlive, hideLegacyDndButton, managedChildren, readyQuickSettings, restoreGrid,
-    snapshotGrid, stockKeys,
+    applyPlan, columnSpan, compactable, gridAlive, hideLegacyDndButton, managedChildren, readyQuickSettings,
+    restoreCompact, restoreGrid, setCompact, snapshotGrid, stockKeys,
 } from './shell.js';
-import { createDndToggle, createSettingTile } from './tiles.js';
+import { createDndToggle, createKiwiModule } from './tiles.js';
 import { PanelBattery, UserRow } from './userRow.js';
 
 const MENU_CLASS = 'kiwi-control-center';
 const GLASS_CLASS = 'kiwi-cc-glass';
+const CALM_CLASS = 'kiwi-cc-calm';
 
 // The stock panel builds its items a moment after the shell starts (async imports); GNOME
 // emits no signal for it, so wait for it with a bounded poll.
@@ -47,6 +50,7 @@ export class ControlCenter {
         this._stockKeys = null;
         this._stockSpans = new Map();   // actor -> span it had in the 2-column grid
         this._own = new Map();          // actor -> model key, for the actors Kiwi added
+        this._compact = new Map();      // stock toggle made icon-only -> what to put back
         this._visibleTokens = new Map();
         this._idle = 0;
         this._userRow = null;
@@ -113,7 +117,8 @@ export class ControlCenter {
             const box = this._qs?.menu.box;
             if (!box)
                 return;
-            // High contrast keeps the stock solid tiles
+            // High contrast keeps the stock solid tiles and colours
+            this._toggleClass(box, CALM_CLASS, !env.highContrast);
             this._toggleClass(box, GLASS_CLASS, Glass.wants('menus', settings) && !env.highContrast);
         });
 
@@ -126,6 +131,8 @@ export class ControlCenter {
         cleanup.connect(this._grid, 'child-removed', (_g, actor) => {
             this._unwatchVisible(actor);
             this._stockSpans.delete(actor);
+            // A toggle that leaves the grid gets its label back on the way out
+            setCompact(actor, false, this._compact);
             this._queueRelayout();
         });
         for (const actor of managedChildren(this._grid))
@@ -167,14 +174,9 @@ export class ControlCenter {
         if (!SHELL_HAS_SYSTEM_DND || !qs._doNotDisturb)
             add(createDndToggle(gettext), 'dnd');
 
-        add(createSettingTile({
-            settings, key: 'stage-manager', iconName: 'view-paged-symbolic',
-            name: gettext('Stage Manager'),
-        }), 'stage-manager');
-        add(createSettingTile({
-            settings, key: 'liquid-glass', iconName: 'weather-fog-symbolic',
-            name: gettext('Liquid Glass'),
-        }), 'liquid-glass');
+        add(createKiwiModule({
+            settings, gettext, extensionDir: this._ctx.extension?.dir,
+        }), 'kiwi-toggles');
 
         this._nowPlaying = new NowPlaying({ gettext, cleanup: this._cleanup });
         add(this._nowPlaying.actor, 'now-playing');
@@ -266,12 +268,18 @@ export class ControlCenter {
                 key: this._keyOf(actor),
                 stockSpan: this._stockSpans.get(actor),
                 visible: actor.visible,
+                compactable: !this._own.has(actor) && compactable(actor),
             };
         });
         byId.set(MORE_HEADER_ID, this._header);
 
         const plan = planLayout(entries);
         this._header.visible = plan.find(p => p.id === MORE_HEADER_ID).visible;
+        for (const p of plan) {
+            const actor = byId.get(p.id);
+            if (p.compact || this._compact.has(actor))
+                setCompact(actor, p.compact, this._compact);
+        }
         applyPlan(grid, plan.map(p => ({ actor: byId.get(p.id), span: p.span })));
     }
 
@@ -297,7 +305,9 @@ export class ControlCenter {
             const box = this._qs.menu?.box;
             box?.remove_style_class_name(MENU_CLASS);
             box?.remove_style_class_name(GLASS_CLASS);
+            box?.remove_style_class_name(CALM_CLASS);
 
+            restoreCompact(this._compact);
             restoreGrid(this._grid, this._snapshot, this._stockSpans);
         } finally {
             // Hand Do Not Disturb back; the legacy module re-applies its own setting
@@ -309,6 +319,7 @@ export class ControlCenter {
             }
             this._qs = this._grid = this._snapshot = this._stockKeys = null;
             this._stockSpans.clear();
+            this._compact.clear();
             this._visibleTokens.clear();
         }
     }

@@ -3,6 +3,7 @@ import {
     DEFAULTS, History, MiB, ageOf, checkSize, classifyText, hasSecretHint, historyFrom,
     imageFileName, isBlankText, isPasswordManagerApp, isSecret, isStoreFileName, makeEntry,
     mergeLoaded, orphanFiles, parseHistory, pasteChordFor, pickMime, previewOf, serializeHistory, shouldRecord,
+    TYPE_ICON, tileIconProps,
 } from '../apps/clipboard/model.js';
 
 let failed = 0;
@@ -326,6 +327,63 @@ test('ageOf buckets', () => {
     eq(ageOf(0, 5 * 60_000)[1], 5);
     eq(ageOf(0, 3 * 3600_000)[0], 'hours');
     eq(ageOf(0, 3 * 86400_000)[0], 'days');
+});
+
+/* ---- row tile: GJS on GNOME 50 throws on an `undefined` constructor property ---- */
+test('tileIconProps never carries an undefined value', () => {
+    const fake = { fake: 'gicon' };
+    for (const type of ['text', 'link', 'color', 'image', 'bogus']) {
+        for (const g of [null, undefined, fake]) {
+            const p = tileIconProps(type, 34, g);
+            for (const [k, v] of Object.entries(p))
+                eq(v === undefined, false, `${type}/${g ? 'gicon' : 'glyph'} ${k}`);
+        }
+    }
+});
+test('tileIconProps: glyph for text, thumbnail for images', () => {
+    const glyph = tileIconProps('link', 34);
+    eq(glyph.icon_name, TYPE_ICON.link);
+    eq('gicon' in glyph, false);
+    eq(glyph.icon_size, 19);
+    eq(tileIconProps('bogus', 30).icon_name, TYPE_ICON.text);
+    const fake = { fake: 'gicon' };
+    const thumb = tileIconProps('image', 30, fake);
+    eq(thumb.gicon, fake);
+    eq('icon_name' in thumb, false);
+    eq(thumb.icon_size, 30);
+});
+
+/* ---- ordinary copies from ordinary apps are recorded ---- */
+const CHROME_MIMES = ['chromium/x-source-url', 'text/html', 'text/plain;charset=utf-8', 'UTF8_STRING',
+    'text/plain', 'STRING', 'TEXT', 'chromium/x-internal-source-rfh-token'];
+const GTK4_MIMES = ['text/plain', 'text/plain;charset=ANSI_X3.4-1968', 'text/plain;charset=utf-8'];
+const FIREFOX_MIMES = ['text/html', 'text/_moz_htmlinfo', 'text/_moz_htmlcontext', 'text/plain;charset=utf-8',
+    'application/x-moz-nativehtml', 'text/x-moz-url-priv'];
+const LIBREOFFICE_MIMES = ['application/x-openoffice-embed-source-xml;windows_formatname="Star Embed Source (XML)"',
+    'text/rtf', 'text/html', 'text/plain;charset=utf-8', 'UTF8_STRING', 'image/png'];
+test('normal apps and their mime sets are not secrets', () => {
+    const apps = ['google-chrome', 'Google-chrome', 'google-chrome.desktop', 'Google Chrome', 'chromium-browser',
+        'org.chromium.Chromium', 'org.gnome.TextEditor', 'org.gnome.TextEditor.desktop', 'Text Editor',
+        'firefox', 'org.mozilla.firefox.desktop', 'org.gnome.Ptyxis', 'code', 'com.visualstudio.code',
+        'libreoffice-writer', 'org.gnome.Nautilus', 'Files', 'Terminal', 'org.gnome.Console', 'Passport Photos',
+        'org.gnome.Settings', 'Settings', 'Keep Notes', 'org.gnome.World.PikaBackup', '', null];
+    for (const app of apps) {
+        eq(isPasswordManagerApp(app), false, `app ${app}`);
+        for (const mimes of [CHROME_MIMES, GTK4_MIMES, FIREFOX_MIMES, LIBREOFFICE_MIMES])
+            eq(isSecret({ mimes, app }), false, `${app} ${mimes[0]}`);
+    }
+});
+test('text mime is picked from browser and GTK4 offers (html first)', () => {
+    eq(pickMime(CHROME_MIMES).mime, 'text/plain;charset=utf-8');
+    eq(pickMime(GTK4_MIMES).mime, 'text/plain;charset=utf-8');
+    eq(pickMime(FIREFOX_MIMES).mime, 'text/plain;charset=utf-8');
+    eq(pickMime(LIBREOFFICE_MIMES).kind, 'text');
+    eq(pickMime(['text/html', 'UTF8_STRING']).mime, 'UTF8_STRING');
+    eq(pickMime(['text/html']), null);
+});
+test('only the hint mime marks a secret, not any application/x-* type', () => {
+    eq(hasSecretHint(['application/x-moz-nativehtml', 'application/x-qt-image', 'text/plain']), false);
+    eq(hasSecretHint(['x-kde-passwordManagerHint', 'text/plain']), true);
 });
 
 if (failed) {

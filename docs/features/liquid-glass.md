@@ -6,6 +6,12 @@ notifications and the notch's surroundings, dock, Spotlight, Clipboard and the S
 Manager strip. One switch turns it all off.
 
 ## 2. Locked decisions
+- **UX round 1 (owner, Fedora 44):** plain transparency only. No blur and no shader layers.
+  The glass is a translucent fill on the surface actor itself (`kiwi-glass-*` classes), so
+  it follows the surface's own rounded corners; a separate layer behind a rounded surface
+  showed as a rectangle. The Blur slider now sets frost (a little more opacity); the
+  performance and refraction keys stay in the schema but do nothing. Sections below that
+  describe blur layers are history.
 - It must be possible to turn it off. Off means solid surfaces that look the same as today.
 - It covers shell surfaces only. App windows stay opaque on GNOME 48–50. GNOME 51's
   Mutter adds `global.compositor.set_background_blur_params()` (background-effect

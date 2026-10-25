@@ -9,13 +9,16 @@ export const COLUMNS = 4;
 
 /** Block order, top to bottom. */
 export const GROUPS = [
-    'connectivity', 'focus', 'display', 'sound', 'media', 'toggles',
+    'connectivity', 'focus', 'display', 'sound', 'media', 'toggles', 'kiwi',
     'background', 'extras', 'notifications', 'system',
 ];
 
 export const MORE_HEADER_ID = 'kiwi:more-header';
 
-// key -> [group, rank inside the group, span in 4 columns]
+// key -> [group, rank inside the group, span in 4 columns, compact]
+// A compact item is a secondary on/off toggle: when the shell says it can be (a plain
+// QuickToggle, no menu), it becomes a 1x1 icon-only square, like the small tiles of macOS.
+// Otherwise it keeps a 2-column labelled tile.
 const STOCK = {
     'wifi': ['connectivity', 0, 2],
     'bluetooth': ['connectivity', 1, 2],
@@ -25,32 +28,66 @@ const STOCK = {
     'bt-tether': ['connectivity', 5, 2],
 
     'dnd': ['focus', 0, 2],
-    'stage-manager': ['focus', 1, 1],
-    'liquid-glass': ['focus', 2, 1],
+    'dark-style': ['focus', 1, 1, true],
+    'night-light': ['focus', 2, 1, true],
 
     'brightness': ['display', 0, 4],
-    'backlight': ['display', 1, 4],
 
     'volume-out': ['sound', 0, 4],
     'volume-in': ['sound', 1, 4],
 
     'now-playing': ['media', 0, 4],
 
-    'dark-style': ['toggles', 0, 2],
-    'night-light': ['toggles', 1, 2],
-    'power-saver': ['toggles', 2, 2],
-    'rotation': ['toggles', 3, 2],
-    'airplane': ['toggles', 4, 2],
-    'location': ['toggles', 5, 2],
-    'camera': ['toggles', 6, 2],
-    'remote-access': ['toggles', 7, 2],
-    'thunderbolt': ['toggles', 8, 2],
-    'unsafe': ['toggles', 9, 2],
+    'backlight': ['toggles', 0, 2],
+    'power-saver': ['toggles', 1, 2],
+    'remote-access': ['toggles', 2, 2],
+    'airplane': ['toggles', 3, 1, true],
+    'rotation': ['toggles', 4, 1, true],
+    'location': ['toggles', 5, 1, true],
+    'camera': ['toggles', 6, 1, true],
+    'thunderbolt': ['toggles', 7, 1, true],
+    'unsafe': ['toggles', 8, 1, true],
+
+    'kiwi-toggles': ['kiwi', 0, 4],
 
     'background-apps': ['background', 0, 4],
     'notifications': ['notifications', 0, 4],
     'system': ['system', 0, 4],
 };
+
+/**
+ * The Kiwi feature tiles of the Control Center, in display order. Each is bound to the
+ * boolean settings key that switches the feature on. The Control Center itself is
+ * deliberately absent: switching it off from inside would take the switch away.
+ */
+// Marks a label for translation (xgettext -kN_); the adapter translates it with gettext
+const N_ = s => s;
+
+export const KIWI_TOGGLES = [
+    { key: 'notch', icon: 'preferences-system-notifications-symbolic', label: N_('Notch') },
+    { key: 'stage-manager', icon: 'view-paged-symbolic', label: N_('Stage Manager') },
+    { key: 'panel-autohide', icon: 'focus-top-bar-symbolic', label: N_('Hide Top Bar') },
+    { key: 'show-window-controls', icon: 'kiwi-buttons-symbolic', label: N_('Window Buttons') },
+    { key: 'clipboard-history', icon: 'edit-paste-symbolic', label: N_('Clipboard') },
+    { key: 'spotlight', icon: 'system-search-symbolic', label: N_('Spotlight') },
+    { key: 'liquid-glass', icon: 'weather-fog-symbolic', label: N_('Liquid Glass') },
+];
+
+/** Columns of the Kiwi tile module. */
+export const KIWI_COLUMNS = 4;
+
+/**
+ * The Kiwi tiles to build, given which keys the schema has, with their cell in the
+ * module's own grid.
+ *
+ * @param {(key: string) => boolean} hasKey
+ * @returns {{key: string, icon: string, label: string, column: number, row: number}[]}
+ */
+export function kiwiTiles(hasKey) {
+    return KIWI_TOGGLES
+        .filter(t => t.key !== 'control-center' && hasKey(t.key))
+        .map((t, i) => ({ ...t, column: i % KIWI_COLUMNS, row: Math.floor(i / KIWI_COLUMNS) }));
+}
 
 export function isKnownKey(key) {
     return Object.hasOwn(STOCK, key);
@@ -60,28 +97,34 @@ export function isKnownKey(key) {
  * Where one item goes. Unknown items (other extensions' toggles) land in "extras" and keep
  * their stock look: a stock span of 1 of 2 columns becomes 2 of 4.
  *
- * @param {{key: ?string, stockSpan?: number}} entry
- * @returns {{group: string, rank: number, span: number}}
+ * @param {{key: ?string, stockSpan?: number, compactable?: boolean}} entry
+ * @returns {{group: string, rank: number, span: number, compact: boolean}}
  */
 export function place(entry) {
     if (entry.key && Object.hasOwn(STOCK, entry.key)) {
-        const [group, rank, span] = STOCK[entry.key];
-        return { group, rank, span };
+        const [group, rank, span, compact = false] = STOCK[entry.key];
+        if (compact && !entry.compactable)
+            return { group, rank, span: 2, compact: false };
+        return { group, rank, span, compact };
     }
     const span = Math.min(COLUMNS, Math.max(1, (entry.stockSpan ?? 1) * 2));
-    return { group: 'extras', rank: 0, span };
+    return { group: 'extras', rank: 0, span, compact: false };
 }
 
 /**
  * Order and spans for the whole grid.
  *
- * Visible items of one group are packed into rows of COLUMNS; a row that would end short
- * gets its last item widened, so no block shares a row with the next one. Hidden items
- * keep their place in the order (they may appear later) and are not counted.
+ * Inside a group the labelled tiles come first and the compact (icon-only) ones after them,
+ * so the squares fill the free half of a row. Visible items of one group are packed into
+ * rows of COLUMNS; a row that would end short gets its last item widened, so no block
+ * shares a row with the next one. A compact square that is widened gets its label back
+ * (a wide icon-only tile reads as a bug). Hidden items keep their place in the order (they
+ * may appear later) and are not counted.
  * The "More" header comes before the extras and is visible only when an extra is.
  *
- * @param {{id: string, key: ?string, stockSpan?: number, visible: boolean}[]} entries
- * @returns {{id: string, group: string, span: number, visible: boolean}[]}
+ * @param {{id: string, key: ?string, stockSpan?: number, visible: boolean,
+ *   compactable?: boolean}[]} entries
+ * @returns {{id: string, group: string, span: number, visible: boolean, compact: boolean}[]}
  */
 export function planLayout(entries) {
     const items = entries.map((entry, index) => ({
@@ -94,19 +137,23 @@ export function planLayout(entries) {
     const extrasVisible = items.some(i => i.group === 'extras' && i.visible);
     items.push({
         id: MORE_HEADER_ID, index: -1, visible: extrasVisible,
-        group: 'extras', rank: -1, span: COLUMNS,
+        group: 'extras', rank: -1, span: COLUMNS, compact: false,
     });
 
     items.sort((a, b) =>
         GROUPS.indexOf(a.group) - GROUPS.indexOf(b.group) ||
+        Number(a.compact) - Number(b.compact) ||
         a.rank - b.rank || a.index - b.index);
 
     for (const group of GROUPS) {
         let row = [];
         let used = 0;
         const close = () => {
-            if (row.length && used < COLUMNS)
-                row[row.length - 1].span += COLUMNS - used;
+            if (row.length && used < COLUMNS) {
+                const last = row[row.length - 1];
+                last.span += COLUMNS - used;
+                last.compact = false;
+            }
             row = [];
             used = 0;
         };
@@ -119,7 +166,7 @@ export function planLayout(entries) {
         close();
     }
 
-    return items.map(({ id, group, span, visible }) => ({ id, group, span, visible }));
+    return items.map(({ id, group, span, visible, compact }) => ({ id, group, span, visible, compact }));
 }
 
 /**

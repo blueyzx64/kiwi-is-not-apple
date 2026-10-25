@@ -25,11 +25,14 @@ import { PanelVisibility } from '../../coordinators/panelVisibility.js';
 import { NotificationRouter } from '../../coordinators/notificationRouter.js';
 import { MprisWatcher } from '../../coordinators/mprisWatcher.js';
 import { clipboardService } from '../clipboard/index.js';
-import { initialState, step, view, nextDeadline, wantsBar, URGENCY } from './stateMachine.js';
+import {
+    initialState, step, view, nextDeadline, wantsBar, recentNotifications, URGENCY,
+} from './stateMachine.js';
 import { NotchView } from './view.js';
 
 const MEDIA_KEY = 'media';
 const HIGH_FACTOR = 1.6;     // high-urgency cards stay this much longer than normal ones
+const RECENT_LIMIT = 2;      // notifications listed in the dashboard
 
 const nowMs = () => Math.floor(GLib.get_monotonic_time() / 1000);
 
@@ -87,6 +90,8 @@ export class NotchFeature {
                     service.copy(entry);
             },
             onToggleDnd: () => NotificationRouter.setDnd(!NotificationRouter.state().dnd),
+            onCollapse: () => this._dispatch({ type: 'collapse' }),
+            onOpenNotification: notification => this._openNotification(notification),
         }, gettext);
 
         // Room in the centre of the bar so the clock and others keep clear of the pill
@@ -265,6 +270,7 @@ export class NotchFeature {
             media: media ? { ...mediaInfo(media), appIcon: media.app?.get_icon() ?? null } : null,
             dnd: state.dnd,
             count: NotificationRouter.state().count,
+            recent: vm.content === 'dashboard' ? this._recentNotifications() : null,
             clipboard: this._clipboardEntries(),
         });
 
@@ -444,6 +450,34 @@ export class NotchFeature {
                 this._watch = null;
             });
             this._syncMedia();
+        }
+    }
+
+    // What the calendar's message list holds, newest first
+    _recentNotifications() {
+        const entries = [];
+        for (const source of Main.messageTray.getSources()) {
+            for (const notification of source.notifications ?? []) {
+                const datetime = notification.datetime ?? null;
+                entries.push({
+                    notification,
+                    title: notification.title ?? '',
+                    app: source.title ?? '',
+                    when: datetime?.format?.('%H:%M') ?? '',
+                    time: datetime?.to_unix?.() ?? null,
+                    gicon: notification.gicon ?? source.icon ?? null,
+                });
+            }
+        }
+        return recentNotifications(entries, RECENT_LIMIT);
+    }
+
+    _openNotification(notification) {
+        this._dispatch({ type: 'collapse' });
+        try {
+            notification?.activate();
+        } catch (e) {
+            console.error('[Kiwi] notch could not open a notification:', e);
         }
     }
 

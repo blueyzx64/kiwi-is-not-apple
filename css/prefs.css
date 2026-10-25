@@ -25,3 +25,9 @@
     padding: 6px 14px;
     margin: 0;
 }
+
+/* Sidebar section headings (General, macOS Features, Kiwi) */
+.kiwi-sidebar-heading {
+    font-size: 0.85em;
+    font-weight: 700;
+}

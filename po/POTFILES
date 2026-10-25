@@ -5,6 +5,7 @@ apps/clipboard/prefs.js
 apps/clipboard/quickPaste.js
 apps/clipboard/view.js
 apps/controlCenter/index.js
+apps/controlCenter/model.js
 apps/controlCenter/nowPlaying.js
 apps/controlCenter/prefs.js
 apps/controlCenter/tiles.js
