@@ -55,8 +55,9 @@ export function buildPrefs({ settings, window, extension }) {
 
     const remove = new Adw.SwitchRow({
         title: _('Remove titlebar buttons from windows'),
-        subtitle: _('Hide the buttons that windows draw themselves while the panel shows them. ' +
-            'Works for GTK 3 and GTK 4 apps; Qt, Electron and server-side decorated windows keep theirs'),
+        subtitle: _('While the top bar shows the buttons for all windows, Kiwi sets a GNOME button layout ' +
+            'without them (GTK, libadwaita, Chromium/Electron and server-side frames follow it) and restores ' +
+            'yours when turned off. With the maximized or fullscreen scope only GTK apps lose theirs'),
     });
     group.add(remove);
     settings.bind('remove-titlebar-buttons', remove, 'active', Gio.SettingsBindFlags.DEFAULT);

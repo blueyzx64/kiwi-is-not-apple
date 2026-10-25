@@ -146,3 +146,89 @@ export function createJobQueue(onError = () => {}) {
         return tail;
     };
 }
+
+/**
+ * A WM button-layout with the close / minimize / maximize buttons taken out, so every
+ * titlebar that follows the layout (GTK 3, GTK 4/libadwaita, Chromium, Mutter frames) draws
+ * none. Other entries (appmenu, icon, spacer) stay where they were.
+ * 'appmenu:close' -> 'appmenu:', 'close,minimize,maximize:' -> ':'.
+ *
+ * @param {string} layoutStr
+ * @returns {string}
+ */
+export function stripControlButtons(layoutStr) {
+    const parts = String(layoutStr ?? '').split(':');
+    const keep = part => (part ?? '').split(',')
+        .map(b => b.trim())
+        .filter(b => b && !VALID_BUTTONS.includes(b))
+        .join(',');
+    return `${keep(parts[0])}:${keep(parts[1])}`;
+}
+
+/**
+ * Does Kiwi replace the WM button-layout? Only while the panel shows the controls for every
+ * window: with the maximized / fullscreen scopes, floating windows must keep their own
+ * buttons, and the layout is global, so the GTK CSS (which can follow the window state)
+ * does the removal then.
+ */
+export function ownsButtonLayout({ showOnPanel, remove, scope }) {
+    return !!showOnPanel && !!remove && scope === 'all';
+}
+
+/**
+ * Who to minimize when the user asks to minimize `chain[0]`.
+ * chain is the focused window followed by its transient-for ancestors, each
+ * `{canMinimize: boolean}`. Mutter refuses minimize for windows without the capability
+ * (dialogs, modal dialogs, skip-taskbar windows) but hides every transient whose ancestor
+ * is minimized, and shows them again with it. So a dialog goes down with the nearest
+ * ancestor that can be minimized, and comes back when that window is restored.
+ * With no such window at all, the closest action is to send it behind the others.
+ *
+ * @param {{canMinimize: boolean}[]} chain
+ * @returns {{action: 'minimize', index: number} | {action: 'lower'}}
+ */
+export function planMinimize(chain) {
+    const index = (chain ?? []).findIndex(w => w?.canMinimize);
+    return index < 0 ? { action: 'lower' } : { action: 'minimize', index };
+}
+
+/**
+ * What the maximize button does for the focused window.
+ * - fullscreen leaves fullscreen; maximized (by mutter) unmaximizes;
+ * - a window Kiwi "filled" to the work area goes back to its saved frame;
+ * - a resizable window is maximized even when it does not advertise it (mutter's
+ *   meta_window_maximize() does not check the capability); the caller falls back to 'fill'
+ *   when mutter did not take it;
+ * - a fixed-size window (min size == max size) cannot grow, so it is centred in the work area.
+ *
+ * @returns {'unfullscreen'|'unmaximize'|'unfill'|'maximize'|'center'}
+ */
+export function planMaximize({ fullscreen, maximized, filled, resizable }) {
+    if (fullscreen)
+        return 'unfullscreen';
+    if (maximized)
+        return 'unmaximize';
+    if (filled)
+        return 'unfill';
+    return resizable ? 'maximize' : 'center';
+}
+
+/** Rect of the given size centred in `area` (all {x, y, width, height}), kept inside it. */
+export function centerIn(area, width, height) {
+    const w = Math.min(width, area.width);
+    const h = Math.min(height, area.height);
+    return {
+        x: Math.round(area.x + (area.width - w) / 2),
+        y: Math.round(area.y + (area.height - h) / 2),
+        width: w,
+        height: h,
+    };
+}
+
+/** True when two rects are the same within `slack` pixels on each edge. */
+export function sameRect(a, b, slack = 2) {
+    if (!a || !b)
+        return false;
+    return Math.abs(a.x - b.x) <= slack && Math.abs(a.y - b.y) <= slack &&
+        Math.abs(a.width - b.width) <= slack && Math.abs(a.height - b.height) <= slack;
+}

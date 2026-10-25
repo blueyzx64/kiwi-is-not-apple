@@ -107,9 +107,9 @@
         <description>Replace the system Do Not Disturb quick settings button with Kiwi's custom implementation.</description>
       </key>
       <key name="hide-activities-button" type="b">
-        <default>false</default>
+        <default>true</default>
         <summary>Hide Activities Button</summary>
-        <description>Hide the Activities button in the top panel.</description>
+        <description>Hide the Activities button in the top panel (on GNOME 45 and later, the workspace indicator pill at the top left). On by default.</description>
       </key>
       <key name="add-username-to-quick-menu" type="b">
         <default>false</default>
@@ -252,7 +252,12 @@
       <key name="remove-titlebar-buttons" type="b">
         <default>true</default>
         <summary>Remove titlebar buttons from windows</summary>
-        <description>While the panel shows window controls, hide the close, minimize and maximize buttons that GTK 3 and GTK 4 windows draw in their own titlebars. Uses GTK CSS in the user's gtk.css; the window button layout is not changed.</description>
+        <description>While the panel shows window controls for all windows, remove the close, minimize and maximize buttons from every app's own titlebar. Kiwi sets the GNOME window button layout (org.gnome.desktop.wm.preferences button-layout) to one without them, which GTK 3, GTK 4/libadwaita, Chromium/Electron and server-side frames honour, and restores the saved original when the controls or this option are turned off or Kiwi is disabled. GTK CSS in the user's gtk.css covers apps that ignore the layout and the maximized/fullscreen scopes.</description>
+      </key>
+      <key name="saved-button-layout" type="s">
+        <default>''</default>
+        <summary>Saved window button layout (internal)</summary>
+        <description>The user's org.gnome.desktop.wm.preferences button-layout, saved while Kiwi replaces it. Empty when Kiwi does not own the layout. A non-empty value found when Kiwi starts without needing it is written back once (crash recovery).</description>
       </key>
 
       <!-- ========================================================= -->

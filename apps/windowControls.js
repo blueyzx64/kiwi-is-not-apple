@@ -4,8 +4,14 @@
 // Uses the PNG icon sets when app window buttons are enabled, otherwise system symbolic
 // icons. Where they sit comes from PanelLayout.
 //
-// Titlebar-button removal for real windows is done by the GTK CSS in gtkThemeManager.js.
-// This file never changes the WM button-layout.
+// Minimize and maximize are offered for every window, whatever it advertises (owner request):
+// see _minimize() / _maximize() for what is done when mutter would refuse.
+//
+// Titlebar-button removal for real windows: while the controls show for all windows and
+// remove-titlebar-buttons is on, ButtonLayoutOwner replaces the WM button-layout with one
+// without buttons (saved in saved-button-layout, restored exactly on disable / toggle-off).
+// The GTK CSS in gtkThemeManager.js stays as the fallback for apps that ignore the layout and
+// for the maximized / fullscreen scopes, where floating windows keep their buttons.
 
 import GObject from 'gi://GObject';
 import Gio from 'gi://Gio';
@@ -27,7 +33,9 @@ import { isMaximized } from './windowTiling.js';
 import { IconCatalog } from './windowControls/icons.js';
 import {
     parseButtonLayout, resolvePlacement, shouldShow, resolveIcon,
+    ownsButtonLayout, planMinimize, planMaximize, centerIn, sameRect,
 } from './windowControls/model.js';
+import { ButtonLayoutOwner } from './windowControls/buttonLayout.js';
 
 const BUTTONS = ['minimize', 'maximize', 'close'];
 
@@ -258,6 +266,8 @@ export class WindowControlsFeature {
         this._slot = null;
         this._closeDelayToken = 0;
         this._wasFullscreen = false;
+        this._layoutOwner = null;
+        this._filled = new Map(); // window -> frame rect before Kiwi filled the work area
     }
 
     enable() {
@@ -269,6 +279,15 @@ export class WindowControlsFeature {
 
         this._wm = new Gio.Settings({ schema_id: 'org.gnome.desktop.wm.preferences' });
         cleanup.add(() => (this._wm = null));
+
+        // The cleanup registry runs LIFO: this release runs after the indicator is gone and
+        // before this._wm is dropped.
+        this._layoutOwner = new ButtonLayoutOwner(settings, this._wm, () => this._applyPlacement(false));
+        cleanup.add(() => {
+            this._layoutOwner.release();
+            this._layoutOwner = null;
+        });
+        cleanup.add(() => this._filled.clear());
 
         const catalog = new IconCatalog(extension.path);
         cleanup.add(() => catalog.destroy());
@@ -287,6 +306,7 @@ export class WindowControlsFeature {
         // Added to the status area so the panel tracks (and removes) it; PanelLayout places it.
         Main.panel.addToStatusArea('window-controls', this._indicator, 0, 'left');
 
+        this._syncLayoutOwner();
         this._indicator.setMacosIcons(ks.bool('enable-app-window-buttons'));
         this._indicator.setSmall(ks.string('button-size') === 'small');
         this._applyPlacement(true);
@@ -295,8 +315,15 @@ export class WindowControlsFeature {
         ks.watch('button-type', () => this._indicator.refreshIcons());
         ks.watch('button-size', () => this._indicator.setSmall(ks.string('button-size') === 'small'));
         ks.watch('window-controls-position', () => this._applyPlacement(false));
-        ks.watch('window-controls-scope', () => this._update());
-        cleanup.connect(this._wm, 'changed::button-layout', () => this._applyPlacement(false));
+        ks.watch('window-controls-scope', () => {
+            this._syncLayoutOwner();
+            this._update();
+        });
+        ks.watch('remove-titlebar-buttons', () => this._syncLayoutOwner());
+        cleanup.connect(this._wm, 'changed::button-layout', () => {
+            if (!this._layoutOwner?.owning)
+                this._applyPlacement(false);
+        });
 
         cleanup.connect(global.display, 'notify::focus-window', () => this._onFocusChanged());
         cleanup.connect(Main.overview, 'showing', () => this._update());
@@ -312,9 +339,22 @@ export class WindowControlsFeature {
         this._win = null;
     }
 
+    _syncLayoutOwner() {
+        this._layoutOwner?.sync(ownsButtonLayout({
+            showOnPanel: true,
+            remove: this._ks.bool('remove-titlebar-buttons'),
+            scope: this._ks.string('window-controls-scope'),
+        }));
+        if (this._indicator)
+            this._applyPlacement(false);
+    }
+
     _applyPlacement(initial) {
+        if (!this._indicator)
+            return;
+        // While Kiwi owns button-layout, 'system' follows the user's saved layout.
         const layout = resolvePlacement(this._ks.string('window-controls-position'),
-            parseButtonLayout(this._wm.get_string('button-layout')));
+            parseButtonLayout(this._layoutOwner?.original ?? this._wm.get_string('button-layout')));
         this._indicator.setOrder(layout.buttons);
 
         // Left: just before the app icon + name. Right: the last slot of the panel.
@@ -332,6 +372,10 @@ export class WindowControlsFeature {
 
     _onFocusChanged() {
         this._winCleanup.dispose();
+        for (const w of [...this._filled.keys()]) {
+            if (!w.get_compositor_private())
+                this._filled.delete(w);
+        }
         const win = global.display.focus_window ?? null;
         this._win = win;
         if (win) {
@@ -366,12 +410,13 @@ export class WindowControlsFeature {
             excluded,
         });
 
+        // Minimize and maximize are forced for every window (see _minimize / _maximize).
         indicator.setWindowState({
             maximized,
             fullscreen,
             can: {
-                minimize: normal && win.can_minimize(),
-                maximize: normal && win.can_maximize(),
+                minimize: normal,
+                maximize: normal,
                 close: normal && win.can_close(),
             },
         });
@@ -412,21 +457,79 @@ export class WindowControlsFeature {
             return;
         switch (name) {
         case 'minimize':
-            // Stage Manager sends the window to its strip instead
-            if (!WindowState.interceptMinimize(win))
-                win.minimize();
+            this._minimize(win);
             break;
         case 'maximize':
-            if (win.is_fullscreen())
-                win.unmake_fullscreen();
-            else if (isMaximized(win))
-                unmaximizeWindow(win);
-            else
-                maximizeWindow(win);
+            this._maximize(win);
             break;
         case 'close':
             win.delete(global.get_current_time());
             break;
+        }
+    }
+
+    // mutter's meta_window_minimize() refuses windows without the capability: every window
+    // that is not NORMAL (dialogs, modal dialogs) and skip-taskbar windows, which includes
+    // dialogs with a parent. It hides transients whose ancestor is minimized, though, and
+    // shows them again with it. So a dialog is minimized together with its parent: an attached
+    // dialog cannot live on its own anyway, and restoring the parent brings both back.
+    _minimize(win) {
+        const chain = [];
+        for (let w = win; w && chain.length < 16; w = w.get_transient_for())
+            chain.push(w);
+        const plan = planMinimize(chain.map(w => ({ canMinimize: w.can_minimize() })));
+        if (plan.action === 'lower') {
+            // Nothing in the chain can be minimized: send it behind the other windows.
+            win.lower();
+            global.display.focus_default_window?.(global.get_current_time());
+            return;
+        }
+        const target = chain[plan.index];
+        // Stage Manager sends the window to its strip instead
+        if (!WindowState.interceptMinimize(target))
+            target.minimize();
+    }
+
+    // meta_window_maximize() does not check can_maximize(), so a resizable window is maximized
+    // even when it does not offer it (dialogs, windows whose minimum size beats the work area).
+    // If mutter still did not take it, the frame is resized to the work area and remembered, so
+    // the next click restores it. A fixed-size window (min == max) cannot grow: it is centred.
+    _maximize(win) {
+        const area = win.get_work_area_current_monitor();
+        const rect = win.get_frame_rect();
+        const saved = this._filled.get(win);
+        const filled = !!saved && sameRect(rect, area);
+        if (saved && !filled)
+            this._filled.delete(win);
+
+        switch (planMaximize({
+            fullscreen: win.is_fullscreen(),
+            maximized: isMaximized(win),
+            filled,
+            resizable: win.resizeable,
+        })) {
+        case 'unfullscreen':
+            win.unmake_fullscreen();
+            break;
+        case 'unmaximize':
+            unmaximizeWindow(win);
+            break;
+        case 'unfill':
+            this._filled.delete(win);
+            win.move_resize_frame(true, saved.x, saved.y, saved.width, saved.height);
+            break;
+        case 'maximize':
+            maximizeWindow(win);
+            if (!isMaximized(win)) {
+                this._filled.set(win, { x: rect.x, y: rect.y, width: rect.width, height: rect.height });
+                win.move_resize_frame(true, area.x, area.y, area.width, area.height);
+            }
+            break;
+        case 'center': {
+            const c = centerIn(area, rect.width, rect.height);
+            win.move_frame(true, c.x, c.y);
+            break;
+        }
         }
     }
 }

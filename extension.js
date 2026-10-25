@@ -26,10 +26,12 @@ import { FEATURES } from './features.js';
 import { Glass } from './lib/glass.js';
 import { isDockExtension, resetDockSettings } from './apps/dockUtils.js';
 import { restoreStaleColors } from './apps/dockColors.js';
+import { restoreStaleButtonLayout } from './apps/windowControls/buttonLayout.js';
 
 // Keys Kiwi writes itself at run time. No `when` or restartOn reads them, and a write made
 // during a refresh would re-enter the registry, so they do not trigger a pass.
-const KEYS_THAT_NEVER_AFFECT_FEATURES = new Set(['dock-colors-saved', 'clipboard-recording', 'migrations-done']);
+const KEYS_THAT_NEVER_AFFECT_FEATURES = new Set(['dock-colors-saved', 'clipboard-recording', 'migrations-done',
+    'saved-button-layout']);
 
 export default class KiwiExtension extends Extension {
     enable() {
@@ -67,6 +69,13 @@ export default class KiwiExtension extends Extension {
             restoreStaleColors(this._settings);
         } catch (err) {
             console.error('[Kiwi] could not restore dock colours:', err);
+        }
+        // Same for the window button layout the panel window controls replace
+        try {
+            restoreStaleButtonLayout(this._settings,
+                new Gio.Settings({ schema_id: 'org.gnome.desktop.wm.preferences' }));
+        } catch (err) {
+            console.error('[Kiwi] could not restore the window button layout:', err);
         }
 
         this._features.start({
