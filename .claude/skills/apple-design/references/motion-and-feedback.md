@@ -75,8 +75,9 @@ so the damping ratio is **ζ = 1 − bounce**. This comes from Apple's `Spring`
 documentation, recalled rather than re-fetched. **[verify]**
 
 The older `response` / `dampingFraction` form maps across as
-`response ≈ duration` and `dampingFraction ≈ ζ`. Third-party tutorials list
-`.spring()` defaults of response 0.5–0.55 with high damping. **[unverified]**
+`response ≈ duration` and `dampingFraction ≈ ζ`. Apple's API defaults are
+`spring(response: 0.5, dampingFraction: 0.825)` and
+`spring(duration: 0.5, bounce: 0)` (SwiftUI `Animation` docs).
 
 ## 4. Mapping to Clutter
 
@@ -187,6 +188,7 @@ and with Kiwi's toggle.
 - HIG Live Activities, 2 s cap: https://developer.apple.com/design/human-interface-guidelines/live-activities
 - WWDC23 "Animate with springs": https://developer.apple.com/videos/play/wwdc2023/10158/ (presets and the duration/bounce model)
 - Apple `Spring` docs: https://developer.apple.com/documentation/swiftui/spring (conversion formula **[verify]**)
+- SwiftUI spring defaults: https://developer.apple.com/documentation/swiftui/animation/spring(response:dampingfraction:blendduration:) and …/spring(duration:bounce:blendduration:)
 - Secondary spring tutorial: https://www.createwithswift.com/understanding-spring-animations-in-swiftui/
 - GNOME Shell `environment.js` (`ease`, `adjustAnimationTime`) in gnome-shell source **[verify per version]**
 - GNOME discussion on reduced motion vs enable-animations: https://gitlab.gnome.org/GNOME/gnome-control-center/-/merge_requests/3253

@@ -87,7 +87,7 @@ text**, because those follow `text-scaling-factor`.
 | Signal | Source | Kiwi behaviour |
 |---|---|---|
 | Animations off | `St.Settings.get().enable_animations` (`org.gnome.desktop.interface enable-animations`) | `actor.ease()` already becomes instant. Custom timelines must check it too. |
-| Reduced motion | GNOME a11y "reduced motion", landing around GNOME 49/50 (key name **unverified**). Probe the schema at runtime, plus a Kiwi toggle. | Replace slides and scales with fades. No spring bounce. No parallax. |
+| Reduced motion | `org.gnome.desktop.a11y.interface reduced-motion` (`'reduce'`; schemas 50+), `St.Settings.reduced_motion` on Shell 51+. Probe at runtime, plus a Kiwi toggle. | Replace slides and scales with fades. No spring bounce. No parallax. |
 | High contrast | `St.Settings.get().high_contrast` (`org.gnome.desktop.a11y.interface high-contrast`) | Opaque surfaces, 1px solid rims, no clear glass |
 | Reduce transparency | GNOME has no system key. Use Kiwi's `glass-reduce-transparency` toggle (proposed), set automatically when high contrast is on. | Replace blur and tint with an opaque `-st-…` bg colour |
 | Colour scheme | `org.gnome.desktop.interface color-scheme` | Light/dark token sets |

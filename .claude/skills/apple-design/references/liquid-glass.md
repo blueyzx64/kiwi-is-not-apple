@@ -195,10 +195,10 @@ St.Widget/BoxLayout .kiwi-glass            ← tint bg + rim border + inset high
 St limits:
 - There is no `backdrop-filter` and no `mix-blend-mode`.
 - Only one `box-shadow` is reliably rendered on most shell versions.
-- `inset` support is **unverified per version**. If the inset highlight doesn't
-  render, use a 1px child `St.Widget` with
-  `background-gradient-direction: horizontal` from α 0 → 0.3 → 0 along the
-  top edge.
+- `inset` box-shadow is parsed and painted (via the cairo path) in St on
+  GNOME 48–51 (`st-theme-node-drawing.c`). As a cheaper alternative, use a
+  1px child `St.Widget` with `background-gradient-direction: horizontal`
+  from α 0 → 0.3 → 0 along the top edge.
 - Verify on GNOME 48–51 before you depend on any of these.
 
 ### 9.3 Optional GLSL refraction (the "high" tier only)
@@ -238,8 +238,8 @@ Rules:
   the overview animates.
 - Auto-drop to **Light** when GNOME's power profile is `power-saver`. Read
   `net.hadess.PowerProfiles` over D-Bus.
-- To measure, run the Shell with `MUTTER_DEBUG` / `CLUTTER_SHOW_FPS=1` (where
-  supported). Target 60 fps while hovering panel buttons.
+- To measure, run the Shell with `MUTTER_DEBUG` / `CLUTTER_SHOW_FPS=1` (still read by
+  Mutter's `clutter-context.c`, 48 to main). Target 60 fps while hovering panel buttons.
 
 ## 11. Fallbacks, reduce transparency, high contrast
 
@@ -265,4 +265,4 @@ Kiwi mirrors this with the Opaque tier.
 - WWDC25 310 "Build an AppKit app with the new design": https://developer.apple.com/videos/play/wwdc2025/310/
 - Community API digest (secondary, not Apple): https://github.com/conorluddy/LiquidGlassReference
 - GNOME Shell blur repaint issue #2857 (referenced in Kiwi code), and the blur-my-shell approach
-- **Unverified:** St `inset` box-shadow support per version; the CLUTTER_SHOW_FPS env var on current Mutter.
+- St inset shadows: https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/main/src/st/st-theme-node-drawing.c (same in tags 48.0–50.0); CLUTTER_SHOW_FPS: https://gitlab.gnome.org/GNOME/mutter/-/blob/main/clutter/clutter/clutter-context.c

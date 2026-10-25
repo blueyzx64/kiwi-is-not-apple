@@ -45,7 +45,7 @@ Further HIG rules:
 | Reduce Transparency | Glass becomes frostier or opaque and hides more of the content behind it |
 | Increase Contrast | Elements become mostly black or white with contrasting borders. System colours switch to their high-contrast variants. |
 | Reduce Motion | Effects are less intense, elastic behaviour is off, and transitions become fades |
-| Liquid Glass look preference (Tahoe 26.1+: Clear / Tinted) **[unverified, secondary]** | The user chooses a more opaque "tinted" glass |
+| Liquid Glass look preference (Tahoe 26.1+: Clear default / Tinted; Apple Support 122868) | The user chooses a more opaque "tinted" glass |
 
 Kiwi offers the same three as user-facing toggles, auto-linked to GNOME
 settings where they exist.
@@ -55,7 +55,7 @@ settings where they exist.
 | Purpose | GSettings | St / runtime |
 |---|---|---|
 | Animations (performance switch) | `org.gnome.desktop.interface enable-animations` | `St.Settings.get().enable_animations` |
-| Reduced motion (a11y) | Being added upstream: gnome-control-center MR 3253 replaces the "Animations" a11y switch with "Reduced motion", exposed through the portal as `org.freedesktop.appearance reduced-motion`. **Key name in gsettings is unverified.** | Probe at runtime (section 4) |
+| Reduced motion (a11y) | `org.gnome.desktop.a11y.interface reduced-motion`, enum `'no-preference'` / `'reduce'` (gsettings-desktop-schemas 50+; absent in 48/49). gnome-control-center MR 3253 (merged, GNOME 50) replaced the "Animations" a11y switch with it; the portal exposes it as `org.freedesktop.appearance reduced-motion`. | `St.Settings.get().reduced_motion === St.ReducedMotion.REDUCE` (gnome-shell 51+ only); probe the schema on 48–50 (section 4) |
 | High contrast | `org.gnome.desktop.a11y.interface high-contrast` | `St.Settings.get().high_contrast` |
 | Colour scheme | `org.gnome.desktop.interface color-scheme` (`default`, `prefer-dark`, `prefer-light`) | `St.Settings.get().color_scheme` (GNOME 47+) **[verify]** |
 | Accent | `org.gnome.desktop.interface accent-color` (GNOME 47+) | CSS `-st-accent-color` |
@@ -77,21 +77,23 @@ function lookupKey(schemaId, key) {
     return schema && schema.has_key(key) ? new Gio.Settings({schema_id: schemaId}) : null;
 }
 
-// Reduced motion: try likely upstream locations, then fall back to Kiwi's own key.
-const rmSettings = lookupKey('org.gnome.desktop.a11y.interface', 'reduced-motion')
-    ?? lookupKey('org.gnome.desktop.interface', 'reduced-motion');   // both unverified
+// Reduced motion: St property on Shell 51+, else the a11y schema key (schemas 50+),
+// else Kiwi's own key. The GSettings key is an enum: 'no-preference' | 'reduce'.
+const st = St.Settings.get();
+const rmSettings = lookupKey('org.gnome.desktop.a11y.interface', 'reduced-motion');
 export const reducedMotion = () =>
     kiwi.get_boolean('reduce-motion') ||
-    (rmSettings ? rmSettings.get_value('reduced-motion').unpack() === true ||
-                  rmSettings.get_value('reduced-motion').unpack() === 'reduce' : false);
+    ('reduced_motion' in st
+        ? st.reduced_motion === St.ReducedMotion.REDUCE
+        : rmSettings?.get_string('reduced-motion') === 'reduce');
 
 export const highContrast = () => St.Settings.get().high_contrast;
 export const reduceTransparency = () => kiwi.get_boolean('glass-reduce-transparency') || highContrast();
 ```
 
 How to use these:
-- Connect `notify::high-contrast` and `notify::enable-animations` on
-  `St.Settings` and `changed::<key>` on the GSettings objects. Re-render
+- Connect `notify::high-contrast`, `notify::enable-animations` (and
+  `notify::reduced-motion` on 51+) on `St.Settings` and `changed::<key>` on the GSettings objects. Re-render
   tokens through the central store (apple-architecture-lessons.md), not in
   each feature separately.
 - `has_key` avoids crashes on shells where the key doesn't exist. Never call
@@ -201,7 +203,8 @@ Implementation:
 - HIG Accessibility (contrast table, sizes, reduce-motion list, keyboard): https://developer.apple.com/design/human-interface-guidelines/accessibility
 - WWDC25 219 "Meet Liquid Glass" (accessibility adaptations): https://developer.apple.com/videos/play/wwdc2025/219/
 - Apple Support, Mac display accessibility settings: https://support.apple.com/guide/mac-help/change-display-settings-for-accessibility-unac089/mac **[verify path]**
+- Apple Support, macOS Tahoe 26 updates (26.1 Clear/Tinted Liquid Glass): https://support.apple.com/en-us/122868
 - WCAG 2.2 contrast: https://www.w3.org/TR/WCAG22/#contrast-minimum
-- GNOME reduced-motion work: https://gitlab.gnome.org/GNOME/gnome-control-center/-/merge_requests/3253 ; https://gitlab.gnome.org/GNOME/gnome-shell/-/issues/6224 ; TWIG #224 https://thisweek.gnome.org/posts/2025/11/twig-224/
+- GNOME reduced-motion key: https://gitlab.gnome.org/GNOME/gsettings-desktop-schemas/-/blob/main/schemas/org.gnome.desktop.a11y.interface.gschema.xml.in (tag 50.0+) ; St property: https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/main/src/st/st-settings.c (tag 51.0+) ; https://gitlab.gnome.org/GNOME/gnome-control-center/-/merge_requests/3253 ; https://gitlab.gnome.org/GNOME/gnome-shell/-/issues/6224 ; TWIG #224 https://thisweek.gnome.org/posts/2025/11/twig-224/
 - GTK `gtk-interface-reduced-motion` (GTK 4.22): https://docs.gtk.org/gtk4/property.Settings.gtk-interface-reduced-motion.html
 - MDN prefers-reduced-motion (GNOME mapping note): https://developer.mozilla.org/docs/Web/CSS/Reference/At-rules/@media/prefers-reduced-motion

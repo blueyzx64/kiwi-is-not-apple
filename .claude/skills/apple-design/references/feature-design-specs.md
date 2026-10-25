@@ -48,7 +48,7 @@ radius and 6px padding, which reshapes GNOME `.popup-menu-content`.
 ## 2. Clipboard history
 
 **macOS reference.**
-- Tahoe Spotlight has a Clipboard view: recent copies kept for a limited time (about 8 h, **[unverified]**). Click an item to paste it.
+- Tahoe Spotlight has a Clipboard view (Cmd-Space, then Cmd-4): searchable recent copies, Clear History. An item is copied with its button or Cmd-C, then pasted with Cmd-V (Apple Support mchl40d5b86b). Retention (reported about 8 h) is **[unverified: Apple doesn't state it]**.
 - Third-party managers add pins, search and a paste stack.
 
 **Kiwi adaptation.** There are two entry points onto one `ClipboardService`.
@@ -254,7 +254,7 @@ Edge cases: GNOME version differences in QuickSettings internals (guard with fea
 
 **macOS reference.**
 - The menu bar hides and slides down when the pointer reaches the top edge.
-- Tahoe options: Always, On Desktop only, In Full Screen only (default), Never. **[unverified]**
+- Tahoe options: Always, On Desktop Only, In Full Screen Only, Never (Apple Support mchlad96d366). In Full Screen Only as default is **[unverified: secondary]**.
 
 **Kiwi adaptation.**
 - Setting `panel-autohide`: `never` | `fullscreen` (the existing hover feature) | `maximized` | `always`.
