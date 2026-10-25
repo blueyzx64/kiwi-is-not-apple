@@ -1,0 +1,57 @@
+diff --git a/features.js b/features.js
+index 14fedd7..66dfe0e 100644
+--- a/features.js
++++ b/features.js
+@@ -44,11 +44,16 @@ import { enable as reduceWindowAnimationsEnable, disable as reduceWindowAnimatio
+ import { enableDragRestore, disableDragRestore } from './apps/windowTiling.js';
+ import { dockActive } from './apps/dockUtils.js';
+ import { LiquidGlass } from './apps/liquidGlass/index.js';
++import { NotchFeature } from './apps/notch/index.js';
+ import { Glass } from './lib/glass.js';
+ 
+ // ctx: { extension, settings (Gio.Settings), gettext, interfaceSettings (Gio.Settings) }
+ const bool = (ctx, key) => ctx.settings.get_boolean(key);
+ 
++// The date menu leaves the centre box when the user asked for it, and always while the notch
++// owns the centre. The message list moves to Quick Settings with it.
++const calendarRight = ctx => bool(ctx, 'move-calendar-right') || bool(ctx, 'notch');
++
+ // Everything that hangs off Dash-to-Dock stays off while it is not running
+ const minimizeToDock = ctx => dockActive() && bool(ctx, 'minimize-to-dock');
+ 
+@@ -102,21 +107,21 @@ export const FEATURES = [
+     // Calendar group. The calendar re-attaches the date menu at the far right of the panel,
+     // so a change of either key restarts it and the notification pieces together.
+     {
+-        id: 'calendar', reapply: true, setting: 'move-calendar-right',
++        id: 'calendar', reapply: true, when: calendarRight,
+         restartOn: ['keep-notification-panel'],
+         enable: ctx => calendarEnable(ctx.extension),
+         disable: () => calendarDisable(),
+     },
+     {
+         id: 'quick-settings-notifications', reapply: true,
+-        when: ctx => bool(ctx, 'move-calendar-right') && !bool(ctx, 'keep-notification-panel'),
++        when: ctx => calendarRight(ctx) && !bool(ctx, 'keep-notification-panel'),
+         restartOn: ['keep-notification-panel'],
+         enable: ctx => quickSettingsNotificationsEnable(ctx.gettext, ctx.settings),
+         disable: () => quickSettingsNotificationsDisable(),
+     },
+     {
+         id: 'panel-media', reapply: true,
+-        when: ctx => bool(ctx, 'move-calendar-right') && !bool(ctx, 'keep-notification-panel'),
++        when: ctx => calendarRight(ctx) && !bool(ctx, 'keep-notification-panel'),
+         restartOn: ['keep-notification-panel'],
+         enable: ctx => panelMediaEnable(ctx.gettext),
+         disable: () => panelMediaDisable(),
+@@ -264,4 +269,10 @@ export const FEATURES = [
+         id: 'liquid-glass', setting: 'liquid-glass',
+         cls: LiquidGlass,
+     },
++    {
++        // Pill in the centre of the bar for banners, media and volume. Replaces the stock banners
++        // and OSD (parts switch live on notch-notifications / notch-osd / notch-live-activities).
++        id: 'notch', setting: 'notch',
++        cls: NotchFeature,
++    },
+ ];
