@@ -169,6 +169,60 @@ test('duplicate id and missing enable are rejected', () => {
     eq(threw, 2);
 });
 
+test('V1: a winner that fails to enable does not pause its losers', () => {
+    const flags = { sm: true };
+    const ctx = { settings: { get_boolean: k => !!flags[k] } };
+    const reg = new FeatureRegistry(CleanupRegistry);
+    let mtd = 0;
+    let tries = 0;
+    reg.registerAll([
+        { id: 'mtd', reapply: true, when: () => true, enable() { mtd = 1; }, disable() { mtd = 0; } },
+        {
+            id: 'sm', setting: 'sm', conflictsWith: ['mtd'],
+            cls: class { enable() { tries++; throw new Error('boom'); } disable() {} },
+        },
+    ]);
+    reg.start(ctx);
+    eq(reg.isActive('sm'), false);
+    eq(mtd, 1, 'loser resumed');
+    eq(reg.status('mtd'), 'active');
+    eq(reg.status('sm'), 'off');
+    reg.refresh('unrelated');
+    reg.refresh('other');
+    eq(tries, 1, 'not retried on unrelated keys');
+    eq(mtd, 1);
+});
+
+test('failed entry retried on its own key, and after off -> on', () => {
+    const flags = { a: true };
+    const ctx = { settings: { get_boolean: k => !!flags[k] } };
+    const reg = new FeatureRegistry(CleanupRegistry);
+    let tries = 0;
+    let broken = true;
+    reg.register({ id: 'a', setting: 'a', keys: ['a-extra'], enable() { tries++; if (broken) throw new Error('x'); }, disable() {} });
+    reg.start(ctx);
+    reg.refresh('a-extra');
+    eq(tries, 2);
+    flags.a = false;
+    reg.refresh('a');
+    flags.a = true;
+    broken = false;
+    reg.refresh('a');
+    eq(tries, 3);
+    eq(reg.isActive('a'), true);
+});
+
+test('needs on a failed entry holds the dependent off', () => {
+    const ctx = { settings: { get_boolean: () => true } };
+    const reg = new FeatureRegistry(CleanupRegistry);
+    const log = [];
+    reg.register({ id: 'base', enable() { throw new Error('x'); }, disable() {} });
+    reg.register({ id: 'dep', needs: ['base'], enable() { log.push('+dep'); }, disable() { log.push('-dep'); } });
+    reg.start(ctx);
+    eq(log, []);
+    eq(reg.isActive('dep'), false);
+});
+
 if (failed) {
     print(`${failed} failed`);
     imports.system.exit(1);
