@@ -134,17 +134,20 @@ export function pointRect(point, frame, width = 24) {
  * Layers of a stacked card, front first. A stage of one window has one layer.
  * dx points toward the screen edge, so the stack peeks out away from the stage.
  */
-export function stackLayers(count, side = 'left', max = DEFAULTS.stackMax) {
+export function stackLayers(count, side = 'left', max = DEFAULTS.stackMax, { set = false } = {}) {
     const n = clamp(Math.floor(count) || 0, 0, max);
     const dir = side === 'right' ? 1 : -1;
+    // A set of different windows fans out more and stays opaque: every window is meant to show
+    const step = set ? { dx: 16, dy: -12, scale: 0.05, fade: 0.08 } : { dx: 7, dy: -6, scale: 0.06, fade: 0.28 };
     const layers = [];
     for (let i = 0; i < n; i++) {
         layers.push({
             index: i,
-            dx: dir * i * 7,
-            dy: -i * 6,
-            scale: 1 - i * 0.06,
-            opacity: Math.round(255 * (1 - i * 0.28)),
+            dx: dir * i * step.dx,
+            dy: i * step.dy,
+            scale: 1 - i * step.scale,
+            opacity: Math.round(255 * (1 - i * step.fade)),
+            tilt: set ? -dir * i * 3 : 0,     // a fanned set: back windows turn a little more
         });
     }
     return layers;
@@ -324,6 +327,113 @@ export function focusRoot(win, parentOf, isListed, maxDepth = 16) {
     return null;
 }
 
+// ---- window sets: drop zones and side-by-side plans -----------------------------------------
+
+/**
+ * Where a strip entry dropped on the stage goes. The outer parts tile the dropped windows on
+ * that side of the stage; the middle band adds them to the set as they are.
+ * @param {{x: number, y: number}} point
+ * @param {rect} area  the stage area
+ * @param {number} [centre]  share of the width the middle band takes
+ * @returns {'left'|'right'|'center'|null} null: outside the stage
+ */
+export function dropZone(point, area, centre = 0.3) {
+    if (!area || !(area.width > 0) || !(area.height > 0))
+        return null;
+    if (point.x < area.x || point.x >= area.x + area.width || point.y < area.y || point.y >= area.y + area.height)
+        return null;
+    const rel = (point.x - area.x) / area.width;
+    const half = clamp(centre, 0, 1) / 2;
+    if (rel < 0.5 - half)
+        return 'left';
+    if (rel >= 0.5 + half)
+        return 'right';
+    return 'center';
+}
+
+/** The highlight drawn for a drop zone: the half it tiles into, or the whole stage for the middle. */
+export function dropZoneRect(area, zone, inset = 12) {
+    if (!area || !zone)
+        return null;
+    const half = Math.floor(area.width / 2);
+    const base = zone === 'left' ? { x: area.x, width: half }
+        : zone === 'right' ? { x: area.x + area.width - half, width: half }
+            : { x: area.x, width: area.width };
+    return {
+        x: base.x + inset, y: area.y + inset,
+        width: Math.max(0, base.width - 2 * inset), height: Math.max(0, area.height - 2 * inset),
+    };
+}
+
+/**
+ * Left-to-right order of a tiled set after a drop: the dropped windows on the zone's side, the
+ * windows already on the stage on the other. A middle drop tiles nothing (null).
+ * @param {'left'|'right'|'center'} zone
+ * @param {Array} dropped  ids of the dropped entry
+ * @param {Array} staged   ids on the stage (current tile order, or its windows)
+ */
+export function tileOrder(zone, dropped, staged) {
+    if (zone !== 'left' && zone !== 'right')
+        return null;
+    const rest = staged.filter(id => !dropped.includes(id));
+    return zone === 'left' ? [...dropped, ...rest] : [...rest, ...dropped];
+}
+
+/**
+ * Side-by-side frames: equal columns over the stage area, a gap between them and around.
+ * @param {rect} area
+ * @param {number} count
+ * @param {number} [gap]
+ * @returns {rect[]} integer rects, left to right
+ */
+export function tilePlan(area, count, gap = 8) {
+    const n = Math.max(0, Math.floor(count));
+    if (n === 0 || !(area.width > 0) || !(area.height > 0))
+        return [];
+    const inner = area.width - gap * (n + 1);
+    const w = Math.floor(inner / n);
+    if (w <= 0)
+        return [];
+    const out = [];
+    for (let i = 0; i < n; i++) {
+        out.push({
+            x: Math.round(area.x + gap + i * (w + gap)),
+            y: Math.round(area.y + gap),
+            width: w,
+            height: Math.max(1, Math.round(area.height - 2 * gap)),
+        });
+    }
+    return out;
+}
+
+// ---- motion and input helpers ------------------------------------------------------------
+
+/** A duration under the user's animation speed (1 = normal, 2 = twice as fast). */
+export function scaleMs(ms, speed = 1) {
+    const s = Number.isFinite(speed) && speed > 0 ? clamp(speed, 0.25, 4) : 1;
+    return Math.max(0, Math.round(ms / s));
+}
+
+/** Direction the strip content slides on a workspace switch: +1 to a later workspace, -1 back, 0 none. */
+export function workspaceDirection(from, to) {
+    if (!Number.isInteger(from) || !Number.isInteger(to) || from === to)
+        return 0;
+    return to > from ? 1 : -1;
+}
+
+/**
+ * A press and release on the wallpaper count as a click (not a drag or a long press).
+ * @param {{x, y, time}} press
+ * @param {{x, y, time}} release
+ */
+export function isClick(press, release, { slop = 6, maxMs = 600 } = {}) {
+    if (!press || !release)
+        return false;
+    const dist = Math.hypot(release.x - press.x, release.y - press.y);
+    const dt = release.time - press.time;
+    return dist <= slop && dt >= 0 && dt <= maxMs;
+}
+
 // ---- stages and focus ---------------------------------------------------------------------
 
 export class StageModel {
@@ -337,6 +447,8 @@ export class StageModel {
         this._order = [];           // stage ids, most recent first
         this._current = null;       // stage id on the stage
         this._clock = 0;
+        this._sets = 0;             // counter for set ids ('set:<n>')
+        this._tiles = new Map();    // set id -> window ids left to right (side by side)
     }
 
     get groupByApp() {
@@ -376,8 +488,10 @@ export class StageModel {
     /**
      * Replace the set of live windows. New windows join the stage of their app (when grouping)
      * or get a stage of their own, at the back of the order. Gone windows leave; an empty
-     * stage disappears. Order of existing stages is kept.
+     * stage disappears. Order of existing stages is kept. While grouping by app, a new window
+     * of an app that is part of a set joins that set ("all at once").
      * @param {{id: string|number, appId: string|null}[]} windows
+     * @returns {{added: Array}} ids seen for the first time
      */
     sync(windows) {
         const live = new Map(windows.map(w => [w.id, w]));
@@ -385,15 +499,81 @@ export class StageModel {
             if (!live.has(id))
                 this._wins.delete(id);
         }
+        const added = [];
         for (const w of windows) {
             const known = this._wins.get(w.id);
             if (known) {
                 known.appId = w.appId ?? null;
             } else {
-                this._wins.set(w.id, { id: w.id, appId: w.appId ?? null, stamp: 0 });
+                const win = { id: w.id, appId: w.appId ?? null, stamp: 0, set: null, solo: false };
+                if (this._group && win.appId !== null) {
+                    const mate = [...this._wins.values()].find(o => o.set && !o.solo && o.appId === win.appId);
+                    if (mate)
+                        win.set = mate.set;
+                }
+                this._wins.set(w.id, win);
+                added.push(w.id);
             }
         }
+        this._dissolve();
         this._rebuildOrder();
+        return { added };
+    }
+
+    /**
+     * Add every window of stage `srcId` to stage `dstId`: the two become one set (macOS: drag a
+     * strip entry onto the stage, or Shift-click it). The set takes the destination's place in
+     * the order and is current if either stage was.
+     * @returns {?object} the set's view, null when either stage is unknown or they are the same
+     */
+    join(srcId, dstId) {
+        const src = this._stageById(srcId);
+        const dst = this._stageById(dstId);
+        if (!src || !dst || src.id === dst.id)
+            return null;
+        const key = dst.id.startsWith('set:') ? dst.id : `set:${++this._sets}`;
+        for (const id of [...dst.windows, ...src.windows]) {
+            const win = this._wins.get(id);
+            win.set = key;
+            win.solo = false;
+        }
+        const tiles = this._tiles.get(dst.id);
+        this._tiles.delete(src.id);
+        this._order = this._order.filter(k => k !== src.id).map(k => k === dst.id ? key : k);
+        if (!this._order.includes(key))
+            this._order.unshift(key);
+        if (this._current === dst.id || this._current === src.id)
+            this._current = key;
+        if (tiles)
+            this._tiles.set(key, tiles);
+        this._prune();
+        return this._view(this._stageById(key));
+    }
+
+    /**
+     * Lay a set out side by side, left to right. Ids not in the set are dropped; fewer than two
+     * left clears the layout.
+     */
+    setTiles(stageId, ids) {
+        const st = this._stageById(stageId);
+        if (!st || !st.id.startsWith('set:'))
+            return null;
+        const order = ids.filter((id, i) => st.windows.includes(id) && ids.indexOf(id) === i);
+        if (order.length < 2)
+            this._tiles.delete(st.id);
+        else
+            this._tiles.set(st.id, order);
+        return this.tilesOf(st.id);
+    }
+
+    /** Side-by-side order of a set's live windows, or null when it is not tiled. */
+    tilesOf(stageId) {
+        const st = this._stageById(stageId);
+        const order = st ? this._tiles.get(st.id) : null;
+        if (!order)
+            return null;
+        const live = order.filter(id => st.windows.includes(id));
+        return live.length >= 2 ? live : null;
     }
 
     /** Make the stage holding this window the current one. Unknown ids do nothing. */
@@ -426,11 +606,16 @@ export class StageModel {
             return null;
         const oldKey = this._stageKey(win);
         win.solo = true;
+        win.set = null;
+        const tiles = this._tiles.get(oldKey);
+        if (tiles)
+            this._tiles.set(oldKey, tiles.filter(t => t !== id));
         const key = this._stageKey(win);
         const wasCurrent = this._current === oldKey;
         const at = this._order.indexOf(oldKey);
         if (!this._order.includes(key))
             this._order.splice(at < 0 ? this._order.length : at + 1, 0, key);
+        this._dissolve();
         this._prune();
         if (wasCurrent && !this._stageById(this._current))
             this._current = this._order[0] ?? null;
@@ -506,6 +691,8 @@ export class StageModel {
     // ---- internals --------------------------------------------------------------------
 
     _stageKey(win) {
+        if (win.set)
+            return win.set;
         if (!this._group || win.solo || win.appId === null)
             return `win:${win.id}`;
         return `app:${win.appId}`;
@@ -536,7 +723,12 @@ export class StageModel {
     }
 
     _view(stage) {
-        return { id: stage.id, appId: stage.appId, windows: [...stage.windows], lead: this._lead(stage) };
+        const view = { id: stage.id, appId: stage.appId, windows: [...stage.windows], lead: this._lead(stage) };
+        if (stage.id.startsWith('set:')) {
+            view.set = true;
+            view.apps = [...new Set(stage.windows.map(id => this._wins.get(id).appId))];
+        }
+        return view;
     }
 
     _moveFront(key) {
@@ -545,6 +737,36 @@ export class StageModel {
             this._order.splice(i, 1);
         if (i !== 0)
             this._order.unshift(key);
+    }
+
+    /** A set left with one window is no set: the window goes back to its own (or its app's) stage. */
+    _dissolve() {
+        const count = new Map();
+        for (const w of this._wins.values()) {
+            if (w.set)
+                count.set(w.set, (count.get(w.set) ?? 0) + 1);
+        }
+        for (const w of this._wins.values()) {
+            if (!w.set || count.get(w.set) > 1)
+                continue;
+            const old = w.set;
+            w.set = null;
+            const key = this._stageKey(w);
+            const at = this._order.indexOf(old);
+            if (at >= 0) {
+                if (this._order.includes(key))
+                    this._order.splice(at, 1);
+                else
+                    this._order[at] = key;
+            }
+            if (this._current === old)
+                this._current = key;
+            count.delete(old);
+        }
+        for (const k of [...this._tiles.keys()]) {
+            if (!count.has(k))
+                this._tiles.delete(k);
+        }
     }
 
     _prune() {

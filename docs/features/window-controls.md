@@ -30,6 +30,19 @@ Optionally, real windows lose their own titlebar buttons.
   **Flatpak:** GTK apps in Flatpak only see the hide-titlebar CSS when the `flatpak override`
   lines in the README (Flatpak theming) are applied.
 
+- **Top-bar controls off** (owner, UX round 2 #8): apps get their own buttons back, by default
+  the stock GNOME look on the right with all three buttons. `AppButtonsFeature`
+  (`apps/windowControls/appButtons.js`, registry entry `app-buttons`, runs only while
+  `show-window-controls` is off) owns `button-layout` through the same `ButtonLayoutOwner` and
+  `saved-button-layout`, with the transform `appButtonsLayout()` (model.js): right
+  `appmenu:minimize,maximize,close`, left `close,minimize,maximize:appmenu`, other entries kept and
+  mirrored when the side flips. The registry stops the old owner before it starts the new one, so
+  the original passes from one to the other untouched. The look is GTK CSS: `appButtonsMacos()`
+  picks `app-buttons-style` whenever the apps' buttons depend on it (controls off, or on with the
+  layout owned), so toggling the controls never changes `gtk.css` and open apps update live; a new
+  style needs an app restart. `enable-app-window-buttons` keeps the top-bar icons and the apps'
+  look when the controls are on but the apps keep their buttons.
+
 ## 4. Settings (proposed)
 | Key | Type | Default |
 |---|---|---|
@@ -37,8 +50,13 @@ Optionally, real windows lose their own titlebar buttons.
 | `window-controls-scope` | s: `all` \| `maximized` \| `fullscreen` | `all` |
 | `window-controls-position` | s: `system` \| `left` \| `right` | `left` |
 | `remove-titlebar-buttons` | b | `true` |
+| `app-buttons-position` | s: `right` \| `left` (controls off) | `right` |
+| `app-buttons-style` | s: `gnome` \| `macos` (controls off) | `gnome` |
+| `app-buttons-set` | s: `all` \| `close` (controls off) | `all` |
 
 `show-window-controls-fullscreen-only` gets migrated to `window-controls-scope=fullscreen`.
+`app-buttons-style` is migrated once from `show-window-controls`: `macos` when the user had
+already turned the controls off and kept `enable-app-window-buttons`, else `gnome`.
 
 ## 5. Interactions
 - **Auto-hide top bar:** removed, so the controls are always on screen with the bar.
@@ -48,4 +66,6 @@ Optionally, real windows lose their own titlebar buttons.
 ## 6. Acceptance
 - [ ] The buttons follow focus changes within 1 frame and ignore unmanaged windows.
 - [ ] Turning the feature off restores the GTK CSS and the saved `button-layout` exactly.
+- [ ] With the feature off, apps show all three buttons on the chosen side in the chosen style;
+  disabling Kiwi restores the original layout exactly.
 - [ ] Works with GTK 3 and GTK 4 apps, Flatpak included (with the documented overrides).

@@ -62,13 +62,50 @@ export function buildPrefs({ settings, window, extension }) {
     group.add(remove);
     settings.bind('remove-titlebar-buttons', remove, 'active', Gio.SettingsBindFlags.DEFAULT);
 
+    // The apps' own buttons, managed while the top-bar controls are off
+    const appGroup = new Adw.PreferencesGroup({
+        title: _('When top-bar controls are off'),
+        description: _('Apps get their own titlebar buttons back. Kiwi sets the GNOME button layout ' +
+            'and restores yours when the top-bar controls come back on or Kiwi is disabled.'),
+    });
+    settings.bind('show-window-controls', appGroup, 'sensitive',
+        Gio.SettingsBindFlags.GET | Gio.SettingsBindFlags.INVERT_BOOLEAN);
+
+    const appPosition = comboRow(settings, {
+        title: _('Position'),
+        subtitle: _('Side of the titlebar for close, minimize and maximize'),
+        key: 'app-buttons-position',
+        values: ['right', 'left'],
+        labels: [_('Right'), _('Left')],
+    });
+    appGroup.add(appPosition.row);
+
+    const appStyle = comboRow(settings, {
+        title: _('Style'),
+        subtitle: _('GNOME keeps the stock look; macOS uses the button type and size above. ' +
+            'Open apps pick up a new style when restarted'),
+        key: 'app-buttons-style',
+        values: ['gnome', 'macos'],
+        labels: [_('GNOME'), _('macOS')],
+    });
+    appGroup.add(appStyle.row);
+
+    const appSet = comboRow(settings, {
+        title: _('Buttons'),
+        subtitle: _('Close only is the stock Fedora layout'),
+        key: 'app-buttons-set',
+        values: ['all', 'close'],
+        labels: [_('Close, minimize and maximize'), _('Close only')],
+    });
+    appGroup.add(appSet.row);
+
     window.connect('close-request', () => {
-        for (const c of [scope, position]) {
+        for (const c of [scope, position, appPosition, appStyle, appSet]) {
             c.row.disconnect(c.rowId);
             settings.disconnect(c.settingsId);
         }
         return false;
     });
 
-    return [group];
+    return [group, appGroup];
 }

@@ -15,7 +15,21 @@ export const MIGRATIONS = [
         to: 'window-controls-scope',
         map: fullscreenOnly => (fullscreenOnly ? 'fullscreen' : 'all'),
     },
+    {
+        // UX round 2: with the top-bar controls off, app-buttons-style now decides the look of
+        // the apps' own buttons (default 'gnome'). Someone who had already turned the controls
+        // off and saw the macOS buttons in apps (enable-app-window-buttons) keeps them.
+        id: 'app-buttons-style-from-controls-off',
+        from: 'show-window-controls',
+        to: 'app-buttons-style',
+        map: (showOnPanel, gs) =>
+            (!showOnPanel && gs.get_boolean('enable-app-window-buttons') ? 'macos' : 'gnome'),
+    },
 ];
+
+export const APP_BUTTONS_POSITIONS = ['right', 'left'];
+export const APP_BUTTONS_STYLES = ['gnome', 'macos'];
+export const APP_BUTTONS_SETS = ['all', 'close'];
 
 /**
  * Parse a WM button-layout such as 'appmenu:minimize,maximize,close'.
@@ -236,4 +250,48 @@ export function sameRect(a, b, slack = 2) {
         return false;
     return Math.abs(a.x - b.x) <= slack && Math.abs(a.y - b.y) <= slack &&
         Math.abs(a.width - b.width) <= slack && Math.abs(a.height - b.height) <= slack;
+}
+
+/**
+ * The WM button-layout Kiwi sets while the top-bar controls are off: the apps' own buttons on
+ * the chosen side, at its outer edge (right: minimize,maximize,close; left: close,minimize,
+ * maximize, macOS order), or close alone with set 'close'. The other entries of `original`
+ * (appmenu, icon, spacer) are kept. When the buttons move to the other side than the original
+ * had them, the whole layout is mirrored, so the app menu stays opposite the buttons:
+ * 'appmenu:close' -> right 'appmenu:minimize,maximize,close', left 'close,minimize,maximize:appmenu'.
+ *
+ * @param {string} original the user's layout
+ * @param {{position?: string, set?: string}} opts position 'right' | 'left', set 'all' | 'close'
+ * @returns {string}
+ */
+export function appButtonsLayout(original, { position = 'right', set = 'all' } = {}) {
+    const parts = String(original ?? '').split(':');
+    const extras = part => (part ?? '').split(',')
+        .map(b => b.trim())
+        .filter(b => b && !VALID_BUTTONS.includes(b));
+    let left = extras(parts[0]);
+    let right = extras(parts[1]);
+    const side = position === 'left' ? 'left' : 'right';
+    if (side !== parseButtonLayout(original).side)
+        [left, right] = [right.reverse(), left.reverse()];
+    if (side === 'right')
+        right = [...right, ...(set === 'close' ? ['close'] : SYSTEM_RIGHT_ORDER)];
+    else
+        left = [...(set === 'close' ? ['close'] : MACOS_ORDER), ...left];
+    return `${left.join(',')}:${right.join(',')}`;
+}
+
+/**
+ * Do GTK apps (and Firefox / Thunderbird) get Kiwi's macOS traffic-light CSS?
+ * - Top-bar controls on, but the apps keep their buttons (scope maximized / fullscreen, or
+ *   remove-titlebar-buttons off): enable-app-window-buttons decides, as before.
+ * - Otherwise app-buttons-style decides ('gnome' = the stock look). That includes controls on
+ *   with the layout owned (the apps draw no buttons then), so the CSS does not change when the
+ *   controls are toggled: GTK reads gtk.css only at start, and open apps would otherwise keep
+ *   the old look until restarted (seen in the real Shell, GNOME 50.6).
+ */
+export function appButtonsMacos({ showOnPanel, remove = true, scope = 'all', enableAppButtons, style }) {
+    if (showOnPanel && !ownsButtonLayout({ showOnPanel, remove, scope }))
+        return !!enableAppButtons;
+    return style === 'macos';
 }

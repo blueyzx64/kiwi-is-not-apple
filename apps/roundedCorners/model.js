@@ -9,6 +9,21 @@ export const RADIUS_MIN = 0;
 export const RADIUS_MAX = 24;
 export const RADIUS_DEFAULT = 12;
 
+/** Which corners are rounded: the `rounded-corners-which` setting. */
+export const WHICH_VALUES = Object.freeze(['top', 'all']);
+export const WHICH_DEFAULT = 'top';
+
+/**
+ * The per-corner mask the shader takes.
+ *
+ * @param {string} which 'top' (top-left and top-right only) or 'all'; junk means the default
+ * @returns {number[]} 1 (rounded) or 0 (square) for top-left, top-right, bottom-right, bottom-left
+ */
+export function cornerMask(which) {
+    const w = WHICH_VALUES.includes(which) ? which : WHICH_DEFAULT;
+    return w === 'all' ? [1, 1, 1, 1] : [1, 1, 0, 0];
+}
+
 /** Window types that get corners. Menus, tooltips, DND icons, docks and desktops never do. */
 export const ROUNDED_TYPES = Object.freeze(['normal', 'dialog', 'modal-dialog']);
 

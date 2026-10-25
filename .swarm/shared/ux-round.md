@@ -3,8 +3,7 @@
 Read-only for workers. The orchestrator merges every `ux/*` branch into `ccr-f3c1f44c-rv5a8r`.
 
 ## The owner's report, with screenshots
-Screenshots from the owner's real desktop:
-`/tmp/claude-0/-home-user-kiwi-is-not-apple/1c9cfc23-1f6c-5ceb-aec3-03f023179fb0/scratchpad/user-shots/`
+(The owner's screenshots are not kept; descriptions below.)
 
 | File | What it shows |
 |---|---|
@@ -68,3 +67,6 @@ KIWI_SRC=$PWD KIWI_EXTRA=/path/to/your-extra.sh /tmp/x2/run-f44.sh 1   # 1 = ena
 - Evidence: run dirs and screenshot paths.
 - `make check` result.
 - Anything you couldn't do, or that you changed outside your files.
+
+## Never commit screenshots
+Screenshots stay in /tmp only. Never add PNG/JPG files to the repo, except Kiwi's own icon assets.

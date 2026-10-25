@@ -5,10 +5,16 @@
 //   - `placeholder` sits in the panel's centre box (PanelLayout) and only reserves room.
 //   - `island` is the black pill. It lives in the top chrome so it can grow below the bar and
 //     take input there. It is centred on the primary monitor and glued to its top edge.
+//   - two `ears` flank the island's top corners: the small concave fillets where a MacBook
+//     notch flares into the screen's top edge. They are siblings of the island (it clips to its
+//     allocation), pinned to its edges by snap constraints so they follow every frame of the
+//     grow and shrink animations, and painted in the island's own background colour.
 
+import Cairo from 'cairo';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import GObject from 'gi://GObject';
 import Pango from 'gi://Pango';
 import Shell from 'gi://Shell';
 import St from 'gi://St';
@@ -17,12 +23,25 @@ import * as Util from 'resource:///org/gnome/shell/misc/util.js';
 
 import { Glass } from '../../lib/glass.js';
 import { SIZES } from './stateMachine.js';
+import {
+    dashboardLayout, cardSize, trackProgress, formatClock, moreCount, spring,
+} from './dashboardModel.js';
 
-const GROW_MS = 450;     // spring with a little overshoot
-const SHRINK_MS = 260;   // ease-out
-const FADE_MS = 160;
-const BARS = 3;
-const BAR_TICK_MS = 380;
+// Motion. The shape moves on a damped spring (a little overshoot when it grows, none when it
+// shrinks); the new content fades in once the shape is most of the way there, and the old
+// content fades out at once so it never shows squeezed.
+const GROW_SPRING = { bounce: 0.18, response: 0.42 };  // seconds
+const SHRINK_SPRING = { bounce: 0, response: 0.3 };
+const GROW_SETTLE_MS = 720;
+const SHRINK_SETTLE_MS = 400;
+const CONTENT_DELAY_MS = 190;    // ~ 90 % of the grow
+const FADE_IN_MS = 200;
+const FADE_OUT_MS = 90;
+const LIVE_TICK_MS = 1000;       // clock and scrubber while the dashboard is open
+const BARS = 4;
+const BAR_TICK_MS = 300;
+const BAR_REST = [6, 12, 9, 5];   // waveform heights when paused or without motion
+const EAR_RADIUS = 10;   // the fillet where the notch meets the top edge, logical px
 
 const label = (text, styleClass, opts = {}) => {
     const l = new St.Label({
@@ -54,12 +73,39 @@ function artIcon(url) {
     return null;
 }
 
+// Lays its one child out from the left edge at `fraction` of the width. Sizing the fill here,
+// inside the allocation, avoids a relayout queued from an allocation handler.
+const FractionLayout = GObject.registerClass(
+class KiwiNotchFractionLayout extends Clutter.LayoutManager {
+    constructor() {
+        super();
+        this.fraction = 0;
+    }
+
+    vfunc_get_preferred_width(_container, _forHeight) {
+        return [0, 0];
+    }
+
+    vfunc_get_preferred_height(_container, _forWidth) {
+        return [0, 0];
+    }
+
+    vfunc_allocate(container, box) {
+        const f = Math.max(0, Math.min(1, this.fraction));
+        const child = new Clutter.ActorBox();
+        child.set_origin(box.x1, box.y1);
+        child.set_size(Math.round(box.get_width() * f), box.get_height());
+        for (const actor of container.get_children())
+            actor.allocate(child);
+    }
+});
+
 export class NotchView {
     /**
      * @param {CleanupRegistry} cleanup everything made here is released on dispose
      * @param {object} handlers {onClick, onDismiss, onHover(bool), onAction(id, index),
      *   onMedia('previous'|'toggle'|'next'), onToggleDnd, onCopy(entryId), onCollapse,
-     *   onOpenNotification(notification)}
+     *   onOpenNotification(notification), onOpenList, getPosition(): Promise<number|null>}
      * @param {function(string): string} gettext
      */
     constructor(cleanup, handlers, gettext) {
@@ -71,8 +117,12 @@ export class NotchView {
         this._kind = null;
         this._page = null;
         this._barTimer = 0;
+        this._liveTimer = 0;         // clock and scrubber refresh while the dashboard is open
+        this._timeline = null;       // the spring of the shape
+        this._timelineId = 0;
         this._size = SIZES.idle;
         this._glass = null;
+        this._ears = null;
         this._glassShown = false;
         this._grab = null;          // Main.pushModal grab while the dashboard is open
         this._wantGrab = false;
@@ -91,7 +141,9 @@ export class NotchView {
         this._island = new St.Widget({
             name: 'kiwi-notch',
             style_class: 'kiwi-notch',
-            layout_manager: new Clutter.BinLayout(),
+            // Pages keep the size of their target shape and stay centred while the island
+            // springs around them (it clips), so text never reflows mid-animation.
+            layout_manager: new Clutter.FixedLayout(),
             reactive: true,
             track_hover: true,
             clip_to_allocation: true,
@@ -103,12 +155,16 @@ export class NotchView {
         cleanup.add(() => {
             this._destroyed = true;
             this._page = null;
+            this._stopSpring();
+            this._stopTimers();
+            this._interface = null;
             this._releaseGrab();
             Main.layoutManager.removeChrome(this._island);
             this._island.destroy();
         });
 
         cleanup.connect(this._island, 'notify::hover', () => this._h.onHover(this._island.hover));
+        cleanup.connect(this._island, 'notify::width', () => this._centerPages());
         // A press or release on a button inside the card belongs to that button. Bubbling up
         // here it used to count as a click on the notch too, which collapsed the dashboard
         // and destroyed the button before it could emit 'clicked'.
@@ -129,6 +185,7 @@ export class NotchView {
         });
         cleanup.connect(Main.layoutManager, 'monitors-changed', () => this._place(this._size, false));
 
+        this._addEars();
         this._attachGlass();
         this._place(SIZES.idle, false);
     }
@@ -216,6 +273,72 @@ export class NotchView {
         return Clutter.EVENT_PROPAGATE;
     }
 
+    // ---- ears -----------------------------------------------------------------------------
+    // Each ear is an EAR_RADIUS square just outside one top corner of the island, filled with
+    // the island's background colour minus a quarter circle centred on the ear's outer bottom
+    // corner. The island's top corners are square, so ear and island share one straight edge
+    // and the black runs from the island's side into the top edge along a smooth arc.
+    // The ears touch the island but never overlap it, so a translucent fill is not doubled
+    // along the seam. Snap constraints put both edges of each ear on the island's allocation
+    // (fractional while it eases), so there is no gap at any width.
+
+    _addEars() {
+        const parent = this._island.get_parent();
+        const edge = Clutter.SnapEdge;
+        const snap = (ear, from, to, offset) => ear.add_constraint(new Clutter.SnapConstraint({
+            source: this._island, from_edge: from, to_edge: to, offset,
+        }));
+        this._ears = ['left', 'right'].map(side => {
+            const ear = new St.DrawingArea({
+                name: `kiwi-notch-ear-${side}`,
+                style_class: 'kiwi-notch-ear',
+                reactive: false,
+            });
+            ear.connect('repaint', () => this._paintEar(ear, side));
+            parent.insert_child_below(ear, this._island);
+            if (side === 'left') {
+                snap(ear, edge.RIGHT, edge.LEFT, 0);
+                snap(ear, edge.LEFT, edge.LEFT, -EAR_RADIUS);
+            } else {
+                snap(ear, edge.LEFT, edge.RIGHT, 0);
+                snap(ear, edge.RIGHT, edge.RIGHT, EAR_RADIUS);
+            }
+            snap(ear, edge.TOP, edge.TOP, 0);
+            snap(ear, edge.BOTTOM, edge.TOP, EAR_RADIUS);
+            // Shown, hidden and faded with the island
+            this._island.bind_property('visible', ear, 'visible', GObject.BindingFlags.SYNC_CREATE);
+            this._island.bind_property('opacity', ear, 'opacity', GObject.BindingFlags.SYNC_CREATE);
+            return ear;
+        });
+        // A theme or Glass change to the island's fill repaints the ears in the same colour
+        this._cleanup.connect(this._island, 'style-changed', () => this._ears?.forEach(e => e.queue_repaint()));
+        this._cleanup.add(() => {
+            this._ears?.forEach(e => e.destroy());
+            this._ears = null;
+        });
+    }
+
+    _paintEar(ear, side) {
+        const cr = ear.get_context();
+        try {
+            const [w, h] = ear.get_surface_size();
+            const c = this._island.get_theme_node().get_background_color();
+            cr.setOperator(Cairo.Operator.CLEAR);
+            cr.paint();
+            cr.setOperator(Cairo.Operator.OVER);
+            // The square, minus the circle of radius w centred on the outer bottom corner
+            const cx = side === 'left' ? 0 : w;
+            cr.newPath();
+            cr.rectangle(0, 0, w, h);
+            cr.arc(cx, h, w, 0, 2 * Math.PI);
+            cr.setFillRule(Cairo.FillRule.EVEN_ODD);
+            cr.setSourceRGBA(c.red / 255, c.green / 255, c.blue / 255, c.alpha / 255);
+            cr.fill();
+        } finally {
+            cr.$dispose();
+        }
+    }
+
     /** Glass blur behind the large cards; the small pill is plain black. */
     _attachGlass() {
         try {
@@ -241,6 +364,28 @@ export class NotchView {
         return Main.layoutManager.primaryMonitor;
     }
 
+    /** Animations are on (GNOME setting, or forced by the Shell) and reduced motion is off */
+    _motion() {
+        return Glass.motion && (St.Settings.get().enable_animations || !!global.force_animations);
+    }
+
+    _stopSpring() {
+        const tl = this._timeline;
+        this._timeline = null;
+        if (!tl)
+            return;
+        tl.disconnect(this._timelineId);
+        this._timelineId = 0;
+        tl.stop();
+    }
+
+    // Centred on the monitor, glued to its top edge
+    _geometry(w, h) {
+        const monitor = this._monitor();
+        w = Math.round(w);
+        return { x: monitor.x + Math.round((monitor.width - w) / 2), y: monitor.y, width: w, height: Math.round(h) };
+    }
+
     _place(size, animate) {
         if (this._destroyed)
             return;
@@ -248,21 +393,36 @@ export class NotchView {
         const monitor = this._monitor();
         if (!monitor)
             return;
-        const x = Math.round(monitor.x + (monitor.width - size.w) / 2);
-        const y = monitor.y;
         const island = this._island;
         island.style = `border-radius: 0 0 ${size.r}px ${size.r}px;`;
         island.remove_all_transitions();
-        if (!animate || !Glass.motion || !island.mapped) {
-            island.set({ x, y, width: size.w, height: size.h });
+        this._stopSpring();
+        if (!animate || !this._motion() || !island.mapped) {
+            island.set(this._geometry(size.w, size.h));
             return;
         }
-        const growing = size.w * size.h > island.width * island.height;
-        island.ease({
-            x, y, width: size.w, height: size.h,
-            duration: growing ? GROW_MS : SHRINK_MS,
-            mode: growing ? Clutter.AnimationMode.EASE_OUT_BACK : Clutter.AnimationMode.EASE_OUT_QUAD,
+        // A spring on a timeline (Clutter's easing modes have no spring). Each frame sets the
+        // size from the curve; the ears follow through their snap constraints.
+        const from = { w: island.width, h: island.height };
+        const growing = size.w * size.h > from.w * from.h;
+        const params = growing ? GROW_SPRING : SHRINK_SPRING;
+        const settle = growing ? GROW_SETTLE_MS : SHRINK_SETTLE_MS;
+        const tl = new Clutter.Timeline({ actor: island, duration: settle });
+        this._timeline = tl;
+        this._timelineId = tl.connect('new-frame', () => {
+            const elapsed = tl.get_elapsed_time();
+            const k = elapsed >= settle ? 1 : spring(elapsed / 1000, params);
+            island.set(this._geometry(from.w + (size.w - from.w) * k, from.h + (size.h - from.h) * k));
+            if (elapsed >= settle)
+                this._stopSpring();
         });
+        tl.connect('completed', () => {
+            if (this._timeline === tl) {
+                this._stopSpring();
+                island.set(this._geometry(size.w, size.h));
+            }
+        });
+        tl.start();
     }
 
     /** @param {boolean} show the island is on screen at all (bar visible, not hidden by fullscreen) */
@@ -274,126 +434,258 @@ export class NotchView {
         this._glass?.setVisible(show && this._glassShown);
     }
 
+
     /**
      * @param {object} vm stateMachine.view(state)
-     * @param {object} ctx {notification, media, dnd, count}
+     * @param {object} ctx {notification, media, dnd, count, recent, clipboard}
      */
     render(vm, ctx) {
         if (this._destroyed)
             return;
         const n = ctx.notification;
         const mediaPlain = ctx.media ? { ...ctx.media, appIcon: undefined } : null; // icons are not JSON
+        const dashboard = vm.kind === 'expanded' && vm.content === 'dashboard';
         const signature = JSON.stringify([
             vm.kind, vm.content, vm.notificationId, vm.badge,
             vm.activity?.data ?? null, vm.osd?.kind, vm.osd?.level, vm.osd?.label,
-            vm.content === 'dashboard'
-                ? [mediaPlain, ctx.dnd, ctx.count, ctx.clipboard, (ctx.recent ?? []).map(r => [r.title, r.app, r.when])]
+            dashboard
+                ? [mediaPlain, ctx.dnd, ctx.count, ctx.clipboard,
+                    (ctx.recent ?? []).map(r => [r.title, r.app, r.when, r.body])]
                 : null,
             n ? [n.title, n.body, n.actions?.length ?? 0] : null,
         ]);
         if (signature === this._signature)
             return;
-        const kindChanged = this._kind !== vm.kind;
+        const shapeChanged = this._kind !== vm.kind || this._content !== vm.content;
         this._signature = signature;
         this._kind = vm.kind;
+        this._content = vm.content;
+
+        const layout = dashboard ? this._dashboardLayout(ctx) : null;
+        let size = layout?.size ?? vm.size;
+        if (vm.kind === 'expanded' && !dashboard && n)
+            size = cardSize({ actions: (n.actions?.length ?? 0) > 0 });
+        const growing = size.w * size.h > this._island.width * this._island.height;
+        const motion = this._motion();
 
         this._glassShown = vm.kind === 'expanded';
         this._glass?.setVisible(this._island.visible && this._glassShown);
-        this._place(vm.size, true);
-        this._wantGrab = vm.kind === 'expanded' && vm.content === 'dashboard';
+        this._place(size, true);
+        this._wantGrab = dashboard;
         this._syncGrab();
 
         const old = this._page;
         this._page = null;
-        old?.destroy();
-        if (this._barTimer)
-            this._cleanup.release(this._barTimer);
-        this._barTimer = 0;
+        this._stopTimers();
+        if (old)
+            this._retire(old, motion && shapeChanged);
         let page;
         try {
-            page = this._build(vm, ctx);
+            page = this._build(vm, ctx, layout);
         } catch (e) {
             // Never leave a half-built page behind; draw an empty pill and retry next time.
             console.error('[Kiwi] notch page failed:', e);
-            if (this._barTimer)
-                this._cleanup.release(this._barTimer);
-            this._barTimer = 0;
+            this._stopTimers();
             this._signature = null;
-            page = new St.Widget({ x_expand: true, y_expand: true });
+            page = new St.Widget();
         }
         this._page = page;
+        page.set_size(size.w, size.h);
         this._island.add_child(page);
-        if (Glass.motion && kindChanged) {
+        this._centerPages();
+        if (motion && shapeChanged) {
+            // The content arrives once the shape is nearly there; a slight drop from above
+            // reads as coming out of the notch.
             page.opacity = 0;
+            page.translation_y = growing ? -6 : 0;
             page.ease({
                 opacity: 255,
-                delay: Math.round(GROW_MS * 0.4),
-                duration: FADE_MS,
-                mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+                translation_y: 0,
+                delay: growing ? CONTENT_DELAY_MS : 40,
+                duration: FADE_IN_MS,
+                mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
             });
         }
     }
 
-    _build(vm, ctx) {
+    _dashboardLayout(ctx) {
+        const rows = (ctx.recent ?? []).length;
+        return dashboardLayout({
+            media: !!ctx.media,
+            rows,
+            more: moreCount(ctx.count, rows) > 0,
+            clipboard: !!ctx.clipboard,
+            clipRows: ctx.clipboard?.length ?? 0,
+        });
+    }
+
+    // Pages are as wide as their target shape; keep them centred in the moving island.
+    _centerPages() {
+        const w = this._island.width;
+        for (const child of this._island.get_children())
+            child.set_position(Math.round((w - child.width) / 2), 0);
+    }
+
+    _stopTimers() {
+        for (const key of ['_barTimer', '_liveTimer']) {
+            if (this[key])
+                this._cleanup.release(this[key]);
+            this[key] = 0;
+        }
+    }
+
+    // The old page fades out quickly while the shape changes, and takes no more clicks.
+    _retire(old, fade) {
+        const walk = a => {
+            if (a instanceof St.Button)
+                a.reactive = false;
+            a.get_children().forEach(walk);
+        };
+        walk(old);
+        if (!fade) {
+            old.destroy();
+            return;
+        }
+        let gone = false;
+        old.connect('destroy', () => {
+            gone = true;
+        });
+        old.ease({
+            opacity: 0,
+            duration: FADE_OUT_MS,
+            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+            onStopped: () => {
+                if (!gone && !this._destroyed)
+                    old.destroy();
+            },
+        });
+    }
+
+    _build(vm, ctx, layout) {
         switch (vm.kind) {
         case 'live-activity': return this._activityPage(vm.activity.data, ctx);
         case 'osd': return this._osdPage(vm.osd);
         case 'compact': return this._compactPage(ctx.notification, vm.badge);
         case 'expanded':
             return vm.content === 'dashboard'
-                ? this._dashboardPage(ctx)
+                ? this._dashboardPage(ctx, layout)
                 : this._cardPage(vm.notificationId, ctx.notification, vm.badge);
         default:
-            return new St.Widget({ x_expand: true, y_expand: true });
+            return new St.Widget();
         }
     }
 
-    // ---- pages ---------------------------------------------------------------------------
+    // ---- small pieces --------------------------------------------------------------------
 
     _row(styleClass) {
-        return new St.BoxLayout({
-            style_class: `kiwi-notch-row ${styleClass}`,
-            x_expand: true, y_expand: true,
-            y_align: Clutter.ActorAlign.FILL,
+        return new St.BoxLayout({ style_class: `kiwi-notch-row ${styleClass}` });
+    }
+
+    _notificationIcon(notification) {
+        return notification.gicon ?? notification.source?.icon ?? themed('dialog-information-symbolic');
+    }
+
+    /**
+     * Cover art with rounded corners. A local file is drawn as the background of a rounded
+     * box (St clips a background image to its border radius); a remote URL loads through GIO
+     * as an icon; without art the app icon sits on a soft tile.
+     */
+    _artwork(media, size, styleClass) {
+        const url = media?.art;
+        const bin = new St.Bin({
+            style_class: `kiwi-notch-artwork ${styleClass}`,
+            width: size, height: size,
+            y_align: Clutter.ActorAlign.CENTER,
         });
+        if (typeof url === 'string' && url.startsWith('file://') && !/["\\]/.test(url)) {
+            bin.style = `background-image: url("${url}"); background-size: cover;`;
+            return bin;
+        }
+        const plain = media?.appIcon ?? themed('audio-x-generic-symbolic');
+        const remote = artIcon(url);
+        if (remote) {
+            bin.add_style_class_name('kiwi-notch-artwork-remote');
+            bin.set_child(icon(remote, size, 'kiwi-notch-art', plain));
+        } else {
+            bin.add_style_class_name('kiwi-notch-artwork-empty');
+            bin.set_child(icon(plain, Math.round(size * 0.5), 'kiwi-notch-icon'));
+        }
+        return bin;
     }
 
-    _activityPage(data, ctx) {
-        const row = this._row('kiwi-notch-activity');
-        const art = artIcon(data.art);
-        const plain = ctx.media?.appIcon ?? themed('audio-x-generic-symbolic');
-        row.add_child(icon(art ?? plain, 20, 'kiwi-notch-art', art ? plain : null));
-        row.add_child(label(data.title, 'kiwi-notch-title', { x_expand: true }));
-        row.add_child(this._bars(data.playing));
-        return row;
-    }
-
-    // Equalizer glyph; the bars move only while playing and only when animations are allowed.
+    // The live-activity waveform: bars that move while playing (only with motion allowed)
     _bars(playing) {
         const box = new St.BoxLayout({
             style_class: 'kiwi-notch-bars', y_align: Clutter.ActorAlign.CENTER,
         });
         const bars = [];
         for (let i = 0; i < BARS; i++) {
-            const bar = new St.Widget({ style_class: 'kiwi-notch-bar', height: 6 + i * 3 % 9 });
+            const bar = new St.Widget({
+                style_class: 'kiwi-notch-bar', height: BAR_REST[i], y_align: Clutter.ActorAlign.CENTER,
+            });
             bars.push(bar);
             box.add_child(bar);
         }
-        if (playing && Glass.motion) {
+        if (playing && this._motion()) {
+            const peak = [10, 16, 14, 9];
             this._barTimer = this._cleanup.timeout(BAR_TICK_MS, () => {
-                for (const bar of bars) {
+                for (let i = 0; i < bars.length; i++) {
+                    const bar = bars[i];
                     if (bar.get_stage() === null)
                         return GLib.SOURCE_REMOVE;
                     bar.ease({
-                        height: 4 + Math.floor(Math.random() * 12),
+                        height: 4 + Math.round(Math.random() * (peak[i] - 4)),
                         duration: BAR_TICK_MS,
                         mode: Clutter.AnimationMode.EASE_IN_OUT_QUAD,
                     });
                 }
                 return GLib.SOURCE_CONTINUE;
             }, { name: 'notch bars' });
+        } else if (!playing) {
+            box.add_style_class_name('kiwi-notch-bars-paused');
         }
         return box;
+    }
+
+    // Runs every function in `fns` now and then every second while `page` is on screen.
+    _startLive(page, fns) {
+        if (!fns.length)
+            return;
+        const run = () => fns.forEach(fn => {
+            try {
+                fn();
+            } catch (e) {
+                console.error('[Kiwi] notch refresh failed:', e);
+            }
+        });
+        run();
+        this._liveTimer = this._cleanup.timeout(LIVE_TICK_MS, () => {
+            if (this._destroyed || this._page !== page)
+                return GLib.SOURCE_REMOVE;
+            run();
+            return GLib.SOURCE_CONTINUE;
+        }, { name: 'notch live' });
+    }
+
+    _clockFormat() {
+        try {
+            this._interface ??= new Gio.Settings({ schema_id: 'org.gnome.desktop.interface' });
+            return this._interface.get_string('clock-format');
+        } catch (_e) {
+            return '24h';
+        }
+    }
+
+    // ---- pills -----------------------------------------------------------------------------
+
+    // Like a compact live activity: tiny art at the left, the waveform at the right, the
+    // title between them (ellipsized, so it shows only as far as there is room).
+    _activityPage(data, ctx) {
+        const row = this._row('kiwi-notch-activity');
+        row.add_child(this._artwork({ art: data.art, appIcon: ctx.media?.appIcon }, 20, 'kiwi-notch-artwork-small'));
+        row.add_child(label(data.title, 'kiwi-notch-pill-title', { x_expand: true }));
+        row.add_child(this._bars(data.playing));
+        return row;
     }
 
     _osdPage(osd) {
@@ -402,21 +694,30 @@ export class NotchView {
         row.add_child(icon(osd.icon ?? themed(fallback), 16));
         const level = osd.level;
         if (level === null || level === undefined) {
-            row.add_child(label(osd.label ?? '', 'kiwi-notch-title', { x_expand: true }));
+            row.add_child(label(osd.label ?? '', 'kiwi-notch-pill-title', { x_expand: true }));
             return row;
         }
         const max = osd.maxLevel && osd.maxLevel > 0 ? osd.maxLevel : 1;
         const fraction = Math.max(0, Math.min(1, level / max));
-        const track = new St.Widget({
-            style_class: 'kiwi-notch-track', x_expand: true, y_align: Clutter.ActorAlign.CENTER, height: 6,
-        });
-        const fill = new St.Widget({ style_class: 'kiwi-notch-fill', height: 6 });
-        track.add_child(fill);
-        const sync = () => fill.set_size(Math.round(track.width * fraction), track.height);
-        track.connect('notify::allocation', sync);
-        row.add_child(track);
+        row.add_child(this._track('kiwi-notch-track', 'kiwi-notch-fill', 6, fraction));
         row.add_child(label(`${Math.round(level * 100)}`, 'kiwi-notch-value'));
         return row;
+    }
+
+    /** A bar with a fill. Returns the track; `track.kiwiSetFraction(f)` moves the fill. */
+    _track(trackClass, fillClass, height, fraction) {
+        const layout = new FractionLayout();
+        layout.fraction = fraction;
+        const track = new St.Widget({
+            style_class: trackClass, x_expand: true, y_align: Clutter.ActorAlign.CENTER, height,
+            layout_manager: layout,
+        });
+        track.add_child(new St.Widget({ style_class: fillClass }));
+        track.kiwiSetFraction = f => {
+            layout.fraction = f;
+            layout.layout_changed();
+        };
+        return track;
     }
 
     _compactPage(notification, badge) {
@@ -424,37 +725,37 @@ export class NotchView {
         if (!notification)
             return row;
         row.add_child(icon(this._notificationIcon(notification), 18));
-        row.add_child(label(notification.title, 'kiwi-notch-title', { x_expand: true }));
+        row.add_child(label(notification.title, 'kiwi-notch-pill-title', { x_expand: true }));
         if (badge > 0)
             row.add_child(label(`+${badge}`, 'kiwi-notch-badge'));
         return row;
     }
 
-    _notificationIcon(notification) {
-        return notification.gicon ?? notification.source?.icon ?? themed('dialog-information-symbolic');
-    }
+    // ---- notification card -------------------------------------------------------------------
 
     _cardPage(id, notification, badge) {
         const card = new St.BoxLayout({
             style_class: 'kiwi-notch-card',
             orientation: Clutter.Orientation.VERTICAL,
-            x_expand: true, y_expand: true,
         });
         if (!notification)
             return card;
 
         const header = new St.BoxLayout({ style_class: 'kiwi-notch-card-header' });
-        header.add_child(icon(this._notificationIcon(notification), 20));
+        header.add_child(icon(this._notificationIcon(notification), 20, 'kiwi-notch-card-icon'));
         const app = notification.source?.title ?? '';
         const when = notification.datetime?.format?.('%H:%M') ?? '';
-        header.add_child(label([app, when].filter(Boolean).join(' · '), 'kiwi-notch-meta', { x_expand: true }));
+        header.add_child(label(app, 'kiwi-notch-card-app', { x_expand: true }));
         if (badge > 0)
             header.add_child(label(`+${badge}`, 'kiwi-notch-badge'));
+        if (when)
+            header.add_child(label(when, 'kiwi-notch-card-time'));
         const close = new St.Button({
             style_class: 'kiwi-notch-close',
             child: new St.Icon({ icon_name: 'window-close-symbolic', icon_size: 12 }),
             can_focus: true,
             accessible_name: this._('Dismiss'),
+            y_align: Clutter.ActorAlign.CENTER,
         });
         close.connect('clicked', () => this._h.onDismiss());
         header.add_child(close);
@@ -493,103 +794,227 @@ export class NotchView {
         return card;
     }
 
-    _dashboardPage(ctx) {
-        const page = new St.BoxLayout({ style_class: 'kiwi-notch-dashboard', x_expand: true, y_expand: true });
+    // ---- dashboard ---------------------------------------------------------------------------
+    // A 32px header level with the top bar (date at the left, Do Not Disturb at the right),
+    // then the columns on one grid: equal outer padding, tops aligned. See dashboardModel.js.
 
-        const media = new St.BoxLayout({ style_class: 'kiwi-notch-panel', orientation: Clutter.Orientation.VERTICAL, x_expand: true });
-        media.add_child(label(this._('Now Playing'), 'kiwi-notch-meta'));
-        if (ctx.media) {
-            const head = new St.BoxLayout({ style_class: 'kiwi-notch-nowplaying' });
-            const art = artIcon(ctx.media.art);
-            const plain = ctx.media.appIcon ?? themed('audio-x-generic-symbolic');
-            head.add_child(icon(art ?? plain, 48, 'kiwi-notch-art-large', art ? plain : null));
-            const text = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, x_expand: true, y_align: Clutter.ActorAlign.CENTER });
-            text.add_child(label(ctx.media.title, 'kiwi-notch-card-title'));
-            text.add_child(label(ctx.media.artist, 'kiwi-notch-meta'));
-            head.add_child(text);
-            media.add_child(head);
-            const controls = new St.BoxLayout({ style_class: 'kiwi-notch-controls', x_align: Clutter.ActorAlign.CENTER });
-            const control = (name, symbolic, command, enabled) => {
-                const button = new St.Button({
-                    style_class: 'kiwi-notch-control',
-                    child: new St.Icon({ icon_name: symbolic, icon_size: 18 }),
-                    can_focus: true,
-                    reactive: enabled,
-                    opacity: enabled ? 255 : 90,
-                    accessible_name: name,
-                });
-                button.connect('clicked', () => this._h.onMedia(command));
-                controls.add_child(button);
-            };
-            control(this._('Previous'), 'media-skip-backward-symbolic', 'previous', ctx.media.canPrevious);
-            control(ctx.media.playing ? this._('Pause') : this._('Play'),
-                ctx.media.playing ? 'media-playback-pause-symbolic' : 'media-playback-start-symbolic',
-                'toggle', true);
-            control(this._('Next'), 'media-skip-forward-symbolic', 'next', ctx.media.canNext);
-            media.add_child(controls);
-        } else {
-            media.add_child(label(this._('Nothing is playing'), 'kiwi-notch-title'));
+    _dashboardPage(ctx, layout) {
+        const page = new St.BoxLayout({
+            style_class: 'kiwi-notch-dash',
+            orientation: Clutter.Orientation.VERTICAL,
+        });
+        const live = [];
+
+        const header = new St.BoxLayout({ style_class: 'kiwi-notch-dash-header' });
+        const date = label('', 'kiwi-notch-dash-date', { x_expand: true });
+        if (layout.mode === 'media')
+            live.push(() => (date.text = GLib.DateTime.new_now_local().format('%a %e %b').replace(/\s+/g, ' ')));
+        header.add_child(date);
+        header.add_child(this._dndButton(ctx.dnd));
+        page.add_child(header);
+
+        const body = new St.BoxLayout({ style_class: 'kiwi-notch-dash-body', y_expand: true });
+        body.add_child(layout.mode === 'media'
+            ? this._mediaColumn(ctx.media, layout.widths.media, live)
+            : this._clockColumn(layout.widths.clock, live));
+        body.add_child(this._listColumn(ctx, layout.widths.list));
+        if (ctx.clipboard)
+            body.add_child(this._clipboardColumn(ctx.clipboard, layout.widths.clipboard));
+        page.add_child(body);
+
+        this._startLive(page, live);
+        return page;
+    }
+
+    // A small moon in the corner; the look follows the state, the behaviour is the router's.
+    _dndButton(on) {
+        const button = new St.Button({
+            style_class: 'kiwi-notch-dnd',
+            child: new St.Icon({ icon_name: 'weather-clear-night-symbolic', icon_size: 16 }),
+            can_focus: true,
+            toggle_mode: true,
+            checked: !!on,
+            accessible_name: this._('Do Not Disturb'),
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        button.connect('clicked', () => this._h.onToggleDnd());
+        return button;
+    }
+
+    _column(styleClass, width) {
+        return new St.BoxLayout({
+            style_class: `kiwi-notch-col ${styleClass}`,
+            orientation: Clutter.Orientation.VERTICAL,
+            width,
+        });
+    }
+
+    _mediaColumn(media, width, live) {
+        const col = this._column('kiwi-notch-media', width);
+        let alive = true;
+        col.connect('destroy', () => {
+            alive = false;
+        });
+
+        // Art, title and artist, the app icon in the top-right corner
+        const top = new St.BoxLayout({ style_class: 'kiwi-notch-media-top' });
+        top.add_child(this._artwork(media, 68, 'kiwi-notch-artwork-large'));
+        const text = new St.BoxLayout({
+            style_class: 'kiwi-notch-media-text',
+            orientation: Clutter.Orientation.VERTICAL,
+            x_expand: true,
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        text.add_child(label(media.title || this._('Unknown title'), 'kiwi-notch-media-title'));
+        if (media.artist)
+            text.add_child(label(media.artist, 'kiwi-notch-media-artist'));
+        top.add_child(text);
+        if (media.appIcon) {
+            top.add_child(new St.Icon({
+                gicon: media.appIcon, icon_size: 16,
+                style_class: 'kiwi-notch-media-app', y_align: Clutter.ActorAlign.START,
+            }));
         }
-        page.add_child(media);
+        col.add_child(top);
 
-        const notifications = new St.BoxLayout({ style_class: 'kiwi-notch-panel', orientation: Clutter.Orientation.VERTICAL, x_expand: true });
-        notifications.add_child(label(this._('Notifications'), 'kiwi-notch-meta'));
+        // The scrubber, when the player reports a length (and then a position)
+        const hasLength = Number.isFinite(media.length) && media.length > 0;
+        const scrub = new St.BoxLayout({ style_class: 'kiwi-notch-scrub', visible: hasLength, opacity: 0 });
+        const elapsed = label('', 'kiwi-notch-scrub-time');
+        const remaining = label('', 'kiwi-notch-scrub-time kiwi-notch-scrub-remaining');
+        const track = this._track('kiwi-notch-scrub-track', 'kiwi-notch-scrub-fill', 4, 0);
+        scrub.add_child(elapsed);
+        scrub.add_child(track);
+        scrub.add_child(remaining);
+        col.add_child(scrub);
+        if (hasLength && this._h.getPosition) {
+            live.push(() => {
+                this._h.getPosition().then(position => {
+                    if (!alive || this._destroyed)
+                        return;
+                    const p = trackProgress(position, media.length);
+                    scrub.opacity = p ? 255 : 0;
+                    if (!p)
+                        return;
+                    elapsed.text = p.elapsed;
+                    remaining.text = p.remaining;
+                    track.kiwiSetFraction(p.fraction);
+                }).catch(() => {});
+            });
+        }
+
+        // Previous, play / pause, next
+        const controls = new St.BoxLayout({
+            style_class: 'kiwi-notch-controls', x_align: Clutter.ActorAlign.CENTER,
+        });
+        const control = (name, symbolic, command, enabled, size) => {
+            const button = new St.Button({
+                style_class: 'kiwi-notch-control',
+                child: new St.Icon({ icon_name: symbolic, icon_size: size }),
+                can_focus: enabled,
+                reactive: enabled,
+                opacity: enabled ? 255 : 90,
+                accessible_name: name,
+            });
+            button.connect('clicked', () => this._h.onMedia(command));
+            controls.add_child(button);
+        };
+        control(this._('Previous'), 'media-skip-backward-symbolic', 'previous', media.canPrevious, 20);
+        control(media.playing ? this._('Pause') : this._('Play'),
+            media.playing ? 'media-playback-pause-symbolic' : 'media-playback-start-symbolic',
+            'toggle', true, 24);
+        control(this._('Next'), 'media-skip-forward-symbolic', 'next', media.canNext, 20);
+        col.add_child(controls);
+        return col;
+    }
+
+    // Nothing is playing: a large clock and the date in place of the player
+    _clockColumn(width, live) {
+        const col = this._column('kiwi-notch-clock', width);
+        const row = new St.BoxLayout({ style_class: 'kiwi-notch-clock-row' });
+        const time = new St.Label({ style_class: 'kiwi-notch-clock-time' });
+        const suffix = new St.Label({ style_class: 'kiwi-notch-clock-suffix', y_align: Clutter.ActorAlign.END });
+        row.add_child(time);
+        row.add_child(suffix);
+        col.add_child(row);
+        const day = label('', 'kiwi-notch-clock-date');
+        col.add_child(day);
+        live.push(() => {
+            const now = GLib.DateTime.new_now_local();
+            const c = formatClock(now.get_hour(), now.get_minute(), this._clockFormat());
+            time.text = c.time;
+            suffix.text = c.suffix;
+            suffix.visible = !!c.suffix;
+            day.text = now.format('%A, %e %B').replace(/\s+/g, ' ');
+        });
+        return col;
+    }
+
+    _listColumn(ctx, width) {
+        const col = this._column('kiwi-notch-list', width);
         const recent = ctx.recent ?? [];
-        if (!recent.length)
-            notifications.add_child(label(this._('No notifications'), 'kiwi-notch-title'));
+        if (!recent.length) {
+            col.add_child(label(this._('No notifications'), 'kiwi-notch-empty-text kiwi-notch-list-empty', {
+                x_align: Clutter.ActorAlign.CENTER,
+            }));
+        }
         for (const item of recent) {
             const button = new St.Button({
-                style_class: 'kiwi-notch-clip kiwi-notch-recent',
+                style_class: 'kiwi-notch-recent',
                 can_focus: true,
                 x_expand: true,
                 x_align: Clutter.ActorAlign.FILL,
                 accessible_name: item.title,
             });
             const row = new St.BoxLayout({ style_class: 'kiwi-notch-recent-row', x_expand: true });
-            row.add_child(icon(item.gicon ?? themed('dialog-information-symbolic'), 16));
-            const text = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, x_expand: true });
-            text.add_child(label(item.title, 'kiwi-notch-title'));
-            text.add_child(label([item.app, item.when].filter(Boolean).join(' · '), 'kiwi-notch-meta'));
+            row.add_child(icon(item.gicon ?? themed('dialog-information-symbolic'), 20, 'kiwi-notch-recent-icon'));
+            const text = new St.BoxLayout({
+                orientation: Clutter.Orientation.VERTICAL, x_expand: true, y_align: Clutter.ActorAlign.CENTER,
+            });
+            const line = new St.BoxLayout({ style_class: 'kiwi-notch-recent-line' });
+            line.add_child(label(item.title, 'kiwi-notch-recent-title', { x_expand: true }));
+            if (item.when)
+                line.add_child(label(item.when, 'kiwi-notch-recent-time'));
+            text.add_child(line);
+            const sub = (item.body ?? '').replace(/\s+/g, ' ').trim() || item.app;
+            if (sub)
+                text.add_child(label(sub, 'kiwi-notch-recent-sub'));
             row.add_child(text);
             button.set_child(row);
             button.connect('clicked', () => this._h.onOpenNotification?.(item.notification));
-            notifications.add_child(button);
+            col.add_child(button);
         }
-        if (ctx.count > recent.length) {
-            notifications.add_child(label(
-                this._('%d more in the message list').format(ctx.count - recent.length), 'kiwi-notch-meta'));
+        const more = moreCount(ctx.count, recent.length);
+        if (more > 0) {
+            const button = new St.Button({
+                style_class: 'kiwi-notch-more',
+                label: this._('%d more').format(more),
+                can_focus: true,
+                x_align: Clutter.ActorAlign.START,
+            });
+            button.connect('clicked', () => this._h.onOpenList?.());
+            col.add_child(button);
         }
-        const dnd = new St.Button({
-            style_class: 'kiwi-notch-action',
-            label: ctx.dnd ? this._('Do Not Disturb: on') : this._('Do Not Disturb: off'),
-            can_focus: true,
-            x_align: Clutter.ActorAlign.START,
-            toggle_mode: true,
-            checked: ctx.dnd,
-        });
-        dnd.connect('clicked', () => this._h.onToggleDnd());
-        notifications.add_child(dnd);
-        page.add_child(notifications);
+        return col;
+    }
 
-        // Clipboard history (null while the clipboard feature is off: no panel)
-        if (ctx.clipboard) {
-            const clip = new St.BoxLayout({ style_class: 'kiwi-notch-panel', orientation: Clutter.Orientation.VERTICAL, x_expand: true });
-            clip.add_child(label(this._('Clipboard'), 'kiwi-notch-meta'));
-            if (!ctx.clipboard.length)
-                clip.add_child(label(this._('Nothing copied yet'), 'kiwi-notch-title'));
-            for (const entry of ctx.clipboard) {
-                const button = new St.Button({
-                    style_class: 'kiwi-notch-clip',
-                    can_focus: true,
-                    x_expand: true,
-                    x_align: Clutter.ActorAlign.FILL,
-                    child: label(entry.text, 'kiwi-notch-title'),
-                });
-                button.connect('clicked', () => this._h.onCopy(entry.id));
-                clip.add_child(button);
-            }
-            page.add_child(clip);
+    // Clipboard history (null while the clipboard feature or its notch option is off)
+    _clipboardColumn(entries, width) {
+        const col = this._column('kiwi-notch-clipboard', width);
+        col.add_child(label(this._('Clipboard'), 'kiwi-notch-caption'));
+        if (!entries.length)
+            col.add_child(label(this._('Nothing copied yet'), 'kiwi-notch-empty-text'));
+        for (const entry of entries) {
+            const button = new St.Button({
+                style_class: 'kiwi-notch-clip',
+                can_focus: true,
+                x_expand: true,
+                x_align: Clutter.ActorAlign.FILL,
+                child: label(entry.text, 'kiwi-notch-clip-text'),
+            });
+            button.connect('clicked', () => this._h.onCopy(entry.id));
+            col.add_child(button);
         }
-        return page;
+        return col;
     }
 }

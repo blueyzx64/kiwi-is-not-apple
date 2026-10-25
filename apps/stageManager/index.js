@@ -19,20 +19,39 @@
 // workspace thumbnails: Workspace/WorkspaceThumbnail._isOverviewWindow (private, same in 48-51)
 // are wrapped while the feature is on. Alt-Tab still lists them, as on macOS.
 //
+// Window sets (UX round 2, macOS behaviour): drag a strip entry onto the stage, or Shift-click
+// it, to add it to the set on the stage. The outer parts of the stage lay the two side by side
+// (dropTarget.js; the frames are put back when the set breaks up). Drag a set window by its
+// titlebar onto the strip, or press the remove shortcut, to take it out. A set goes to the strip
+// as one entry and comes back with its layout. A new app window takes the stage and the old set
+// goes to the strip (or joins the set: stage-manager-new-windows). Sets live in memory, per
+// workspace, for the session.
+//
+// Show the desktop: toggleDesktop() sends the whole stage to the strip and back (the top bar
+// button calls it), as does a click on the wallpaper (stage-manager-wallpaper-click).
+//
 // The toggle shortcut lives in shortcut.js (its own entry, so it still works while this is off).
 // Control Center and Spotlight toggles belong to the Control Center and Spotlight and flip the same key.
 // A top bar icon would vanish when the feature is off, so none is built here.
 
+import Clutter from 'gi://Clutter';
+import Meta from 'gi://Meta';
 import St from 'gi://St';
+import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as Workspace from 'resource:///org/gnome/shell/ui/workspace.js';
 import * as WorkspaceThumbnail from 'resource:///org/gnome/shell/ui/workspaceThumbnail.js';
 
 import { WindowState } from '../../coordinators/windowState.js';
 import { watchReducedMotion } from '../../lib/compat.js';
+import { Keybindings } from '../../lib/keybindings.js';
 import { KiwiSettings } from '../../lib/settings.js';
+import { StageDropTarget } from './dropTarget.js';
 import { FADE_MS, Flights } from './flight.js';
-import { StageModel, fitCount, fitToStage, pointRect, stageArea } from './model.js';
+import {
+    StageModel, fitCount, fitToStage, isClick, overlaps, pointRect, scaleMs, stageArea, tileOrder, tilePlan,
+    workspaceDirection,
+} from './model.js';
 import { StageStrip } from './strip.js';
 import { WindowSource } from './shellAdapter.js';
 import { WindowHider } from './windowHider.js';
@@ -42,7 +61,12 @@ const KEYS = [
     'stage-manager-autohide',
     'stage-manager-group-by-app',
     'stage-manager-recent-count',
+    'stage-manager-tilt',
+    'stage-manager-animation-speed',
 ];
+
+const WINDOW_DRAG_POLL_MS = 60;
+
 
 export class StageManager {
     constructor(ctx, cleanup) {
@@ -61,6 +85,13 @@ export class StageManager {
         this._leaving = new Map();  // Meta.Window -> frame rect it left from, flown after the strip is rebuilt
         this._skipped = new Set();  // actors handed to Main.wm.skipNextEffect
         this._reduced = false;
+        this._drop = null;
+        this._desktops = new Map(); // Meta.Workspace -> {stageId, focus}: the desktop is shown there
+        this._seen = new WeakSet(); // models synced once (their first windows are not "new")
+        this._tileSig = new Map();  // StageModel -> layout last applied to its current set
+        this._wsIndex = -1;
+        this._windowDrag = null;    // {win, frame, token} while a set window is dragged
+        this._press = null;         // a press on the wallpaper, waiting for its release
     }
 
     _motion() {
@@ -77,12 +108,23 @@ export class StageManager {
             this._reduced = reduced;
         });
         this._strip = new StageStrip(cleanup, {
-            onActivate: id => this._activate(id),
+            onActivate: (id, { add }) => (add ? this._addToStage(id, 'center') : this._activate(id)),
             motion: () => this._motion(),
+            onDragBegin: () => this._drop?.show(this._dropArea()),
+            onDragEnd: () => this._drop?.hide(),
+        });
+        this._drop = new StageDropTarget(cleanup, {
+            onDrop: (id, zone) => this._addToStage(id, zone),
+            motion: () => this._motion(),
+            speed: () => this._speed(),
+            hint: zone => (zone === 'center' ? _('Add to set') : _('Side by side')),
         });
         // Created after the strip and the hider's records go after it: on disable the hider
         // restores the windows first, then the clones go, then the strip.
-        this._flights = new Flights(cleanup, { onLanded: win => this._strip?.setFlying(win, false) });
+        this._flights = new Flights(cleanup, {
+            onLanded: win => this._strip?.setFlying(win, false),
+            ms: d => scaleMs(d, this._speed()),
+        });
         this._hider = new WindowHider(cleanup, {
             motion: () => this._motion(),
             land: win => this._flights?.land(win),
@@ -133,12 +175,25 @@ export class StageManager {
         });
         cleanup.connect(global.display, 'workareas-changed', () => this._sync());
 
+        // A set window dragged by its titlebar onto the strip leaves the set
+        cleanup.connect(global.display, 'grab-op-begin', (_d, win, op) => this._windowDragBegin(win, op));
+        cleanup.connect(global.display, 'grab-op-end', (_d, win) => this._windowDragEnd(win));
+        // A click on the wallpaper shows the desktop (and brings the stage back)
+        cleanup.connect(global.stage, 'captured-event', (_s, event) => this._wallpaperEvent(event));
+        Keybindings.add(cleanup, 'stage-manager-remove-shortcut', this._ctx.settings,
+            () => this._removeFocused());
+
         // Last in, first out: stop intercepting and drop the stage mode, then everything else
         cleanup.add(() => {
             WindowState.setMinimizeInterceptor(null);
             WindowState.setStageActive(false);
             WindowState.clearFlag('staged');
             this._models.clear();
+            this._desktops.clear();
+            this._tileSig.clear();
+            this._windowDrag = null;
+            this._press = null;
+            this._drop = null;
             this._flights = null;
             this._source = null;
             this._strip = null;
@@ -189,6 +244,25 @@ export class StageManager {
         return this._ks.string('stage-manager-side') === 'right' ? 'right' : 'left';
     }
 
+    _speed() {
+        const v = this._ks?.double('stage-manager-animation-speed');
+        return Number.isFinite(v) && v > 0 ? v : 1;
+    }
+
+    _tilt() {
+        return this._ks?.int('stage-manager-tilt') ?? 22;
+    }
+
+    /** Where a dragged entry may land: the stage, never the strip's own column. */
+    _dropArea() {
+        return stageArea(this._workArea(), { side: this._side(), autohide: false });
+    }
+
+    /** Where a side-by-side set is laid out: the stage, the strip's column too when it auto-hides. */
+    _tileArea() {
+        return stageArea(this._workArea(), { side: this._side(), autohide: this._ks.bool('stage-manager-autohide') });
+    }
+
     _frame(win) {
         const r = win.get_frame_rect();
         return { x: r.x, y: r.y, width: r.width, height: r.height };
@@ -226,7 +300,11 @@ export class StageManager {
         const byId = new Map(list.map(w => [w.id, w]));
         const idOf = new Map(list.map(w => [w.win, w.id]));
 
-        model.sync(list.map(({ id, appId }) => ({ id, appId })));
+        const ws = global.workspace_manager.get_active_workspace();
+        const { added } = model.sync(list.map(({ id, appId }) => ({ id, appId })));
+        const fresh = this._seen.has(model) ? added.filter(id => this._canShow(byId.get(id))) : [];
+        this._seen.add(model);
+        this._newWindows(model, fresh, ws);
 
         // A focused dialog stands for the window that owns it (or, orphaned, for its app)
         const target = this._source.focusTarget(new Set(idOf.keys()));
@@ -235,10 +313,17 @@ export class StageManager {
             if (focused !== id || !byId.has(id))
                 this._parked.delete(id);
         }
-        if (focused !== null && this._canShow(byId.get(focused)))
+        // The desktop is shown: only a window the user brings forward ends it
+        const desk = this._desktops.get(ws);
+        if (desk && focused !== null && focused !== desk.focus && this._canShow(byId.get(focused)))
+            this._desktops.delete(ws);
+        const showingDesktop = this._desktops.has(ws);
+        if (!showingDesktop && focused !== null && this._canShow(byId.get(focused)))
             model.focus(focused);
-        this._ensureStage(model, byId);
+        if (!showingDesktop)
+            this._ensureStage(model, byId);
         this._revealIneligible();
+        this._syncTiles(model, byId);
 
         const cap = this._cap(model);
         if (!this._overview)
@@ -247,9 +332,16 @@ export class StageManager {
         const cards = model.strip().slice(0, cap).map(stage => {
             const rest = stage.windows.filter(id => id !== stage.lead);
             const ordered = [stage.lead, ...rest].map(id => byId.get(id));
-            return { id: stage.id, app: ordered[0].app, windows: ordered.map(w => w.win) };
+            const names = [...new Set(ordered.map(w => w.app?.get_name?.()).filter(Boolean))];
+            return { id: stage.id, app: ordered[0].app, windows: ordered.map(w => w.win), set: !!stage.set, names };
         });
+        const wsIndex = ws.index();
+        const slide = this._wsIndex >= 0 ? workspaceDirection(this._wsIndex, wsIndex) : 0;
+        this._wsIndex = wsIndex;
         this._strip.update({
+            slide,
+            tilt: this._tilt(),
+            speed: this._speed(),
             side: this._side(),
             autohide: ks.bool('stage-manager-autohide'),
             overview: this._overview,
@@ -450,6 +542,8 @@ export class StageManager {
             return;
         const area = stageArea(this._workArea(), { side: this._side(), autohide: false });
         for (const win of wins) {
+            if (this._hider.isTiled(win))
+                continue;
             if (win.minimized || win.is_fullscreen() || win.maximized_horizontally || win.maximized_vertically)
                 continue;
             if (win.get_monitor() !== Main.layoutManager.primaryIndex)
@@ -462,14 +556,271 @@ export class StageManager {
         }
     }
 
+    /**
+     * Windows seen for the first time on this workspace. macOS: a new app takes the stage and
+     * the previous set goes to the strip as one entry. With 'join', it joins the set instead.
+     */
+    _newWindows(model, fresh, ws) {
+        if (fresh.length === 0)
+            return;
+        this._desktops.delete(ws);
+        const join = this._ks.string('stage-manager-new-windows') === 'join';
+        for (const id of fresh) {
+            const current = model.current;
+            const own = model.stageOf(id);
+            // Only a window that came with a stage of its own (not one that joined its app's)
+            const alone = own && own.windows.every(w => fresh.includes(w));
+            if (join && current && alone && own.id !== current.id)
+                model.join(own.id, current.id);
+            else if (alone)
+                model.focus(id);
+        }
+    }
+
+    /**
+     * Lay the current set out side by side when its layout changed, and give windows back their
+     * old frames once they leave a side-by-side set.
+     */
+    _syncTiles(model, byId) {
+        const current = model.current;
+        const tiles = current ? model.tilesOf(current.id) : null;
+        const usable = tiles?.filter(id => byId.get(id) && !byId.get(id).minimized) ?? [];
+        const sig = usable.length >= 2 ? `${current.id}:${usable.join(',')}` : null;
+        if (sig && sig !== this._tileSig.get(model)) {
+            const plan = tilePlan(this._tileArea(), usable.length);
+            usable.forEach((id, i) => {
+                if (plan[i])
+                    this._hider.tile(byId.get(id).win, plan[i]);
+            });
+        }
+        this._tileSig.set(model, sig);
+
+        // Untile windows whose set is gone or no longer side by side (any workspace)
+        for (const win of this._hider.tiledWindows()) {
+            const m = this._models.get(win.get_workspace());
+            const id = win.get_stable_sequence();
+            const stage = m?.stageOf(id);
+            const keep = stage && m.tilesOf(stage.id)?.includes(id);
+            if (!keep)
+                this._hider.untile(win);
+        }
+    }
+
     // ---- actions ---------------------------------------------------------------------------
 
+    /** Bring a strip entry (a stage or a whole set) to the stage. */
     _activate(stageId) {
-        // Focus the stage's lead window; the focus change switches the stage (one code path)
+        const ws = global.workspace_manager.get_active_workspace();
         const stage = this._model().stages().find(st => st.id === stageId);
-        const entry = stage && this._source.windows().find(w => w.id === stage.lead);
-        if (entry)
-            Main.activateWindow(entry.win);
+        const entries = new Map(this._source.windows().map(w => [w.id, w]));
+        const entry = stage && entries.get(stage.lead);
+        if (!entry)
+            return;
+        this._desktops.delete(ws);
+        // A set comes back whole: its other windows first, so the lead ends on top
+        for (const id of stage.windows) {
+            const w = entries.get(id);
+            if (!w || id === stage.lead)
+                continue;
+            if (w.win.minimized)
+                w.win.unminimize();
+            w.win.raise();
+        }
+        // Focusing the lead switches the stage (the focus path); sync for a lead that had the focus
+        Main.activateWindow(entry.win);
+        this._sync();
+    }
+
+    /**
+     * Add a strip entry to the set on the stage (drag and drop, or Shift-click). zone 'left' or
+     * 'right' lays them out side by side; 'center' keeps the frames.
+     * @returns {boolean} true when it joined
+     */
+    _addToStage(stageId, zone) {
+        if (!this._source)
+            return false;
+        const model = this._model();
+        const current = model.current;
+        if (!current || this._desktops.has(global.workspace_manager.get_active_workspace())) {
+            this._activate(stageId);
+            return true;
+        }
+        const src = model.stages().find(st => st.id === stageId);
+        if (!src || src.id === current.id)
+            return false;
+        const entries = new Map(this._source.windows().map(w => [w.id, w]));
+        // Windows on the stage left to right: the set's layout, else where they stand
+        const staged = model.tilesOf(current.id) ??
+            [...current.windows].filter(id => entries.has(id))
+                .sort((a, b) => entries.get(a).win.get_frame_rect().x - entries.get(b).win.get_frame_rect().x);
+        const set = model.join(src.id, current.id);
+        if (!set)
+            return false;
+        const order = tileOrder(zone, src.windows, staged);
+        if (order)
+            model.setTiles(set.id, order);
+        for (const id of src.windows) {
+            const w = entries.get(id);
+            if (w?.win.minimized)
+                w.win.unminimize();
+        }
+        this._sync();
+        const lead = entries.get(src.lead);
+        if (lead)
+            this._cleanup.idle(() => Main.activateWindow(lead.win), { name: 'stage-manager-focus' });
+        return true;
+    }
+
+    /** The remove shortcut: the focused window leaves its set for the strip. */
+    _removeFocused() {
+        const win = global.display.focus_window;
+        if (win)
+            this._removeFromSet(win);
+    }
+
+    /**
+     * Take a window out of the set on the stage and put it in the strip (the rest stays).
+     * @returns {boolean} true when it was in a set
+     */
+    _removeFromSet(win) {
+        if (!this._source)
+            return false;
+        const model = this._model();
+        const id = win.get_stable_sequence();
+        if (!model.current?.set || !model.current.windows.includes(id))
+            return false;
+        return this._unstage(win, { minimize: false });
+    }
+
+    // ---- show the desktop ------------------------------------------------------------------
+
+    /** True while the stage of the active workspace is in the strip to show the desktop. */
+    get isDesktopShown() {
+        return this._desktops.has(global.workspace_manager.get_active_workspace());
+    }
+
+    /**
+     * Show the desktop: every window on the stage flies into the strip as one entry. Called
+     * again (or with the desktop shown), the stage comes back. Safe in any state; the top bar
+     * show-desktop button calls it.
+     * @returns {boolean} true when the desktop is shown afterwards
+     */
+    toggleDesktop() {
+        if (!this._source)
+            return false;
+        const ws = global.workspace_manager.get_active_workspace();
+        if (this._desktops.has(ws)) {
+            this._restoreDesktop(ws);
+            return false;
+        }
+        const model = this._model();
+        const current = model.current;
+        if (!current || this._overview)
+            return false;
+        const focus = global.display.focus_window;
+        this._desktops.set(ws, { stageId: current.id, focus: focus ? focus.get_stable_sequence() : null });
+        model.unfocus();
+        try {
+            global.display.unset_input_focus(global.get_current_time());
+        } catch (_e) {
+            // the stage stays empty either way: only a new focus ends the desktop
+        }
+        this._sync();
+        return true;
+    }
+
+    _restoreDesktop(ws) {
+        const desk = this._desktops.get(ws);
+        this._desktops.delete(ws);
+        const model = this._model(ws);
+        const stage = model.stages().find(st => st.id === desk?.stageId) ?? model.strip()[0];
+        if (stage)
+            this._activate(stage.id);
+        else
+            this._sync();
+    }
+
+    _wallpaperEvent(event) {
+        try {
+            const type = event.type();
+            if (type !== Clutter.EventType.BUTTON_PRESS && type !== Clutter.EventType.BUTTON_RELEASE)
+                return Clutter.EVENT_PROPAGATE;
+            if (event.get_button() !== Clutter.BUTTON_PRIMARY || Main.overview.visible || Main.modalCount > 0 ||
+                !this._ks.bool('stage-manager-wallpaper-click')) {
+                this._press = null;
+                return Clutter.EVENT_PROPAGATE;
+            }
+            const [x, y] = event.get_coords();
+            const point = { x, y, time: event.get_time() };
+            if (type === Clutter.EventType.BUTTON_PRESS) {
+                this._press = global.stage.get_event_actor(event) instanceof Meta.BackgroundActor ? point : null;
+                return Clutter.EVENT_PROPAGATE;
+            }
+            const press = this._press;
+            this._press = null;
+            if (!press || !isClick(press, point) ||
+                !(global.stage.get_event_actor(event) instanceof Meta.BackgroundActor))
+                return Clutter.EVENT_PROPAGATE;
+            // Only a stage to hide, or a desktop to bring the stage back from
+            if (this.isDesktopShown || this._model().current)
+                this._cleanup.idle(() => this.toggleDesktop(), { name: 'stage-manager-wallpaper' });
+        } catch (e) {
+            console.error(`[Kiwi] stage wallpaper click: ${e.message}`);
+        }
+        return Clutter.EVENT_PROPAGATE;
+    }
+
+    // ---- a set window dragged to the strip -------------------------------------------------
+
+    _windowDragBegin(win, op) {
+        if (!this._source || !win || this._overview)
+            return;
+        const moving = op === Meta.GrabOp.MOVING || op === Meta.GrabOp.MOVING_UNCONSTRAINED ||
+            op === Meta.GrabOp.KEYBOARD_MOVING;
+        const model = this._model();
+        const id = win.get_stable_sequence();
+        if (!moving || !model.current?.set || !model.current.windows.includes(id))
+            return;
+        this._endWindowDrag();
+        const drag = { win, frame: this._frame(win), token: 0, over: false };
+        this._windowDrag = drag;
+        this._strip.setDropHint('near');
+        drag.token = this._cleanup.timeout(WINDOW_DRAG_POLL_MS, () => {
+            const floor = this._strip?.floorRect();
+            const [px, py] = global.get_pointer();
+            drag.over = !!floor && overlaps({ x: px, y: py, width: 1, height: 1 }, floor);
+            this._strip?.setDropHint(drag.over ? 'over' : 'near');
+            return true;
+        }, { name: 'stage-manager-window-drag' });
+    }
+
+    _windowDragEnd(win) {
+        const drag = this._windowDrag;
+        if (!drag || drag.win !== win)
+            return;
+        const floor = this._strip?.floorRect();
+        const [px, py] = global.get_pointer();
+        const over = !!floor && overlaps({ x: px, y: py, width: 1, height: 1 }, floor);
+        this._endWindowDrag();
+        if (!over)
+            return;
+        // It goes to the strip from where it was picked up, so it comes back there
+        const f = drag.frame;
+        try {
+            win.move_frame(true, f.x, f.y);
+        } catch (_e) {
+            // closed meanwhile
+        }
+        this._removeFromSet(win);
+    }
+
+    _endWindowDrag() {
+        const drag = this._windowDrag;
+        if (!drag)
+            return;
+        this._windowDrag = null;
+        this._cleanup.release(drag.token);
+        this._strip?.setDropHint(null);
     }
 
     /**
@@ -477,7 +828,7 @@ export class StageManager {
      * With no other stage to bring forward, it is a real minimize (returns false).
      * @returns {boolean} true when handled
      */
-    _unstage(win) {
+    _unstage(win, { minimize = true } = {}) {
         const model = this._model();
         const entries = this._source.windows();
         const byId = new Map(entries.map(e => [e.id, e]));
@@ -492,7 +843,8 @@ export class StageManager {
         if (others.length === 0 && !next)
             return false;
 
-        this._hider.markUserMinimized(win);
+        if (minimize)
+            this._hider.markUserMinimized(win);
         this._parked.add(me.id);
         const before = model.current.id;
         model.split(me.id);

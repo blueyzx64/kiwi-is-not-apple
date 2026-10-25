@@ -1,6 +1,6 @@
 // Run: gjs -m tests/roundedCornersModel.test.js
 import {
-    RADIUS_DEFAULT, clampRadius, enlargeForEffects, fboOrigin, fitRadius, frameInActor,
+    RADIUS_DEFAULT, WHICH_DEFAULT, WHICH_VALUES, clampRadius, cornerMask, enlargeForEffects, fboOrigin, fitRadius, frameInActor,
     isExcluded, normalizeId, qualifies, shaderGeometry,
 } from '../apps/roundedCorners/model.js';
 
@@ -27,6 +27,16 @@ test('clampRadius: range, rounding and junk', () => {
     eq(clampRadius(7.6), 8);
     eq(clampRadius('x'), RADIUS_DEFAULT);
     eq(clampRadius(undefined), RADIUS_DEFAULT);
+});
+
+test('cornerMask: top (default) rounds TL and TR only, all rounds four', () => {
+    eq(WHICH_DEFAULT, 'top');
+    eq(WHICH_VALUES, ['top', 'all']);
+    eq(cornerMask('top'), [1, 1, 0, 0]);
+    eq(cornerMask('all'), [1, 1, 1, 1]);
+    eq(cornerMask(''), [1, 1, 0, 0]);
+    eq(cornerMask(undefined), [1, 1, 0, 0]);
+    eq(cornerMask('bottom'), [1, 1, 0, 0]);
 });
 
 test('fitRadius: never more than half the shorter side', () => {

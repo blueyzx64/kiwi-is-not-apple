@@ -25,10 +25,12 @@ function rectOf(r) {
 export class Flights {
     /**
      * @param {import('../../lib/disposables.js').CleanupRegistry} cleanup
-     * @param {{onLanded?: (win: Meta.Window) => void}} [handlers]
+     * @param {{onLanded?: (win: Meta.Window) => void, ms?: (ms: number) => number}} [handlers]
+     *   ms: a duration under the user's animation speed
      */
-    constructor(cleanup, { onLanded = () => {} } = {}) {
+    constructor(cleanup, { onLanded = () => {}, ms = d => d } = {}) {
         this._onLanded = onLanded;
+        this._ms = ms;
         this._active = new Map();   // Meta.Window -> flight
         cleanup.add(() => this.cancelAll());
     }
@@ -88,7 +90,7 @@ export class Flights {
             x: b.x, y: b.y, scale_x: b.scale, scale_y: b.scale, scale_z: b.scale,
             rotation_angle_y: to.angle ?? 0,
             opacity: fade === 'out' ? 0 : 255,
-            duration, mode,
+            duration: this._ms(duration), mode,
             onStopped: finished => {
                 if (this._active.get(win) === flight)
                     this._finish(win, flight, finished);
