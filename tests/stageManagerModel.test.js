@@ -1,7 +1,7 @@
 // Run: gjs -m tests/stageManagerModel.test.js
 import {
     DEFAULTS, overlaps, thumbFit, cropThumb, stackLayers, cardTilt, fitCount, stripLayout,
-    edgeZone, stageArea, fitToStage, centerOnStage, stripShown, StageModel, focusRoot, isExempt, edgeBarrier,
+    pointRect, clonePose, balancedFit, edgeZone, stageArea, fitToStage, centerOnStage, stripShown, StageModel, focusRoot, isExempt, edgeBarrier,
 } from '../apps/stageManager/model.js';
 
 let failed = 0;
@@ -83,9 +83,45 @@ test('stackLayers shrink and fade', () => {
     eq(l[2].opacity < l[1].opacity, true);
 });
 test('cardTilt flips with side', () => {
-    eq(cardTilt('left'), 24);
-    eq(cardTilt('right'), -24);
+    eq(cardTilt('left', 24), 24);
+    eq(cardTilt('right', 24), -24);
+    eq(cardTilt('left'), DEFAULTS.rotation);
     eq(cardTilt('left', 10), 10);
+});
+
+test('balancedFit keeps the aspect ratio', () => {
+    for (const [w, h] of [[361, 600], [900, 329], [700, 520], [1920, 1080]]) {
+        const f = balancedFit(w, h, 132, 112);
+        near(f.width / f.height, w / h);
+        eq(f.width <= 132 + 1e-9 && f.height <= 112 + 1e-9, true);
+    }
+});
+test('balancedFit: a tall window takes the slot height, a wide one the slot width', () => {
+    near(balancedFit(361, 600, 132, 112).height, 112);
+    near(balancedFit(900, 329, 132, 112).width, 132);
+});
+test('balancedFit: a normal window lands on the target area', () => {
+    const f = balancedFit(700, 520, 132, 112, 0.6);
+    near(f.width * f.height, 0.6 * 132 * 112);
+});
+test('balancedFit: no window is a sliver', () => {
+    const areas = [[361, 600], [900, 329], [700, 520]].map(([w, h]) => {
+        const f = balancedFit(w, h, 132, 112);
+        return f.width * f.height;
+    });
+    eq(Math.min(...areas) / Math.max(...areas) > 0.5, true);
+});
+test('balancedFit: empty input', () => eq(balancedFit(0, 10, 100, 100), { width: 0, height: 0, scale: 0 }));
+test('clonePose pivots on the frame centre', () => {
+    const frame = { x: 100, y: 50, width: 400, height: 300 };
+    const buffer = { x: 80, y: 30, width: 440, height: 340 };
+    eq(clonePose(frame, buffer, frame), { x: 80, y: 30, pivotX: 220 / 440, pivotY: 170 / 340, scale: 1 });
+    const p = clonePose(frame, buffer, { x: 0, y: 0, width: 100, height: 100 });
+    eq([p.x, p.y, p.scale], [50 - 220, 50 - 170, 0.25]);
+    eq(clonePose(frame, buffer, { x: 0, y: 0, width: 0, height: 5 }), null);
+});
+test('pointRect is centred and keeps aspect', () => {
+    eq(pointRect({ x: 50, y: 50 }, { width: 200, height: 100 }, 20), { x: 40, y: 45, width: 20, height: 10 });
 });
 
 // ---- strip layout ----
@@ -124,7 +160,7 @@ test('stripLayout shrinks to fit a short screen', () => {
     const last = l.cards[3];
     eq(last.y + last.height <= wa.height - DEFAULTS.padBottom + 1e-6, true);
     eq(l.cards[0].y >= DEFAULTS.padTop - 1e-6, true);
-    near(l.cards[0].width / l.cards[0].height, 180 / 116);
+    near(l.cards[0].width / l.cards[0].height, DEFAULTS.thumbW / DEFAULTS.thumbH);
 });
 test('stripLayout honours option overrides', () => {
     const l = stripLayout({ workArea: WA, count: 1, stripWidth: 300, thumbW: 100, thumbH: 60 });
@@ -209,6 +245,23 @@ test('focus makes the stage current and moves it to the front', () => {
     eq(m.current.id, 'app:b');
     eq(ids(m.stages())[0], 'app:b');
     eq(ids(m.strip()), ['app:a', 'app:c', 'win:5']);
+});
+test('inStrip: current stage windows are not parked, strip ones are', () => {
+    const m = new StageModel();
+    m.sync(SET);
+    m.focus(3);
+    eq(m.inStrip(3), false);
+    eq(m.inStrip(1), true);
+    eq(m.inStrip(2), true);
+});
+test('inStrip honours the card limit', () => {
+    const m = new StageModel();
+    m.sync(SET);
+    m.focus(3);
+    // strip order after focusing b: a, c, win:5
+    eq(m.inStrip(5, 2), false);
+    eq(m.inStrip(4, 2), true);
+    eq(m.inStrip(99), false);
 });
 test('focusing the same stage again is not a change', () => {
     const m = new StageModel();

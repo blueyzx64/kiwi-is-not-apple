@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Kiwi is not Apple 2.0.0\n"
 "Report-Msgid-Bugs-To: https://github.com/kem-a/kiwi-kemma/issues\n"
-"POT-Creation-Date: 2026-10-25 13:57+0000\n"
+"POT-Creation-Date: 2026-10-25 21:44+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -25,55 +25,77 @@ msgstr ""
 msgid "Unknown title"
 msgstr ""
 
-#: prefs.js:127
+#: prefs.js:86
+msgid "Page"
+msgstr ""
+
+#: prefs.js:235
+msgid "Search preferences"
+msgstr ""
+
+#: prefs.js:242 apps/clipboard/popover.js:57
+#: apps/spotlight/providers/settingsCatalog.js:23 apps/spotlight/view.js:73
+#: apps/spotlight/view.js:74
+msgid "Search"
+msgstr ""
+
+#: prefs.js:251
+msgid "No Results Found"
+msgstr ""
+
+#: prefs.js:252
+msgid "Try a different search"
+msgstr ""
+
+#: prefs.js:411
 msgid "Kiwi (is not Apple)"
 msgstr ""
 
-#: prefs.js:147 apps/spotlight/providers/settingsCatalog.js:32
+#: prefs.js:435 apps/spotlight/providers/settingsCatalog.js:37
 msgid "About"
 msgstr ""
 
-#: prefs.js:196
+#: prefs.js:483
 msgid "Change log"
 msgstr ""
 
-#: prefs.js:232
+#: prefs.js:519
 msgid "Website"
 msgstr ""
 
-#: prefs.js:236
+#: prefs.js:523
 msgid "Report an Issue"
 msgstr ""
 
-#: prefs.js:241
+#: prefs.js:528
 msgid "Credits"
 msgstr ""
 
-#: prefs.js:244 prefs.js:259
+#: prefs.js:531 prefs.js:546
 msgid "Legal"
 msgstr ""
 
-#: prefs.js:267
+#: prefs.js:554
 msgid "License"
 msgstr ""
 
-#: prefs.js:268
+#: prefs.js:555
 msgid "Kiwi is free and open source software"
 msgstr ""
 
-#: prefs.js:273
+#: prefs.js:560
 msgid "GNU General Public License v3.0"
 msgstr ""
 
-#: prefs.js:275
+#: prefs.js:562
 msgid "View the full license text on GitHub"
 msgstr ""
 
-#: prefs.js:282 prefs.js:283
+#: prefs.js:569 prefs.js:570
 msgid "Copyright"
 msgstr ""
 
-#: prefs.js:283
+#: prefs.js:570
 msgid ""
 "This program is free software: you can redistribute it and/or modify it "
 "under the terms of the GNU General Public License as published by the Free "
@@ -81,560 +103,560 @@ msgid ""
 "any later version."
 msgstr ""
 
-#: prefs.js:337
+#: prefs.js:624
 msgid "Become a sponsor on GitHub"
 msgstr ""
 
-#: prefs.js:350
+#: prefs.js:637
 msgid "Support Me ♡"
 msgstr ""
 
-#: prefs.js:376
+#: prefs.js:663
 msgid "Panel"
 msgstr ""
 
-#: prefs.js:382 prefs.js:396
+#: prefs.js:668 prefs.js:682
 msgid "Panel Transparency"
 msgstr ""
 
-#: prefs.js:383
+#: prefs.js:669
 msgid "Configure panel transparency and appearance"
 msgstr ""
 
-#: prefs.js:397
+#: prefs.js:683
 msgid "Make the top panel transparent"
 msgstr ""
 
-#: prefs.js:404
+#: prefs.js:690
 msgid "Transparency Level"
 msgstr ""
 
-#: prefs.js:405
+#: prefs.js:691
 msgid "Set panel transparency (0-100)"
 msgstr ""
 
-#: prefs.js:419
+#: prefs.js:705
 msgid "Opaque When Window Maximized"
 msgstr ""
 
-#: prefs.js:420
+#: prefs.js:706
 msgid "Make panel opaque when a maximized window touches it"
 msgstr ""
 
-#: prefs.js:428
+#: prefs.js:714
 msgid "Panel Blur"
 msgstr ""
 
-#: prefs.js:429 prefs.js:475
+#: prefs.js:715 prefs.js:761
 msgid "Blur the background behind the panel"
 msgstr ""
 
-#: prefs.js:437
+#: prefs.js:723
 msgid "Panel Color Fix"
 msgstr ""
 
-#: prefs.js:438
+#: prefs.js:724
 msgid "Fix white panel on some themes (e.g., Ubuntu Yaru)"
 msgstr ""
 
-#: prefs.js:445
+#: prefs.js:731
 msgid "Invert Tray Icons on Light Wallpapers"
 msgstr ""
 
-#: prefs.js:446
+#: prefs.js:732
 msgid ""
 "Darken white monochrome tray icons when the panel adapts to a light "
 "wallpaper. Colored icons are left untouched"
 msgstr ""
 
-#: prefs.js:474 prefs.js:862
+#: prefs.js:760 prefs.js:1147
 msgid "Handled by Liquid Glass"
 msgstr ""
 
-#: prefs.js:489
+#: prefs.js:775
 msgid "Panel Items"
 msgstr ""
 
-#: prefs.js:490
+#: prefs.js:776
 msgid "Choose what the top panel and its menus show"
 msgstr ""
 
-#: prefs.js:497
+#: prefs.js:783
 msgid "Show Window Title"
 msgstr ""
 
-#: prefs.js:498
+#: prefs.js:784
 msgid "Display current window title in the top panel"
 msgstr ""
 
-#: prefs.js:507
+#: prefs.js:793
 msgid "Hide App Icon"
 msgstr ""
 
-#: prefs.js:508
+#: prefs.js:794
 msgid "Do not show the application icon next to the window title"
 msgstr ""
 
-#: prefs.js:515
+#: prefs.js:801
 msgid "Hide Window Subtitle"
 msgstr ""
 
-#: prefs.js:516
+#: prefs.js:802
 msgid "Show only the application name, without the window's own title"
 msgstr ""
 
-#: prefs.js:523
+#: prefs.js:809
 msgid "Disable Window Tiling"
 msgstr ""
 
-#: prefs.js:524
+#: prefs.js:810
 msgid ""
 "Drop the tiling layouts from the window title menu, and stop restoring tiled "
 "windows when their titlebar is dragged"
 msgstr ""
 
-#: prefs.js:550
+#: prefs.js:836
 msgid "Move Calendar to Right"
 msgstr ""
 
-#: prefs.js:551
+#: prefs.js:837
 msgid "Move calendar to right side and hide notifications"
 msgstr ""
 
-#: prefs.js:564
+#: prefs.js:850
 msgid "On while the notch is on"
 msgstr ""
 
-#: prefs.js:571
+#: prefs.js:857
 msgid "Keep GNOME Notification Panel"
 msgstr ""
 
-#: prefs.js:572
+#: prefs.js:858
 msgid "Don't split notification and calendar layout"
 msgstr ""
 
-#: prefs.js:578
+#: prefs.js:864
 msgid "Indicator Style"
 msgstr ""
 
-#: prefs.js:579
+#: prefs.js:865
 msgid "Notification dot recolor"
 msgstr ""
 
-#: prefs.js:582 prefs.js:923
+#: prefs.js:868 prefs.js:1207
 msgid "Default"
 msgstr ""
 
-#: prefs.js:582
+#: prefs.js:868
 msgid "Accent"
 msgstr ""
 
-#: prefs.js:582
+#: prefs.js:868
 msgid "Symbolic"
 msgstr ""
 
-#: prefs.js:591
+#: prefs.js:877
 msgid "Battery Percentage"
 msgstr ""
 
-#: prefs.js:603
+#: prefs.js:889
 msgid ""
 "Unavailable while GNOME Settings shows the battery percentage in the top bar"
 msgstr ""
 
-#: prefs.js:604
+#: prefs.js:890
 msgid "Show battery percentage in the top bar when below 20%"
 msgstr ""
 
-#: prefs.js:610
+#: prefs.js:896
 msgid "Custom Do Not Disturb Button"
 msgstr ""
 
-#: prefs.js:610
+#: prefs.js:896
 msgid ""
 "Replace the system Do Not Disturb button with Kiwi's custom implementation"
 msgstr ""
 
-#: prefs.js:611
+#: prefs.js:897
 msgid "Caps Lock and Num Lock"
 msgstr ""
 
-#: prefs.js:611
+#: prefs.js:897
 msgid "Show Caps Lock and Num Lock icon"
 msgstr ""
 
-#: prefs.js:612
+#: prefs.js:898
 msgid "Hide Activities Button"
 msgstr ""
 
-#: prefs.js:612
+#: prefs.js:898
 msgid "Hide the Activities button in the top panel"
 msgstr ""
 
-#: prefs.js:613
+#: prefs.js:899
 msgid "Add Username"
 msgstr ""
 
-#: prefs.js:613
+#: prefs.js:899
 msgid "Add username to the quick menu"
 msgstr ""
 
-#: prefs.js:622
+#: prefs.js:908
 msgid "Shown in Control Center while it is on"
 msgstr ""
 
-#: prefs.js:629 prefs.js:839
+#: prefs.js:915 prefs.js:1124
 msgid "Styling"
 msgstr ""
 
-#: prefs.js:630
+#: prefs.js:916
 msgid ""
 "Restyle stock GNOME Shell elements and GTK apps. Log out and back in for "
 "changes to take effect"
 msgstr ""
 
-#: prefs.js:635
+#: prefs.js:921
 msgid "Panel Styling"
 msgstr ""
 
-#: prefs.js:635
+#: prefs.js:921
 msgid ""
 "Tighter button spacing, smaller status icons, no dropdown arrows and a "
 "transparent panel in the overview"
 msgstr ""
 
-#: prefs.js:636
+#: prefs.js:922
 msgid "Menu and App Styling"
 msgstr ""
 
-#: prefs.js:636
+#: prefs.js:922
 msgid ""
 "Narrower shell menu items with accent-colored hover and selection, plus the "
 "GTK app fixes"
 msgstr ""
 
-#: prefs.js:642
+#: prefs.js:928
 msgid "Style Keyboard Indicator"
 msgstr ""
 
-#: prefs.js:643
+#: prefs.js:929
 msgid ""
 "Slightly style keyboard/input source indicator by converting to uppercase "
 "and adding border"
 msgstr ""
 
-#: prefs.js:650
+#: prefs.js:936
 msgid "Hide keyboard indicator"
 msgstr ""
 
-#: prefs.js:651
+#: prefs.js:937
 msgid "Completely hide the indicator from the panel"
 msgstr ""
 
-#: prefs.js:679 apps/liquidGlass/prefs.js:19
+#: prefs.js:965 apps/liquidGlass/prefs.js:19
 msgid "Dock"
 msgstr ""
 
-#: prefs.js:688
+#: prefs.js:973
 msgid "These options need the Dash to Dock extension installed and enabled"
 msgstr ""
 
-#: prefs.js:696
+#: prefs.js:981
 msgid "Dock Items"
 msgstr ""
 
-#: prefs.js:697
+#: prefs.js:982
 msgid "Add extra items to Dash-to-Dock"
 msgstr ""
 
-#: prefs.js:702
+#: prefs.js:987
 msgid "Minimize Windows to Dock"
 msgstr ""
 
-#: prefs.js:702
+#: prefs.js:987
 msgid ""
 "Park minimized windows as thumbnails in Dash-to-Dock, after the apps and "
 "before the trash"
 msgstr ""
 
-#: prefs.js:706
+#: prefs.js:991
 msgid "Downloads Folder in Dock"
 msgstr ""
 
-#: prefs.js:707
+#: prefs.js:992
 msgid ""
 "Add a Downloads folder before the trash that fans its newest files out over "
 "the desktop"
 msgstr ""
 
-#: prefs.js:716
+#: prefs.js:1001
 msgid "Stack Behind Folder"
 msgstr ""
 
-#: prefs.js:717
+#: prefs.js:1002
 msgid ""
 "Show the newest files sticking out of the folder icon instead of piled on "
 "top of it"
 msgstr ""
 
-#: prefs.js:735
+#: prefs.js:1020
 msgid "Launchpad Application"
 msgstr ""
 
-#: prefs.js:736
+#: prefs.js:1021
 msgid ""
 "Add custom Launchpad icon to dock that opens application overview. "
 "Recommended to hide default app launcher."
 msgstr ""
 
-#: prefs.js:746
+#: prefs.js:1031
 msgid "Custom Icon"
 msgstr ""
 
-#: prefs.js:749 prefs.js:834
+#: prefs.js:1034 prefs.js:1119
 msgid "Using default icon"
 msgstr ""
 
-#: prefs.js:757
+#: prefs.js:1042
 msgid "Reset to default icon"
 msgstr ""
 
-#: prefs.js:768
+#: prefs.js:1053
 msgid "Browse for icon"
 msgstr ""
 
-#: prefs.js:773
+#: prefs.js:1058
 msgid "Select Launchpad Icon"
 msgstr ""
 
-#: prefs.js:777
+#: prefs.js:1062
 msgid "Images (PNG, SVG)"
 msgstr ""
 
-#: prefs.js:805
+#: prefs.js:1090
 msgid "Icon Too Large"
 msgstr ""
 
-#: prefs.js:806
+#: prefs.js:1091
 msgid ""
 "The selected image exceeds 512×512 pixels. Please choose a smaller image."
 msgstr ""
 
-#: prefs.js:808
+#: prefs.js:1093
 msgid "OK"
 msgstr ""
 
-#: prefs.js:844
+#: prefs.js:1129
 msgid "Dock Styling"
 msgstr ""
 
-#: prefs.js:844
+#: prefs.js:1129
 msgid ""
 "Tighten icon spacing, drop the icon highlight and darken icons while pressed"
 msgstr ""
 
-#: prefs.js:845
+#: prefs.js:1130
 msgid "Dock Blur"
 msgstr ""
 
-#: prefs.js:845
+#: prefs.js:1130
 msgid ""
 "Blur the background behind Dash-to-Dock. Recommended fixed dock opacity 10% "
 "- 30%, min 1%."
 msgstr ""
 
-#: prefs.js:846
+#: prefs.js:1131
 msgid "Adaptive Dock Colors"
 msgstr ""
 
-#: prefs.js:846
+#: prefs.js:1131
 msgid ""
 "Flip the running indicators and separators to suit whatever is behind the "
 "dock, wallpaper or window"
 msgstr ""
 
-#: prefs.js:882
-msgid "Buttons"
+#: prefs.js:1167 apps/controlCenter/model.js:69
+msgid "Window Buttons"
 msgstr ""
 
-#: prefs.js:888
+#: prefs.js:1172
 msgid "Window Control Button Style"
 msgstr ""
 
-#: prefs.js:889
+#: prefs.js:1173
 msgid ""
 "Choose the window control button style. Log out to apply it across all apps."
 msgstr ""
 
-#: prefs.js:897
+#: prefs.js:1181
 msgid "Enable macOS Window Buttons"
 msgstr ""
 
-#: prefs.js:898
+#: prefs.js:1182
 msgid "Replace window control buttons in application windows with macOS style"
 msgstr ""
 
-#: prefs.js:919
+#: prefs.js:1203
 msgid "Button Type"
 msgstr ""
 
-#: prefs.js:920
+#: prefs.js:1204
 msgid "Choose the button icon set"
 msgstr ""
 
-#: prefs.js:923
+#: prefs.js:1207
 msgid "Alternative"
 msgstr ""
 
-#: prefs.js:923
+#: prefs.js:1207
 msgid "Glass"
 msgstr ""
 
-#: prefs.js:929
+#: prefs.js:1213
 msgid "Button Size"
 msgstr ""
 
-#: prefs.js:930
+#: prefs.js:1214
 msgid "Choose button size"
 msgstr ""
 
-#: prefs.js:933
+#: prefs.js:1217
 msgid "Small"
 msgstr ""
 
-#: prefs.js:933
+#: prefs.js:1217
 msgid "Normal"
 msgstr ""
 
-#: prefs.js:939
+#: prefs.js:1223
 msgid "Firefox Styling"
 msgstr ""
 
-#: prefs.js:940
+#: prefs.js:1224
 msgid ""
 "Apply macOS window control styling for Firefox. Recommended to use with "
 "vertical tabs."
 msgstr ""
 
-#: prefs.js:948
+#: prefs.js:1232
 msgid "Thunderbird Styling"
 msgstr ""
 
-#: prefs.js:949
+#: prefs.js:1233
 msgid "Apply macOS window control styling for Thunderbird."
 msgstr ""
 
-#: prefs.js:973
-msgid "Show Window Controls on Panel"
+#: prefs.js:1257
+msgid "Window controls in top bar (removes them from app windows)"
 msgstr ""
 
-#: prefs.js:974
+#: prefs.js:1258
 msgid ""
-"Display close, minimize, maximize buttons in the top panel for the focused "
-"window"
+"Close, minimize and maximize for the focused window. Turn off to give every "
+"app its own titlebar buttons back"
 msgstr ""
 
-#: prefs.js:983
+#: prefs.js:1267
 msgid "Options"
 msgstr ""
 
-#: prefs.js:989 apps/spotlight/providers/settingsCatalog.js:71
+#: prefs.js:1272 prefs.js:1465 apps/spotlight/providers/settingsCatalog.js:76
 msgid "Kiwi"
 msgstr ""
 
-#: prefs.js:990
+#: prefs.js:1273
 msgid ""
 "Kiwi is not like Apple, it's free open source project that brings macOS-like "
 "feel for GNOME"
 msgstr ""
 
-#: prefs.js:995
+#: prefs.js:1278
 msgid "Overview Wallpaper Blur"
 msgstr ""
 
-#: prefs.js:995
+#: prefs.js:1278
 msgid "Use blurred current wallpaper as overview background"
 msgstr ""
 
-#: prefs.js:996
+#: prefs.js:1279
 msgid "Seamless Overview Zoom"
 msgstr ""
 
-#: prefs.js:996
+#: prefs.js:1279
 msgid ""
 "Zoom the whole desktop, including the strip behind the panel, in and out of "
 "the overview"
 msgstr ""
 
-#: prefs.js:997
+#: prefs.js:1280
 msgid "Focus on Overview Exit"
 msgstr ""
 
-#: prefs.js:997
+#: prefs.js:1280
 msgid ""
 "Focus the window under the cursor instead of the previously focused one when "
 "leaving the overview"
 msgstr ""
 
-#: prefs.js:998
+#: prefs.js:1281
 msgid "Skip to Desktop"
 msgstr ""
 
-#: prefs.js:998
+#: prefs.js:1281
 msgid "Do not show the overview when logging in. Animation is still visible"
 msgstr ""
 
-#: prefs.js:999
+#: prefs.js:1282
 msgid "Hide Minimized Windows"
 msgstr ""
 
-#: prefs.js:999
+#: prefs.js:1282
 msgid "Hide minimized windows in the overview"
 msgstr ""
 
-#: prefs.js:1000
+#: prefs.js:1283
 msgid "Move Window to New Workspace"
 msgstr ""
 
-#: prefs.js:1000
+#: prefs.js:1283
 msgid "Move fullscreen window to a new workspace"
 msgstr ""
 
-#: prefs.js:1001
+#: prefs.js:1284
 msgid "Reduce App Animations"
 msgstr ""
 
-#: prefs.js:1001
+#: prefs.js:1284
 msgid "Mimic macOS window opening and closing with a subtle scale and fade"
 msgstr ""
 
-#: prefs.js:1002
+#: prefs.js:1285
 msgid "Focus New Windows"
 msgstr ""
 
-#: prefs.js:1002
+#: prefs.js:1285
 msgid ""
 "Automatically focus new windows instead of showing window-ready alerts. "
 "Requires extension reload"
 msgstr ""
 
-#: prefs.js:1003
+#: prefs.js:1286
 msgid "Transparent Move"
 msgstr ""
 
-#: prefs.js:1003
+#: prefs.js:1286
 msgid "Move window with transparency"
 msgstr ""
 
-#: prefs.js:1010
+#: prefs.js:1293
 msgid "Advanced"
 msgstr ""
 
-#: prefs.js:1040
+#: prefs.js:1322
 msgid "Titlebuttons Hover Effect for GTK3 apps"
 msgstr ""
 
-#: prefs.js:1053
+#: prefs.js:1335
 msgid ""
 "The titlebuttons hover module provides macOS-like hover effects for window "
 "controls in GTK3 applications. GTK3 apps cannot natively show hover effects "
@@ -646,200 +668,150 @@ msgid ""
 "is possible."
 msgstr ""
 
-#: prefs.js:1069
+#: prefs.js:1351
 msgid "Installation Guide on GitHub"
 msgstr ""
 
-#: prefs.js:1071
+#: prefs.js:1353
 msgid "Open the advanced module build instructions"
 msgstr ""
 
-#: prefs.js:1077
+#: prefs.js:1359
 msgid "More of my work..."
 msgstr ""
 
-#: prefs.js:1081
+#: prefs.js:1363
 msgid "Kiwi Menu"
 msgstr ""
 
-#: prefs.js:1081
+#: prefs.js:1363
 msgid "MacOS style menu for GNOME"
 msgstr ""
 
-#: prefs.js:1082
+#: prefs.js:1364
 msgid "AppManager"
 msgstr ""
 
-#: prefs.js:1082
+#: prefs.js:1364
 msgid "MacOS style AppImage installer and management application"
 msgstr ""
 
-#: prefs.js:1083
+#: prefs.js:1365
 msgid "Catalina Reloaded Icon Pack"
 msgstr ""
 
-#: prefs.js:1083
+#: prefs.js:1365
 msgid "macOS Tahoe icon theme for Linux"
 msgstr ""
 
-#: prefs.js:1084
+#: prefs.js:1366
 msgid "GDM Wallpaper"
 msgstr ""
 
-#: prefs.js:1084
+#: prefs.js:1366
 msgid "Set custom GDM login screen wallpaper"
 msgstr ""
 
-#: prefs.js:1096
+#: prefs.js:1378
 msgid "Other Recommended Extensions"
 msgstr ""
 
-#: prefs.js:1097
+#: prefs.js:1379
 msgid "Extensions that are compatible with Kiwi"
 msgstr ""
 
-#: prefs.js:1137
+#: prefs.js:1418
 msgid "This page failed to load"
 msgstr ""
 
-#: prefs.js:1151 prefs.js:1165
+#: prefs.js:1429 prefs.js:1443
 msgid "Restore Defaults"
 msgstr ""
 
-#: prefs.js:1155
+#: prefs.js:1433
 msgid "Reset every Kiwi setting to its default value"
 msgstr ""
 
-#: prefs.js:1161
+#: prefs.js:1439
 msgid "Restore Default Settings?"
 msgstr ""
 
-#: prefs.js:1162
+#: prefs.js:1440
 msgid ""
 "Every Kiwi setting will be reset to its default value. This cannot be undone."
 msgstr ""
 
-#: prefs.js:1164
+#: prefs.js:1442
 msgid "Cancel"
 msgstr ""
 
-#: apps/autohide/prefs.js:11
-msgid "Auto-hide Top Bar"
+#: prefs.js:1463
+msgid "General"
 msgstr ""
 
-#: apps/autohide/prefs.js:20 apps/stageManager/prefs.js:118
-msgid "Auto-hide"
+#: prefs.js:1464
+msgid "macOS Features"
 msgstr ""
 
-#: apps/autohide/prefs.js:21
-msgid ""
-"The top bar slides away and comes back when the pointer pushes against the "
-"top edge."
-msgstr ""
-
-#: apps/autohide/prefs.js:25
-msgid "Auto-hide the top bar"
-msgstr ""
-
-#: apps/autohide/prefs.js:26
-msgid "Windows then use the full screen height"
-msgstr ""
-
-#: apps/autohide/prefs.js:32
-msgid "Only over fullscreen windows"
-msgstr ""
-
-#: apps/autohide/prefs.js:33
-msgid "Keep the top bar and its space otherwise"
-msgstr ""
-
-#: apps/autohide/prefs.js:39
-msgid "Keep visible on an empty desktop"
-msgstr ""
-
-#: apps/autohide/prefs.js:40
-msgid "Do not hide while no window is open on the main screen"
-msgstr ""
-
-#: apps/autohide/prefs.js:55
-msgid "Reveal delay (ms)"
-msgstr ""
-
-#: apps/autohide/prefs.js:55
-msgid "How long to push against the top edge"
-msgstr ""
-
-#: apps/autohide/prefs.js:57
-msgid "Hide delay (ms)"
-msgstr ""
-
-#: apps/autohide/prefs.js:57
-msgid "How long after the pointer leaves the top bar"
-msgstr ""
-
-#: apps/clipboard/index.js:583 apps/clipboard/prefs.js:104
+#: apps/clipboard/index.js:603 apps/clipboard/prefs.js:114
 msgid "Clipboard History"
 msgstr ""
 
-#: apps/clipboard/popover.js:54 apps/clipboard/prefs.js:13
-#: apps/notch/view.js:420 apps/spotlight/prefs.js:136
-#: apps/spotlight/providers/clipboard.js:18 apps/spotlight/view.js:22
+#: apps/clipboard/popover.js:51 apps/clipboard/prefs.js:13
+#: apps/controlCenter/model.js:70 apps/notch/view.js:577
+#: apps/spotlight/prefs.js:136 apps/spotlight/providers/clipboard.js:18
+#: apps/spotlight/view.js:22
 msgid "Clipboard"
 msgstr ""
 
-#: apps/clipboard/popover.js:60 apps/spotlight/providers/settingsCatalog.js:20
-#: apps/spotlight/view.js:73 apps/spotlight/view.js:74
-msgid "Search"
-msgstr ""
-
-#: apps/clipboard/popover.js:70
+#: apps/clipboard/popover.js:67
 msgid "All"
 msgstr ""
 
-#: apps/clipboard/popover.js:70 apps/clipboard/quickPaste.js:199
+#: apps/clipboard/popover.js:67 apps/clipboard/quickPaste.js:202
 msgid "Text"
 msgstr ""
 
-#: apps/clipboard/popover.js:70
+#: apps/clipboard/popover.js:67
 msgid "Links"
 msgstr ""
 
-#: apps/clipboard/popover.js:70
+#: apps/clipboard/popover.js:67
 msgid "Images"
 msgstr ""
 
-#: apps/clipboard/popover.js:102
+#: apps/clipboard/popover.js:99
 msgid "Clear History"
 msgstr ""
 
-#: apps/clipboard/popover.js:141 apps/clipboard/quickPaste.js:136
-msgid "Pinned"
-msgstr ""
-
-#: apps/clipboard/popover.js:145 apps/clipboard/quickPaste.js:140
-msgid "Recent"
-msgstr ""
-
-#: apps/clipboard/popover.js:150 apps/clipboard/quickPaste.js:145
-msgid "No matches"
-msgstr ""
-
-#: apps/clipboard/popover.js:150 apps/clipboard/quickPaste.js:145
-#: apps/notch/view.js:422
-msgid "Nothing copied yet"
-msgstr ""
-
-#: apps/clipboard/popover.js:156 apps/clipboard/prefs.js:109
+#: apps/clipboard/popover.js:128 apps/clipboard/prefs.js:119
 msgid "Recording"
 msgstr ""
 
-#: apps/clipboard/popover.js:156
+#: apps/clipboard/popover.js:128
 msgid "Paused"
 msgstr ""
 
-#: apps/clipboard/popover.js:158
+#: apps/clipboard/popover.js:130
 #, javascript-format
 msgid "Quick Paste %s"
+msgstr ""
+
+#: apps/clipboard/popover.js:144 apps/clipboard/quickPaste.js:136
+msgid "Pinned"
+msgstr ""
+
+#: apps/clipboard/popover.js:148 apps/clipboard/quickPaste.js:140
+msgid "Recent"
+msgstr ""
+
+#: apps/clipboard/popover.js:153 apps/clipboard/quickPaste.js:145
+msgid "No matches"
+msgstr ""
+
+#: apps/clipboard/popover.js:153 apps/clipboard/quickPaste.js:145
+#: apps/notch/view.js:579
+msgid "Nothing copied yet"
 msgstr ""
 
 #: apps/clipboard/prefs.js:32
@@ -871,59 +843,59 @@ msgstr ""
 msgid "Also ignore copies from these apps"
 msgstr ""
 
-#: apps/clipboard/prefs.js:105
+#: apps/clipboard/prefs.js:115
 msgid ""
 "Keeps what you copy so you can paste it again. Open it from the top bar or "
 "with the shortcut."
 msgstr ""
 
-#: apps/clipboard/prefs.js:107
+#: apps/clipboard/prefs.js:117
 msgid "Clipboard history"
 msgstr ""
 
-#: apps/clipboard/prefs.js:108
+#: apps/clipboard/prefs.js:118
 msgid "Record text, links, colours and images that you copy."
 msgstr ""
 
-#: apps/clipboard/prefs.js:110
+#: apps/clipboard/prefs.js:120
 msgid "Turn off to pause without losing the history."
 msgstr ""
 
-#: apps/clipboard/prefs.js:111
+#: apps/clipboard/prefs.js:121
 msgid "Show in the top bar"
 msgstr ""
 
-#: apps/clipboard/prefs.js:112
+#: apps/clipboard/prefs.js:122
 msgid "Keep images"
 msgstr ""
 
-#: apps/clipboard/prefs.js:113
+#: apps/clipboard/prefs.js:123
 msgid "Images over 5 MB are never kept."
 msgstr ""
 
-#: apps/clipboard/prefs.js:118
+#: apps/clipboard/prefs.js:128
 msgid "Privacy"
 msgstr ""
 
-#: apps/clipboard/prefs.js:119
+#: apps/clipboard/prefs.js:129
 msgid "Nothing is recorded while the screen is locked."
 msgstr ""
 
-#: apps/clipboard/prefs.js:121
+#: apps/clipboard/prefs.js:131
 msgid "Save history to disk"
 msgstr ""
 
-#: apps/clipboard/prefs.js:122
+#: apps/clipboard/prefs.js:132
 msgid ""
 "Kept in ~/.local/share/kiwi/clipboard/, readable only by you. Needed to keep "
 "history across lock and log out."
 msgstr ""
 
-#: apps/clipboard/prefs.js:124
+#: apps/clipboard/prefs.js:134
 msgid "Ignore passwords"
 msgstr ""
 
-#: apps/clipboard/prefs.js:125
+#: apps/clipboard/prefs.js:135
 msgid "Skip copies marked as secret and copies from password managers."
 msgstr ""
 
@@ -936,7 +908,7 @@ msgid "Paste"
 msgstr ""
 
 #: apps/clipboard/quickPaste.js:97 apps/clipboard/quickPaste.js:170
-#: apps/clipboard/quickPaste.js:173 apps/clipboard/view.js:124
+#: apps/clipboard/quickPaste.js:173 apps/clipboard/view.js:112
 msgid "Pin"
 msgstr ""
 
@@ -944,67 +916,81 @@ msgstr ""
 msgid "↑↓ Select    ↵ Paste    Ctrl+P Pin    Ctrl+D Remove    Esc Close"
 msgstr ""
 
-#: apps/clipboard/quickPaste.js:173 apps/clipboard/view.js:124
+#: apps/clipboard/quickPaste.js:173 apps/clipboard/view.js:112
 msgid "Unpin"
 msgstr ""
 
-#: apps/clipboard/quickPaste.js:199
+#: apps/clipboard/quickPaste.js:202
 msgid "Link"
 msgstr ""
 
-#: apps/clipboard/quickPaste.js:199
+#: apps/clipboard/quickPaste.js:202
 msgid "Colour"
 msgstr ""
 
-#: apps/clipboard/quickPaste.js:199 apps/clipboard/view.js:56
-#: apps/notch/index.js:439 apps/spotlight/providers/clipboard.js:17
+#: apps/clipboard/quickPaste.js:202 apps/clipboard/view.js:49
+#: apps/notch/index.js:500 apps/spotlight/providers/clipboard.js:17
 msgid "Image"
 msgstr ""
 
-#: apps/clipboard/view.js:34
+#: apps/clipboard/view.js:27
 msgid "Just now"
 msgstr ""
 
-#: apps/clipboard/view.js:35
+#: apps/clipboard/view.js:28
 #, javascript-format
 msgid "%d min ago"
 msgstr ""
 
-#: apps/clipboard/view.js:36
+#: apps/clipboard/view.js:29
 #, javascript-format
 msgid "%d h ago"
 msgstr ""
 
-#: apps/clipboard/view.js:37
+#: apps/clipboard/view.js:30
 #, javascript-format
 msgid "%d d ago"
 msgstr ""
 
-#: apps/clipboard/view.js:125
+#: apps/clipboard/view.js:113 apps/roundedCorners/prefs.js:32
 msgid "Remove"
 msgstr ""
 
-#: apps/controlCenter/index.js:163
+#: apps/controlCenter/index.js:167
 msgid "More"
 msgstr ""
 
-#: apps/controlCenter/index.js:175
-#: apps/spotlight/providers/settingsCatalog.js:38 apps/stageManager/prefs.js:13
+#: apps/controlCenter/model.js:67 apps/notch/prefs.js:10 apps/notch/view.js:101
+msgid "Notch"
+msgstr ""
+
+#: apps/controlCenter/model.js:68
+#: apps/spotlight/providers/settingsCatalog.js:43 apps/stageManager/prefs.js:13
 #: apps/stageManager/prefs.js:88
 msgid "Stage Manager"
 msgstr ""
 
-#: apps/controlCenter/index.js:179 apps/liquidGlass/prefs.js:14
+#: apps/controlCenter/model.js:71 apps/spotlight/prefs.js:14
+#: apps/spotlight/prefs.js:120
+msgid "Spotlight"
+msgstr ""
+
+#: apps/controlCenter/model.js:72 apps/liquidGlass/prefs.js:14
 #: apps/liquidGlass/prefs.js:105 apps/liquidGlass/prefs.js:108
-#: apps/spotlight/providers/settingsCatalog.js:37
+#: apps/spotlight/providers/settingsCatalog.js:42
 msgid "Liquid Glass"
 msgstr ""
 
-#: apps/controlCenter/nowPlaying.js:44
+#: apps/controlCenter/model.js:73 apps/roundedCorners/prefs.js:13
+#: apps/roundedCorners/prefs.js:67
+msgid "Rounded Corners"
+msgstr ""
+
+#: apps/controlCenter/nowPlaying.js:45
 msgid "Play or pause"
 msgstr ""
 
-#: apps/controlCenter/nowPlaying.js:46
+#: apps/controlCenter/nowPlaying.js:47
 msgid "Next track"
 msgstr ""
 
@@ -1046,7 +1032,7 @@ msgstr ""
 msgid "Show the charge in the top bar at any level, not only when it is low"
 msgstr ""
 
-#: apps/controlCenter/tiles.js:56 apps/quickSettingsNotifications.js:101
+#: apps/controlCenter/tiles.js:124 apps/quickSettingsNotifications.js:101
 msgid "Do Not Disturb"
 msgstr ""
 
@@ -1070,15 +1056,15 @@ msgstr ""
 msgid "%s until full"
 msgstr ""
 
-#: apps/downloadsStack.js:487
+#: apps/downloadsStack.js:492
 msgid "Open in Files"
 msgstr ""
 
-#: apps/downloadsStack.js:491
+#: apps/downloadsStack.js:496
 msgid "Empty"
 msgstr ""
 
-#: apps/downloadsStack.js:873
+#: apps/downloadsStack.js:915
 msgid "Downloads"
 msgstr ""
 
@@ -1114,15 +1100,15 @@ msgstr ""
 msgid "Tinted"
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:55 apps/quickSettingsNotifications.js:199
+#: apps/liquidGlass/prefs.js:55 apps/quickSettingsNotifications.js:216
 msgid "Clear"
 msgstr ""
 
 #: apps/liquidGlass/prefs.js:106
 msgid ""
-"Frosted, translucent shell surfaces. App windows stay opaque. Turning this "
-"off restores solid surfaces; the old Panel Blur and Dock Blur switches then "
-"apply again."
+"Translucent shell surfaces with the same rounded shape as the surface "
+"itself. No blur, so it is light on the GPU. App windows stay opaque. Turning "
+"this off restores solid surfaces."
 msgstr ""
 
 #: apps/liquidGlass/prefs.js:108
@@ -1136,8 +1122,7 @@ msgstr ""
 #: apps/liquidGlass/prefs.js:114
 msgid ""
 "Its blur and its own Liquid Glass effect overlap with this page. Use one of "
-"them for each surface, or the panel and dock may blur twice. Kiwi never "
-"changes Blur my Shell."
+"them for each surface. Kiwi never changes Blur my Shell."
 msgstr ""
 
 #: apps/liquidGlass/prefs.js:121
@@ -1145,11 +1130,11 @@ msgid "Look"
 msgstr ""
 
 #: apps/liquidGlass/prefs.js:123
-msgid "Blur"
+msgid "Frost"
 msgstr ""
 
 #: apps/liquidGlass/prefs.js:123
-msgid "How much the background is blurred"
+msgid "Higher makes the glass a little more opaque"
 msgstr ""
 
 #: apps/liquidGlass/prefs.js:124
@@ -1175,42 +1160,8 @@ msgstr ""
 msgid "Surfaces"
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:133
-msgid "Performance"
-msgstr ""
-
-#: apps/liquidGlass/prefs.js:134
-msgid "Performance mode"
-msgstr ""
-
-#: apps/liquidGlass/prefs.js:135
-msgid "Blur a still copy of the wallpaper instead of the live screen"
-msgstr ""
-
-#: apps/liquidGlass/prefs.js:136
-msgid "Performance mode in Power Saver"
-msgstr ""
-
-#: apps/liquidGlass/prefs.js:137
-msgid "Switch automatically while the Power Saver profile is active"
-msgstr ""
-
-#: apps/liquidGlass/prefs.js:138
-msgid "Edge refraction (experimental)"
-msgstr ""
-
-#: apps/liquidGlass/prefs.js:139
-msgid ""
-"Bends the picture at the edges. Uses the still wallpaper copy and a GPU "
-"shader."
-msgstr ""
-
-#: apps/notch/index.js:427
+#: apps/notch/index.js:488
 msgid "Copied"
-msgstr ""
-
-#: apps/notch/prefs.js:10 apps/notch/view.js:86
-msgid "Notch"
 msgstr ""
 
 #: apps/notch/prefs.js:19
@@ -1231,9 +1182,9 @@ msgstr ""
 msgid "Moves the clock to the right and shows notifications in Quick Settings"
 msgstr ""
 
-#: apps/notch/prefs.js:36 apps/notch/view.js:401
-#: apps/quickSettingsNotifications.js:189
-#: apps/spotlight/providers/settingsCatalog.js:19
+#: apps/notch/prefs.js:36 apps/notch/view.js:536
+#: apps/quickSettingsNotifications.js:206
+#: apps/spotlight/providers/settingsCatalog.js:22
 msgid "Notifications"
 msgstr ""
 
@@ -1275,78 +1226,106 @@ msgstr ""
 msgid "Turn off to keep copied text off the screen while sharing it"
 msgstr ""
 
-#: apps/notch/view.js:324
+#: apps/notch/view.js:457
 msgid "Dismiss"
 msgstr ""
 
-#: apps/notch/view.js:367
+#: apps/notch/view.js:500
 msgid "Now Playing"
 msgstr ""
 
-#: apps/notch/view.js:389
+#: apps/notch/view.js:524
 msgid "Previous"
 msgstr ""
 
-#: apps/notch/view.js:390
+#: apps/notch/view.js:525
 msgid "Pause"
 msgstr ""
 
-#: apps/notch/view.js:390
+#: apps/notch/view.js:525
 msgid "Play"
 msgstr ""
 
-#: apps/notch/view.js:393
+#: apps/notch/view.js:528
 msgid "Next"
 msgstr ""
 
-#: apps/notch/view.js:396
+#: apps/notch/view.js:531
 msgid "Nothing is playing"
 msgstr ""
 
-#: apps/notch/view.js:403
-#, javascript-format
-msgid "%d in the message list"
-msgstr ""
-
-#: apps/notch/view.js:403
+#: apps/notch/view.js:539
 msgid "No notifications"
 msgstr ""
 
-#: apps/notch/view.js:407
+#: apps/notch/view.js:560
+#, javascript-format
+msgid "%d more in the message list"
+msgstr ""
+
+#: apps/notch/view.js:564
 msgid "Do Not Disturb: on"
 msgstr ""
 
-#: apps/notch/view.js:407
+#: apps/notch/view.js:564
 msgid "Do Not Disturb: off"
 msgstr ""
 
-#: apps/panelMedia.js:134
+#: apps/panelMedia.js:135
 msgid "Media"
 msgstr ""
 
-#: apps/quickSettingsNotifications.js:204
+#: apps/quickSettingsNotifications.js:221
 msgid "Clear all notifications"
 msgstr ""
 
-#: apps/quickSettingsNotifications.js:386
+#: apps/quickSettingsNotifications.js:403
 msgid "Do Not Disturb Indicator"
 msgstr ""
 
-#: apps/spotlight/index.js:199
+#: apps/roundedCorners/prefs.js:19
+msgid "Excluded Apps"
+msgstr ""
+
+#: apps/roundedCorners/prefs.js:20
+msgid ""
+"These apps keep square corners. Use the WM_CLASS or app id, for example "
+"\"org.gnome.Terminal\" or \"firefox\"."
+msgstr ""
+
+#: apps/roundedCorners/prefs.js:22
+msgid "Add an app id or WM_CLASS"
+msgstr ""
+
+#: apps/roundedCorners/prefs.js:68
+msgid ""
+"Round all four corners of app windows, including apps that draw square "
+"bottom corners. Maximized, tiled and fullscreen windows stay square."
+msgstr ""
+
+#: apps/roundedCorners/prefs.js:70
+msgid "Round window corners"
+msgstr ""
+
+#: apps/roundedCorners/prefs.js:75
+msgid "Corner radius"
+msgstr ""
+
+#: apps/roundedCorners/prefs.js:76
+msgid "In pixels"
+msgstr ""
+
+#: apps/spotlight/index.js:190
 msgid "Open"
 msgstr ""
 
-#: apps/spotlight/index.js:206
+#: apps/spotlight/index.js:197
 msgid "Search the web for"
 msgstr ""
 
-#: apps/spotlight/index.js:207 apps/spotlight/prefs.js:142
+#: apps/spotlight/index.js:198 apps/spotlight/prefs.js:142
 #: apps/spotlight/view.js:25
 msgid "Web"
-msgstr ""
-
-#: apps/spotlight/prefs.js:14 apps/spotlight/prefs.js:120
-msgid "Spotlight"
 msgstr ""
 
 #: apps/spotlight/prefs.js:17
@@ -1438,7 +1417,7 @@ msgstr ""
 msgid "Uses GNOME search, so nothing is indexed twice"
 msgstr ""
 
-#: apps/spotlight/prefs.js:134 apps/spotlight/providers/settingsCatalog.js:54
+#: apps/spotlight/prefs.js:134 apps/spotlight/providers/settingsCatalog.js:59
 #: apps/spotlight/view.js:20
 msgid "Settings"
 msgstr ""
@@ -1477,100 +1456,104 @@ msgid ""
 "Return"
 msgstr ""
 
-#: apps/spotlight/providers/settingsCatalog.js:9
+#: apps/spotlight/providers/settingsCatalog.js:12
 msgid "Wi-Fi"
 msgstr ""
 
-#: apps/spotlight/providers/settingsCatalog.js:10
+#: apps/spotlight/providers/settingsCatalog.js:13
 msgid "Network"
 msgstr ""
 
-#: apps/spotlight/providers/settingsCatalog.js:11
+#: apps/spotlight/providers/settingsCatalog.js:14
 msgid "Bluetooth"
 msgstr ""
 
-#: apps/spotlight/providers/settingsCatalog.js:12
+#: apps/spotlight/providers/settingsCatalog.js:15
 msgid "Displays"
 msgstr ""
 
-#: apps/spotlight/providers/settingsCatalog.js:13
+#: apps/spotlight/providers/settingsCatalog.js:16
 msgid "Sound"
 msgstr ""
 
-#: apps/spotlight/providers/settingsCatalog.js:14
+#: apps/spotlight/providers/settingsCatalog.js:17
 msgid "Power"
 msgstr ""
 
-#: apps/spotlight/providers/settingsCatalog.js:15
+#: apps/spotlight/providers/settingsCatalog.js:18
 msgid "Keyboard"
 msgstr ""
 
-#: apps/spotlight/providers/settingsCatalog.js:16
+#: apps/spotlight/providers/settingsCatalog.js:19
 msgid "Mouse & Touchpad"
 msgstr ""
 
-#: apps/spotlight/providers/settingsCatalog.js:17
+#: apps/spotlight/providers/settingsCatalog.js:21
 msgid "Appearance"
 msgstr ""
 
-#: apps/spotlight/providers/settingsCatalog.js:18
-msgid "Wallpaper"
-msgstr ""
-
-#: apps/spotlight/providers/settingsCatalog.js:21
+#: apps/spotlight/providers/settingsCatalog.js:24
 msgid "Multitasking"
 msgstr ""
 
-#: apps/spotlight/providers/settingsCatalog.js:22
+#: apps/spotlight/providers/settingsCatalog.js:25
 msgid "Apps"
 msgstr ""
 
-#: apps/spotlight/providers/settingsCatalog.js:23
+#: apps/spotlight/providers/settingsCatalog.js:26
 msgid "Privacy & Security"
 msgstr ""
 
-#: apps/spotlight/providers/settingsCatalog.js:24
+#: apps/spotlight/providers/settingsCatalog.js:27
 msgid "Online Accounts"
 msgstr ""
 
-#: apps/spotlight/providers/settingsCatalog.js:25
+#: apps/spotlight/providers/settingsCatalog.js:28
 msgid "Sharing"
 msgstr ""
 
-#: apps/spotlight/providers/settingsCatalog.js:26
+#: apps/spotlight/providers/settingsCatalog.js:29
 msgid "Printers"
 msgstr ""
 
-#: apps/spotlight/providers/settingsCatalog.js:27
+#: apps/spotlight/providers/settingsCatalog.js:30
 msgid "Color"
 msgstr ""
 
-#: apps/spotlight/providers/settingsCatalog.js:28
+#: apps/spotlight/providers/settingsCatalog.js:31
 msgid "Date & Time"
 msgstr ""
 
-#: apps/spotlight/providers/settingsCatalog.js:29
+#: apps/spotlight/providers/settingsCatalog.js:32
 msgid "Region & Language"
 msgstr ""
 
-#: apps/spotlight/providers/settingsCatalog.js:30
+#: apps/spotlight/providers/settingsCatalog.js:33
 msgid "Accessibility"
 msgstr ""
 
-#: apps/spotlight/providers/settingsCatalog.js:31
+#: apps/spotlight/providers/settingsCatalog.js:34
+msgid "Digital Wellbeing"
+msgstr ""
+
+#: apps/spotlight/providers/settingsCatalog.js:35
+msgid "Users"
+msgstr ""
+
+#: apps/spotlight/providers/settingsCatalog.js:36
 #: apps/windowControls/prefs.js:52
 msgid "System"
 msgstr ""
 
-#: apps/spotlight/providers/settingsCatalog.js:65
+#: apps/spotlight/providers/settingsCatalog.js:70
 msgid "Kiwi · On, press Return to turn off"
 msgstr ""
 
-#: apps/spotlight/providers/settingsCatalog.js:65
+#: apps/spotlight/providers/settingsCatalog.js:70
 msgid "Kiwi · Off, press Return to turn on"
 msgstr ""
 
-#: apps/spotlight/providers/settingsCatalog.js:71
+#: apps/spotlight/providers/settingsCatalog.js:76
 msgid "Kiwi Settings"
 msgstr ""
 
@@ -1590,7 +1573,7 @@ msgstr ""
 msgid "Suggestions"
 msgstr ""
 
-#: apps/spotlight/view.js:134
+#: apps/spotlight/view.js:154
 msgid "Top hit"
 msgstr ""
 
@@ -1629,13 +1612,17 @@ msgid "Which screen edge holds the strip"
 msgstr ""
 
 #: apps/stageManager/prefs.js:102 apps/windowControls/prefs.js:52
-#: apps/windowTiling.js:319
+#: apps/windowTiling.js:368
 msgid "Left"
 msgstr ""
 
 #: apps/stageManager/prefs.js:102 apps/windowControls/prefs.js:52
-#: apps/windowTiling.js:320
+#: apps/windowTiling.js:369
 msgid "Right"
+msgstr ""
+
+#: apps/stageManager/prefs.js:118
+msgid "Auto-hide"
 msgstr ""
 
 #: apps/stageManager/prefs.js:119
@@ -1716,40 +1703,41 @@ msgstr ""
 
 #: apps/windowControls/prefs.js:58
 msgid ""
-"Hide the buttons that windows draw themselves while the panel shows them. "
-"Works for GTK 3 and GTK 4 apps; Qt, Electron and server-side decorated "
-"windows keep theirs"
+"While the top bar shows the buttons for all windows, Kiwi sets a GNOME "
+"button layout without them (GTK, libadwaita, Chromium/Electron and server-"
+"side frames follow it) and restores yours when turned off. With the "
+"maximized or fullscreen scope only GTK apps lose theirs"
 msgstr ""
 
-#: apps/windowTiling.js:318
+#: apps/windowTiling.js:367
 msgid "Move & Resize"
 msgstr ""
 
-#: apps/windowTiling.js:321
+#: apps/windowTiling.js:370
 msgid "Top"
 msgstr ""
 
-#: apps/windowTiling.js:322
+#: apps/windowTiling.js:371
 msgid "Bottom"
 msgstr ""
 
-#: apps/windowTiling.js:324
+#: apps/windowTiling.js:373
 msgid "Fill & Arrange"
 msgstr ""
 
-#: apps/windowTiling.js:325
+#: apps/windowTiling.js:374
 msgid "Fill"
 msgstr ""
 
-#: apps/windowTiling.js:332
+#: apps/windowTiling.js:381
 msgid "Left & Right"
 msgstr ""
 
-#: apps/windowTiling.js:335
+#: apps/windowTiling.js:384
 msgid "Right & Left"
 msgstr ""
 
-#: apps/windowTiling.js:338
+#: apps/windowTiling.js:387
 msgid "Quarters"
 msgstr ""
 

@@ -283,7 +283,7 @@ function onSet(s, ev, cfg) {
 /**
  * @param {object} state from initialState()/step()
  * @param {object} ev {type, now, ...}: notify, notify-removed, activity, osd, hover, click,
- *   dismiss, tick, set
+ *   dismiss, collapse (a press outside the notch, or Escape), tick, set
  * @param {object} [config] DEFAULT_CONFIG overrides
  * @returns {{state: object, effects: object[]}} effects: {type:'activate'|'dismiss', id}
  */
@@ -321,6 +321,13 @@ export function step(state, ev, config = {}) {
         if (s.current) {
             effects.push({ type: 'dismiss', id: s.current.id });
             dropCurrent(s, cfg);
+        }
+        break;
+    case 'collapse':
+        // Only the dashboard closes; a notification card keeps its own time.
+        if (s.dashboard) {
+            s.dashboard = null;
+            promote(s, cfg);
         }
         break;
     case 'tick':
@@ -394,4 +401,20 @@ export function nextDeadline(state) {
 export function wantsBar(state) {
     const kind = view(state).kind;
     return kind === 'osd' || kind === 'compact' || kind === 'expanded';
+}
+
+/**
+ * The notifications the dashboard lists: newest first, at most `limit`. Entries without a
+ * finite time sort last, in the order given.
+ * @param {Array<{time: number|null}>} entries
+ * @param {number} limit
+ * @returns {Array} a new array
+ */
+export function recentNotifications(entries, limit) {
+    const at = e => (Number.isFinite(e.time) ? e.time : -Infinity);
+    return entries
+        .map((e, i) => ({ e, i }))
+        .sort((a, b) => at(b.e) - at(a.e) || a.i - b.i)
+        .slice(0, Math.max(0, limit))
+        .map(x => x.e);
 }

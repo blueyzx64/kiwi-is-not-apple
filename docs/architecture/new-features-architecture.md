@@ -98,7 +98,7 @@ creates them, or the release zip breaks.
 | Liquid Glass | `apps/liquidGlass/`, `lib/glass.js` | `panelTransparency.js`, `dockBlur.js`, `overviewWallpaper.js` (delegate to the service), `stylesheet.css` (glass classes) | `liquid-glass-*`; `panel-blur` and `dock-blur` become "handled by Liquid Glass" when it is on |
 | Clipboard | `apps/clipboard/`, `lib/modalSurface.js`, `lib/keybindings.js` | `prefs.js` (new page), schema | `clipboard-*` |
 | Spotlight | `apps/spotlight/` | schema (keybinding), prefs | `spotlight-*` |
-| Auto-hide bar | `coordinators/panelVisibility.js` | `panelHover.js` (folded in), `panelTransparency.js:634-647`, `windowTiling.js:128`, `overviewSeamlessZoom.js:129-141` | `panel-autohide-*`; migrate `panel-hover-fullscreen` |
+| ~~Auto-hide bar~~ (**removed** in UX round 1: the bar houses the notch) | ~~`coordinators/panelVisibility.js`~~ | `panelHover.js` (folded in), `panelTransparency.js:634-647`, `windowTiling.js:128`, `overviewSeamlessZoom.js:129-141` | `panel-autohide-*`; migrate `panel-hover-fullscreen` |
 | Control Center | `apps/controlCenter/` | absorbs `addUsernameToQuickMenu.js`, `quickSettingsDnDRemoval.js`, the `custom-dnd-button` path in `extension.js:106-119`; works with `batteryPercentage.js` and `lockIcon.js` | `control-center-*` |
 | Notch | `apps/notch/`, `coordinators/notificationRouter.js` | `calendar.js:197-228`, `quickSettingsNotifications.js` (retry `:131`), `panelMedia.js` / `mediaPlayback.js` (one shared MPRIS watcher) | `notch-*` |
 | Stage Manager | `apps/stageManager/`, `coordinators/windowState.js` | `minimizedToDock.js:92-147,641-664`, `moveFullscreenWindow.js:107,130`, `hideMinimizedWindows.js`, `windowTiling.js` | `stage-manager-*` |

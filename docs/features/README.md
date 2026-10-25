@@ -15,7 +15,7 @@ https://claude.ai/artifact/PJTdauCxK1VKQvpXditZpz (private to the repo owner unt
 | 4 | Spotlight | [spotlight.md](spotlight.md) | M–L | Merged, untested on Shell |
 | 5 | Notification notch | [notch.md](notch.md) | M–L | Merged, untested on Shell (phase 1; see notch.md §4) |
 | 6 | Control Center | [control-center.md](control-center.md) | M | Merged, untested on Shell |
-| 7 | Auto-hide top bar | [autohide-top-bar.md](autohide-top-bar.md) | S–M | Merged, untested on Shell |
+| 7 | ~~Auto-hide top bar~~ | [autohide-top-bar.md](autohide-top-bar.md) | S–M | **Removed** (UX round 1): the top bar houses the notch, so it stays on screen |
 | 8 | Stage Manager | [stage-manager.md](stage-manager.md) | L | Merged, untested on Shell |
 
 Status words: *Merged, untested on Shell* means the code is on the integration branch and passes
@@ -42,3 +42,4 @@ How to build them: [../architecture/new-features-architecture.md](../architectur
 4. **Settings**: proposed GSettings keys
 5. **Interactions with other features**
 6. **Acceptance checklist**
+- [Rounded window corners](rounded-corners.md): opt-in per-window corner mask (UX round 1).

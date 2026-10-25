@@ -1,6 +1,6 @@
 // Run: gjs -m tests/notchStateMachine.test.js
 import {
-    initialState, step, view, nextDeadline, wantsBar, URGENCY, SIZES, DEFAULT_CONFIG,
+    initialState, step, view, nextDeadline, wantsBar, recentNotifications, URGENCY, SIZES, DEFAULT_CONFIG,
 } from '../apps/notch/stateMachine.js';
 
 let failed = 0;
@@ -367,6 +367,35 @@ test('osd pause on the dashboard only counts from when it opened', () => {
     ({ state } = step(state, { type: 'osd', kind: 'volume', now: 2000 }));
     ({ state } = step(state, tick(2000 + DEFAULT_CONFIG.osdMs)));
     eq(nextDeadline(state), 1600 + DEFAULT_CONFIG.dashboardLeaveMs + DEFAULT_CONFIG.osdMs);
+});
+
+test('collapse (outside press or Escape) closes the dashboard and shows what waited', () => {
+    let { state } = run([{ type: 'click', now: 0 }, notify('a', 10)]);
+    eq(view(state).content, 'dashboard');
+    eq(state.pending.map(n => n.id), ['a']);
+    ({ state } = step(state, { type: 'collapse', now: 20 }));
+    eq(state.dashboard, null);
+    eq(view(state).notificationId, 'a');
+});
+
+test('collapse leaves a notification card and idle alone', () => {
+    let { state, effects } = run([notify('a', 0), { type: 'collapse', now: 5 }]);
+    eq(view(state).notificationId, 'a');
+    eq(effects, []);
+    ({ state } = step(initialState(0), { type: 'collapse', now: 1 }));
+    eq(kind(state), 'idle');
+});
+
+test('recentNotifications: newest first, capped, untimed last in given order', () => {
+    const list = [
+        { id: 1, time: 100 }, { id: 2, time: null }, { id: 3, time: 300 },
+        { id: 4, time: 200 }, { id: 5 },
+    ];
+    eq(recentNotifications(list, 2).map(e => e.id), [3, 4]);
+    eq(recentNotifications(list, 10).map(e => e.id), [3, 4, 1, 2, 5]);
+    eq(recentNotifications(list, 0), []);
+    eq(recentNotifications([], 3), []);
+    eq(list.map(e => e.id), [1, 2, 3, 4, 5]); // input untouched
 });
 
 print(failed ? `${failed} FAILED` : 'all passed');

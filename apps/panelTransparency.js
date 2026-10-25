@@ -9,15 +9,12 @@ import Meta from 'gi://Meta';
 import GdkPixbuf from 'gi://GdkPixbuf';
 import Clutter from 'gi://Clutter';
 
-import { PanelVisibility } from '../coordinators/panelVisibility.js';
 import { Glass } from '../lib/glass.js';
 import { CleanupRegistry } from '../lib/disposables.js';
 
 Gio._promisify(Gio.File.prototype, 'read_async', 'read_finish');
 Gio._promisify(Gio.InputStream.prototype, 'close_async', 'close_finish');
 Gio._promisify(GdkPixbuf.Pixbuf, 'new_from_stream_at_scale_async', 'new_from_stream_finish');
-
-const visibilityCleanup = new CleanupRegistry();
 
 let settings;
 let enabled = false;
@@ -63,8 +60,9 @@ const ICON_LUMINANCE_MIN = 0.6;      // above this the icon counts as light
 const ICON_LUMINANCE_MAX_DARK = 0.4; // below this it counts as dark
 const ICON_SPREAD_MAX = 0.15;        // luminance std dev; above this it has its own contrast
 
-// Blur state. The blur itself (and its tint, Liquid Glass tiers, legacy panel-blur key,
-// repaint workarounds) is lib/glass.js; this module only says when the panel is see-through.
+// Glass state. Liquid Glass is plain transparency (lib/glass.js): with layers 'blur' the
+// service draws nothing here, the panel's own background-color below is the translucent fill
+// and follows the panel's shape. The handle is kept for its tier (high contrast -> solid).
 let blurHandle = null;
 let blurWanted = false;   // last visibility updatePanelStyle asked for
 let glassRegistry = null;
@@ -77,7 +75,7 @@ function createBlurEffect() {
     if (!panelBox)
         return;
 
-    // layers: 'blur' - the panel keeps its own (adjustable) background colour
+    // layers: 'blur' - the panel keeps its own (adjustable) background colour; no layer is added
     blurHandle = Glass.attach(panel, {
         surface: 'panel',
         parent: panelBox,
@@ -509,13 +507,6 @@ function updatePanelStyle(alpha = null) {
 }
 
 function checkWindowTouchingPanel() {
-    // Auto-hiding bar: it floats over windows, so it keeps its overlay style and the
-    // "opaque when a window touches it" rule is off (PanelVisibility owns the strut).
-    if (PanelVisibility.autoHiding()) {
-        lastForcedAlpha = null;
-        updatePanelStyle(null);
-        return;
-    }
     if (!settings.get_boolean('panel-transparency') || 
         !settings.get_boolean('panel-opaque-on-window')) {
         // Even if opaque-on-window is disabled, fullscreen should force opaque
@@ -823,8 +814,7 @@ export function enable(_settings) {
     // Apply panel color fix on startup
     applyPanelColorFix();
 
-    // The glass layer is always attached; lib/glass.js decides whether it is drawn
-    // (Liquid Glass panel surface, or the legacy panel-blur key while it is off).
+    // The glass handle is always attached; it only reports the tier (no layer is drawn).
     createBlurEffect();
     glassRegistry = new CleanupRegistry();
     let glassReady = false;
@@ -835,9 +825,6 @@ export function enable(_settings) {
     });
     glassReady = true;
 
-    // Re-style when the bar starts or stops auto-hiding (state signal, no polling needed).
-    PanelVisibility.connect(visibilityCleanup, () => checkWindowTouchingPanel());
-
     timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
         checkWindowTouchingPanel();
         timeoutId = null;
@@ -847,7 +834,6 @@ export function enable(_settings) {
 
 export function disable() {
     enabled = false;
-    visibilityCleanup.dispose();
 
     if (timeoutId) {
         GLib.Source.remove(timeoutId);

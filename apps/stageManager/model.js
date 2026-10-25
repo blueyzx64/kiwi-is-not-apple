@@ -12,12 +12,13 @@
 export const DEFAULTS = Object.freeze({
     stripWidth: 200,
     thumbW: 180,
-    thumbH: 116,
-    gap: 22,
+    thumbH: 130,
+    gap: 18,
     padTop: 24,
     padBottom: 24,
     minScale: 0.55,       // cards shrink to this at most, then the strip stops listing more
-    rotation: 24,         // degrees, see cardTilt()
+    rotation: 22,         // degrees, see cardTilt(); windows turn to face the stage
+    cardPad: 14,          // px between the card's edge and the window inside it (scaled with the card)
     badge: 34,
     stackMax: 3,
     edgeZone: 2,
@@ -70,6 +71,63 @@ export function cropThumb(frame, buffer, boxW, boxH) {
         cloneW: buffer.width * s,
         cloneH: buffer.height * s,
     };
+}
+
+/**
+ * Size of a window in a strip slot: true aspect ratio, similar visual weight for every window.
+ * The window is scaled toward `area` (a share of the slot), then shrunk to fit the slot's
+ * max width and height. A tall window ends up as tall as the slot, a wide one as wide, and a
+ * normal one in between; none becomes a sliver.
+ * @param {number} w  window width
+ * @param {number} h  window height
+ * @param {number} maxW  slot width
+ * @param {number} maxH  slot height
+ * @param {number} [fill]  share of the slot's area to aim for (0..1)
+ * @returns {{width: number, height: number, scale: number}} scale: from window to slot pixels
+ */
+export function balancedFit(w, h, maxW, maxH, fill = 0.6) {
+    if (!(w > 0) || !(h > 0) || !(maxW > 0) || !(maxH > 0))
+        return { width: 0, height: 0, scale: 0 };
+    const target = Math.max(0, Math.min(1, fill)) * maxW * maxH;
+    let scale = Math.sqrt(target / (w * h));
+    scale = Math.min(scale, maxW / w, maxH / h);
+    return { width: w * scale, height: h * scale, scale };
+}
+
+/**
+ * Pose of a window clone (the clone has the buffer's size) whose frame is drawn in `rect`
+ * (centred, aspect kept), turned about the frame's centre. The pivot is the frame centre, so
+ * position does not depend on scale or rotation and a flight can tween x, y, scale and angle.
+ * @param {rect} frame
+ * @param {rect} buffer
+ * @param {rect} rect
+ * @returns {?{x: number, y: number, pivotX: number, pivotY: number, scale: number}}
+ *   pivot normalised to the buffer size; x, y: clone position in rect's coordinate space
+ */
+export function clonePose(frame, buffer, rect) {
+    if (!(frame.width > 0) || !(frame.height > 0) || !(buffer.width > 0) || !(buffer.height > 0) ||
+        !(rect.width > 0) || !(rect.height > 0))
+        return null;
+    const px = frame.x - buffer.x + frame.width / 2;
+    const py = frame.y - buffer.y + frame.height / 2;
+    return {
+        x: rect.x + rect.width / 2 - px,
+        y: rect.y + rect.height / 2 - py,
+        pivotX: px / buffer.width,
+        pivotY: py / buffer.height,
+        scale: Math.min(rect.width / frame.width, rect.height / frame.height),
+    };
+}
+
+/**
+ * A small rect centred on a point: where a window shrinks to when it has no card to land on.
+ * @param {{x: number, y: number}} point
+ * @param {rect} frame keeps its aspect ratio
+ * @param {number} width
+ */
+export function pointRect(point, frame, width = 24) {
+    const h = frame.width > 0 ? width * frame.height / frame.width : width;
+    return { x: point.x - width / 2, y: point.y - h / 2, width, height: h };
 }
 
 /**
@@ -401,6 +459,15 @@ export class StageModel {
             .filter(st => st.id !== this._current)
             .slice(0, this._recent)
             .map(st => this._view(st));
+    }
+
+    /**
+     * Is this window parked in the strip: in a stage that has a card (not the current one)?
+     * @param {string|number} id
+     * @param {number} [stripLimit] cards the strip really shows
+     */
+    inStrip(id, stripLimit = Infinity) {
+        return this.strip().slice(0, Math.max(0, stripLimit)).some(st => st.windows.includes(id));
     }
 
     /** Every stage, most recent first (current included). */

@@ -69,7 +69,7 @@
       <key name="panel-hover-fullscreen" type="b">
         <default>true</default>
         <summary>Show Panel on Hover in Fullscreen</summary>
-        <description>Deprecated: replaced by panel-autohide and panel-autohide-fullscreen-only. Kept so older settings migrate; it has no effect on its own.</description>
+        <description>Deprecated: the auto-hide top bar this fed was removed. Kept so existing dconf settings stay valid; nothing reads it.</description>
       </key>
       <key name="move-calendar-right" type="b">
         <default>true</default>
@@ -107,9 +107,9 @@
         <description>Replace the system Do Not Disturb quick settings button with Kiwi's custom implementation.</description>
       </key>
       <key name="hide-activities-button" type="b">
-        <default>false</default>
+        <default>true</default>
         <summary>Hide Activities Button</summary>
-        <description>Hide the Activities button in the top panel.</description>
+        <description>Hide the Activities button in the top panel (on GNOME 45 and later, the workspace indicator pill at the top left). On by default.</description>
       </key>
       <key name="add-username-to-quick-menu" type="b">
         <default>false</default>
@@ -252,7 +252,12 @@
       <key name="remove-titlebar-buttons" type="b">
         <default>true</default>
         <summary>Remove titlebar buttons from windows</summary>
-        <description>While the panel shows window controls, hide the close, minimize and maximize buttons that GTK 3 and GTK 4 windows draw in their own titlebars. Uses GTK CSS in the user's gtk.css; the window button layout is not changed.</description>
+        <description>While the panel shows window controls for all windows, remove the close, minimize and maximize buttons from every app's own titlebar. Kiwi sets the GNOME window button layout (org.gnome.desktop.wm.preferences button-layout) to one without them, which GTK 3, GTK 4/libadwaita, Chromium/Electron and server-side frames honour, and restores the saved original when the controls or this option are turned off or Kiwi is disabled. With the maximized or fullscreen scope the layout is left alone and GTK CSS in the user's gtk.css hides the buttons of GTK windows in those states.</description>
+      </key>
+      <key name="saved-button-layout" type="s">
+        <default>''</default>
+        <summary>Saved window button layout (internal)</summary>
+        <description>The user's org.gnome.desktop.wm.preferences button-layout, saved while Kiwi replaces it. Empty when Kiwi does not own the layout. A non-empty value found when Kiwi starts without needing it is written back once (crash recovery).</description>
       </key>
 
       <!-- ========================================================= -->
@@ -355,33 +360,33 @@
         <description>Switch to performance mode automatically while the Power Saver profile is active.</description>
       </key>
 
-      <!-- Auto-hide top bar (coordinators/panelVisibility.js) -->
+      <!-- Deprecated: the auto-hide top bar was removed. Keys kept so dconf stays valid; unread. -->
       <key name="panel-autohide" type="b">
         <default>true</default>
-        <summary>Auto-hide the top bar</summary>
-        <description>Slide the top bar out of view and bring it back when the pointer pushes against the top edge. Replaces panel-hover-fullscreen.</description>
+        <summary>(Deprecated) Auto-hide the top bar</summary>
+        <description>Deprecated: the auto-hide top bar was removed (the top bar houses the notch). Kept so existing dconf settings stay valid; nothing reads it. Slide the top bar out of view and bring it back when the pointer pushes against the top edge. Replaces panel-hover-fullscreen.</description>
       </key>
       <key name="panel-autohide-fullscreen-only" type="b">
         <default>false</default>
-        <summary>Auto-hide only over fullscreen windows</summary>
-        <description>Keep the top bar (and its space) as usual and hide it only while a fullscreen window is on the primary monitor.</description>
+        <summary>(Deprecated) Auto-hide only over fullscreen windows</summary>
+        <description>Deprecated: the auto-hide top bar was removed (the top bar houses the notch). Kept so existing dconf settings stay valid; nothing reads it. Keep the top bar (and its space) as usual and hide it only while a fullscreen window is on the primary monitor.</description>
       </key>
       <key name="panel-autohide-reveal-delay" type="i">
         <default>150</default>
         <range min="0" max="2000"/>
-        <summary>Reveal delay (ms)</summary>
-        <description>How long the pointer must stay pushed against the top edge before the top bar slides in.</description>
+        <summary>(Deprecated) Reveal delay (ms)</summary>
+        <description>Deprecated: the auto-hide top bar was removed (the top bar houses the notch). Kept so existing dconf settings stay valid; nothing reads it. How long the pointer must stay pushed against the top edge before the top bar slides in.</description>
       </key>
       <key name="panel-autohide-hide-delay" type="i">
         <default>600</default>
         <range min="0" max="5000"/>
-        <summary>Hide delay (ms)</summary>
-        <description>How long after the pointer leaves the top bar, and nothing holds it open, before it slides out.</description>
+        <summary>(Deprecated) Hide delay (ms)</summary>
+        <description>Deprecated: the auto-hide top bar was removed (the top bar houses the notch). Kept so existing dconf settings stay valid; nothing reads it. How long after the pointer leaves the top bar, and nothing holds it open, before it slides out.</description>
       </key>
       <key name="panel-autohide-keep-on-desktop" type="b">
         <default>false</default>
-        <summary>Keep the top bar on an empty desktop</summary>
-        <description>Do not hide the top bar while no window is showing on the primary monitor.</description>
+        <summary>(Deprecated) Keep the top bar on an empty desktop</summary>
+        <description>Deprecated: the auto-hide top bar was removed (the top bar houses the notch). Kept so existing dconf settings stay valid; nothing reads it. Do not hide the top bar while no window is showing on the primary monitor.</description>
       </key>
 
       <key name="migrations-done" type="as">
@@ -444,6 +449,24 @@
         <default>[]</default>
         <summary>Stage Manager shortcut</summary>
         <description>Turns Stage Manager on or off. Empty means no shortcut; prefs has a button for Ctrl+Super+S.</description>
+      </key>
+
+      <!-- Rounded window corners (apps/roundedCorners) -->
+      <key name="rounded-corners" type="b">
+        <default>false</default>
+        <summary>Rounded window corners</summary>
+        <description>Round all four corners of normal and dialog windows. Maximized, tiled and fullscreen windows keep square corners.</description>
+      </key>
+      <key name="rounded-corners-radius" type="i">
+        <default>12</default>
+        <range min="0" max="24"/>
+        <summary>Corner radius</summary>
+        <description>Radius of the rounded window corners, in logical pixels.</description>
+      </key>
+      <key name="rounded-corners-blacklist" type="as">
+        <default>[]</default>
+        <summary>Apps without rounded corners</summary>
+        <description>Windows whose WM_CLASS or app id (for example "org.gnome.Terminal" or "firefox") is listed keep square corners. Not case-sensitive.</description>
       </key>
 
       <!-- Clipboard history (apps/clipboard) -->

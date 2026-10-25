@@ -1,4 +1,11 @@
-# Auto-hide top bar
+# Auto-hide top bar (removed)
+
+> **Removed in UX round 1 (owner decision).** "Remove the option to minimize (auto-hide) the top
+> bar, since it houses the notch." The coordinator (`coordinators/panelVisibility*.js`), the prefs
+> page, the Control Center *Hide Top Bar* tile and its CSS are gone. The `panel-autohide*` keys
+> stay in the schema, marked deprecated and unread, so existing dconf settings stay valid; a user
+> who had it on simply gets the stock, always-shown bar with its normal strut. The spec below is
+> kept for the record only; do not build from it.
 
 ## 1. Summary
 The top bar slides out of view so windows get the full height. It slides back in when

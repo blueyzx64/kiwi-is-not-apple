@@ -1,10 +1,10 @@
-apps/autohide/prefs.js
 apps/clipboard/index.js
 apps/clipboard/popover.js
 apps/clipboard/prefs.js
 apps/clipboard/quickPaste.js
 apps/clipboard/view.js
 apps/controlCenter/index.js
+apps/controlCenter/model.js
 apps/controlCenter/nowPlaying.js
 apps/controlCenter/prefs.js
 apps/controlCenter/tiles.js
@@ -17,6 +17,7 @@ apps/notch/prefs.js
 apps/notch/view.js
 apps/panelMedia.js
 apps/quickSettingsNotifications.js
+apps/roundedCorners/prefs.js
 apps/spotlight/index.js
 apps/spotlight/prefs.js
 apps/spotlight/providers/clipboard.js
