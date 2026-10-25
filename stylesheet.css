@@ -1941,3 +1941,18 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
 .kiwi-notch-control:focus {
     background-color: rgba(255, 255, 255, 0.26);
 }
+
+/* the Notifications column: the newest entries of the message list */
+.kiwi-notch-recent {
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+.kiwi-notch-recent-row {
+    spacing: 8px;
+}
+
+.kiwi-notch-recent:hover,
+.kiwi-notch-recent:focus {
+    background-color: rgba(255, 255, 255, 0.12);
+}
