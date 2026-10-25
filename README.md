@@ -64,6 +64,49 @@ Requires [Dash to Dock](https://extensions.gnome.org/extension/307/), except Lau
 - [**Weather or Not**](https://extensions.gnome.org/extension/5660/) by somepaulo
 </details>
 
+## New in this version (preview, not yet tested on a real GNOME session)
+
+All of these are on by default and can be turned off in Kiwi's preferences.
+
+- **Window controls in the top bar** for every focused window, with the apps' own titlebar buttons removed.
+- **Liquid Glass**: translucent, blurred top bar, menus, dock and overlays (solid in high contrast).
+- **Auto-hide top bar**: push the pointer against the top edge to reveal it.
+- **Clipboard history** with Quick Paste. History is saved in `~/.local/share/kiwi/clipboard/`. The shortcut is empty by default; set it in preferences ("Use Super+Shift+V").
+- **Spotlight**: tap Super to search apps, files, settings, clipboard and the web, and to calculate. The overview stays on the hot corner, Super+A and the Activities button.
+- **Control Center**: the Quick Settings menu in a macOS-style layout.
+- **Stage Manager**: a strip of other apps at the screen edge; other apps' windows are hidden, not minimized.
+- **Notification notch**: notifications, volume, brightness and Now Playing in a pill at the top centre.
+
+## Install from source
+
+Requirements: GNOME Shell 48–51, `git`, `make`, `gettext`, and `gnome-extensions` (comes with GNOME Shell).
+
+1. Back up your current Kiwi settings, so you can roll back:
+   ```sh
+   dconf dump /org/gnome/shell/extensions/kiwi/ > ~/kiwi-settings-backup.ini
+   ```
+2. Get the code and install it for your user:
+   ```sh
+   git clone https://github.com/blueyzx64/kiwi-is-not-apple.git
+   cd kiwi-is-not-apple
+   git checkout ccr-f3c1f44c-rv5a8r   # the preview branch; skip once it is merged into main
+   make install                        # packs the zip into dist/ and runs gnome-extensions install --force
+   ```
+3. Restart GNOME Shell so it loads the new code: on **Wayland**, log out and back in; on **X11**, press Alt+F2, type `r`, press Enter.
+4. Enable it, if it is not already enabled:
+   ```sh
+   gnome-extensions enable kiwi@kemma
+   ```
+   Preferences: `gnome-extensions prefs kiwi@kemma`.
+5. Watch for errors while you try things out:
+   ```sh
+   journalctl -f -o cat /usr/bin/gnome-shell | grep -i kiwi
+   ```
+
+Optional: `make smoke` runs a headless GNOME Shell and turns Kiwi off and on repeatedly to catch load and teardown errors without touching your session (see `tools/smoke/README.md`).
+
+**Roll back:** `gnome-extensions disable kiwi@kemma`, or uninstall with `make uninstall`, then log out and in. To restore your old settings: `dconf load /org/gnome/shell/extensions/kiwi/ < ~/kiwi-settings-backup.ini`. Clipboard history lives in `~/.local/share/kiwi/clipboard/` and can be deleted.
+
 ## Known Issues
 
 - in multimonitor setup sometimes max number of workspaces are created. See issue #49.
