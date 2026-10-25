@@ -223,6 +223,22 @@ test('needs on a failed entry holds the dependent off', () => {
     eq(reg.isActive('dep'), false);
 });
 
+test('instance(): the running cls instance, null while off', () => {
+    class Thing { enable() {} disable() {} hello() { return 'hi'; } }
+    const { reg, ctx, flags } = setup([{ id: 't', setting: 't', cls: Thing }, { id: 'p', setting: 'p' }]);
+    reg.start(ctx);
+    eq(reg.instance('t'), null);
+    flags.t = true;
+    flags.p = true;
+    reg.refresh('t');
+    eq(reg.instance('t').hello(), 'hi');
+    eq(reg.instance('p'), null);
+    eq(reg.instance('missing'), null);
+    flags.t = false;
+    reg.refresh('t');
+    eq(reg.instance('t'), null);
+});
+
 if (failed) {
     print(`${failed} failed`);
     imports.system.exit(1);

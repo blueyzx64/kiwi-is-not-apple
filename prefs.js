@@ -34,10 +34,11 @@ import * as spotlightPrefs from './apps/spotlight/prefs.js';
 import * as notchPrefs from './apps/notch/prefs.js';
 import * as stageManagerPrefs from './apps/stageManager/prefs.js';
 import * as roundedCornersPrefs from './apps/roundedCorners/prefs.js';
+import * as showDesktopPrefs from './apps/showDesktop/prefs.js';
 
 // Feature prefs modules (see apps/<feature>/prefs.js): PAGE says where, buildPrefs() makes the groups
 // New pages appear in this order, after Options and before Advanced (Liquid Glass first).
-const FEATURE_PREFS = [liquidGlassPrefs, windowControlsPrefs, controlCenterPrefs, clipboardPrefs, spotlightPrefs, notchPrefs, stageManagerPrefs, roundedCornersPrefs];
+const FEATURE_PREFS = [liquidGlassPrefs, windowControlsPrefs, controlCenterPrefs, clipboardPrefs, spotlightPrefs, notchPrefs, stageManagerPrefs, roundedCornersPrefs, showDesktopPrefs];
 
 const D2D_UUIDS = ['dash-to-dock@micxgx.gmail.com', 'ubuntu-dock@ubuntu.com'];
 const EXTENSION_ACTIVE = 1;
