@@ -3,7 +3,6 @@
 
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
-import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import Gio from 'gi://Gio';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
@@ -11,23 +10,21 @@ import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 
 export const LockIcon = GObject.registerClass(
 class LockIcon extends PanelMenu.Button {
-    _init() {
+    _init(dir) {
         super._init(0.0, 'Lock Indicator', false);
 
         // GNOME 51 dropped Clutter.get_default_backend(); go through the context.
         this.keymap = global.stage.get_context().get_backend().get_default_seat().get_keymap();
 
-        // Get extension object for accessing icons
-        const extensionObject = Main.extensionManager.lookup('kiwi@kemma');
 
         // Create icons
         this._numLockIcon = new St.Icon({
-            gicon: Gio.FileIcon.new(Gio.File.new_for_path(extensionObject.dir.get_child('icons/num-lock-symbolic.svg').get_path())),
+            gicon: Gio.FileIcon.new(Gio.File.new_for_path(dir.get_child('icons/num-lock-symbolic.svg').get_path())),
             style_class: 'system-status-icon',
         });
 
         this._capsLockIcon = new St.Icon({
-            gicon: Gio.FileIcon.new(Gio.File.new_for_path(extensionObject.dir.get_child('icons/caps-lock-symbolic.svg').get_path())),
+            gicon: Gio.FileIcon.new(Gio.File.new_for_path(dir.get_child('icons/caps-lock-symbolic.svg').get_path())),
             style_class: 'system-status-icon',
         });
 
@@ -41,18 +38,12 @@ class LockIcon extends PanelMenu.Button {
         this._lockKeysLayout.add_child(this._capsLockIcon);
         this.add_child(this._lockKeysLayout);
 
-        // Delay the state initialization to ensure the keymap is fully ready
-        this._timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
+        // The keymap reports its state through state-changed, so there is no
+        // fixed delay: read it now and follow every change after.
+        this._keymapChangedId = this.keymap.connect('state-changed', () => {
             this._updateLockState();
-
-            // Connect to keymap state change after initial state has been set
-            this._keymapChangedId = this.keymap.connect('state-changed', () => {
-                this._updateLockState();
-            });
-
-            this._timeoutId = null;
-            return GLib.SOURCE_REMOVE;
         });
+        this._updateLockState();
     }
 
     _updateLockState() {
@@ -102,10 +93,6 @@ class LockIcon extends PanelMenu.Button {
     }
 
     destroy() {
-        if (this._timeoutId) {
-            GLib.Source.remove(this._timeoutId);
-            this._timeoutId = null;
-        }
         if (this._keymapChangedId) {
             this.keymap.disconnect(this._keymapChangedId);
             this._keymapChangedId = null;
@@ -116,9 +103,15 @@ class LockIcon extends PanelMenu.Button {
 
 let lockIcon = null;
 
-export function enable() {
+/**
+ * @param extension the Extension object (optional); its icons/ folder is used.
+ *   Without it the folder next to this file's parent is used.
+ */
+export function enable(extension) {
     if (!lockIcon) {
-        lockIcon = new LockIcon();
+        const dir = extension?.dir ??
+            Gio.File.new_for_uri(import.meta.url).get_parent().get_parent();
+        lockIcon = new LockIcon(dir);
         Main.panel.addToStatusArea('lock-indicator', lockIcon, 0, 'right');
     }
 }

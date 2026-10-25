@@ -6,6 +6,8 @@ import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import { shouldShowLabel } from './batteryModel.js';
+
 // Static variable for the battery percentage trigger threshold. Default is 20%.
 const BATTERY_TRIGGER_PERCENTAGE = 20;
 const FALLBACK_BATTERY_PATH = '/org/freedesktop/UPower/devices/battery_BAT0';
@@ -26,9 +28,8 @@ class BatteryPercentage {
     // Initialize the battery proxy to interact with UPower
     this._propertiesChangedId = null;
     this._initBatteryProxy();
-        // Track the last battery state and percentage to avoid redundant animations
-        this._lastPercentage = null;
-        this._lastState = null;
+        // Whether the label is currently shown, to animate on changes only
+        this._labelShown = false;
     }
 
     _initBatteryProxy() {
@@ -117,23 +118,17 @@ class BatteryPercentage {
         // Update the label text with the current battery percentage
         this._batteryLabel.text = `${percentage}%`;
 
-        // Animate when percentage changes to 25% while not charging
-        if (percentage === BATTERY_TRIGGER_PERCENTAGE && state === 2 && percentage !== this._lastPercentage) {
-            this._animateIn();
-        }
-
-        // Animate when plugging or unplugging the charger while below 25%
-        if (percentage <= BATTERY_TRIGGER_PERCENTAGE && state !== this._lastState) {
-            // State: 1 = Charging, 2 = Discharging
-            if (state === 1)
-                this._animateOut();
-            else if (state === 2)
+        // Slide in / out only when the answer changes (edge flag), so skipping
+        // the exact threshold or starting below it still behaves.
+        const show = shouldShowLabel(percentage, state, BATTERY_TRIGGER_PERCENTAGE);
+        if (show !== this._labelShown) {
+            this._labelShown = show;
+            if (show)
                 this._animateIn();
+            else
+                this._animateOut();
         }
 
-        // Update the last known state and percentage
-        this._lastPercentage = percentage;
-        this._lastState = state;
     }
 
     _animateIn() {
