@@ -46,12 +46,47 @@ const MOVING_GRAB_OPS = [
 
 let _grabOpBeginId = null;
 
+// Windows holding a restore stash -> signal ids that drop it when the window is
+// maximized by other means or goes away (a stale stash restores to an old geometry).
+const _stashWatches = new Map();
+
+function unwatchStash(win) {
+    const ids = _stashWatches.get(win);
+    if (!ids)
+        return;
+    for (const id of ids)
+        win.disconnect(id);
+    _stashWatches.delete(win);
+}
+
+function dropStash(win) {
+    delete win._kiwiRestore;
+    unwatchStash(win);
+}
+
+function watchStash(win) {
+    if (_stashWatches.has(win))
+        return;
+    // Tiling leaves the window un-maximized, so a maximize while the stash is held
+    // came from somewhere else (button, double-click, keyboard): the tile is gone.
+    const onMaximized = () => {
+        if (isMaximized(win))
+            dropStash(win);
+    };
+    _stashWatches.set(win, [
+        win.connect('notify::maximized-horizontally', onMaximized),
+        win.connect('notify::maximized-vertically', onMaximized),
+        win.connect('unmanaged', () => dropStash(win)),
+    ]);
+}
+
 export { maximizeWindow, unmaximizeWindow };
 
 export function isMaximized(win) {
     if (!win)
         return false;
-    // is_maximized() is the stable API (Mutter 48-51); the property pair is the fallback.
+    // is_maximized() exists from Mutter 49 (48 has get_maximized() instead); the
+    // maximized-horizontally/vertically properties cover 48 and stay in 49-51.
     if (typeof win.is_maximized === 'function')
         return !!win.is_maximized();
     return !!(win.maximized_horizontally && win.maximized_vertically);
@@ -119,6 +154,13 @@ function stashGeometry(win) {
     }
 }
 
+// Watch only once the window is un-maximized for the tile, so our own unmaximize
+// cannot look like an outside change.
+function tileStashed(win) {
+    if (win._kiwiRestore)
+        watchStash(win);
+}
+
 function frameFor(win, key) {
     const wa = win.get_work_area_current_monitor();
     const f = LAYOUTS[key];
@@ -144,6 +186,7 @@ function tileWindow(win, key, animate = true) {
 
     const [x, y, w, h] = frameFor(win, key);
     moveResizeAnimated(win, x, y, w, h, animate, from);
+    tileStashed(win);
 }
 
 function restoreWindow(win, animate = true) {
@@ -151,7 +194,7 @@ function restoreWindow(win, animate = true) {
         return;
 
     const stash = win._kiwiRestore;
-    delete win._kiwiRestore;
+    dropStash(win);
 
     if (!stash) {
         // Never tiled by us, but still maximized: plain unmaximize.
@@ -228,8 +271,12 @@ function onGrabOpBegin(_display, win, grabOp) {
     if (!win || !win._kiwiRestore)
         return;
 
-    if (!MOVING_GRAB_OPS.includes(grabOp))
+    // A resize by hand untiles the window: nothing to restore to any more
+    if (!MOVING_GRAB_OPS.includes(grabOp)) {
+        if (grabOp !== Meta.GrabOp.NONE)
+            dropStash(win);
         return;
+    }
 
     const before = win.get_frame_rect();
     const [pointerX] = global.get_pointer();
@@ -241,7 +288,7 @@ function onGrabOpBegin(_display, win, grabOp) {
     // Nothing left to move back to when it was maximized before we tiled it, and
     // Mutter restores a still-maximized window itself.
     const stash = win._kiwiRestore;
-    delete win._kiwiRestore;
+    dropStash(win);
     if (stash.maximized || isMaximized(win))
         return;
 
@@ -262,6 +309,8 @@ export function disableDragRestore() {
     // stale one would send a window back to a geometry from a previous session.
     for (const win of global.display.get_tab_list(Meta.TabList.NORMAL, null))
         delete win._kiwiRestore;
+    for (const win of [..._stashWatches.keys()])
+        dropStash(win);
 
     if (!_grabOpBeginId)
         return;
