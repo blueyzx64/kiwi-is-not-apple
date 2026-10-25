@@ -21,11 +21,12 @@ import { CleanupRegistry } from '../lib/disposables.js';
 import { KiwiSettings } from '../lib/settings.js';
 import { maximizeWindow, unmaximizeWindow } from '../lib/compat.js';
 import { PanelLayout } from '../coordinators/panelLayout.js';
+import { isHelperWindowInfo } from './util/windows.js';
 import { WindowState } from '../coordinators/windowState.js';
 import { isMaximized } from './windowTiling.js';
 import { IconCatalog } from './windowControls/icons.js';
 import {
-    MIGRATIONS, parseButtonLayout, resolvePlacement, isExcludedWindow, shouldShow, resolveIcon,
+    MIGRATIONS, parseButtonLayout, resolvePlacement, shouldShow, resolveIcon,
 } from './windowControls/model.js';
 
 const BUTTONS = ['minimize', 'maximize', 'close'];
@@ -354,7 +355,7 @@ export class WindowControlsFeature {
         let excluded = false;
         if (normal) {
             const app = Shell.WindowTracker.get_default().get_window_app(win);
-            excluded = isExcludedWindow({ title: win.get_title(), appName: app?.get_name() ?? null });
+            excluded = isHelperWindowInfo({ title: win.get_title(), appName: app?.get_name() ?? null });
         }
 
         const visible = shouldShow({

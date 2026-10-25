@@ -1,8 +1,9 @@
 // Run: gjs -m tests/windowControlsModel.test.js
 import {
-    parseButtonLayout, resolvePlacement, isExcludedWindow, shouldShow,
+    parseButtonLayout, resolvePlacement, shouldShow,
     titlebarHideSheet, resolveIcon, MIGRATIONS, createJobQueue,
 } from '../apps/windowControls/model.js';
+import { isHelperWindowInfo } from '../apps/util/windows.js';
 import { runMigrations } from '../lib/settings.js';
 
 let failed = 0;
@@ -53,11 +54,11 @@ test('forced right on a left layout uses GNOME order', () =>
 test('unknown position acts like system', () => eq(resolvePlacement('x', mac), mac));
 
 // --- isExcludedWindow
-test('plain window is fine', () => eq(isExcludedWindow({ title: 'Docs', appName: 'Files' }), false));
-test('null title is fine', () => eq(isExcludedWindow({ title: null, appName: null }), false));
-test('blank title excluded', () => eq(isExcludedWindow({ title: '  ', appName: 'Files' }), true));
-test('com. title excluded', () => eq(isExcludedWindow({ title: 'com.foo.Bar', appName: 'x' }), true));
-test('gjs app excluded', () => eq(isExcludedWindow({ title: 'ok', appName: 'GJS Thing' }), true));
+test('plain window is fine', () => eq(isHelperWindowInfo({ title: 'Docs', appName: 'Files' }), false));
+test('null title is fine', () => eq(isHelperWindowInfo({ title: null, appName: null }), false));
+test('blank title excluded', () => eq(isHelperWindowInfo({ title: '  ', appName: 'Files' }), true));
+test('com. title excluded', () => eq(isHelperWindowInfo({ title: 'com.foo.Bar', appName: 'x' }), true));
+test('gjs app excluded', () => eq(isHelperWindowInfo({ title: 'ok', appName: 'GJS Thing' }), true));
 
 // --- shouldShow
 const base = { scope: 'all', hasWindow: true, maximized: false, fullscreen: false, overview: false, excluded: false };
