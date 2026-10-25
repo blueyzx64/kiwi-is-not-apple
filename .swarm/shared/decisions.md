@@ -60,3 +60,7 @@ All answered by the owner on 2026-10-25. Do not ask the owner again; ask the orc
   Spotlight, Notch, Stage Manager; Advanced stays last.
 - `Glass.configure(settings)` is called by extension.js on enable (null on disable). Features
   never look up their own extension (EGO X-006).
+- Prefs files run outside the Shell: there is no global `N_`/`_`. Import gettext from
+  `resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js` or define `const N_ = s => s;`.
+- Stage Manager adds `conflictsWith: ['minimize-to-dock']` only in the round that really hides
+  windows (S9 Wave D). It is not added while the feature is strip-only.

@@ -26,10 +26,11 @@ import { ExtensionPreferences, gettext as _ } from 'resource:///org/gnome/Shell/
 
 import * as liquidGlassPrefs from './apps/liquidGlass/prefs.js';
 import * as windowControlsPrefs from './apps/windowControls/prefs.js';
+import * as autohidePrefs from './apps/autohide/prefs.js';
 
 // Feature prefs modules (see apps/<feature>/prefs.js): PAGE says where, buildPrefs() makes the groups
 // New pages appear in this order, after Options and before Advanced (Liquid Glass first).
-const FEATURE_PREFS = [liquidGlassPrefs, windowControlsPrefs];
+const FEATURE_PREFS = [liquidGlassPrefs, windowControlsPrefs, autohidePrefs];
 
 const D2D_UUIDS = ['dash-to-dock@micxgx.gmail.com', 'ubuntu-dock@ubuntu.com'];
 const EXTENSION_ACTIVE = 1;
@@ -483,10 +484,6 @@ export default class KiwiPreferences extends ExtensionPreferences {
             description: _('Choose what the top panel and its menus show'),
         });
         panelPage.add(windowTitleGroup);
-
-        this._addSwitchRows(settings, windowTitleGroup, [
-            { key: 'panel-hover-fullscreen', title: _("Show Panel in Fullscreen on Hover"), subtitle: _("Show panel when mouse is near top edge in fullscreen. Bugged for GTK4 apps.") },
-        ]);
 
         // Tiling lives under the window title because the layouts are reached from its
         // menu; without the title in the panel there is no way to open them.
