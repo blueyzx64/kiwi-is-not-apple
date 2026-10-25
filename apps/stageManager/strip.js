@@ -99,6 +99,13 @@ export class StageStrip {
             style_class: 'kiwi-stage-strip', reactive: true, visible: false,
         });
         this._chrome.add_child(this._root);
+        // The Shell can destroy chrome from C (shutdown, a session mode change) before our cleanup
+        // runs; from then on every call is a no-op instead of touching disposed actors
+        this._dead = false;
+        this._chrome.connect('destroy', () => {
+            this._dead = true;
+            this._thumbs.clear();
+        });
         this._root.connect('enter-event', () => this._setPointer({ onStrip: true }));
         this._root.connect('leave-event', () => this._setPointer({ onStrip: false }));
         this._cards = new Clutter.Actor({ reactive: false });
@@ -131,6 +138,8 @@ export class StageStrip {
      *   cards: [{id, app (Shell.App|null), windows: Meta.Window[] (lead first)}]
      */
     update(next) {
+        if (this._dead)
+            return;
         const { slide = 0, ...rest } = next;
         Object.assign(this._state, rest);
         if (slide)
@@ -146,6 +155,8 @@ export class StageStrip {
 
     /** The floor's rect on screen while it is shown, else null (window drags test against it). */
     floorRect() {
+        if (this._dead)
+            return null;
         if (!this._pill || !this._shown)
             return null;
         return { ...this._pill, x: this._pill.x + this._root.translation_x };
@@ -156,6 +167,8 @@ export class StageStrip {
      * pointer is over it ('over'). null ends the hint.
      */
     setDropHint(hint) {
+        if (this._dead)
+            return;
         if (hint === this._dropHint)
             return;
         this._dropHint = hint;
@@ -172,6 +185,8 @@ export class StageStrip {
 
     /** Where windows shrink toward: the middle of the pill, or null when there is none. */
     anchor() {
+        if (this._dead)
+            return null;
         const p = this._pill;
         return p ? { x: p.x + p.width / 2, y: p.y + p.height / 2 } : null;
     }
@@ -181,6 +196,8 @@ export class StageStrip {
      * when the window has no card.
      */
     thumbRect(win) {
+        if (this._dead)
+            return null;
         const t = this._thumbs.get(win);
         if (!t)
             return null;
@@ -194,6 +211,8 @@ export class StageStrip {
 
     /** A flight stands in for this window's thumbnail: hide it until the flight lands. */
     setFlying(win, flying) {
+        if (this._dead)
+            return;
         if (flying)
             this._flying.add(win);
         else
@@ -214,6 +233,8 @@ export class StageStrip {
 
     /** Cheap path for window moves: only re-decide whether the strip is shown. */
     setStageRects(rects) {
+        if (this._dead)
+            return;
         this._state.stageRects = rects;
         this._syncShown();
     }
@@ -221,12 +242,16 @@ export class StageStrip {
     // ---- build -----------------------------------------------------------------------
 
     _clearCards() {
+        if (this._dead)
+            return;
         this._thumbs.clear();
         for (const child of this._cards.get_children())
             child.destroy();
     }
 
     _rebuild() {
+        if (this._dead)
+            return;
         const { side, workArea, cards } = this._state;
         this._clearCards();
         if (!workArea || cards.length === 0) {
@@ -663,6 +688,8 @@ export class StageStrip {
     }
 
     _syncShown() {
+        if (this._dead)
+            return;
         if (!this._pill)
             return;
         const show = this._wantShown();
@@ -697,7 +724,7 @@ export class StageStrip {
                 translation_x: away, opacity: 0, duration: this._ms(SLIDE_MS),
                 mode: Clutter.AnimationMode.EASE_IN_CUBIC,
                 onComplete: () => {
-                    if (this._shown === false)
+                    if (!this._dead && this._shown === false)
                         this._root.visible = false;
                 },
             });
