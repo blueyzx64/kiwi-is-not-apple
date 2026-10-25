@@ -6,7 +6,7 @@
 | advanced/ fixes + foundation nits | S1 | done, merged | feat/advanced-fixes |
 | Integrator/review | S10 | setup merged; idle until review | feat/integration |
 | Window controls | S2 | done, merged | feat/window-controls |
-| Liquid Glass | S3 | doing | feat/liquid-glass |
+| Liquid Glass | S3 | built; S10 review + integration | feat/liquid-glass |
 | Clipboard | S4 | todo | feat/clipboard |
 | Spotlight | S5 | todo | feat/spotlight |
 | Auto-hide bar | S6 | doing | feat/autohide |

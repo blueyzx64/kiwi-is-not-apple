@@ -1,6 +1,6 @@
 # Contracts (frozen APIs; only the orchestrator edits)
 
-_S1 froze lib/ and features.js (below). S3's lib/glass.js comes later._
+_Frozen: lib/ + features.js (S1), prefs builder, panelLayout (S2), lib/glass.js (S3)._
 
 ## Prefs builder (frozen by orchestrator, owner S10)
 - Each `apps/<feature>/prefs.js`: ESM, Adw/Gtk/Gio only, no Shell libs.
@@ -57,3 +57,25 @@ _S1 froze lib/ and features.js (below). S3's lib/glass.js comes later._
 - Re-sorts in one idle on `child-added` of a claimed box.
 - Claims in use: `window-controls` (left before `window-title`, or right last).
   The notch (S8) claims box `center`.
+
+## lib/glass.js: GlassService (frozen from S3, feat/liquid-glass)
+`import { Glass } from '../lib/glass.js'`: a module singleton with no ctx. It starts on the first attach/watch and stops after the last destroy.
+**Rules:** never write your own blur. Put content in a sibling above the glass layer, not in a child.
+Attach in `enable()` and add `cleanup.add(() => h.destroy())`. Check `Glass.motion` before animating.
+- `Glass.attach(target, opts) -> handle`: refcounted per (target, surface).
+  - `surface`: 'panel'|'menus'|'dock'|'overlays' (default) | 'wallpaper' (plain cached blur, mode self).
+  - `parent` (default `target.get_parent()`; the layer goes in at index 0) and `below` (insert just under that child).
+  - `layers`: 'glass' (blur + tint + rim + highlight [+ shadow], the default) | 'blur' (blur only; the caller keeps its tint).
+  - `mode`: 'backdrop' (default) | 'self'. `follow`: true (default) | false (the caller uses `handle.setRect`).
+  - `radius`: corner px. Concentric inner radius = max(outer - padding, 4).
+  - `role`: 'small' | 'large' (+0.10 tint). `shadow` defaults to false for panel/dock and true otherwise.
+  - `isDark: () => bool` (default: St color-scheme), `name`, and `brightness(dark)` for self/wallpaper only.
+- handle: `setVisible(bool)`, `setRect(x, y, w, h)`, `refresh()`, `invalidate()`, `destroy()` (idempotent),
+  `tier` ('off'|'blur'|'light'|'opaque'), `params` (read-only).
+- `Glass.wants(surface, rawGsettings?) -> bool`: liquid-glass is on and the surface is enabled, or glass is off and the legacy key is on.
+- `Glass.motion` (false under reduced motion), `Glass.snapshot`, `Glass.watch(registry, fn({snapshot, env}))`.
+- `Glass.configure(gsettings)` is optional.
+- The service owns: tiers (high contrast gives opaque), the still wallpaper copy for Performance and Power Saver modes,
+  the repaint throttle, the legacy keys, and the migration into liquid-glass-surfaces.
+- compat shims: `SHADER_API`, `createShaderEffect({declarations, effectFn})` in lib/compat.js.
+- Known limit: refraction bends only the actor's own texture, so it uses the still-wallpaper path.
