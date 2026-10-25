@@ -29,6 +29,9 @@ import {
 
 const BUTTONS = ['minimize', 'maximize', 'close'];
 
+// Normal windows and dialogs: GTK dialogs lose their own buttons too, so they need the panel ones.
+const CONTROL_WINDOW_TYPES = [Meta.WindowType.NORMAL, Meta.WindowType.DIALOG, Meta.WindowType.MODAL_DIALOG];
+
 const SYMBOLIC_ICONS = {
     close: 'window-close-symbolic',
     minimize: 'window-minimize-symbolic',
@@ -342,7 +345,7 @@ export class WindowControlsFeature {
         if (!indicator)
             return;
         const win = this._win;
-        const normal = !!win && win.get_window_type() === Meta.WindowType.NORMAL;
+        const normal = !!win && CONTROL_WINDOW_TYPES.includes(win.get_window_type());
         const maximized = normal && isMaximized(win);
         const fullscreen = normal && win.is_fullscreen();
 
