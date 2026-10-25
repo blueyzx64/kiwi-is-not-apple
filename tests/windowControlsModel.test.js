@@ -1,7 +1,7 @@
 // Run: gjs -m tests/windowControlsModel.test.js
 import {
     parseButtonLayout, resolvePlacement, isExcludedWindow, shouldShow,
-    titlebarHideSheet, resolveIcon, MIGRATIONS,
+    titlebarHideSheet, resolveIcon, MIGRATIONS, createJobQueue,
 } from '../apps/windowControls/model.js';
 import { runMigrations } from '../lib/settings.js';
 
@@ -142,6 +142,25 @@ test('migration: idempotent, new key wins', () => {
     eq(runMigrations(gs, MIGRATIONS), []);
     eq(gs.user['window-controls-scope'], 'maximized');
 });
+
+try {
+    const q = createJobQueue(() => {});
+    const log = [];
+    let running = 0;
+    const job = (name, ms, fail) => () => new Promise((res, rej) => {
+        running++;
+        if (running > 1) log.push('OVERLAP');
+        setTimeout(() => { running--; log.push(name); fail ? rej(new Error('x')) : res(); }, ms);
+    });
+    q(job('a', 20, true));
+    q(job('b', 1));
+    await q(job('c', 1));
+    eq(log, ['a', 'b', 'c']);
+    print('ok   job queue: no overlap, failure does not stop the next');
+} catch (e) {
+    failed++;
+    print(`FAIL job queue: ${e.message}`);
+}
 
 if (failed)
     throw new Error(`${failed} failed`);

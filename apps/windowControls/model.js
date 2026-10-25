@@ -150,3 +150,15 @@ export function resolveIcon({ buttonType, iconName, scale, has }) {
     }
     return { folder: 'titlebuttons', name: iconName };
 }
+
+/**
+ * Runs jobs one after another; a failing job is reported and does not stop the next.
+ * Share one queue between all users of the same files.
+ */
+export function createJobQueue(onError = () => {}) {
+    let tail = Promise.resolve();
+    return job => {
+        tail = tail.then(job).catch(onError);
+        return tail;
+    };
+}

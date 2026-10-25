@@ -11,7 +11,7 @@ import GLib from 'gi://GLib';
 
 import { CleanupRegistry } from '../lib/disposables.js';
 import { KiwiSettings } from '../lib/settings.js';
-import { MIGRATIONS as WINDOW_CONTROLS_MIGRATIONS, titlebarHideSheet } from './windowControls/model.js';
+import { MIGRATIONS as WINDOW_CONTROLS_MIGRATIONS, titlebarHideSheet, createJobQueue } from './windowControls/model.js';
 
 const MARKER_BEGIN = '/* Kiwi (is not Apple) - managed imports: begin */';
 const MARKER_END = '/* Kiwi (is not Apple) - managed imports: end */';
@@ -25,14 +25,15 @@ const LEGACY_IMPORT_REGEX = /^[^\n]*@import[^\n]*kiwi@kemma[^\n]*\n?/gm;
 
 let gtkThemeManager = null;
 
+// File work runs one job at a time across ALL manager instances: a lock drops one instance and
+// the unlock makes another, and their jobs must not overlap on the same gtk.css files.
+const enqueueFileJob = createJobQueue(error => console.error(`[Kiwi] GTK css job failed: ${error}`));
+
 class GtkThemeManager {
     constructor(ext) {
         this._extension = ext;
         this._ks = null;
         this._cleanup = new CleanupRegistry();
-        // File work runs one job at a time, so an unlock never interleaves with the cleanup
-        // that a lock started.
-        this._queue = Promise.resolve();
     }
 
     // Absolute file:// URI for a stylesheet shipped in the extension's css folder.
@@ -96,10 +97,7 @@ class GtkThemeManager {
     }
 
     _enqueue(job) {
-        this._queue = this._queue.then(job).catch(error => {
-            console.error(`[Kiwi] GTK css job failed: ${error}`);
-        });
-        return this._queue;
+        return enqueueFileJob(job);
     }
 
     // Settings are read now, the files are written later, so a disable cannot starve the job.
