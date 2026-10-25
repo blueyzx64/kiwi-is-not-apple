@@ -45,8 +45,10 @@ export default class KiwiExtension extends Extension {
         // us, and the dock features follow it either way
         this._cleanup.connect(Main.extensionManager, 'extension-state-changed',
             (_manager, extension) => {
-                if (isDockExtension(extension))
-                    this._features.refresh(null);
+                if (!isDockExtension(extension))
+                    return;
+                resetDockSettings();
+                this._features.refresh(null);
             });
 
         // A crash or hard logout can leave Dash to Dock colours Kiwi changed; put them back first

@@ -170,7 +170,9 @@ export function makeDashSeparator(dash) {
     });
 }
 
-let d2dSettings;              // undefined until looked up, null without the dock
+// undefined until looked up, null without the dock. Dropped by resetDockSettings(),
+// which extension.js calls when the dock extension changes state.
+let d2dSettings;
 
 /**
  * The default schema source only covers the system-wide directories, so a dock
@@ -185,12 +187,18 @@ function lookupDockSchema() {
 
     for (const uuid of D2D_UUIDS) {
         const dir = Main.extensionManager.lookup(uuid)?.dir.get_child('schemas');
-        if (!dir?.get_child('gschemas.compiled').query_exists(null))
+        if (!dir)
             continue;
-        const own = Gio.SettingsSchemaSource.new_from_directory(dir.get_path(), source, true)
-            .lookup(D2D_SCHEMA, true);
-        if (own)
-            return own;
+        // No existence probe: a missing compiled schema throws, and that is
+        // the answer. Keeps file IO off the refresh path.
+        try {
+            const own = Gio.SettingsSchemaSource.new_from_directory(dir.get_path(), source, true)
+                .lookup(D2D_SCHEMA, true);
+            if (own)
+                return own;
+        } catch (_e) {
+            // This copy of the dock has no compiled schema; try the next
+        }
     }
     return null;
 }
