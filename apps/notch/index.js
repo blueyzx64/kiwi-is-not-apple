@@ -139,12 +139,20 @@ export class NotchFeature {
         if (!this._alive)
             return;
         const before = this._state.current?.id;
+        const pendingBefore = this._state.pending.map(n => n.id);
         const { state, effects } = step(this._state, { now: nowMs(), ...ev }, this._config());
         this._state = state;
         // A card that ran out of time (not clicked, not dismissed, not waiting in the queue)
         if (ev.type === 'tick' && before !== undefined && state.current?.id !== before &&
             !state.pending.some(n => n.id === before))
             this._expire(before);
+        // Queued cards pruned by the queue cap or by DnD / fullscreen never get their turn
+        if (ev.type !== 'notify-removed') {
+            for (const id of pendingBefore) {
+                if (id !== state.current?.id && !state.pending.some(n => n.id === id))
+                    this._expire(id);
+            }
+        }
         for (const effect of effects)
             this._run(effect);
         this._sync();
@@ -300,12 +308,14 @@ export class NotchFeature {
 
     // A critical card is sticky; if the notch stops taking banners it must not vanish with it.
     _requeueCritical() {
-        const current = this._state.current;
-        if (!current || current.urgency < URGENCY.CRITICAL)
-            return;
-        const notification = this._notifications.get(current.id);
-        if (notification)
-            requeueBanner(Main.messageTray, notification);
+        const { current, pending } = this._state;
+        for (const entry of [current, ...pending]) {
+            if (!entry || entry.urgency < URGENCY.CRITICAL)
+                continue;
+            const notification = this._notifications.get(entry.id);
+            if (notification)
+                requeueBanner(Main.messageTray, notification);
+        }
     }
 
     _applyParts() {
