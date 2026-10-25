@@ -390,5 +390,22 @@
         <description>Internal. JSON of the user's original Dash-to-Dock indicator and background colours, written while dock adaptive colours are on and cleared when they are turned off. Restores the colours after a shell crash. Do not edit.</description>
       </key>
 
+      <!-- Control Center (apps/controlCenter) -->
+      <key name="control-center" type="b">
+        <default>true</default>
+        <summary>Control Center</summary>
+        <description>Re-lay out the Quick Settings menu like the macOS Control Center: blocks for connectivity, focus, display, sound and media, with Stage Manager and Liquid Glass tiles. GNOME keeps running every toggle. Off restores the stock menu.</description>
+      </key>
+      <key name="control-center-user-row" type="b">
+        <default>true</default>
+        <summary>Control Center user row</summary>
+        <description>Show your picture and name in the Control Center footer, with the battery time left. Replaces the old username label in the top bar (add-username-to-quick-menu, migrated).</description>
+      </key>
+      <key name="battery-percentage-always" type="b">
+        <default>false</default>
+        <summary>Always show battery percentage</summary>
+        <description>Show the battery charge in the top bar at any level, not only when it is low. Not shown while GNOME's own battery percentage is on.</description>
+      </key>
+
     </schema>
 </schemalist>

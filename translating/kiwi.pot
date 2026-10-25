@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Kiwi is not Apple 2.0.0\n"
 "Report-Msgid-Bugs-To: https://github.com/kem-a/kiwi-kemma/issues\n"
-"POT-Creation-Date: 2026-10-25 12:35+0000\n"
+"POT-Creation-Date: 2026-10-25 12:49+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -71,6 +71,89 @@ msgstr ""
 msgid "How long after the pointer leaves the top bar"
 msgstr ""
 
+#: apps/controlCenter/index.js:163
+msgid "More"
+msgstr ""
+
+#: apps/controlCenter/index.js:175
+msgid "Stage Manager"
+msgstr ""
+
+#: apps/controlCenter/index.js:179 apps/liquidGlass/prefs.js:14
+#: apps/liquidGlass/prefs.js:105 apps/liquidGlass/prefs.js:108
+msgid "Liquid Glass"
+msgstr ""
+
+#: apps/controlCenter/nowPlaying.js:44
+msgid "Play or pause"
+msgstr ""
+
+#: apps/controlCenter/nowPlaying.js:46
+msgid "Next track"
+msgstr ""
+
+#: apps/controlCenter/prefs.js:10 apps/controlCenter/prefs.js:26
+#: apps/controlCenter/prefs.js:29
+msgid "Control Center"
+msgstr ""
+
+#: apps/controlCenter/prefs.js:27
+msgid ""
+"Re-lays out the Quick Settings menu in blocks, like the macOS Control "
+"Center. GNOME keeps running every toggle; turning this off restores the "
+"stock menu."
+msgstr ""
+
+#: apps/controlCenter/prefs.js:30
+msgid ""
+"Blocks for connectivity, focus, display, sound and media, with Stage Manager "
+"and Liquid Glass tiles"
+msgstr ""
+
+#: apps/controlCenter/prefs.js:33
+msgid "Details"
+msgstr ""
+
+#: apps/controlCenter/prefs.js:34
+msgid "User row"
+msgstr ""
+
+#: apps/controlCenter/prefs.js:35
+msgid "Show your picture and name at the bottom, with the battery time left"
+msgstr ""
+
+#: apps/controlCenter/prefs.js:37
+msgid "Always show battery percentage"
+msgstr ""
+
+#: apps/controlCenter/prefs.js:38
+msgid "Show the charge in the top bar at any level, not only when it is low"
+msgstr ""
+
+#: apps/controlCenter/tiles.js:56 apps/quickSettingsNotifications.js:102
+msgid "Do Not Disturb"
+msgstr ""
+
+#: apps/controlCenter/userRow.js:27
+#, javascript-format
+msgid "%d h %d min"
+msgstr ""
+
+#: apps/controlCenter/userRow.js:28
+#, javascript-format
+msgid "%d min"
+msgstr ""
+
+#: apps/controlCenter/userRow.js:30
+#, javascript-format
+msgid "%s left"
+msgstr ""
+
+#: apps/controlCenter/userRow.js:31
+#, javascript-format
+msgid "%s until full"
+msgstr ""
+
 #: apps/downloadsStack.js:453
 msgid "Open in Files"
 msgstr ""
@@ -88,130 +171,128 @@ msgstr ""
 msgid "Downloads"
 msgstr ""
 
-#: apps/launchpadApp.js:160
+#: apps/launchpadApp.js:161
 msgid "Launchpad"
 msgstr ""
 
-#: apps/launchpadApp.js:161
+#: apps/launchpadApp.js:162
 msgid "Open Application Overview"
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:12 apps/liquidGlass/prefs.js:103
-#: apps/liquidGlass/prefs.js:106
-msgid "Liquid Glass"
-msgstr ""
-
-#: apps/liquidGlass/prefs.js:15
+#: apps/liquidGlass/prefs.js:17
 msgid "Top bar"
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:16
+#: apps/liquidGlass/prefs.js:18
 msgid "Menus and Control Center"
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:17 prefs.js:650
+#: apps/liquidGlass/prefs.js:19 prefs.js:650
 msgid "Dock"
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:18
+#: apps/liquidGlass/prefs.js:20
 msgid "Spotlight, Quick Paste and the Stage Manager strip"
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:51
+#: apps/liquidGlass/prefs.js:53
 msgid "Style"
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:52
+#: apps/liquidGlass/prefs.js:54
 msgid "Tinted is easier to read. Clear is more transparent."
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:53
+#: apps/liquidGlass/prefs.js:55
 msgid "Tinted"
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:53 apps/quickSettingsNotifications.js:195
+#: apps/liquidGlass/prefs.js:55 apps/quickSettingsNotifications.js:200
 msgid "Clear"
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:104
+#: apps/liquidGlass/prefs.js:106
 msgid ""
 "Frosted, translucent shell surfaces. App windows stay opaque. Turning this "
 "off restores solid surfaces; the old Panel Blur and Dock Blur switches then "
 "apply again."
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:106
+#: apps/liquidGlass/prefs.js:108
 msgid "Shell-wide glass style"
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:111
+#: apps/liquidGlass/prefs.js:113
 msgid "Blur my Shell is installed"
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:112
+#: apps/liquidGlass/prefs.js:114
 msgid ""
 "Its blur and its own Liquid Glass effect overlap with this page. Use one of "
 "them for each surface, or the panel and dock may blur twice. Kiwi never "
 "changes Blur my Shell."
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:119
+#: apps/liquidGlass/prefs.js:121
 msgid "Look"
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:121
+#: apps/liquidGlass/prefs.js:123
 msgid "Blur"
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:121
+#: apps/liquidGlass/prefs.js:123
 msgid "How much the background is blurred"
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:122
+#: apps/liquidGlass/prefs.js:124
 msgid "Tint"
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:122
-msgid "Higher keeps text readable over any wallpaper"
+#: apps/liquidGlass/prefs.js:124
+#, javascript-format
+msgid ""
+"Higher keeps text readable over any wallpaper. In Tinted style, values below "
+"%d are treated as %d to keep text readable."
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:123
+#: apps/liquidGlass/prefs.js:125
 msgid "Edge highlight"
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:123
+#: apps/liquidGlass/prefs.js:125
 msgid "A thin light edge along the top"
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:126
+#: apps/liquidGlass/prefs.js:128
 msgid "Surfaces"
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:131
+#: apps/liquidGlass/prefs.js:133
 msgid "Performance"
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:132
+#: apps/liquidGlass/prefs.js:134
 msgid "Performance mode"
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:133
+#: apps/liquidGlass/prefs.js:135
 msgid "Blur a still copy of the wallpaper instead of the live screen"
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:134
+#: apps/liquidGlass/prefs.js:136
 msgid "Performance mode in Power Saver"
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:135
+#: apps/liquidGlass/prefs.js:137
 msgid "Switch automatically while the Power Saver profile is active"
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:136
+#: apps/liquidGlass/prefs.js:138
 msgid "Edge refraction (experimental)"
 msgstr ""
 
-#: apps/liquidGlass/prefs.js:137
+#: apps/liquidGlass/prefs.js:139
 msgid ""
 "Bends the picture at the edges. Uses the still wallpaper copy and a GPU "
 "shader."
@@ -229,19 +310,15 @@ msgstr ""
 msgid "Media"
 msgstr ""
 
-#: apps/quickSettingsNotifications.js:97
-msgid "Do Not Disturb"
-msgstr ""
-
-#: apps/quickSettingsNotifications.js:185
+#: apps/quickSettingsNotifications.js:190
 msgid "Notifications"
 msgstr ""
 
-#: apps/quickSettingsNotifications.js:200
+#: apps/quickSettingsNotifications.js:205
 msgid "Clear all notifications"
 msgstr ""
 
-#: apps/quickSettingsNotifications.js:374
+#: apps/quickSettingsNotifications.js:385
 msgid "Do Not Disturb Indicator"
 msgstr ""
 
@@ -352,55 +429,55 @@ msgstr ""
 msgid "Always on Top"
 msgstr ""
 
-#: prefs.js:122
+#: prefs.js:123
 msgid "Kiwi (is not Apple)"
 msgstr ""
 
-#: prefs.js:142
+#: prefs.js:143
 msgid "About"
 msgstr ""
 
-#: prefs.js:191
+#: prefs.js:192
 msgid "Change log"
 msgstr ""
 
-#: prefs.js:227
+#: prefs.js:228
 msgid "Website"
 msgstr ""
 
-#: prefs.js:231
+#: prefs.js:232
 msgid "Report an Issue"
 msgstr ""
 
-#: prefs.js:236
+#: prefs.js:237
 msgid "Credits"
 msgstr ""
 
-#: prefs.js:239 prefs.js:254
+#: prefs.js:240 prefs.js:255
 msgid "Legal"
 msgstr ""
 
-#: prefs.js:262
+#: prefs.js:263
 msgid "License"
 msgstr ""
 
-#: prefs.js:263
+#: prefs.js:264
 msgid "Kiwi is free and open source software"
 msgstr ""
 
-#: prefs.js:268
+#: prefs.js:269
 msgid "GNU General Public License v3.0"
 msgstr ""
 
-#: prefs.js:270
+#: prefs.js:271
 msgid "View the full license text on GitHub"
 msgstr ""
 
-#: prefs.js:277 prefs.js:278
+#: prefs.js:278 prefs.js:279
 msgid "Copyright"
 msgstr ""
 
-#: prefs.js:278
+#: prefs.js:279
 msgid ""
 "This program is free software: you can redistribute it and/or modify it "
 "under the terms of the GNU General Public License as published by the Free "
@@ -408,198 +485,190 @@ msgid ""
 "any later version."
 msgstr ""
 
-#: prefs.js:332
+#: prefs.js:333
 msgid "Become a sponsor on GitHub"
 msgstr ""
 
-#: prefs.js:345
+#: prefs.js:346
 msgid "Support Me ♡"
 msgstr ""
 
-#: prefs.js:371
+#: prefs.js:372
 msgid "Panel"
 msgstr ""
 
-#: prefs.js:377 prefs.js:390
+#: prefs.js:378 prefs.js:391
 msgid "Panel Transparency"
 msgstr ""
 
-#: prefs.js:378
+#: prefs.js:379
 msgid "Configure panel transparency and appearance"
 msgstr ""
 
-#: prefs.js:391
+#: prefs.js:392
 msgid "Make the top panel transparent"
 msgstr ""
 
-#: prefs.js:398
+#: prefs.js:399
 msgid "Transparency Level"
 msgstr ""
 
-#: prefs.js:399
+#: prefs.js:400
 msgid "Set panel transparency (0-100)"
 msgstr ""
 
-#: prefs.js:413
+#: prefs.js:414
 msgid "Opaque When Window Maximized"
 msgstr ""
 
-#: prefs.js:414
+#: prefs.js:415
 msgid "Make panel opaque when a maximized window touches it"
 msgstr ""
 
-#: prefs.js:422
+#: prefs.js:423
 msgid "Panel Blur"
 msgstr ""
 
-#: prefs.js:423 prefs.js:469
+#: prefs.js:424 prefs.js:470
 msgid "Blur the background behind the panel"
 msgstr ""
 
-#: prefs.js:431
+#: prefs.js:432
 msgid "Panel Color Fix"
 msgstr ""
 
-#: prefs.js:432
+#: prefs.js:433
 msgid "Fix white panel on some themes (e.g., Ubuntu Yaru)"
 msgstr ""
 
-#: prefs.js:439
+#: prefs.js:440
 msgid "Invert Tray Icons on Light Wallpapers"
 msgstr ""
 
-#: prefs.js:440
+#: prefs.js:441
 msgid ""
 "Darken white monochrome tray icons when the panel adapts to a light "
 "wallpaper. Colored icons are left untouched"
 msgstr ""
 
-#: prefs.js:468 prefs.js:833
+#: prefs.js:469 prefs.js:833
 msgid "Handled by Liquid Glass"
 msgstr ""
 
-#: prefs.js:483
+#: prefs.js:484
 msgid "Panel Items"
 msgstr ""
 
-#: prefs.js:484
+#: prefs.js:485
 msgid "Choose what the top panel and its menus show"
 msgstr ""
 
-#: prefs.js:491
+#: prefs.js:492
 msgid "Show Window Title"
 msgstr ""
 
-#: prefs.js:492
+#: prefs.js:493
 msgid "Display current window title in the top panel"
 msgstr ""
 
-#: prefs.js:501
+#: prefs.js:502
 msgid "Hide App Icon"
 msgstr ""
 
-#: prefs.js:502
+#: prefs.js:503
 msgid "Do not show the application icon next to the window title"
 msgstr ""
 
-#: prefs.js:509
+#: prefs.js:510
 msgid "Hide Window Subtitle"
 msgstr ""
 
-#: prefs.js:510
+#: prefs.js:511
 msgid "Show only the application name, without the window's own title"
 msgstr ""
 
-#: prefs.js:517
+#: prefs.js:518
 msgid "Disable Window Tiling"
 msgstr ""
 
-#: prefs.js:518
+#: prefs.js:519
 msgid ""
 "Drop the tiling layouts from the window title menu, and stop restoring tiled "
 "windows when their titlebar is dragged"
 msgstr ""
 
-#: prefs.js:544
+#: prefs.js:545
 msgid "Move Calendar to Right"
 msgstr ""
 
-#: prefs.js:545
+#: prefs.js:546
 msgid "Move calendar to right side and hide notifications"
 msgstr ""
 
-#: prefs.js:554
+#: prefs.js:555
 msgid "Keep GNOME Notification Panel"
 msgstr ""
 
-#: prefs.js:555
+#: prefs.js:556
 msgid "Don't split notification and calendar layout"
 msgstr ""
 
-#: prefs.js:561
+#: prefs.js:562
 msgid "Indicator Style"
 msgstr ""
 
-#: prefs.js:562
+#: prefs.js:563
 msgid "Notification dot recolor"
 msgstr ""
 
-#: prefs.js:565 prefs.js:894
+#: prefs.js:566 prefs.js:894
 msgid "Default"
 msgstr ""
 
-#: prefs.js:565
+#: prefs.js:566
 msgid "Accent"
 msgstr ""
 
-#: prefs.js:565
+#: prefs.js:566
 msgid "Symbolic"
 msgstr ""
 
-#: prefs.js:574
+#: prefs.js:575
 msgid "Battery Percentage"
 msgstr ""
 
-#: prefs.js:586
+#: prefs.js:587
 msgid ""
 "Unavailable while GNOME Settings shows the battery percentage in the top bar"
 msgstr ""
 
-#: prefs.js:587
+#: prefs.js:588
 msgid "Show battery percentage in the top bar when below 20%"
 msgstr ""
 
-#: prefs.js:593
+#: prefs.js:594
 msgid "Custom Do Not Disturb Button"
 msgstr ""
 
-#: prefs.js:593
+#: prefs.js:594
 msgid ""
 "Replace the system Do Not Disturb button with Kiwi's custom implementation"
 msgstr ""
 
-#: prefs.js:594
+#: prefs.js:595
 msgid "Caps Lock and Num Lock"
 msgstr ""
 
-#: prefs.js:594
+#: prefs.js:595
 msgid "Show Caps Lock and Num Lock icon"
 msgstr ""
 
-#: prefs.js:595
+#: prefs.js:596
 msgid "Hide Activities Button"
 msgstr ""
 
-#: prefs.js:595
+#: prefs.js:596
 msgid "Hide the Activities button in the top panel"
-msgstr ""
-
-#: prefs.js:596
-msgid "Add Username"
-msgstr ""
-
-#: prefs.js:596
-msgid "Add username to the quick menu"
 msgstr ""
 
 #: prefs.js:600 prefs.js:810

@@ -44,6 +44,7 @@ import { enable as reduceWindowAnimationsEnable, disable as reduceWindowAnimatio
 import { enableDragRestore, disableDragRestore } from './apps/windowTiling.js';
 import { dockActive } from './apps/dockUtils.js';
 import { LiquidGlass } from './apps/liquidGlass/index.js';
+import { ControlCenter } from './apps/controlCenter/index.js';
 import { Glass } from './lib/glass.js';
 
 // ctx: { extension, settings (Gio.Settings), gettext, interfaceSettings (Gio.Settings) }
@@ -75,7 +76,9 @@ export const FEATURES = [
         disable: () => moveFullscreenDisable(),
     },
     {
-        id: 'add-username-to-quick-menu', reapply: true, setting: 'add-username-to-quick-menu',
+        // The Control Center user row replaces this
+        id: 'add-username-to-quick-menu', reapply: true,
+        when: ctx => bool(ctx, 'add-username-to-quick-menu') && !bool(ctx, 'control-center'),
         enable: () => addUsernameEnable(),
         disable: () => addUsernameDisable(),
     },
@@ -94,7 +97,8 @@ export const FEATURES = [
         // Also re-applied alone when org.gnome.desktop.interface show-battery-percentage changes.
         id: 'battery-percentage', reapply: true,
         when: ctx => bool(ctx, 'battery-percentage') &&
-            !ctx.interfaceSettings.get_boolean('show-battery-percentage'),
+            !ctx.interfaceSettings.get_boolean('show-battery-percentage') &&
+            !(bool(ctx, 'control-center') && bool(ctx, 'battery-percentage-always')),
         enable: () => batteryPercentageEnable(),
         disable: () => batteryPercentageDisable(),
     },
@@ -263,5 +267,10 @@ export const FEATURES = [
         // Frosted panel and menus; the dock and wallpaper blur ride on the same service
         id: 'liquid-glass', setting: 'liquid-glass',
         cls: LiquidGlass,
+    },
+    {
+        // Quick Settings restyled as a Control Center; last so it sees the other panel features
+        id: 'control-center', setting: 'control-center',
+        cls: ControlCenter,
     },
 ];

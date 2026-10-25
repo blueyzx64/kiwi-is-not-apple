@@ -1,4 +1,9 @@
 apps/autohide/prefs.js
+apps/controlCenter/index.js
+apps/controlCenter/nowPlaying.js
+apps/controlCenter/prefs.js
+apps/controlCenter/tiles.js
+apps/controlCenter/userRow.js
 apps/downloadsStack.js
 apps/launchpadApp.js
 apps/liquidGlass/prefs.js
