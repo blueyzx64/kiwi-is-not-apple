@@ -2251,7 +2251,7 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
 
 /* feature: notch */
 .kiwi-notch {
-    background-color: rgba(0, 0, 0, 0.94);
+    background-color: #000000;
     color: #ffffff;
     /* No box-shadow: the island clips to its allocation, so a shadow shows only as a
        dark square in the corners around the rounded bottom. */
