@@ -24,7 +24,7 @@ Kiwi is a GNOME Shell extension that mimics various macOS features. This extensi
 
 ## Dock
 
-Requires [Dash to Dock](https://extensions.gnome.org/extension/307/), except Launchpad Application.
+These features work only when [Dash to Dock](https://extensions.gnome.org/extension/307/) is installed and enabled (except Launchpad Application). Fedora Workstation does not ship it by default. Without it, these features stay off.
 
 - **Minimize Windows to Dock**: Park minimized windows as thumbnails after the apps and before the trash, macOS style.
 - **Downloads Folder in Dock**: Add a Downloads folder before the trash that fans its newest files out over the desktop, macOS stack style.
@@ -92,7 +92,7 @@ Requirements: GNOME Shell 50 (tested target: Fedora 44 Workstation), `git`, `mak
    git checkout ccr-f3c1f44c-rv5a8r   # the preview branch; skip once it is merged into main
    make install                        # packs the zip into dist/ and runs gnome-extensions install --force
    ```
-3. Restart GNOME Shell so it loads the new code: on **Wayland**, log out and back in; on **X11**, press Alt+F2, type `r`, press Enter.
+3. Restart GNOME Shell so it loads the new code: log out and back in. GNOME 50 is Wayland-only, so Alt+F2 `r` does not work.
 4. Enable it, if it is not already enabled:
    ```sh
    gnome-extensions enable kiwi@kemma
@@ -113,8 +113,8 @@ Optional: `make smoke` runs a headless GNOME Shell and turns Kiwi off and on rep
 - *move to fullscreen* can behave unexpectedly due to built in GNOME dynamic workspace management. Disabling it might help.
 - Advanced triple button hover effect will not work for GTK3 flatpak apps due to sandboxing
 - Window controls in the top bar hide the titlebar buttons of GTK client-side decorated windows only. Windows drawn by the compositor (server-side decorations, some Qt/X11 apps) keep their own buttons. Flatpak GTK apps need the overrides under *Flatpak theming* for the hide-titlebar CSS to apply.
-- Electron apps now by default have wayland enabled which causes to use CSD and thus many title bar issues, like blurry icons or completely different window control icons. There is no CSS fix beyond avoiding forced Wayland or passing `--ozone-platform=x11` argument to force `Xwayland` usage.
-- similarly to electron apps also KDE apps by default uses CSD on wayland causing the same issues. To force `Xwayland` usage for KDE apps have to pass environmental variable `QT_QPA_PLATFORM=xcb`.
+- Electron apps now by default have wayland enabled which causes to use CSD and thus many title bar issues, like blurry icons or completely different window control icons. There is no CSS fix. Workaround (runs the app under Xwayland): avoid forced Wayland, or pass `--ozone-platform=x11`.
+- similarly to electron apps also KDE apps by default uses CSD on wayland causing the same issues. Workaround (runs the app under Xwayland): set the environment variable `QT_QPA_PLATFORM=xcb`.
 
 <details>
 <summary><H2>Flatpak theming</H2> <b>(click to open)</b></summary>

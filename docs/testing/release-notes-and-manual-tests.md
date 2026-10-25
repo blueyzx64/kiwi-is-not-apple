@@ -6,7 +6,8 @@ Brings the 8 planned macOS-style features (window controls, Liquid Glass, auto-h
 - `make check`: eslint 0 errors / 0 warnings, strict schema compile, `gjs -m` unit tests green.
 - `make pack`, and the prefs pages smoke-built under Xvfb.
 - `make smoke`: headless Shell 46 with shims.
-- **Headless real GNOME Shell 48.1 and 51.1** (Arch chroot): 20 enable/disable cycles each, 7 functional probes PASS on both, 0 Kiwi errors. These were run before the scope narrowed to 50. A GNOME 50 run is in progress. See section 4d.
+- **GNOME 50 (supported) headless run:** in progress. See section 4d.
+- **Earlier, other versions (not supported in this release):** headless GNOME Shell 48.1 and 51.1 (Arch chroot). Each had 20 enable/disable cycles, 7 functional probes PASS and 0 Kiwi errors. They show the shared code loads, not that GNOME 50 works.
 
 Headless runs can't check looks, real input or real apps, so please work through the manual list on Fedora 44 Workstation with GNOME 50 on Wayland.
 
@@ -313,7 +314,7 @@ Run each item on Fedora 44 Workstation, GNOME 50, in a Wayland session (GNOME 50
 
 ## 4b. EGO submission notes
 
-- **Version coverage:** `metadata.json` lists shell-version `["50"]` only. Headless runs so far were on 48.1 and 51.1, and a GNOME 50 run is in progress (section 4d). The owner must test on Fedora 44 Workstation with GNOME 50 before uploading to extensions.gnome.org.
+- **Version coverage:** `metadata.json` lists shell-version `["50"]` only. A headless GNOME 50 run is in progress (section 4d). Earlier headless runs on 48.1 and 51.1 cover other versions only. The owner must test on Fedora 44 Workstation with GNOME 50 before uploading to extensions.gnome.org.
 - **`overlay-key` handler block (Spotlight):** Kiwi finds the oldest `overlay-key` handler on the display (assumed to be the Shell's overview handler) with `signal_handler_find` and blocks only that id, then connects its own. Disable disconnects its own handler and unblocks that id. If not found, it warns and stock behaviour stays. Other extensions' handlers are untouched; the blocked handler id is logged at debug level. The assumption was read from the 51.1 source only.
 - **Dash to Dock settings writes:** the adaptive-colours feature writes Dash to Dock colour keys. Originals are saved to the Kiwi key `dock-colors-saved`, restored on disable, and restored on the next enable after a crash (`restoreStaleColors`). Keys that were at their default are `reset()`, and keys the user changed while Kiwi ran are left alone.
 - **`favorite-apps` write (Launchpad):** `launchpadApp.js` inserts a synthetic Launchpad desktop id into the shell's `favorite-apps` after the first favourite. On disable it removes only its own id, and resets the key when it was the default before and is the default again.
@@ -333,7 +334,13 @@ Run each item on Fedora 44 Workstation, GNOME 50, in a Wayland session (GNOME 50
 
 ## 4d. Real GNOME Shell testing
 
-**So far real-Shell runs were on 48.1 and 51.1 only**, before the scope was narrowed to GNOME 50. **A GNOME 50 run is in progress**; results: _to be filled in by the orchestrator_.
+### GNOME 50 (the supported version)
+
+**A headless GNOME 50 run is in progress.** Results: _to be filled in by the orchestrator_.
+
+### Earlier runs on other versions (48.1, 51.1; not supported in this release)
+
+These ran before the scope narrowed to GNOME 50 on Fedora 44. They are kept as evidence that the shared code loads and tears down. They do not show that anything works on GNOME 50 or on Fedora 44.
 
 Headless real GNOME Shell sessions ran in an Arch Linux chroot (`gnome-shell --headless --wayland --virtual-monitor 1280x800`, surfaceless renderer, no GPU):
 - **GNOME Shell 51.1** (mutter 51.1). Run `/tmp/x2/runs/20261025-185207-kiwi-is-not-apple-arch`.
@@ -345,7 +352,7 @@ Each run did the following:
 - Flipped settings, then toggled Kiwi 20 times.
 - Scanned the Shell log.
 
-Result on both versions: **all 7 functional probes PASS, `Kiwi errors: 0`.**
+Result on both of these other versions: **all 7 functional probes PASS, `Kiwi errors: 0`.**
 
 | Probe | What it checks | 51.1 | 48.1 |
 |---|---|---|---|
@@ -372,11 +379,11 @@ Headless can't cover:
 - **Multi-monitor hardware:** the 1280x800 virtual monitor only; S9's 2-virtual-monitor run is not real hardware.
 - **Specific apps and extensions:** Firefox and Thunderbird profile styling, Dash to Dock (dock blur, colours, Launchpad), third-party Quick Settings extensions, password managers.
 - **Lock screen and suspend:** a real session lock, suspend/resume, login.
-- **GNOME 50 (the supported version):** pending (see above). GNOME 49 was not run. Fedora 44 packaging and its default extensions were not used (Arch chroot).
+- **GNOME 50 on Fedora 44:** the GNOME 50 headless run is pending (see above). No run used Fedora 44 packaging, its default extensions or its SELinux/Flatpak setup (all runs were in an Arch chroot).
 
 ## 5. Not tested
 
-The supported platform is **Fedora 44 Workstation with GNOME 50**. Real GNOME Shell **48.1 and 51.1 ran headless only** (section 4d), and a **GNOME 50 headless run is in progress**. Nobody has used these features on Fedora 44 or on any real desktop with a screen, GPU, real input and real apps.
+The supported platform is **Fedora 44 Workstation with GNOME 50**. A **GNOME 50 headless run is in progress** (section 4d). Earlier headless runs used other versions (48.1, 51.1), which this release does not support. Nobody has used these features on Fedora 44 or on any real desktop with a screen, GPU, real input and real apps.
 
 Also run in the cloud:
 - Pure-logic unit tests with `gjs -m` (`bash tests/run.sh`).
