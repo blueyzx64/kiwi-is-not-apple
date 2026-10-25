@@ -16,170 +16,157 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-// file: titlebuttons_hover.c
+/*
+ * titlebuttons_hover.c: GTK3 module. While any titlebutton (minimize, maximize, close) of a
+ * window is hovered, the window's headerbar gets the CSS class "titlebuttons-hover-alt", which
+ * css/titlebuttons-alt3.css uses to highlight the whole group, like macOS.
+ *
+ * Event driven: an emission hook on GtkWidget::realize wires each titlebutton once. There is
+ * no timer and no tree walk after the one-shot scan of windows that exist at load time.
+ * The hover state is recomputed from the buttons' real PRELIGHT state instead of counting
+ * enter/leave events, so a button that is hidden or rebuilt while hovered cannot leave the
+ * class stuck.
+ */
+
+#define G_LOG_DOMAIN "kiwi-titlebuttons"
+
 #include <gtk/gtk.h>
+#include <gmodule.h>
 
-typedef struct {
-  int hover_count;
-} HoverHoverData;
+#define HOVER_CLASS "titlebuttons-hover-alt"
 
-static void ensure_hover_data(GtkWidget *target) {
-  if (!g_object_get_data(G_OBJECT(target), "tb-hover-data")) {
-    HoverHoverData *d = g_new0(HoverHoverData, 1);
-    g_object_set_data_full(G_OBJECT(target), "tb-hover-data", d, g_free);
-  }
+static GQuark wired_quark;
+
+static gboolean
+is_titlebutton (GtkWidget *w)
+{
+  return GTK_IS_BUTTON (w) &&
+         gtk_style_context_has_class (gtk_widget_get_style_context (w), "titlebutton");
 }
 
-static void add_hover_classes(GtkWidget *w) {
-  GtkStyleContext *ctx = gtk_widget_get_style_context(w);
-  gtk_style_context_add_class(ctx, "titlebuttons-hover");
-  gtk_style_context_add_class(ctx, "titlebuttons-hover-alt");
-}
-static void remove_hover_classes(GtkWidget *w) {
-  GtkStyleContext *ctx = gtk_widget_get_style_context(w);
-  gtk_style_context_remove_class(ctx, "titlebuttons-hover");
-  gtk_style_context_remove_class(ctx, "titlebuttons-hover-alt");
-}
+static gboolean
+any_titlebutton_prelit (GtkWidget *box)
+{
+  g_autoptr (GList) kids = gtk_container_get_children (GTK_CONTAINER (box));
 
-static void reset_hover_state(GtkWidget *target) {
-  HoverHoverData *d = g_object_get_data(G_OBJECT(target), "tb-hover-data");
-  if (d) d->hover_count = 0;
-  remove_hover_classes(target);
-}
-
-static GtkWidget *find_headerbar(GtkWidget *w) {
-  while (w && !GTK_IS_HEADER_BAR(w)) w = gtk_widget_get_parent(w);
-  return w; // may be NULL
-}
-
-static gboolean on_btn_enter(GtkWidget *btn, GdkEventCrossing *e, gpointer target) {
-  if (e->detail == GDK_NOTIFY_INFERIOR) return FALSE;
-  ensure_hover_data(GTK_WIDGET(target));
-  HoverHoverData *d = g_object_get_data(G_OBJECT(target), "tb-hover-data");
-  if (d->hover_count++ == 0) add_hover_classes(GTK_WIDGET(target));
-  return FALSE;
-}
-static gboolean on_btn_leave(GtkWidget *btn, GdkEventCrossing *e, gpointer target) {
-  if (e->detail == GDK_NOTIFY_INFERIOR) return FALSE;
-  HoverHoverData *d = g_object_get_data(G_OBJECT(target), "tb-hover-data");
-  if (!d) return FALSE;
-  if (d->hover_count > 0 && --d->hover_count == 0) remove_hover_classes(GTK_WIDGET(target));
-  return FALSE;
-}
-
-static gboolean has_class(GtkWidget *w, const char *cls) {
-  GtkStyleContext *ctx = gtk_widget_get_style_context(w);
-  return gtk_style_context_has_class(ctx, cls);
-}
-
-static void wire_button_box(GtkWidget *box) {
-  if (g_object_get_data(G_OBJECT(box), "tb-hover-wired")) return;
-  GList *kids = gtk_container_get_children(GTK_CONTAINER(box));
-  int n_tb = 0;
-  for (GList *l = kids; l; l = l->next)
-    if (GTK_IS_BUTTON(l->data) && has_class(GTK_WIDGET(l->data), "titlebutton"))
-      n_tb++;
-  if (n_tb > 0) {
-  }
-  if (n_tb >= 2) {
-    GtkWidget *headerbar = find_headerbar(box);
-    GtkWidget *target = headerbar ? headerbar : box; // prefer headerbar for styling
-  // Reset previous state because buttons may have been recreated (e.g. maximize/unmaximize)
-  reset_hover_state(target);
-    for (GList *l = kids; l; l = l->next) {
+  for (GList *l = kids; l != NULL; l = l->next)
+    {
       GtkWidget *child = l->data;
-      if (GTK_IS_BUTTON(child) && has_class(child, "titlebutton")) {
-        gtk_widget_add_events(child, GDK_ENTER_NOTIFY_MASK | GDK_LEAVE_NOTIFY_MASK);
-        g_signal_connect(child, "enter-notify-event", G_CALLBACK(on_btn_enter), target);
-        g_signal_connect(child, "leave-notify-event", G_CALLBACK(on_btn_leave),  target);
-    // On destroy (replacement) ensure we clear hover state to avoid a stuck hover
-    g_signal_connect_swapped(child, "destroy", G_CALLBACK(reset_hover_state), target);
-      }
+
+      /* Only mapped buttons count: a hidden or destroyed button keeps PRELIGHT */
+      if (is_titlebutton (child) &&
+          gtk_widget_get_mapped (child) &&
+          (gtk_widget_get_state_flags (child) & GTK_STATE_FLAG_PRELIGHT))
+        return TRUE;
     }
-    g_object_set_data(G_OBJECT(box), "tb-hover-wired", GINT_TO_POINTER(1));
-    g_object_set_data(G_OBJECT(target), "tb-hover-any-wired", GINT_TO_POINTER(1));
-  }
-  g_list_free(kids);
+  return FALSE;
 }
 
-static void scan(GtkWidget *w); // fwd
+static void
+update_target (GtkWidget *button, GtkWidget *target)
+{
+  GtkWidget *box = gtk_widget_get_parent (button);
+  GtkStyleContext *ctx = gtk_widget_get_style_context (target);
 
-static void forall_cb(GtkWidget *child, gpointer data) {
-  scan(child);
+  if (box != NULL && GTK_IS_CONTAINER (box) && any_titlebutton_prelit (box))
+    gtk_style_context_add_class (ctx, HOVER_CLASS);
+  else
+    gtk_style_context_remove_class (ctx, HOVER_CLASS);
 }
 
-static void scan(GtkWidget *w) {
-  if (GTK_IS_BOX(w)) wire_button_box(w);
-  if (GTK_IS_CONTAINER(w)) {
-    // Use forall to include INTERNAL children (gtk_container_get_children skips those)
-    gtk_container_forall(GTK_CONTAINER(w), forall_cb, NULL);
-  }
+static void
+on_state_flags_changed (GtkWidget *button, GtkStateFlags previous, gpointer user_data)
+{
+  (void) previous;
+  update_target (button, GTK_WIDGET (user_data));
 }
 
-// ---- Broader fallback: collect all titlebuttons globally and wire their common parent if not already wired ----
-static void collect_titlebuttons(GtkWidget *w, GPtrArray *buttons) {
-  if (GTK_IS_BUTTON(w) && has_class(w, "titlebutton")) {
-    g_ptr_array_add(buttons, w);
-  }
-  if (GTK_IS_CONTAINER(w)) {
-    gtk_container_forall(GTK_CONTAINER(w), (GtkCallback) collect_titlebuttons, buttons);
-  }
+static void
+on_unmap (GtkWidget *button, gpointer user_data)
+{
+  /* Runs after GtkWidget's class handler, so the button is already unmapped.
+   * Covers hide, window minimise and button rebuilds. */
+  update_target (button, GTK_WIDGET (user_data));
 }
 
-static void global_wire(GtkWindow *win) {
-  if (!GTK_IS_WINDOW(win)) return;
-  GPtrArray *buttons = g_ptr_array_new();
-  collect_titlebuttons(GTK_WIDGET(win), buttons);
-  if (buttons->len >= 2) {
-    // Find common parent of first two buttons (likely the box we want)
-    GtkWidget *b0 = g_ptr_array_index(buttons, 0);
-    GtkWidget *parent = gtk_widget_get_parent(b0);
-    if (parent && !g_object_get_data(G_OBJECT(parent), "tb-hover-wired")) {
-      wire_button_box(parent); // will perform internal wiring & mark
-    }
-  } else {
-  }
-  g_ptr_array_free(buttons, TRUE);
+static void
+wire_button (GtkWidget *button)
+{
+  GtkWidget *hb, *target;
+
+  if (g_object_get_qdata (G_OBJECT (button), wired_quark) != NULL)
+    return;
+
+  hb = gtk_widget_get_ancestor (button, GTK_TYPE_HEADER_BAR);
+  target = hb != NULL ? hb : gtk_widget_get_parent (button);
+  if (target == NULL)
+    return;
+
+  /* _object variants disconnect automatically when the target is finalized */
+  g_signal_connect_object (button, "state-flags-changed",
+                           G_CALLBACK (on_state_flags_changed), target, 0);
+  g_signal_connect_object (button, "unmap", G_CALLBACK (on_unmap), target, 0);
+  g_object_set_qdata (G_OBJECT (button), wired_quark, GINT_TO_POINTER (1));
 }
 
-static gboolean deferred_scan(gpointer w) {
-  if (GTK_IS_WIDGET(w)) scan(GTK_WIDGET(w));
-  g_object_unref(w);
+static gboolean
+on_widget_realize (GSignalInvocationHint *ihint,
+                   guint                  n_params,
+                   const GValue          *params,
+                   gpointer               data)
+{
+  GtkWidget *w = g_value_get_object (&params[0]);
+
+  (void) ihint; (void) n_params; (void) data;
+
+  if (is_titlebutton (w))
+    wire_button (w);
+  return TRUE; /* returning FALSE would remove the hook after the first emission */
+}
+
+/* One-shot walk for windows that already exist when the module is loaded late
+ * (the gtk-modules setting path). Includes internal children (decoration boxes). */
+static void
+wire_tree (GtkWidget *w, gpointer data)
+{
+  (void) data;
+
+  if (is_titlebutton (w) && gtk_widget_get_realized (w))
+    wire_button (w);
+  if (GTK_IS_CONTAINER (w))
+    gtk_container_forall (GTK_CONTAINER (w), wire_tree, NULL);
+}
+
+static gboolean
+initial_scan (gpointer data)
+{
+  g_autoptr (GList) tops = gtk_window_list_toplevels ();
+
+  (void) data;
+  for (GList *l = tops; l != NULL; l = l->next)
+    wire_tree (GTK_WIDGET (l->data), NULL);
   return G_SOURCE_REMOVE;
 }
 
-static gboolean on_widget_realize(GSignalInvocationHint *ih, guint n, const GValue *params, gpointer data) {
-  GtkWidget *w = g_value_get_object(&params[0]);
-  if (GTK_IS_HEADER_BAR(w) || has_class(w, "titlebar")) {
-    // Immediate scan (might catch early buttons)
-    scan(w);
-    // Deferred scan to catch late-created decoration buttons
-    g_idle_add(deferred_scan, g_object_ref(w));
-  }
-  return TRUE;
+/* Code in this module is called from signal handlers; it must never be unloaded */
+G_MODULE_EXPORT const gchar *
+g_module_check_init (GModule *module)
+{
+  g_module_make_resident (module);
+  return NULL;
 }
 
-// Periodic fallback scanning callbacks (file-scope; cannot nest in C)
-static gboolean initial_idle_scan(gpointer data) {
-  GList *tops = gtk_window_list_toplevels();
-  for (GList *l = tops; l; l = l->next) scan(GTK_WIDGET(l->data));
-  g_list_free(tops);
-  return G_SOURCE_REMOVE; // one-shot
-}
-static gboolean periodic_scan(gpointer data) {
-  GList *tops = gtk_window_list_toplevels();
-  for (GList *l = tops; l; l = l->next) {
-    GtkWidget *w = GTK_WIDGET(l->data);
-    scan(w);
-    global_wire(GTK_WINDOW(w));
-  }
-  g_list_free(tops);
-  return TRUE;
-}
+G_MODULE_EXPORT void
+gtk_module_init (gint *argc, gchar ***argv)
+{
+  (void) argc; (void) argv;
 
-G_MODULE_EXPORT void gtk_module_init(gint *argc, gchar ***argv) {
-  // Some distros build GTK without exposing 'realize' as a signal; fall back to periodic scans.
-  // Schedule an early idle scan and then periodic lightweight rescans.
-  g_idle_add(initial_idle_scan, NULL);
-  g_timeout_add(800 /* ms */, periodic_scan, NULL);
+  wired_quark = g_quark_from_static_string ("kiwi-tb-wired");
+
+  /* Signals exist only once the class is initialised; at module-init time nothing has
+   * created a widget yet, so g_signal_lookup() would return 0 without this. */
+  g_type_class_ref (GTK_TYPE_WIDGET);
+  g_signal_add_emission_hook (g_signal_lookup ("realize", GTK_TYPE_WIDGET),
+                              0, on_widget_realize, NULL, NULL);
+  g_idle_add (initial_scan, NULL);
 }

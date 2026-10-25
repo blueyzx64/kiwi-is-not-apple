@@ -17,3 +17,4 @@ css/gtk4.css
 !.swarm/**
 !start-workflow.md
 !CLAUDE.md
+advanced/.built-locally
