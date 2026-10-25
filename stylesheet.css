@@ -1478,3 +1478,172 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
   font-size: 22px;
   font-weight: 600;
 }
+
+/* feature: notch */
+.kiwi-notch {
+    background-color: rgba(0, 0, 0, 0.94);
+    color: #ffffff;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.kiwi-notch-placeholder {
+    background: transparent;
+}
+
+.kiwi-notch-row {
+    spacing: 8px;
+    padding: 0 14px;
+}
+
+.kiwi-notch-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.kiwi-notch-meta {
+    font-size: 11px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.62);
+}
+
+.kiwi-notch-value {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.8);
+    min-width: 24px;
+    text-align: right;
+}
+
+.kiwi-notch-badge {
+    font-size: 11px;
+    font-weight: 700;
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.22);
+    border-radius: 999px;
+    padding: 0 7px;
+}
+
+.kiwi-notch-icon {
+    color: #ffffff;
+}
+
+.kiwi-notch-art {
+    border-radius: 5px;
+}
+
+.kiwi-notch-art-large {
+    border-radius: 10px;
+}
+
+/* equalizer glyph */
+.kiwi-notch-bars {
+    spacing: 2px;
+}
+
+.kiwi-notch-bar {
+    width: 3px;
+    border-radius: 2px;
+    background-color: -st-accent-color;
+}
+
+/* volume / brightness bar */
+.kiwi-notch-track {
+    height: 6px;
+    border-radius: 3px;
+    background-color: rgba(255, 255, 255, 0.24);
+}
+
+.kiwi-notch-fill {
+    border-radius: 3px;
+    background-color: #ffffff;
+}
+
+/* notification card: 14px padding, inner radii concentric with the 32px outer radius */
+.kiwi-notch-card {
+    padding: 12px 18px 14px 18px;
+    spacing: 4px;
+}
+
+.kiwi-notch-card-header {
+    spacing: 8px;
+    height: 22px;
+}
+
+.kiwi-notch-card-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.kiwi-notch-card-body {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.82);
+}
+
+.kiwi-notch-close {
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    color: rgba(255, 255, 255, 0.7);
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.kiwi-notch-close:hover,
+.kiwi-notch-close:focus {
+    background-color: rgba(255, 255, 255, 0.24);
+    color: #ffffff;
+}
+
+.kiwi-notch-actions {
+    spacing: 8px;
+    padding-top: 4px;
+}
+
+.kiwi-notch-action {
+    height: 28px;
+    padding: 0 14px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.16);
+    text-align: center;
+}
+
+.kiwi-notch-action:hover,
+.kiwi-notch-action:focus,
+.kiwi-notch-action:checked {
+    background-color: rgba(255, 255, 255, 0.28);
+}
+
+/* dashboard */
+.kiwi-notch-dashboard {
+    padding: 16px 22px;
+    spacing: 24px;
+}
+
+.kiwi-notch-panel {
+    spacing: 8px;
+}
+
+.kiwi-notch-nowplaying {
+    spacing: 12px;
+}
+
+.kiwi-notch-controls {
+    spacing: 14px;
+}
+
+.kiwi-notch-control {
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.14);
+}
+
+.kiwi-notch-control:hover,
+.kiwi-notch-control:focus {
+    background-color: rgba(255, 255, 255, 0.26);
+}
