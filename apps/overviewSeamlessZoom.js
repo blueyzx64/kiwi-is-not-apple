@@ -8,6 +8,7 @@
 
 import Clutter from 'gi://Clutter';
 import GObject from 'gi://GObject';
+import Graphene from 'gi://Graphene';
 import Mtk from 'gi://Mtk';
 import St from 'gi://St';
 
@@ -55,8 +56,18 @@ class SeamlessWorkspaceBackground extends WorkspaceBackground {
         this._bin.allocate(this.get_theme_node().get_content_box(myBox));
     }
 
-    // Left unset so Mutter's rounded clip covers the whole monitor.
-    _updateRoundedClipBounds() {}
+    // The rounded clip covers the whole monitor, not the stock work-area crop. Mutter 50
+    // does not fall back to the full texture when the bounds are unset: it clips to an
+    // empty rect, leaving only a quarter-circle wedge at the card's top-left corner.
+    _updateRoundedClipBounds() {
+        const monitor = Main.layoutManager.monitors[this._monitorIndex];
+        if (!monitor)
+            return;
+        const rect = new Graphene.Rect();
+        rect.size.width = monitor.width;
+        rect.size.height = monitor.height;
+        this._bgManager.backgroundActor.content.set_rounded_clip_bounds(rect);
+    }
 });
 
 function patchWorkspace(workspace) {
