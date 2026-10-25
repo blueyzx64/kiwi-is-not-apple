@@ -24,7 +24,7 @@ function pump(ms) {
 }
 
 const Emitter = GObject.registerClass({
-    Signals: { ping: {} },
+    Signals: { ping: {}, destroy: {} },
 }, class Emitter extends GObject.Object {});
 
 test('dispose runs newest first, once', () => {
@@ -156,6 +156,90 @@ test('file removed on dispose, missing file tolerated', () => {
     r.file(path);
     r.dispose();
     pump(50);
+});
+
+test('connect: after the object emitted destroy, dispose does not touch it', () => {
+    const e = new Emitter();
+    const r = new CleanupRegistry();
+    let calls = 0;
+    const origDisconnect = e.disconnect.bind(e);
+    e.disconnect = id => { calls++; return origDisconnect(id); };
+    r.connect(e, 'ping', () => {});
+    r.connect(e, 'ping', () => {});
+    eq(r.size, 2);
+    e.emit('destroy');
+    eq(r.size, 0, 'entries dropped on destroy');
+    r.dispose();
+    eq(calls, 0);
+});
+
+test('connect: live object gets all handlers (and our destroy watcher) disconnected', () => {
+    const e = new Emitter();
+    const r = new CleanupRegistry();
+    let n = 0;
+    r.connect(e, 'ping', () => n++);
+    r.connect(e, 'destroy', () => n++);
+    r.dispose();
+    e.emit('ping');
+    e.emit('destroy');
+    eq(n, 0);
+});
+
+test('connect: one destroy watcher per object', () => {
+    const e = new Emitter();
+    const r = new CleanupRegistry();
+    let hooks = 0;
+    const real = e.connect.bind(e);
+    e.connect = (sig, fn) => { if (sig === 'destroy') hooks++; return real(sig, fn); };
+    r.connect(e, 'ping', () => {});
+    r.connect(e, 'ping', () => {});
+    eq(hooks, 1);
+    eq(r.size, 2);
+});
+
+test('connect: handler already disconnected by someone else is not disconnected again', () => {
+    const e = new Emitter();
+    const r = new CleanupRegistry();
+    const id = e.connect('ping', () => {});
+    let calls = 0;
+    const real = e.disconnect.bind(e);
+    e.disconnect = i => { calls++; real(i); };
+    // simulate: registry owns a token, then someone disconnects the handler behind its back
+    const t = r.connect(e, 'ping', () => {});
+    r.dispose();
+    r.release(t);
+    real(id);
+    eq(calls, 2, 'watcher + handler, each once');
+});
+
+test('actor: destroy emitted first -> dispose never calls destroy()', () => {
+    const e = new Emitter();
+    let destroyed = 0;
+    e.destroy = () => { destroyed++; };
+    const r = new CleanupRegistry();
+    r.actor(e);
+    e.emit('destroy');
+    r.dispose();
+    eq(destroyed, 0);
+});
+
+test('timeout: fired one-shot is forgotten; dispose never removes a gone source', () => {
+    const r = new CleanupRegistry();
+    r.timeout(1, () => false);
+    r.timeout(1, () => { throw new Error('x'); });
+    pump(30);
+    eq(r.size, 0);
+    r.dispose();
+});
+
+test('timeout/idle: release twice is harmless', () => {
+    const r = new CleanupRegistry();
+    const t = r.timeout(500, () => false);
+    r.release(t);
+    r.release(t);
+    const i = r.idle(() => {});
+    pump(10);
+    r.release(i);
 });
 
 if (failed) {

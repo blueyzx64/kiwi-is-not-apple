@@ -292,6 +292,9 @@ export function enable(gettext, settings) {
 
     // Delay to ensure quicksettings is fully loaded
     _initTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
+        // This source is one-shot: forget its id first, so a throw below cannot leave a stale
+        // id for disable() to remove
+        _initTimeoutId = null;
         const quickSettings = Main.panel.statusArea.quickSettings;
         const grid = quickSettings.menu._grid;
         const monitor = Main.layoutManager.primaryMonitor;
@@ -334,7 +337,6 @@ export function enable(gettext, settings) {
             _kiwiSettingsChangedId = _kiwiSettings.connect('changed::custom-dnd-button', _applyCustomDndSetting);
 
         enabled = true;
-        _initTimeoutId = null;
         return GLib.SOURCE_REMOVE;
     });
 }
