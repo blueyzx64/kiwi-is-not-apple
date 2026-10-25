@@ -79,3 +79,13 @@ Attach in `enable()` and add `cleanup.add(() => h.destroy())`. Check `Glass.moti
   the repaint throttle, the legacy keys, and the migration into liquid-glass-surfaces.
 - compat shims: `SHADER_API`, `createShaderEffect({declarations, effectFn})` in lib/compat.js.
 - Known limit: refraction bends only the actor's own texture, so it uses the still-wallpaper path.
+
+## coordinators/panelVisibility.js (frozen from S6, feat/autohide)
+`import { PanelVisibility } from '../coordinators/panelVisibility.js'`
+- `hold(cleanup, name) -> {release()}`: keeps the bar shown until release or dispose. Works before the controller starts.
+  The notch uses `hold(cleanup, 'notch')`, and Spotlight and other modals use their own name.
+- `reveal()`: show now, then hide after the hide delay unless something holds it.
+- `isVisible()`, `autoHiding()` (true only in mode autohide), `mode()` ('always'|'fullscreen-hover'|'autohide').
+- `connect(cleanup, fn({visible, autoHiding, mode}))` fires on visibility or mode changes.
+- Feature id `panel-autohide`. Style class `kiwi-panel-autohide` is on Main.panel while it runs.
+- Not done: no banner-offset hold and no drag-and-drop hold.
