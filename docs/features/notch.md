@@ -24,8 +24,22 @@ live activities and quick confirmations, and opens a dashboard on click. Canvas 
 - Hover keeps a notification open. With several queued, show the newest and a "+2" badge.
 - On screens with a real hardware notch, align to it (future).
 
-## 4. Settings (proposed)
-`notch` b · `notch-notifications` b=true · `notch-live-activities` b=true · `notch-osd` b=true
+## 4. Settings
+`notch` b=true · `notch-notifications` b=true · `notch-live-activities` b=true · `notch-osd` b=true ·
+`notch-timeout` i=5 (range 2 to 30 s): how long a notification stays in the notch. Hovering keeps it
+open and urgent ones stay until dismissed.
+
+**Calendar forcing.** While the notch is on, the clock moves right and the notification list lives in
+Quick Settings, whatever `move-calendar-right` says (`calendarRight` in `features.js`). Prefs shows a
+subtitle on the notch row and greys out the `move-calendar-right` row with "On while the notch is on".
+
+**Status:** merged, untested on Shell. Phase 1 has notification cards, the media live activity,
+the volume and brightness confirmations, the Clipboard dashboard panel and the "Copied" confirmation.
+
+**Deferred to phase 2 (decided):**
+- the "Up next" dashboard panel (MPRIS has no reliable queue API);
+- the timer, recording and charging live activities;
+- "toggle changed" confirmations.
 
 ## 5. Interactions
 - **Auto-hide top bar:** when a notification arrives while the bar is hidden, only the

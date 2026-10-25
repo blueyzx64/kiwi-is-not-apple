@@ -11,16 +11,15 @@ https://claude.ai/artifact/PJTdauCxK1VKQvpXditZpz (private to the repo owner unt
 |---|---|---|---|---|
 | 1 | Window controls in the top bar + button-free windows | [window-controls.md](window-controls.md) | S | Merged, untested on Shell |
 | 2 | Liquid Glass (toggleable) | [liquid-glass.md](liquid-glass.md) | M | Merged, untested on Shell |
-| 3 | Clipboard history (popover + Quick Paste) | [clipboard.md](clipboard.md) | M | Locked (in progress, not merged) |
-| 4 | Spotlight | [spotlight.md](spotlight.md) | M–L | Locked (in progress, not merged) |
-| 5 | Notification notch | [notch.md](notch.md) | M–L | Locked (in progress, not merged) |
-| 6 | Control Center | [control-center.md](control-center.md) | M | Locked (in progress, not merged) |
+| 3 | Clipboard history (popover + Quick Paste) | [clipboard.md](clipboard.md) | M | Merged, untested on Shell |
+| 4 | Spotlight | [spotlight.md](spotlight.md) | M–L | Merged, untested on Shell |
+| 5 | Notification notch | [notch.md](notch.md) | M–L | Merged, untested on Shell (phase 1; see notch.md §4) |
+| 6 | Control Center | [control-center.md](control-center.md) | M | Merged, untested on Shell |
 | 7 | Auto-hide top bar | [autohide-top-bar.md](autohide-top-bar.md) | S–M | Merged, untested on Shell |
-| 8 | Stage Manager | [stage-manager.md](stage-manager.md) | L | Locked (in progress, not merged) |
+| 8 | Stage Manager | [stage-manager.md](stage-manager.md) | L | Merged, untested on Shell |
 
 Status words: *Merged, untested on Shell* means the code is on the integration branch and passes
-`bash tests/run.sh` and eslint, but nobody has run it on a real GNOME Shell yet. *In progress, not merged*
-means a lead's branch exists but is not on the integration branch.
+`bash tests/run.sh` and eslint, but nobody has run it on a real GNOME Shell yet. Features may still carry deferred parts; see the spec's Settings or Interactions section.
 
 Owner decisions that apply to all features:
 - **On by default.** Every new feature ships enabled; users opt out in prefs.

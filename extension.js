@@ -26,6 +26,10 @@ import { Glass } from './lib/glass.js';
 import { isDockExtension, resetDockSettings } from './apps/dockUtils.js';
 import { restoreStaleColors } from './apps/dockColors.js';
 
+// Keys Kiwi writes itself at run time. No `when` or restartOn reads them, and a write made
+// during a refresh would re-enter the registry, so they do not trigger a pass.
+const KEYS_THAT_NEVER_AFFECT_FEATURES = new Set(['dock-colors-saved', 'clipboard-recording']);
+
 export default class KiwiExtension extends Extension {
     enable() {
         this._cleanup = new CleanupRegistry();
@@ -37,7 +41,10 @@ export default class KiwiExtension extends Extension {
         this._features.registerAll(FEATURES);
 
         this._cleanup.connect(this._settings, 'changed',
-            (_settings, key) => this._features.refresh(key));
+            (_settings, key) => {
+                if (!KEYS_THAT_NEVER_AFFECT_FEATURES.has(key))
+                    this._features.refresh(key);
+            });
         this._cleanup.connect(this._interfaceSettings, 'changed::show-battery-percentage',
             () => this._features.apply('battery-percentage'));
 
@@ -45,8 +52,10 @@ export default class KiwiExtension extends Extension {
         // us, and the dock features follow it either way
         this._cleanup.connect(Main.extensionManager, 'extension-state-changed',
             (_manager, extension) => {
-                if (isDockExtension(extension))
-                    this._features.refresh(null);
+                if (!isDockExtension(extension))
+                    return;
+                resetDockSettings();
+                this._features.refresh(null);
             });
 
         // A crash or hard logout can leave Dash to Dock colours Kiwi changed; put them back first

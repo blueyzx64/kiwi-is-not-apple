@@ -8,12 +8,14 @@ import Clutter from 'gi://Clutter';
 import GObject from 'gi://GObject';
 
 import { MediaItem } from './mediaPlayback.js';
+import { PanelLayout } from '../coordinators/panelLayout.js';
 import { MprisWatcher } from '../coordinators/mprisWatcher.js';
 import { CleanupRegistry } from '../lib/disposables.js';
 
 const MAX_VISIBLE_PLAYERS = 3;
 
 let panelButton = null;
+let mediaSlot = null;
 
 class MediaList extends St.BoxLayout {
     constructor(gettext, requestRedraw) {
@@ -149,10 +151,17 @@ export function enable(gettext) {
     };
     panelButton.menu.box.add_child(new MediaWidget(gettext, requestRedraw));
     Main.panel.addToStatusArea('kiwi-media', panelButton, 1, 'right');
+    // Right after the lock icon (or leftmost without it); see coordinators/panelLayout.js
+    mediaSlot = PanelLayout.claim(null, {
+        id: 'kiwi-media', actor: panelButton.container, box: 'right',
+        anchor: { after: ['lock-indicator'], fallback: 'first' },
+    });
 }
 
 export function disable() {
     if (panelButton) {
+        mediaSlot?.release();
+        mediaSlot = null;
         panelButton.destroy();
         panelButton = null;
     }

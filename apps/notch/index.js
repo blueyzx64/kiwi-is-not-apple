@@ -24,6 +24,7 @@ import { PanelLayout } from '../../coordinators/panelLayout.js';
 import { PanelVisibility } from '../../coordinators/panelVisibility.js';
 import { NotificationRouter } from '../../coordinators/notificationRouter.js';
 import { MprisWatcher } from '../../coordinators/mprisWatcher.js';
+import { clipboardService } from '../clipboard/index.js';
 import { initialState, step, view, nextDeadline, wantsBar, URGENCY } from './stateMachine.js';
 import { NotchView } from './view.js';
 
@@ -77,6 +78,7 @@ export class NotchFeature {
             onHover: value => this._dispatch({ type: 'hover', value }),
             onAction: (id, index) => this._action(id, index),
             onMedia: command => this._media(command),
+            onCopy: id => clipboardService()?.copy(clipboardService().get(id)),
             onToggleDnd: () => NotificationRouter.setDnd(!NotificationRouter.state().dnd),
         }, gettext);
 
@@ -85,9 +87,16 @@ export class NotchFeature {
 
         // Shared inputs
         NotificationRouter.connect(cleanup, () => this._syncExternal());
-        cleanup.connect(Main.layoutManager, 'in-fullscreen-changed', () => this._syncExternal());
+        cleanup.connect(global.display, 'in-fullscreen-changed', () => this._syncExternal());
         PanelVisibility.connect(cleanup, () => this._sync());
         this._syncExternal(true);
+
+        // The clipboard feature can start or stop after the notch
+        this._clipSvc = null;
+        this._clipOff = [];
+        ks.watch('clipboard-history', () => cleanup.idle(() => this._syncClipboard(), { name: 'notch clipboard' }));
+        cleanup.add(() => this._dropClipboard());
+        this._syncClipboard();
 
         // The three features can be switched one by one
         this._sink = null;
@@ -229,6 +238,7 @@ export class NotchFeature {
             media: media ? { ...mediaInfo(media), appIcon: media.app?.get_icon() ?? null } : null,
             dnd: state.dnd,
             count: NotificationRouter.state().count,
+            clipboard: this._clipboardEntries(),
         });
 
         // Only the pill over a fullscreen window; no bar there. Otherwise keep the bar up.
@@ -385,6 +395,43 @@ export class NotchFeature {
             });
             this._syncMedia();
         }
+    }
+
+    // ---- clipboard -------------------------------------------------------------------------
+
+    _dropClipboard() {
+        this._clipOff?.forEach(off => off());
+        this._clipOff = [];
+        this._clipSvc = null;
+    }
+
+    // Follow the clipboard service as it appears and disappears
+    _syncClipboard() {
+        if (!this._alive)
+            return;
+        const service = clipboardService();
+        if (service === this._clipSvc)
+            return;
+        this._dropClipboard();
+        this._clipSvc = service;
+        if (service) {
+            this._clipOff = [
+                service.connectChanged(() => this._sync()),
+                service.connectCopied(() => this._dispatch({
+                    type: 'confirm', kind: 'copied', label: this._ctx.gettext('Copied'),
+                })),
+            ];
+        }
+        this._sync();
+    }
+
+    _clipboardEntries() {
+        if (!this._clipSvc)
+            return null;
+        return this._clipSvc.latest(3).map(e => ({
+            id: e.id,
+            text: e.kind === 'image' ? this._ctx.gettext('Image') : String(e.text ?? '').replace(/\s+/g, ' ').trim().slice(0, 80),
+        }));
     }
 
     // ---- media -----------------------------------------------------------------------------

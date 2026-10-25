@@ -20,13 +20,15 @@
 | Dock (D5) | D5 | done, merged | debt/dock |
 | CSS debt (D6) | D6 | done, merged | debt/css-debt |
 | Build/CI (D7) | D7 | done, merged | debt/build-ci |
-| Docs (D8) | D8 | pass 1 merged; pass 2 at end | debt/docs |
+| Docs (D8) | D8 | pass 2 merged | debt/docs |
 | Reviewer 2 | R1 | reviewing S4 | - |
 | Audit fixes (autohide restore, glass contrast/menu destroy) | S6, S3 | done, merged | feat/autohide-fix, feat/liquid-glass-fix2 |
 | Small modules (D9) | D9 | done, merged (features.js lockIcon ctx.extension → S10 with notch) | debt/small-modules |
 | Window move (D10) | D10 | done, merged | debt/window-move |
 | Lint (L1) | L1 | done: 0 warnings, merged | debt/lint |
 | Audit merged CC/SM/clipboard/spotlight (A2) | A2 | doing | - |
-| Shell smoke harness (X1) | X1 | doing | - |
+| Shell smoke harness (X1) | X1 | merged (tools/smoke, make smoke) | - |
 | PR notes + manual test list (P1) | P1 | draft 1 committed; refresh at end | - |
 | Now Playing -> MprisWatcher | S8 | done, merged | feat/notch |
+| Cross-feature review (RF) | RF | PASS-WITH-FIXES; fixes dispatched to S10/S4/S2/D5/S5/S3 | - |
+| Smoke-found bugs (fullscreen signal, disposed disconnects, glass group) | S3/S1/S8 | doing | various |

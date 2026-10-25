@@ -7,7 +7,7 @@ POT     := po/$(UUID).pot
 EXTRA   := icons apps css $(wildcard lib coordinators features.js)
 EXTRA_FLAGS := $(addprefix --extra-source=,$(EXTRA))
 
-.PHONY: all pack pot install uninstall test lint schema-check check clean
+.PHONY: all pack pot install uninstall test lint schema-check check clean smoke
 
 all: check
 
@@ -43,3 +43,7 @@ check: lint schema-check test
 
 clean:
 	rm -rf $(DISTDIR)
+
+# Headless Shell smoke test (needs gnome-shell + dbus; not part of CI). make smoke TOGGLES=20
+smoke:
+	tools/smoke/run-headless.sh $(TOGGLES)

@@ -21,6 +21,15 @@
 // a box we hold a claim in, so late arrivals (calendar moving the date menu, the window title)
 // do not push claimed actors out of place. It never destroys actors; the owner does.
 //
+// Claims in use and the order they give (left to right; foreign = stock or other extensions):
+//   left box :  [foreign...] [window-controls] [window-title]
+//   right box:  [lock-indicator] [kiwi-media] [foreign...] [clipboard] [quickSettings] [foreign...]
+//   (window-controls on the right instead: last slot of the right box)
+//   center box: notch placeholder
+// lock-indicator {first}; kiwi-media {after: lock-indicator, fallback first}; clipboard
+// {before: quickSettings}. The keyboard indicator claims nothing: it restyles the stock
+// 'keyboard' indicator in place and keeps its stock position.
+//
 // Private Shell API: Main.panel._leftBox/_centerBox/_rightBox. Same names in 48-51 as far as
 // the shell sources used for this extension's skills go; not run on a real shell yet.
 
