@@ -53,6 +53,7 @@ import { ClipboardHistory } from './apps/clipboard/index.js';
 import { SpotlightFeature } from './apps/spotlight/index.js';
 import { RoundedCorners } from './apps/roundedCorners/index.js';
 import { ShellBehaviour } from './apps/shellBehaviour/index.js';
+import { ShowDesktop } from './apps/showDesktop/index.js';
 
 // ctx: { extension, settings (Gio.Settings), gettext, interfaceSettings (Gio.Settings) }
 const bool = (ctx, key) => ctx.settings.get_boolean(key);
@@ -171,6 +172,15 @@ export const FEATURES = [
         // Local clipboard history; its panel icon claims a slot through PanelLayout
         id: 'clipboard-history', setting: 'clipboard-history',
         cls: ClipboardHistory,
+    },
+    {
+        // Top-bar button and Super+D slide the windows aside; hands off to Stage Manager's
+        // toggleDesktop() while that runs (looked up through ctx.features)
+        id: 'show-desktop',
+        when: ctx => bool(ctx, 'show-desktop-button') ||
+            ctx.settings.get_strv('show-desktop-shortcut').length > 0,
+        restartOn: ['show-desktop-shortcut'],
+        cls: ShowDesktop,
     },
     {
         // Super tap / shortcut opens Spotlight; the clipboard provider reads clipboardService() lazily

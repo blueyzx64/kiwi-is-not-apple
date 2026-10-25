@@ -488,6 +488,28 @@
         <description>Turns Stage Manager on or off. Empty means no shortcut; prefs has a button for Ctrl+Super+S.</description>
       </key>
 
+      <!-- Show Desktop (apps/showDesktop) -->
+      <key name="show-desktop-button" type="b">
+        <default>true</default>
+        <summary>Show Desktop button in the top bar</summary>
+        <description>A small top bar button that slides every window to the screen edges to show the desktop. Click it again, or click a window, to bring them back.</description>
+      </key>
+      <key name="show-desktop-shortcut" type="as">
+        <default>['&lt;Super&gt;d']</default>
+        <summary>Show Desktop shortcut</summary>
+        <description>Shows the desktop or brings the windows back. Empty means no Kiwi shortcut; GNOME's own Show Desktop shortcut, if set, also plays this animation while Kiwi runs.</description>
+      </key>
+      <key name="show-desktop-speed" type="s">
+        <choices>
+          <choice value="fast"/>
+          <choice value="normal"/>
+          <choice value="slow"/>
+        </choices>
+        <default>'normal'</default>
+        <summary>Show Desktop animation speed</summary>
+        <description>How fast the windows slide aside and back: fast, normal or slow.</description>
+      </key>
+
       <!-- Rounded window corners (apps/roundedCorners) -->
       <key name="rounded-corners" type="b">
         <default>true</default>
