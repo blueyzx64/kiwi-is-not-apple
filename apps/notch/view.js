@@ -12,6 +12,7 @@ import GLib from 'gi://GLib';
 import Pango from 'gi://Pango';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as Util from 'resource:///org/gnome/shell/misc/util.js';
 
 import { Glass } from '../../lib/glass.js';
 import { SIZES } from './stateMachine.js';
@@ -332,11 +333,11 @@ export class NotchView {
         body.clutter_text.line_wrap = true;
         body.clutter_text.ellipsize = Pango.EllipsizeMode.END;
         const text = notification.body ?? '';
+        // Same as the stock banner (messageList.js URLHighlighter, 48-51): fixMarkup keeps only
+        // the tags notifications may use when the sender asked for markup, and escapes everything
+        // otherwise, so the result is always safe for set_markup().
         try {
-            if (notification.useBodyMarkup)
-                body.clutter_text.set_markup(text);
-            else
-                body.text = text;
+            body.clutter_text.set_markup(Util.fixMarkup(text, !!notification.useBodyMarkup));
         } catch (_e) {
             body.text = text;
         }
