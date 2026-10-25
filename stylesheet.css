@@ -359,12 +359,6 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
   color: -st-accent-fg-color !important;
 }
 
-/* Ensure content fills the space */
-.kiwi-popup-styled .maximized .window-content {
-  margin-top: 0;
-  border-radius: 0;
-}
-
 
 /*###############################################*/
 /*          Notification Badge Styling         */
@@ -564,7 +558,7 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
   box-sizing: border-box;
 }
 
-.media-message {
+.kiwi-media .media-message {
   font-size: 0.9em;
 }
 
@@ -696,7 +690,9 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
 .kiwi-popup-styled .message-title,
 .kiwi-popup-styled .message-group-title,
 .kiwi-notifications .message-title,
-.kiwi-notifications .message-group-title {
+.kiwi-notifications .message-group-title,
+.kiwi-media .message-title,
+.kiwi-media .message-group-title {
   font-size: 1em;
   font-weight: normal;
 }
