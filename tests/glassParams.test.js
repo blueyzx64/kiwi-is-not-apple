@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // gjs -m tests/glassParams.test.js
-import { readSnapshot, MIN_TINTED_ALPHA, MIN_TINT_PERCENT, wantsSurface, resolve, tintAlpha, legacySurfaces, worstCaseContrast, tintColor, SETTING_FIELDS }
+import { followRect, readSnapshot, MIN_TINTED_ALPHA, MIN_TINT_PERCENT, wantsSurface, resolve, tintAlpha, legacySurfaces, worstCaseContrast, tintColor, SETTING_FIELDS }
     from '../lib/glassParams.js';
 
 let failed = 0;
@@ -101,6 +101,16 @@ check('every field has a key', Object.keys(SETTING_FIELDS).length === 11);
     check('fresh read: dock on right after the change', wantsSurface(readSnapshot(fake), 'dock'));
     check('missing keys fall back to defaults', readSnapshot(fake).style === 'tinted');
 }
+
+// followRect: never NaN, never 0-size
+check('rect: plain child', JSON.stringify(followRect({ x: 1, y: 2, width: 30, height: 40 })) === '{"x":1,"y":2,"width":30,"height":40}');
+check('rect: zero width -> null', followRect({ x: 0, y: 0, width: 0, height: 10 }) === null);
+check('rect: NaN size -> null', followRect({ x: 0, y: 0, width: NaN, height: 10 }) === null);
+check('rect: NaN transformed position -> null', followRect({ x: 0, y: 0, width: 5, height: 5 }, [NaN, 3], [0, 0]) === null);
+check('rect: one position missing -> null', followRect({ x: 0, y: 0, width: 5, height: 5 }, [1, 1], null) === null);
+check('rect: transformed difference', JSON.stringify(followRect({ x: 9, y: 9, width: 5, height: 6 }, [110, 220], [100, 200]))
+    === '{"x":10,"y":20,"width":5,"height":6}');
+check('rect: undefined -> null', followRect({ x: undefined, y: 0, width: 5, height: 5 }) === null);
 
 if (failed) {
     print(`${failed} failed`);
