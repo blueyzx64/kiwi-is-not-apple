@@ -214,7 +214,7 @@ const deferred = () => {
     const promise = new Promise((a, b) => { resolve = a; reject = b; });
     return { promise, resolve, reject };
 };
-const tick = () => new Promise(r => imports.mainloop ? r() : r());
+const tick = () => Promise.resolve();
 
 async function atest(name, fn) {
     try {

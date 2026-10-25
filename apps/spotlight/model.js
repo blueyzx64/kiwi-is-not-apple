@@ -5,15 +5,16 @@
 // Item shape (what providers return):
 //   { id, kind, title, subtitle?, group?, boost?, keywords?[], ...providerData }
 //   kind: 'app' | 'setting' | 'action' | 'file' | 'external' | 'clipboard' | 'calc' | 'web'
+//   External search-provider results other than Files set `group: 'other'`.
 
-export const GROUPS = ['top', 'apps', 'settings', 'documents', 'clipboard', 'calculator', 'web'];
+export const GROUPS = ['top', 'apps', 'settings', 'documents', 'clipboard', 'calculator', 'other', 'web'];
 
 /** Fixed order of the sections after the top hit. */
-export const GROUP_ORDER = ['apps', 'settings', 'documents', 'clipboard', 'calculator', 'web'];
+export const GROUP_ORDER = ['apps', 'settings', 'documents', 'clipboard', 'calculator', 'other', 'web'];
 
 /** Default row limits per section. */
 export const GROUP_LIMITS = {
-    top: 1, apps: 6, settings: 4, documents: 5, clipboard: 4, calculator: 1, web: 1,
+    top: 1, apps: 6, settings: 4, documents: 5, clipboard: 4, calculator: 1, other: 4, web: 1,
 };
 
 // A weak match must not become the top hit.
@@ -325,6 +326,11 @@ export class SearchSession {
         this._timers = [];
         this.results = new Map();
         this.pending = new Set();
+    }
+
+    /** Swap the provider list (external providers load async). Takes effect on the next start(). */
+    setProviders(providers) {
+        this._providers = providers;
     }
 
     get busy() {
