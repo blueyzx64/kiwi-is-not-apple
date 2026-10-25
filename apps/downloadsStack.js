@@ -454,114 +454,147 @@ function _showFan(info) {
     // drawn over the desktop but every click goes to the window underneath
     Main.layoutManager.addTopChrome(overlay);
 
-    // The fan is top chrome, over the dock, so a row coming out from behind the
-    // folder would cross in front of it. Clip the band the fan has to itself,
-    // in stage coordinates, which the rows keep.
-    let rowParent = overlay;
-    if (behindFolder) {
-        const [, stackY] = stack.get_transformed_position();
-        const [, stackHeight] = stack.get_transformed_size();
-        const edge = Math.round(dir < 0 ? stackY : stackY + stackHeight);
-        rowParent = new St.Widget({
-            width: global.stage.width,
-            height: global.stage.height,
-        });
-        rowParent.set_clip(0, dir < 0 ? 0 : edge, global.stage.width,
-            dir < 0 ? edge : global.stage.height - edge);
-        overlay.add_child(rowParent);
-    }
-
-    const folder = _downloadsFile();
+    // From here on the overlay holds the screen: if building the fan fails, it
+    // must not stay behind as a reactive, stage-sized sheet over everything.
     const rows = [];
+    let grab = null;
+    try {
 
-    for (const file of shown) {
-        rows.push(_makeRow(
-            _displayName(file), _fileIcon(file, iconSize), 'kiwi-fan-icon',
+        // The fan is top chrome, over the dock, so a row coming out from behind the
+        // folder would cross in front of it. Clip the band the fan has to itself,
+        // in stage coordinates, which the rows keep.
+        let rowParent = overlay;
+        if (behindFolder) {
+            const [, stackY] = stack.get_transformed_position();
+            const [, stackHeight] = stack.get_transformed_size();
+            const edge = Math.round(dir < 0 ? stackY : stackY + stackHeight);
+            rowParent = new St.Widget({
+                width: global.stage.width,
+                height: global.stage.height,
+            });
+            rowParent.set_clip(0, dir < 0 ? 0 : edge, global.stage.width,
+                dir < 0 ? edge : global.stage.height - edge);
+            overlay.add_child(rowParent);
+        }
+
+        const folder = _downloadsFile();
+
+        for (const file of shown) {
+            rows.push(_makeRow(
+                _displayName(file), _fileIcon(file, iconSize), 'kiwi-fan-icon',
+                () => {
+                    _openUri(folder.get_child(file.get_name()).get_uri());
+                    _closeFan();
+                }));
+        }
+
+        const rest = recentCount - shown.length;
+        let text = gettextFunc('Open in Files');
+        if (rest > 0)
+            text = ngettextFunc('%d More in Files', '%d More in Files', rest).replace('%d', rest);
+        else if (shown.length === 0)
+            text = gettextFunc('Empty');
+
+        // The row that ends the fan and goes on to the folder. Its button is filled
+        // to its own edge, unlike a thumbnail sitting in a roomier box, so the row
+        // holds the pill off it.
+        const more = _makeRow(
+            text,
+            new St.Icon({
+                style_class: 'kiwi-fan-more-icon',
+                icon_name: 'go-next-symbolic',
+                icon_size: Math.round(iconSize * 0.3),
+            }),
+            'kiwi-fan-more',
             () => {
-                _openUri(folder.get_child(file.get_name()).get_uri());
+                _openUri(folder.get_uri());
                 _closeFan();
-            }));
+            });
+        more.add_style_class_name('kiwi-fan-more-row');
+        rows.push(more);
+
+        // The arc leans to the right, as a macOS fan does, and the name pills hang
+        // off to the left of it where there is room for them
+        let x = anchorX;
+        let y = anchorY;
+        let angle = FAN_START;
+        rows.forEach((row, index) => {
+            // Under everything added before it, so the fan keeps the pile's order:
+            // the newest card is on top there and nearest the dock here
+            rowParent.insert_child_at_index(row, 0);
+            x += Math.sin(angle * Math.PI / 180) * spacing;
+            y += dir * Math.cos(angle * Math.PI / 180) * spacing;
+            // Growing the other way the arc is the mirror of itself, so the rows
+            // lean over the other way with it
+            _placeRow(row, x, y, -dir * angle);
+            row.card = cards[index] ?? null;
+            // Rows too deep to have a card of their own come out from under the
+            // bottom one, which is where the pile ends
+            row.start = cardStart(Math.min(index, Math.max(0, pile.depth - 1)));
+            _animateRowIn(row, index);
+            angle += FAN_STEP;
+        });
+
+        // Cards too deep for the fan to have room for still leave the pile - what
+        // the dock shows while the fan is out is the folder, not a rump of a pile
+        for (const card of cards.slice(rows.length))
+            card.ease({ opacity: 0, duration: 1, delay: rows.length * ROW_STAGGER });
+
+        // One Kiwi modal at a time: Quick Paste / Spotlight close when the fan opens
+        ModalSurface.closeAll();
+        grab = Main.pushModal(overlay, { actionMode: Shell.ActionMode.POPUP });
+        // St.Button tracks its press with a click action, which does not consume
+        // the event, so a press on a row bubbles up here and would tear the row
+        // down before the release made it a click. Only the backdrop closes it.
+        overlay.connect('button-press-event', (actor, event) => {
+            if (global.stage.get_event_actor(event) !== actor)
+                return Clutter.EVENT_PROPAGATE;
+            _closeFan();
+            return Clutter.EVENT_STOP;
+        });
+        overlay.connect('key-press-event', (_actor, event) => {
+            if (event.get_key_symbol() !== Clutter.KEY_Escape)
+                return Clutter.EVENT_PROPAGATE;
+            _closeFan();
+            return Clutter.EVENT_STOP;
+        });
+    } catch (e) {
+        logError(e, '[Kiwi] downloads fan');
+        if (grab)
+            _popGrab(grab);
+        _lockDock(info, false);
+        _dropOverlay(overlay);
+        return;
     }
 
-    const rest = recentCount - shown.length;
-    let text = gettextFunc('Open in Files');
-    if (rest > 0)
-        text = ngettextFunc('%d More in Files', '%d More in Files', rest).replace('%d', rest);
-    else if (shown.length === 0)
-        text = gettextFunc('Empty');
-
-    // The row that ends the fan and goes on to the folder. Its button is filled
-    // to its own edge, unlike a thumbnail sitting in a roomier box, so the row
-    // holds the pill off it.
-    const more = _makeRow(
-        text,
-        new St.Icon({
-            style_class: 'kiwi-fan-more-icon',
-            icon_name: 'go-next-symbolic',
-            icon_size: Math.round(iconSize * 0.3),
-        }),
-        'kiwi-fan-more',
-        () => {
-            _openUri(folder.get_uri());
-            _closeFan();
-        });
-    more.add_style_class_name('kiwi-fan-more-row');
-    rows.push(more);
-
-    // The arc leans to the right, as a macOS fan does, and the name pills hang
-    // off to the left of it where there is room for them
-    let x = anchorX;
-    let y = anchorY;
-    let angle = FAN_START;
-    rows.forEach((row, index) => {
-        // Under everything added before it, so the fan keeps the pile's order:
-        // the newest card is on top there and nearest the dock here
-        rowParent.insert_child_at_index(row, 0);
-        x += Math.sin(angle * Math.PI / 180) * spacing;
-        y += dir * Math.cos(angle * Math.PI / 180) * spacing;
-        // Growing the other way the arc is the mirror of itself, so the rows
-        // lean over the other way with it
-        _placeRow(row, x, y, -dir * angle);
-        row.card = cards[index] ?? null;
-        // Rows too deep to have a card of their own come out from under the
-        // bottom one, which is where the pile ends
-        row.start = cardStart(Math.min(index, Math.max(0, pile.depth - 1)));
-        _animateRowIn(row, index);
-        angle += FAN_STEP;
+    const opened = { overlay, grab, rows, info, gone: false };
+    // Destroyed from outside (the shell tearing the chrome down): the shell has
+    // already dropped the grab with it, so teardown must not pop it again
+    overlay.connect('destroy', () => {
+        opened.gone = true;
     });
-
-    // Cards too deep for the fan to have room for still leave the pile - what
-    // the dock shows while the fan is out is the folder, not a rump of a pile
-    for (const card of cards.slice(rows.length))
-        card.ease({ opacity: 0, duration: 1, delay: rows.length * ROW_STAGGER });
-
-    // One Kiwi modal at a time: Quick Paste / Spotlight close when the fan opens
-    ModalSurface.closeAll();
-    const grab = Main.pushModal(overlay, { actionMode: Shell.ActionMode.POPUP });
-    // St.Button tracks its press with a click action, which does not consume
-    // the event, so a press on a row bubbles up here and would tear the row
-    // down before the release made it a click. Only the backdrop closes it.
-    overlay.connect('button-press-event', (actor, event) => {
-        if (global.stage.get_event_actor(event) !== actor)
-            return Clutter.EVENT_PROPAGATE;
-        _closeFan();
-        return Clutter.EVENT_STOP;
-    });
-    overlay.connect('key-press-event', (_actor, event) => {
-        if (event.get_key_symbol() !== Clutter.KEY_Escape)
-            return Clutter.EVENT_PROPAGATE;
-        _closeFan();
-        return Clutter.EVENT_STOP;
-    });
-
-    fan = { overlay, grab, rows, info };
+    fan = opened;
 }
 
-function _dropOverlay(overlay) {
-    if (!overlay.get_stage())
+function _dropOverlay(overlay, gone = false) {
+    if (gone || !overlay.get_stage())
         return;
     Main.layoutManager.removeChrome(overlay);
     overlay.destroy();
+}
+
+/**
+ * Pop the fan's grab without letting a stale one break teardown: popModal
+ * throws on a grab the shell has already dropped.
+ *
+ * @param grab what pushModal returned
+ */
+function _popGrab(grab) {
+    try {
+        Main.popModal(grab);
+    } catch (e) {
+        logError(e, '[Kiwi] downloads fan: popModal');
+    }
 }
 
 /**
@@ -594,10 +627,18 @@ function _closeFan() {
     if (!fan)
         return;
 
-    const { overlay, grab, rows, info } = fan;
+    const closing = fan;
+    const { overlay, grab, rows, info, gone } = closing;
     fan = null;
 
-    Main.popModal(grab);
+    if (gone) {
+        // Nothing left to fold back: the rows went with the overlay
+        _lockDock(info, false);
+        _syncButton(info);
+        return;
+    }
+
+    _popGrab(grab);
     _lockDock(info, false);
     overlay.reactive = false;
 
@@ -611,7 +652,8 @@ function _closeFan() {
             landed = true;
             return;
         }
-        _dropOverlay(overlay);
+        // The fold can outlive the overlay if something else destroys it
+        _dropOverlay(overlay, closing.gone);
         // Rebuilt from the folder as it stands now, in case it changed while the
         // fan was out
         _syncButton(info);
@@ -1112,10 +1154,16 @@ export function disable() {
     unregisterModal = null;
 
     if (fan) {
-        Main.popModal(fan.grab);
-        _lockDock(fan.info, false);
-        _dropOverlay(fan.overlay);
+        const { overlay, grab, info, gone } = fan;
         fan = null;
+        if (!gone)
+            _popGrab(grab);
+        try {
+            _lockDock(info, false);
+        } catch (e) {
+            logError(e, '[Kiwi] downloads fan: unlock dock');
+        }
+        _dropOverlay(overlay, gone);
     }
 
     disconnectAll(globalSignals);
