@@ -1,0 +1,9 @@
+apps/downloadsStack.js
+apps/launchpadApp.js
+apps/mediaPlayback.js
+apps/panelMedia.js
+apps/quickSettingsNotifications.js
+apps/windowControls/prefs.js
+apps/windowTiling.js
+apps/windowTitle.js
+prefs.js

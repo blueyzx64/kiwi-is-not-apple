@@ -1,0 +1,17 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
+/* Hide GTK4 window control buttons in every window (panel shows them for the focused window).
+   Same trick as hide-titlebar4.css, without the .maximized/.fullscreen condition.
+   The .titlebar.default-decoration rule is left out on purpose: see hide-titlebar-always3.css. */
+
+/* Shift left-side window controls off-screen */
+headerbar windowcontrols.start {
+  margin: 0 0 0 -200px;
+  opacity: 0;
+}
+
+/* Shift right-side window controls off-screen */
+headerbar windowcontrols.end {
+  margin: 0 -200px 0 0;
+  opacity: 0;
+}

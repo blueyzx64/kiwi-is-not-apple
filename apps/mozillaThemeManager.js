@@ -30,7 +30,7 @@ export class MozillaThemeManager {
     enable() {
         this._settings = this._extension.getSettings();
         this._settingsChangedId = this._settings.connect('changed', (_settings, key) => {
-            if (key === this._config.settingsKey || key === 'enable-app-window-buttons' || key === 'button-type' || key === 'button-size' || key === 'show-window-controls') {
+            if (key === this._config.settingsKey || key === 'enable-app-window-buttons' || key === 'button-type' || key === 'button-size' || key === 'show-window-controls' || key === 'remove-titlebar-buttons') {
                 this.updateCss().catch(e => console.error(`[Kiwi] ${this._config.logPrefix} update error: ${e}`));
             }
         });
@@ -48,7 +48,9 @@ export class MozillaThemeManager {
     async updateCss() {
         const enableStyling = this._settings.get_boolean(this._config.settingsKey);
         const enableAppButtons = this._settings.get_boolean('enable-app-window-buttons');
-        const showControlsOnPanel = this._settings.get_boolean('show-window-controls');
+        // Hide the native buttons only while the panel shows them and removal is wanted
+        const showControlsOnPanel = this._settings.get_boolean('show-window-controls') &&
+            this._settings.get_boolean('remove-titlebar-buttons');
         const buttonType = this._settings.get_string('button-type');
         const buttonSize = this._settings.get_string('button-size');
 
