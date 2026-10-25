@@ -1,14 +1,16 @@
 diff --git a/features.js b/features.js
-index 14fedd7..66dfe0e 100644
+index ad616ab..155934c 100644
 --- a/features.js
 +++ b/features.js
-@@ -44,11 +44,16 @@ import { enable as reduceWindowAnimationsEnable, disable as reduceWindowAnimatio
+@@ -44,6 +44,7 @@ import { enable as reduceWindowAnimationsEnable, disable as reduceWindowAnimatio
  import { enableDragRestore, disableDragRestore } from './apps/windowTiling.js';
  import { dockActive } from './apps/dockUtils.js';
  import { LiquidGlass } from './apps/liquidGlass/index.js';
 +import { NotchFeature } from './apps/notch/index.js';
+ import { ControlCenter } from './apps/controlCenter/index.js';
+ import { StageManager } from './apps/stageManager/index.js';
  import { Glass } from './lib/glass.js';
- 
+@@ -53,6 +54,10 @@ import { SpotlightFeature } from './apps/spotlight/index.js';
  // ctx: { extension, settings (Gio.Settings), gettext, interfaceSettings (Gio.Settings) }
  const bool = (ctx, key) => ctx.settings.get_boolean(key);
  
@@ -19,7 +21,7 @@ index 14fedd7..66dfe0e 100644
  // Everything that hangs off Dash-to-Dock stays off while it is not running
  const minimizeToDock = ctx => dockActive() && bool(ctx, 'minimize-to-dock');
  
-@@ -102,21 +107,21 @@ export const FEATURES = [
+@@ -109,21 +114,21 @@ export const FEATURES = [
      // Calendar group. The calendar re-attaches the date menu at the far right of the panel,
      // so a change of either key restarts it and the notification pieces together.
      {
@@ -44,9 +46,9 @@ index 14fedd7..66dfe0e 100644
          restartOn: ['keep-notification-panel'],
          enable: ctx => panelMediaEnable(ctx.gettext),
          disable: () => panelMediaDisable(),
-@@ -264,4 +269,10 @@ export const FEATURES = [
-         id: 'liquid-glass', setting: 'liquid-glass',
-         cls: LiquidGlass,
+@@ -292,4 +297,10 @@ export const FEATURES = [
+         cls: StageManager,
+         conflictsWith: ['minimize-to-dock', 'move-window-to-new-workspace', 'tiling-title-menu'],
      },
 +    {
 +        // Pill in the centre of the bar for banners, media and volume. Replaces the stock banners

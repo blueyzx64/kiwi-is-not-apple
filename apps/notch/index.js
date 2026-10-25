@@ -19,12 +19,12 @@ import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
 
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { KiwiSettings } from '../../lib/settings.js';
-import { canDivertOsd, setUnredirectAllowed } from '../../lib/compat.js';
+import { canDivertOsd, setUnredirectAllowed, requeueBanner } from '../../lib/compat.js';
 import { PanelLayout } from '../../coordinators/panelLayout.js';
 import { PanelVisibility } from '../../coordinators/panelVisibility.js';
 import { NotificationRouter } from '../../coordinators/notificationRouter.js';
 import { MprisWatcher } from '../../coordinators/mprisWatcher.js';
-import { initialState, step, view, nextDeadline, wantsBar } from './stateMachine.js';
+import { initialState, step, view, nextDeadline, wantsBar, URGENCY } from './stateMachine.js';
 import { NotchView } from './view.js';
 
 const MEDIA_KEY = 'media';
@@ -94,13 +94,16 @@ export class NotchFeature {
         this._mpris = null;
         this._osd = null;
         this._applyParts();
-        ks.watch(['notch-notifications', 'notch-live-activities', 'notch-osd', 'notch-timeout'], () => {
+        ks.watch(['notch-notifications', 'notch-live-activities', 'notch-osd'], () => {
             this._applyParts();
             this._dispatch({ type: 'set', patch: {} });
         });
+        // The timeout is read from settings on every event; nothing to rebuild.
+        ks.watch('notch-timeout', () => this._dispatch({ type: 'set', patch: {} }));
 
         // Runs first on dispose (newest first): stop reacting, then give everything back
         cleanup.add(() => {
+            this._requeueCritical();
             this._alive = false;
             this._deadlineToken = 0;
             this._release();
@@ -135,8 +138,13 @@ export class NotchFeature {
     _dispatch(ev) {
         if (!this._alive)
             return;
+        const before = this._state.current?.id;
         const { state, effects } = step(this._state, { now: nowMs(), ...ev }, this._config());
         this._state = state;
+        // A card that ran out of time (not clicked, not dismissed, not waiting in the queue)
+        if (ev.type === 'tick' && before !== undefined && state.current?.id !== before &&
+            !state.pending.some(n => n.id === before))
+            this._expire(before);
         for (const effect of effects)
             this._run(effect);
         this._sync();
@@ -153,6 +161,18 @@ export class NotchFeature {
                 notification.destroy(MessageTray.NotificationDestroyedReason.DISMISSED);
         } catch (e) {
             console.error('[Kiwi] notch notification action failed:', e);
+        }
+    }
+
+    // Transient notifications leave the message list once their banner time is over
+    _expire(id) {
+        const notification = this._notifications.get(id);
+        if (!notification?.isTransient)
+            return;
+        try {
+            notification.destroy(MessageTray.NotificationDestroyedReason.EXPIRED);
+        } catch (e) {
+            console.error('[Kiwi] notch could not expire a notification:', e);
         }
     }
 
@@ -278,7 +298,19 @@ export class NotchFeature {
 
     // ---- parts that can be switched on and off ----------------------------------------------
 
+    // A critical card is sticky; if the notch stops taking banners it must not vanish with it.
+    _requeueCritical() {
+        const current = this._state.current;
+        if (!current || current.urgency < URGENCY.CRITICAL)
+            return;
+        const notification = this._notifications.get(current.id);
+        if (notification)
+            requeueBanner(Main.messageTray, notification);
+    }
+
     _applyParts() {
+        if (!this._ks.bool('notch-notifications'))
+            this._requeueCritical();
         this._parts?.dispose();
         this._parts = new CleanupRegistry();
         const parts = this._parts;
@@ -292,15 +324,20 @@ export class NotchFeature {
             parts.inject(Main.osdWindowManager, '_showOsdWindow',
                 function (orig, monitorIndex, icon, label, level, maxLevel) {
                     // Other monitors keep the stock OSD; the notch lives on the primary one.
-                    if (!self._alive || monitorIndex !== Main.layoutManager.primaryIndex)
+                    if (!self._alive || !self._view || monitorIndex !== Main.layoutManager.primaryIndex)
                         return orig.call(this, monitorIndex, icon, label, level, maxLevel);
-                    self._dispatch({
-                        type: 'osd',
-                        icon,
-                        label,
-                        level: Number.isFinite(level) && level >= 0 ? level : null,
-                        maxLevel: Number.isFinite(maxLevel) && maxLevel > 0 ? maxLevel : null,
-                    });
+                    try {
+                        self._dispatch({
+                            type: 'osd',
+                            icon,
+                            label,
+                            level: Number.isFinite(level) && level >= 0 ? level : null,
+                            maxLevel: Number.isFinite(maxLevel) && maxLevel > 0 ? maxLevel : null,
+                        });
+                    } catch (e) {
+                        console.error('[Kiwi] notch OSD failed, using the stock one:', e);
+                        return orig.call(this, monitorIndex, icon, label, level, maxLevel);
+                    }
                     return undefined;
                 });
         }

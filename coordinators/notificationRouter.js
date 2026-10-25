@@ -31,7 +31,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
 
 import { CleanupRegistry } from '../lib/disposables.js';
-import { takeQueuedBanner, kickTray, canDivertBanners } from '../lib/compat.js';
+import { takeQueuedBanner, kickTray, canDivertBanners, requeueBanner } from '../lib/compat.js';
 
 const NOTIFICATION_SCHEMA = 'org.gnome.desktop.notifications';
 
@@ -162,7 +162,16 @@ function installDiversion() {
         try {
             sink.present(notification);
         } catch (e) {
-            console.error('[Kiwi] banner sink failed:', e);
+            // The sink is broken: drop it and let the stock banner show this one.
+            console.error('[Kiwi] banner sink failed, back to stock banners:', e);
+            const index = sinks.indexOf(sink);
+            if (index >= 0)
+                sinks.splice(index, 1);
+            if (sinks.length === 0)
+                removeDiversion();
+            requeueBanner(this, notification);
+            kickTray(this);
+            return undefined;
         }
         // The tray stays HIDDEN, so give the rest of the queue its turn too.
         if (this._notificationQueue.length > 0) {
