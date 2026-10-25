@@ -24,8 +24,8 @@
 | Reviewer 2 | R1 | reviewing S4 | - |
 | Audit fixes (autohide restore, glass contrast/menu destroy) | S6, S3 | done, merged | feat/autohide-fix, feat/liquid-glass-fix2 |
 | Small modules (D9) | D9 | doing | debt/small-modules |
-| Window move (D10) | D10 | doing | debt/window-move |
-| Lint (L1) | L1 | doing | debt/lint |
+| Window move (D10) | D10 | done, merged | debt/window-move |
+| Lint (L1) | L1 | pass 1 merged (104→101); pass 2 at end | debt/lint |
 | Audit merged CC/SM/clipboard/spotlight (A2) | A2 | doing | - |
 | Shell smoke harness (X1) | X1 | doing | - |
 | PR notes + manual test list (P1) | P1 | doing | - |
