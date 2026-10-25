@@ -151,6 +151,30 @@ export function edgeZone(workArea, side = 'left', width = DEFAULTS.edgeZone) {
     return { x, y: workArea.y, width, height: workArea.height };
 }
 
+/**
+ * Vertical pressure barrier on the strip's screen edge (reveals an auto-hidden strip without a
+ * reactive actor over the windows). Null when another monitor continues past that edge, since a
+ * barrier there would stop the pointer crossing over.
+ * @param {rect} workArea  of the primary monitor
+ * @param {rect} monitor   the primary monitor
+ * @param {rect[]} others  the other monitors
+ * @returns {{x1, x2, y1, y2, direction: 'positive'|'negative'}|null}
+ *   direction: the Meta.BarrierDirection that lets the pointer move away from the edge
+ */
+export function edgeBarrier(workArea, monitor, others = [], side = 'left') {
+    const right = side === 'right';
+    const x = right ? monitor.x + monitor.width : monitor.x;
+    const y1 = workArea.y;
+    const y2 = workArea.y + workArea.height;
+    const neighbour = others.some(m => {
+        const touches = right ? m.x === monitor.x + monitor.width : m.x + m.width === monitor.x;
+        return touches && m.y < y2 && m.y + m.height > y1;
+    });
+    if (neighbour || y2 <= y1)
+        return null;
+    return { x1: x, x2: x, y1, y2, direction: right ? 'negative' : 'positive' };
+}
+
 // ---- stage area ---------------------------------------------------------------------------
 
 /** The part of the work area the stage may use. An auto-hide strip reserves nothing. */
@@ -202,6 +226,44 @@ export function stripShown({ autohide, overview, stageOverlapsStrip, pointerAtEd
     if (!stageOverlapsStrip)
         return true;
     return !!(pointerAtEdge || pointerOnStrip);
+}
+
+// ---- which windows Stage Manager leaves alone ---------------------------------------------
+
+const PIP_TITLE = /picture[\s-]*in[\s-]*picture/i;
+
+/**
+ * Windows that float over every stage: always-on-top, on all workspaces, picture-in-picture,
+ * or on another monitor than the strip. They are never hidden, moved or listed.
+ * @param {{above: boolean, sticky: boolean, title: ?string, monitor: number, primary: number}} w
+ */
+export function isExempt({ above, sticky, title, monitor, primary }) {
+    if (above || sticky)
+        return true;
+    if (title && PIP_TITLE.test(title))
+        return true;
+    return monitor !== primary;
+}
+
+// ---- focus ------------------------------------------------------------------------------
+
+/**
+ * The window that owns a focused dialog: follow transient-for up to the first window the stage
+ * manager lists. Returns the window itself when it is listed, null when the chain has none.
+ * @param {T} win
+ * @param {(w: T) => T|null} parentOf  e.g. w => w.get_transient_for()
+ * @param {(w: T) => boolean} isListed
+ * @template T
+ */
+export function focusRoot(win, parentOf, isListed, maxDepth = 16) {
+    const seen = new Set();
+    for (let w = win, depth = 0; w && depth <= maxDepth && !seen.has(w); depth++) {
+        if (isListed(w))
+            return w;
+        seen.add(w);
+        w = parentOf(w);
+    }
+    return null;
 }
 
 // ---- stages and focus ---------------------------------------------------------------------
@@ -347,16 +409,27 @@ export class StageModel {
     }
 
     /**
-     * What to do after a switch: show the current stage's windows, hide all others.
+     * What to do after a switch: show the current stage's windows, hide the windows of the
+     * stages that have a card in the strip. A stage without a card (past recentCount, or past
+     * what fits on screen: pass that as stripLimit) is never hidden, or it would be unreachable.
+     * @param {number} [stripLimit] cards the strip really shows
      * @returns {{show: (string|number)[], hide: (string|number)[]}}
      */
-    visibility() {
+    visibility(stripLimit = Infinity) {
+        const hidden = new Set(this.strip().slice(0, Math.max(0, stripLimit)).map(st => st.id));
         const show = [];
         const hide = [];
-        for (const st of this._stages()) {
-            (st.id === this._current ? show : hide).push(...st.windows);
-        }
+        for (const st of this._stages())
+            (hidden.has(st.id) ? hide : show).push(...st.windows);
         return { show, hide };
+    }
+
+    /** Lead window of the stage holding this app's windows (most recent first), or null. */
+    leadForApp(appId) {
+        if (appId === null || appId === undefined)
+            return null;
+        const st = this._stages().find(s => s.appId === appId);
+        return st ? this._lead(st) : null;
     }
 
     get size() {

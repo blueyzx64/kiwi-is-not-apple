@@ -114,6 +114,20 @@ export class WindowStateRegistry {
         return this.has(win, 'parkedInDock') && !this.has(win, 'staged');
     }
 
+    /**
+     * Policy for hideMinimizedWindows: should this window be left out of the overview and
+     * alt-tab? Staged windows never are. With the user's "hide minimized windows" switch on,
+     * every other minimized window is; when only minimize-to-dock asked for the filter, only the
+     * windows parked in the dock are (stock behaviour for the rest).
+     * @param {{minimized: boolean}} win
+     * @param {{hideAllMinimized?: boolean}} [opts]
+     */
+    hideFromSwitcher(win, { hideAllMinimized = false } = {}) {
+        if (!win?.minimized || this.has(win, 'staged'))
+            return false;
+        return hideAllMinimized || this.has(win, 'parkedInDock');
+    }
+
     // ---- Stage Manager on/off -----------------------------------------------------------
 
     /** True while Stage Manager owns window placement. */

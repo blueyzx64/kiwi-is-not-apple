@@ -10,25 +10,32 @@
 //     [glass layer] inserted by Glass.attach at index 0
 //     bg            St.Widget .kiwi-stage-strip (glass target; holds no content)
 //     cards         Clutter.Actor above the glass, one St.Button .kiwi-stage-card per stage
-//   edge            thin reactive actor that reveals an auto-hidden strip
+//   barrier         Meta.Barrier + Layout.PressureBarrier on the screen edge: a push reveals an
+//                   auto-hidden strip (no reactive actor over the windows)
 //
 // Private API: none. Main.layoutManager.addChrome without affectsInputRegion (removed in 50).
 // Card tilt sign and the clone clipping are unverified on a real shell (no shell in the cloud).
 
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
+import Meta from 'gi://Meta';
+import Shell from 'gi://Shell';
 import St from 'gi://St';
+import * as Layout from 'resource:///org/gnome/shell/ui/layout.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import { Glass } from '../../lib/glass.js';
 import {
-    DEFAULTS, cardTilt, cropThumb, edgeZone, fitCount, overlaps, stackLayers, stripLayout, stripShown,
+    DEFAULTS, cardTilt, cropThumb, edgeBarrier, fitCount, overlaps, stackLayers, stripLayout, stripShown,
 } from './model.js';
 
 const PILL_PAD = 14;
 const PILL_RADIUS = 22;
 const SLIDE_MS = 250;
 const HIDE_DELAY_MS = 450;
+const EDGE_HOLD_MS = 1200;       // after a push on the edge, time to reach the strip
+const PRESSURE_THRESHOLD = 40;  // px of push against the edge (as the auto-hide top bar)
+const PRESSURE_TIMEOUT = 600;
 
 export class StageStrip {
     /**
@@ -56,14 +63,24 @@ export class StageStrip {
         this._root.add_child(this._bg);
         this._root.add_child(this._cards);
 
-        this._edge = cleanup.actor(new Clutter.Actor({ reactive: true, visible: false, opacity: 0 }));
-        this._edge.connect('enter-event', () => this._setPointer({ atEdge: true }));
-        this._edge.connect('leave-event', () => this._setPointer({ atEdge: false }));
+        this._barrier = null;
+        this._barrierKey = '';
+        this._edgeToken = 0;
+        this._pressure = new Layout.PressureBarrier(PRESSURE_THRESHOLD, PRESSURE_TIMEOUT,
+            Shell.ActionMode.NORMAL);
+        // A held button is a drag (a window to the edge to tile): not a reveal
+        this._pressure.setEventFilter(() => {
+            const [, , mods] = global.get_pointer();
+            return (mods & Clutter.ModifierType.BUTTON1_MASK) !== 0;
+        });
+        this._pressure.connect('trigger', () => this._edgePushed());
+        cleanup.add(() => {
+            this._dropBarrier();
+            this._pressure.destroy();
+        });
 
         Main.layoutManager.addChrome(this._root, { trackFullscreen: true });
         cleanup.add(() => Main.layoutManager.removeChrome(this._root));
-        Main.layoutManager.addChrome(this._edge, { trackFullscreen: true });
-        cleanup.add(() => Main.layoutManager.removeChrome(this._edge));
 
         // Glass last in, first out: the layer goes before the actors it sits in
         this._glass = Glass.attach(this._bg, {
@@ -112,8 +129,8 @@ export class StageStrip {
         if (!workArea || cards.length === 0) {
             this._pill = null;
             this._root.visible = false;
-            this._edge.visible = false;
             this._shown = null;
+            this._syncBarrier();
             return;
         }
 
@@ -141,9 +158,7 @@ export class StageStrip {
         this._bg.set_size(pill.width, pill.height);
         this._cards.set_size(pill.width, pill.height);
 
-        const edge = edgeZone(workArea, side);
-        this._edge.set_position(edge.x, edge.y);
-        this._edge.set_size(edge.width, edge.height);
+        this._syncBarrier();
 
         for (let i = 0; i < count; i++)
             this._cards.add_child(this._makeCard(cards[i], rects[i], pill, layout.scale));
@@ -172,7 +187,10 @@ export class StageStrip {
         const layers = stackLayers(card.windows.length, side);
         // Back to front so the lead window paints on top
         for (const layer of [...layers].reverse()) {
-            const holderLayer = this._makeThumb(card.windows[layer.index], rect.width, rect.height);
+            const win = card.windows[layer.index];
+            const holderLayer = win?.minimized
+                ? this._makeIconThumb(card.app, rect.width, rect.height, scale)
+                : this._makeThumb(win, rect.width, rect.height);
             if (!holderLayer)
                 continue;
             holderLayer.set_pivot_point(0.5, 0.5);
@@ -197,6 +215,31 @@ export class StageStrip {
         return button;
     }
 
+    /**
+     * A minimized window's actor is unmapped and its clone paints nothing, so it shows as its
+     * app icon on a tile instead.
+     */
+    _makeIconThumb(app, boxW, boxH, scale) {
+        const tile = new St.Widget({
+            style_class: 'kiwi-stage-icon-tile',
+            layout_manager: new Clutter.BinLayout(),
+            reactive: false,
+        });
+        tile.set_size(boxW, boxH);
+        const size = Math.round(64 * scale);
+        let icon = null;
+        try {
+            icon = app?.create_icon_texture(size) ?? null;
+        } catch (_e) {
+            icon = null;
+        }
+        icon ??= new St.Icon({ icon_name: 'application-x-executable-symbolic', icon_size: size });
+        icon.x_align = Clutter.ActorAlign.CENTER;
+        icon.y_align = Clutter.ActorAlign.CENTER;
+        tile.add_child(icon);
+        return tile;
+    }
+
     /** One thumbnail: a clipping holder with a live clone inside, or null if the window has no actor. */
     _makeThumb(win, boxW, boxH) {
         const actor = win?.get_compositor_private?.();
@@ -213,6 +256,51 @@ export class StageStrip {
         clone.set_size(t.cloneW, t.cloneH);
         holder.add_child(clone);
         return holder;
+    }
+
+    // ---- edge barrier ---------------------------------------------------------------------
+
+    _dropBarrier() {
+        if (!this._barrier)
+            return;
+        this._pressure.removeBarrier(this._barrier);
+        this._barrier.destroy();
+        this._barrier = null;
+    }
+
+    /** One barrier on the strip's edge while auto-hide is on and there are cards. */
+    _syncBarrier() {
+        const { side, workArea, autohide, cards } = this._state;
+        const lm = Main.layoutManager;
+        const monitor = lm.primaryMonitor;
+        const want = autohide && workArea && cards.length > 0 && monitor
+            ? edgeBarrier(workArea, monitor, lm.monitors.filter(m => m !== monitor), side)
+            : null;
+        const key = want ? JSON.stringify(want) : '';
+        if (key === this._barrierKey)
+            return;
+        this._barrierKey = key;
+        this._dropBarrier();
+        if (!want)
+            return;
+        this._barrier = new Meta.Barrier({
+            backend: global.backend,
+            x1: want.x1, x2: want.x2, y1: want.y1, y2: want.y2,
+            directions: want.direction === 'negative'
+                ? Meta.BarrierDirection.NEGATIVE_X : Meta.BarrierDirection.POSITIVE_X,
+        });
+        this._pressure.addBarrier(this._barrier);
+    }
+
+    _edgePushed() {
+        this._setPointer({ atEdge: true });
+        // The push is a moment, not a place: let go of it unless the pointer reaches the strip
+        this._cleanup.release(this._edgeToken);
+        this._edgeToken = this._cleanup.timeout(EDGE_HOLD_MS, () => {
+            this._edgeToken = 0;
+            this._setPointer({ atEdge: false });
+            return GLib.SOURCE_REMOVE;
+        }, { name: 'stage-strip-edge' });
     }
 
     // ---- show / hide ----------------------------------------------------------------------
@@ -253,8 +341,6 @@ export class StageStrip {
         if (!this._pill)
             return;
         const show = this._wantShown();
-        // The edge catcher exists only while the strip is hidden by auto-hide
-        this._edge.visible = !show && this._state.autohide && !this._state.overview;
         if (show === this._shown)
             return;
         const first = this._shown === null;

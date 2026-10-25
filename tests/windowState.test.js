@@ -256,6 +256,28 @@ test('reset removes the interceptor', () => {
     r.setStageActive(true);
     eq(r.interceptMinimize({}), false);
 });
+test('hideFromSwitcher: only minimized windows', () => {
+    const r = new WindowStateRegistry();
+    eq(r.hideFromSwitcher({ minimized: false }, { hideAllMinimized: true }), false);
+    eq(r.hideFromSwitcher(null), false);
+});
+test('hideFromSwitcher: user switch hides every minimized window but staged ones', () => {
+    const r = new WindowStateRegistry();
+    const w = { minimized: true };
+    eq(r.hideFromSwitcher(w, { hideAllMinimized: true }), true);
+    r.set(w, 'staged');
+    eq(r.hideFromSwitcher(w, { hideAllMinimized: true }), false);
+});
+test('hideFromSwitcher: forced by minimize-to-dock hides only parked windows', () => {
+    const r = new WindowStateRegistry();
+    const plain = { minimized: true };
+    const parked = { minimized: true };
+    r.set(parked, 'parkedInDock');
+    eq(r.hideFromSwitcher(plain), false);
+    eq(r.hideFromSwitcher(parked), true);
+    r.set(parked, 'staged');
+    eq(r.hideFromSwitcher(parked), false);
+});
 
 if (failed)
     throw new Error(`${failed} failed`);
