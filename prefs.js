@@ -555,6 +555,17 @@ export default class KiwiPreferences extends ExtensionPreferences {
         settings.bind('move-calendar-right', calendarExpander, 'enable-expansion',
             Gio.SettingsBindFlags.DEFAULT);
 
+        // The notch takes the centre of the bar and moves the date menu right itself
+        const calendarSubtitle = calendarExpander.subtitle;
+        const syncCalendarForNotch = () => {
+            const notch = settings.get_boolean('notch');
+            calendarExpander.sensitive = !notch;
+            calendarExpander.subtitle = notch ? _('On while the notch is on') : calendarSubtitle;
+        };
+        syncCalendarForNotch();
+        const calendarNotchId = settings.connect('changed::notch', syncCalendarForNotch);
+        window.connect('close-request', () => settings.disconnect(calendarNotchId));
+
         const keepPanelRow = new Adw.SwitchRow({
             title: _('Keep GNOME Notification Panel'),
             subtitle: _("Don't split notification and calendar layout"),
