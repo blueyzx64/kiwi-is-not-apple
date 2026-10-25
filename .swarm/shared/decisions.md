@@ -64,3 +64,5 @@ All answered by the owner on 2026-10-25. Do not ask the owner again; ask the orc
   `resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js` or define `const N_ = s => s;`.
 - Stage Manager adds `conflictsWith: ['minimize-to-dock']` only in the round that really hides
   windows (S9 Wave D). It is not added while the feature is strip-only.
+- Team size (owner, 2026-10-25): up to **30 Sonnet agents** live. Extra leads run the debt
+  cards in `.swarm/shared/debt-cards.md`; R1 is a second reviewer next to S10.
