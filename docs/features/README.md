@@ -42,3 +42,4 @@ How to build them: [../architecture/new-features-architecture.md](../architectur
 4. **Settings**: proposed GSettings keys
 5. **Interactions with other features**
 6. **Acceptance checklist**
+- [Rounded window corners](rounded-corners.md): opt-in per-window corner mask (UX round 1).
