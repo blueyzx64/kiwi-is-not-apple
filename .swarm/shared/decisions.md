@@ -58,3 +58,5 @@ All answered by the owner on 2026-10-25. Do not ask the owner again; ask the orc
 - Prefs page order (fixed; S10 enforces): General/existing pages first, then new feature pages
   in this order: Liquid Glass, Window Controls, Auto-hide Top Bar, Control Center, Clipboard,
   Spotlight, Notch, Stage Manager; Advanced stays last.
+- `Glass.configure(settings)` is called by extension.js on enable (null on disable). Features
+  never look up their own extension (EGO X-006).

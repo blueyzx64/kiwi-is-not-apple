@@ -6,10 +6,10 @@
 | advanced/ fixes + foundation nits | S1 | done, merged | feat/advanced-fixes |
 | Integrator/review | S10 | setup merged; idle until review | feat/integration |
 | Window controls | S2 | done, merged | feat/window-controls |
-| Liquid Glass | S3 | built; S10 review + integration | feat/liquid-glass |
-| Clipboard | S4 | todo | feat/clipboard |
-| Spotlight | S5 | todo | feat/spotlight |
+| Liquid Glass | S3 | merged; 3 review fixes doing (feat/liquid-glass-fixes) | feat/liquid-glass |
+| Clipboard | S4 | doing | feat/clipboard |
+| Spotlight | S5 | doing (model first; waits S4 modalSurface) | feat/spotlight |
 | Auto-hide bar | S6 | doing | feat/autohide |
-| Control Center | S7 | todo | feat/control-center |
+| Control Center | S7 | doing | feat/control-center |
 | Notch | S8 | todo | feat/notch |
-| Stage Manager | S9 | todo | feat/stage-manager |
+| Stage Manager | S9 | doing (model + strip only) | feat/stage-manager |
