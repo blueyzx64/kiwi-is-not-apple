@@ -24,7 +24,7 @@ import * as Util from 'resource:///org/gnome/shell/misc/util.js';
 import { Glass } from '../../lib/glass.js';
 import { SIZES } from './stateMachine.js';
 import {
-    dashboardLayout, cardSize, trackProgress, formatClock, moreCount, spring,
+    dashboardLayout, cardSize, trackProgress, seekTarget, formatClock, moreCount, spring,
 } from './dashboardModel.js';
 
 // Motion. The shape moves on a damped spring (a little overshoot when it grows, none when it
@@ -105,7 +105,8 @@ export class NotchView {
      * @param {CleanupRegistry} cleanup everything made here is released on dispose
      * @param {object} handlers {onClick, onDismiss, onHover(bool), onAction(id, index),
      *   onMedia('previous'|'toggle'|'next'), onToggleDnd, onCopy(entryId), onCollapse,
-     *   onOpenNotification(notification), onOpenList, getPosition(): Promise<number|null>}
+     *   onOpenNotification(notification), onOpenList, onSeek(fraction 0..1),
+     *   getPosition(): Promise<number|null>}
      * @param {function(string): string} gettext
      */
     constructor(cleanup, handlers, gettext) {
@@ -883,8 +884,32 @@ export class NotchView {
         const elapsed = label('', 'kiwi-notch-scrub-time');
         const remaining = label('', 'kiwi-notch-scrub-time kiwi-notch-scrub-remaining');
         const track = this._track('kiwi-notch-scrub-track', 'kiwi-notch-scrub-fill', 4, 0);
+        // A click on the bar seeks there. It is a button so the press stays with it and does
+        // not count as a click on the notch (which would close the dashboard).
+        const seekable = hasLength && !!media.canSeek && !!this._h.onSeek;
+        const hit = new St.Button({
+            style_class: 'kiwi-notch-scrub-hit',
+            child: track,
+            x_expand: true,
+            y_align: Clutter.ActorAlign.CENTER,
+            reactive: seekable,
+            can_focus: false,
+            accessible_name: this._('Seek'),
+        });
+        hit.connect('clicked', () => {
+            const [px] = global.get_pointer();
+            const [tx] = track.get_transformed_position();
+            const [tw] = track.get_transformed_size();
+            if (!(tw > 0))
+                return;
+            const fraction = (px - tx) / tw;
+            if (seekTarget(fraction, media.length) === null)
+                return;
+            track.kiwiSetFraction(Math.max(0, Math.min(1, fraction)));
+            this._h.onSeek(fraction);
+        });
         scrub.add_child(elapsed);
-        scrub.add_child(track);
+        scrub.add_child(hit);
         scrub.add_child(remaining);
         col.add_child(scrub);
         if (hasLength && this._h.getPosition) {
@@ -976,9 +1001,20 @@ export class NotchView {
             if (item.when)
                 line.add_child(label(item.when, 'kiwi-notch-recent-time'));
             text.add_child(line);
-            const sub = (item.body ?? '').replace(/\s+/g, ' ').trim() || item.app;
-            if (sub)
-                text.add_child(label(sub, 'kiwi-notch-recent-sub'));
+            const body = (item.body ?? '').replace(/\s+/g, ' ').trim();
+            if (body || item.app) {
+                const sub = label('', 'kiwi-notch-recent-sub');
+                // Like the card: the body may carry markup (Rhythmbox sends
+                // "by <i>Artist</i>"); fixMarkup keeps the allowed tags and escapes the rest.
+                try {
+                    sub.clutter_text.set_markup(body
+                        ? Util.fixMarkup(body, !!item.markup)
+                        : Util.fixMarkup(item.app, false));
+                } catch (_e) {
+                    sub.text = body || item.app;
+                }
+                text.add_child(sub);
+            }
             row.add_child(text);
             button.set_child(row);
             button.connect('clicked', () => this._h.onOpenNotification?.(item.notification));
