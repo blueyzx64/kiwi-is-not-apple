@@ -73,4 +73,4 @@ that slide on a workspace switch. Sets live in memory per workspace for the sess
 
 Limits: side by side uses `move_resize_frame` (mutter's tiling has no public API on 50); the
 frames and maximized state are put back when the set breaks up or Stage Manager turns off.
-A set of more than two windows dropped side by side gets equal columns.
+A set of more than two windows dropped side by side gets equal columns. An app whose minimum size is wider than its column keeps that size (and mutter then ignores the move), so a second pass places the windows at the sizes they took: equal gaps when they fit, else overlapping evenly, always inside the stage; a fixed-size window is centred in its column. Without auto-hide, the strip still steps aside for a maximized or fullscreen stage window and comes back from the screen edge, as on macOS.
