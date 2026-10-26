@@ -1049,7 +1049,7 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
 .quick-settings.kiwi-control-center .quick-toggle,
 .quick-settings.kiwi-control-center .quick-toggle-has-menu {
     min-width: 0;
-    max-width: none;
+    max-width: 306px;
     min-height: 48px;
     border-radius: 14px;
 }
@@ -1061,7 +1061,7 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
 }
 
 .quick-settings.kiwi-control-center .quick-toggle-has-menu .quick-toggle-menu-button {
-    padding: 6px 8px;
+    padding: 6px 4px;
 }
 
 .quick-settings.kiwi-control-center .quick-toggle-has-menu .quick-toggle-menu-button StIcon {
@@ -1072,40 +1072,50 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
     width: 0;
 }
 
-/* A module made of several items: square where they meet */
-.quick-settings.kiwi-control-center .kiwi-cc-join-next,
-.quick-settings.kiwi-control-center .kiwi-cc-join-next .quick-toggle {
+/* A module made of several items: square where they meet. .kiwi-cc-item raises these
+   above the per-kind radii below (.quick-slider, .kiwi-cc-caption), whatever their order. */
+.quick-settings.kiwi-control-center .kiwi-cc-item.kiwi-cc-join-next,
+.quick-settings.kiwi-control-center .kiwi-cc-item.kiwi-cc-join-next .quick-toggle {
     border-radius: 14px 14px 0 0;
 }
 
-.quick-settings.kiwi-control-center .kiwi-cc-join-prev,
-.quick-settings.kiwi-control-center .kiwi-cc-join-prev .quick-toggle {
+.quick-settings.kiwi-control-center .kiwi-cc-item.kiwi-cc-join-prev,
+.quick-settings.kiwi-control-center .kiwi-cc-item.kiwi-cc-join-prev .quick-toggle {
     border-radius: 0 0 14px 14px;
 }
 
-.quick-settings.kiwi-control-center .kiwi-cc-join-prev.kiwi-cc-join-next,
-.quick-settings.kiwi-control-center .kiwi-cc-join-prev.kiwi-cc-join-next .quick-toggle {
+.quick-settings.kiwi-control-center .kiwi-cc-item.kiwi-cc-join-prev.kiwi-cc-join-next,
+.quick-settings.kiwi-control-center .kiwi-cc-item.kiwi-cc-join-prev.kiwi-cc-join-next .quick-toggle {
     border-radius: 0;
 }
 
+/* A joined toggle shares its grid row with a right-hand item that has an 8px margin under
+   it; the row is that much taller, so the toggle keeps the extra 8px as padding instead of
+   growing: its icon then lines up with its neighbour's, and every row of the stack is the
+   same height. */
+.quick-settings.kiwi-control-center .quick-toggle.kiwi-cc-item.kiwi-cc-join-next,
+.quick-settings.kiwi-control-center .quick-toggle-has-menu.kiwi-cc-item.kiwi-cc-join-next {
+    padding-bottom: 8px;
+}
+
 .quick-settings.kiwi-control-center .quick-toggle > StBoxLayout {
-    spacing: 9px;
+    spacing: 8px;
 }
 
 .quick-settings.kiwi-control-center .quick-toggle:ltr > StBoxLayout {
-    padding-left: 9px;
-    padding-right: 4px;
+    padding-left: 8px;
+    padding-right: 2px;
 }
 
 .quick-settings.kiwi-control-center .quick-toggle:rtl > StBoxLayout {
-    padding-right: 9px;
-    padding-left: 4px;
+    padding-right: 8px;
+    padding-left: 2px;
 }
 
-/* The icon sits in a 30px circle; the circle, not the tile, shows "on" */
+/* The icon sits in a 28px circle; the circle, not the tile, shows "on" */
 .quick-settings.kiwi-control-center .quick-toggle .quick-toggle-icon {
     icon-size: 16px;
-    padding: 7px;
+    padding: 6px;
     border-radius: 999px;
 }
 
@@ -1189,8 +1199,8 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
 }
 
 .quick-settings.kiwi-control-center .kiwi-cc-kiwi-tile {
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
     padding: 0;
     border-radius: 999px;
 }
@@ -1202,7 +1212,7 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
 /* max-width keeps a long title from widening the whole menu */
 .quick-settings.kiwi-control-center .kiwi-cc-now-playing {
     min-width: 0;
-    max-width: none;
+    max-width: 306px;
     min-height: 0;
     padding: 8px 8px 8px 8px;
     spacing: 10px;
@@ -1464,6 +1474,14 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
 .quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-slider .slider-bin,
 .quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-slider .icon-button {
     color: rgba(0, 0, 0, 0.75);
+    background-color: transparent;
+}
+
+/* The footer battery is a quick toggle too: no tile and no icon circle in light style
+   either (the light tile rules above would otherwise reach it) */
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-settings-system-item .power-item .quick-toggle-icon {
+    color: rgba(0, 0, 0, 0.75);
+    background-color: transparent;
 }
 
 .quick-settings.kiwi-cc-calm.kiwi-cc-light .kiwi-cc-np-button:hover,
@@ -2501,6 +2519,11 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
 
 .kiwi-notch-scrub-remaining {
     text-align: right;
+}
+
+/* the bar's click target: taller than the 4px bar, transparent */
+.kiwi-notch-scrub-hit {
+    padding: 6px 0;
 }
 
 .kiwi-notch-scrub-track {

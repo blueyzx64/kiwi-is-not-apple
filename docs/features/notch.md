@@ -93,3 +93,12 @@ rows and an "N more" text button that opens the message list. Grid, sizes and th
 live in `apps/notch/dashboardModel.js` (tested). Not done: the next calendar event (needs
 the calendar server; later), remote cover art keeps square corners (only local art is
 clipped to the radius, remote art loads as an icon through GIO).
+
+## Real-player test, round 3 (Rhythmbox + a GStreamer MPRIS player)
+- A paused player keeps its pill with the waveform at rest; a stopped one leaves. With several
+  players, playing beats paused beats stopped, and the one that started playing last wins
+  (`lib/mprisModel.js`, tested).
+- A player with nothing loaded (Rhythmbox at startup: empty Metadata, Stopped) is not a player
+  yet, so the dashboard keeps the clock instead of "Unknown title".
+- A click on the dashboard scrubber seeks there (MPRIS SetPosition).
+- Dashboard list bodies honour notification markup like the card (Rhythmbox sends `<i>`).

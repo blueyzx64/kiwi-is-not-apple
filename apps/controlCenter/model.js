@@ -169,7 +169,7 @@ function takeHalfRow(pool) {
  *   as the stack has (at least one). Blank spacers fill the right half if it runs out.
  *   With no connectivity at all the block is one row: Do Not Disturb and two squares.
  * - Display and Sound: a caption joined to its sliders.
- * - The secondary toggles left over: labelled half tiles first, then squares, packed in
+ * - The secondary toggles left over: squares first, then labelled half tiles, packed in
  *   rows of COLUMNS. A labelled tile alone at the end of a row is widened.
  * - Everything else is full width, in GROUPS order. The "More" header heads the extras.
  * Hidden items keep a place at the end of their block (they may appear later) and are not
@@ -224,10 +224,12 @@ export function planLayout(entries) {
 
     emit('media', [...shown('media'), ...hidden('media')]);
 
-    // ---- leftover secondary toggles: labelled first, then squares
+    // ---- leftover secondary toggles: squares first, then labelled tiles. A short last row
+    // of squares then takes the next labelled tile beside it (widened to the row end), so a
+    // square is never left alone on a row under labelled tiles.
     const labelled = pool.filter(i => !i.compact);
     const squares = pool.filter(i => i.compact);
-    const toggles = [...labelled, ...squares];
+    const toggles = [...squares, ...labelled];
     let col = 0;
     toggles.forEach((item, i) => {
         if (col + item.span > COLUMNS)

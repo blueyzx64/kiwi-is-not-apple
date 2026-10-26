@@ -117,6 +117,7 @@ export class ShowDesktop {
         if (typeof stage?.toggleDesktop === 'function') {
             try {
                 stage.toggleDesktop();
+                this._syncChecked();
                 return;
             } catch (e) {
                 console.error('[Kiwi] Stage Manager toggleDesktop failed, using Show Desktop:', e);
@@ -330,6 +331,21 @@ export class ShowDesktop {
             this.toggle();
             return Clutter.EVENT_STOP;
         });
+        // Stage Manager's desktop also ends by a focus change (a strip click, a new window) or a
+        // workspace switch: follow it so the button is checked exactly while the desktop shows
+        // (a moment later: Stage Manager settles its state in an idle)
+        let pending = 0;
+        const later = () => {
+            if (!pending) {
+                pending = reg.timeout(60, () => {
+                    pending = 0;
+                    this._syncChecked();
+                    return false;
+                }, { name: 'show-desktop-checked' });
+            }
+        };
+        reg.connect(global.display, 'notify::focus-window', later);
+        reg.connect(global.workspace_manager, 'active-workspace-changed', later);
         Main.panel.addToStatusArea('kiwi-show-desktop', button, 0, 'right');
         PanelLayout.claim(reg, {
             id: 'show-desktop', actor: button.container, box: 'right',
@@ -346,10 +362,21 @@ export class ShowDesktop {
         this._button = null;
     }
 
+    /** Is the desktop shown, by this feature or by Stage Manager? */
+    _desktopShown() {
+        if (this._shown)
+            return true;
+        try {
+            return !!this._ctx.features?.instance?.('stage-manager')?.isDesktopShown;
+        } catch (_e) {
+            return false;
+        }
+    }
+
     _syncChecked() {
         if (!this._button)
             return;
-        if (this._shown)
+        if (this._desktopShown())
             this._button.add_style_pseudo_class('checked');
         else
             this._button.remove_style_pseudo_class('checked');

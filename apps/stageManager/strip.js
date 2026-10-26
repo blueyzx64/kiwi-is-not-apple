@@ -236,6 +236,7 @@ export class StageStrip {
         if (this._dead)
             return;
         this._state.stageRects = rects;
+        this._syncBarrier();
         this._syncShown();
     }
 
@@ -623,7 +624,10 @@ export class StageStrip {
         const { side, workArea, autohide, cards } = this._state;
         const lm = Main.layoutManager;
         const monitor = lm.primaryMonitor;
-        const want = autohide && workArea && cards.length > 0 && monitor
+        // Without auto-hide the strip still steps aside for a maximized stage window: the edge reveals it
+        const strip = this._strip;
+        const covered = !!strip && (this._state.stageRects ?? []).some(r => r.covers && overlaps(r, strip));
+        const want = (autohide || covered) && workArea && cards.length > 0 && monitor
             ? edgeBarrier(workArea, monitor, lm.monitors.filter(m => m !== monitor), side)
             : null;
         const key = want ? JSON.stringify(want) : '';
@@ -678,10 +682,12 @@ export class StageStrip {
     _wantShown() {
         const { autohide, overview, stageRects } = this._state;
         const stripRect = this._strip;
+        const over = stripRect ? stageRects.filter(r => overlaps(r, stripRect)) : [];
         return stripShown({
             autohide,
             overview,
-            stageOverlapsStrip: !!stripRect && stageRects.some(r => overlaps(r, stripRect)),
+            stageOverlapsStrip: over.length > 0,
+            stageCoversStrip: over.some(r => r.covers),
             pointerAtEdge: this._pointerAtEdge,
             pointerOnStrip: this._pointerOnStrip || !!this._dragging || !!this._dropHint,
         });

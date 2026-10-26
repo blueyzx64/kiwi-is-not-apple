@@ -23,9 +23,11 @@ import { PanelLayout } from '../../coordinators/panelLayout.js';
 import { NotificationRouter } from '../../coordinators/notificationRouter.js';
 import { MprisWatcher } from '../../coordinators/mprisWatcher.js';
 import { clipboardService } from '../clipboard/index.js';
+import { pickPlayer, showsActivity } from '../../lib/mprisModel.js';
 import {
     initialState, step, view, nextDeadline, wantsBar, recentNotifications, URGENCY,
 } from './stateMachine.js';
+import { seekTarget } from './dashboardModel.js';
 import { NotchView } from './view.js';
 
 const MEDIA_KEY = 'media';
@@ -44,6 +46,7 @@ function mediaInfo(player) {
         playing: player.isPlaying(),
         canPrevious: player.canGoPrevious,
         canNext: player.canGoNext,
+        canSeek: player.canSeek,
     };
 }
 
@@ -81,6 +84,7 @@ export class NotchFeature {
             onHover: value => this._dispatch({ type: 'hover', value }),
             onAction: (id, index) => this._action(id, index),
             onMedia: command => this._media(command),
+            onSeek: fraction => this._seek(fraction),
             onCopy: id => {
                 const service = clipboardService();
                 const entry = service?.get(id);
@@ -407,6 +411,7 @@ export class NotchFeature {
         if (this._ks.bool('notch-live-activities')) {
             this._watch = MprisWatcher.acquire(parts, this._ctx.gettext);
             this._playerSignals = new Map();
+            this._playedAt = new Map();         // Player -> when it last started playing
             const track = player => {
                 if (this._playerSignals.has(player))
                     return;
@@ -421,6 +426,7 @@ export class NotchFeature {
                 if (id !== undefined)
                     player.disconnect(id);
                 this._playerSignals.delete(player);
+                this._playedAt?.delete(player);
                 this._syncMedia();
             });
             this._watch.players.forEach(track);
@@ -433,6 +439,7 @@ export class NotchFeature {
                     }
                 }
                 this._playerSignals = null;
+                this._playedAt = null;
                 this._watch = null;
             });
             this._syncMedia();
@@ -449,6 +456,7 @@ export class NotchFeature {
                     notification,
                     title: notification.title ?? '',
                     body: notification.body ?? '',
+                    markup: !!notification.useBodyMarkup,
                     app: source.title ?? '',
                     when: datetime?.format?.('%H:%M') ?? '',
                     time: datetime?.to_unix?.() ?? null,
@@ -520,21 +528,45 @@ export class NotchFeature {
 
     // ---- media -----------------------------------------------------------------------------
 
-    // The player to show: one that is playing, else the first that can play
+    // The player to show: playing beats paused beats stopped; among two playing, the one
+    // that started last (see lib/mprisModel.js).
     _bestPlayer() {
         const players = this._watch?.players ?? [];
-        return players.find(p => p.isPlaying()) ?? players[0] ?? null;
+        return pickPlayer(players.map(p => ({
+            status: p.status, since: this._playedAt?.get(p) ?? null, item: p,
+        })));
+    }
+
+    // Remember when each player went to Playing, so a player that starts takes over.
+    _notePlaying() {
+        if (!this._playedAt)
+            return;
+        for (const p of this._watch?.players ?? []) {
+            if (!p.isPlaying())
+                this._playedAt.delete(p);
+            else if (!this._playedAt.has(p))
+                this._playedAt.set(p, nowMs());
+        }
     }
 
     _syncMedia() {
         if (!this._alive)
             return;
-        const playing = (this._watch?.players ?? []).find(p => p.isPlaying()) ?? null;
+        this._notePlaying();
+        // A paused player keeps its pill, with the waveform at rest; a stopped one leaves.
+        const best = this._bestPlayer();
         this._dispatch({
             type: 'activity',
             key: MEDIA_KEY,
-            data: playing ? mediaInfo(playing) : null,
+            data: best && showsActivity(best.status) ? mediaInfo(best) : null,
         });
+    }
+
+    _seek(fraction) {
+        const player = this._bestPlayer();
+        const target = player?.canSeek ? seekTarget(fraction, player.length) : null;
+        if (target !== null)
+            player.seek(target).catch(() => {});
     }
 
     _media(command) {
