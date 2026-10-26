@@ -1,6 +1,6 @@
 // Run: gjs -m tests/notchDashboardModel.test.js
 import {
-    dashboardLayout, cardSize, formatTrackTime, trackProgress, formatClock, moreCount, spring, GRID,
+    dashboardLayout, cardSize, formatTrackTime, trackProgress, seekTarget, formatClock, moreCount, spring, GRID,
 } from '../apps/notch/dashboardModel.js';
 
 let failed = 0;
@@ -118,6 +118,16 @@ test('spring: no bounce never overshoots', () => {
 test('card: taller only with actions', () => {
     eq(cardSize({ actions: false }).h < cardSize({ actions: true }).h, true);
     eq(cardSize({ actions: true }).w, cardSize({ actions: false }).w);
+});
+
+test('seekTarget: clamps the fraction, needs a length', () => {
+    eq(seekTarget(0.5, 200e6), 100e6);
+    eq(seekTarget(-0.2, 200e6), 0);
+    eq(seekTarget(1.7, 200e6), 200e6);
+    eq(seekTarget(0.333, 34_000_000), 11_322_000);
+    eq(seekTarget(0.5, null), null);
+    eq(seekTarget(0.5, 0), null);
+    eq(seekTarget(NaN, 200e6), null);
 });
 
 if (failed) {

@@ -276,13 +276,15 @@ export function centerOnStage(size, area) {
 // ---- auto-hide ----------------------------------------------------------------------------
 
 /**
- * @param {{autohide, overview, stageOverlapsStrip, pointerAtEdge, pointerOnStrip}} s
+ * @param {{autohide, overview, stageOverlapsStrip, stageCoversStrip, pointerAtEdge, pointerOnStrip}} s
+ *   stageCoversStrip: a stage window over the strip that Kiwi does not move aside (maximized,
+ *   tiled, fullscreen). The strip steps aside for it even without auto-hide, as on macOS.
  * @returns {boolean} true: the strip is shown
  */
-export function stripShown({ autohide, overview, stageOverlapsStrip, pointerAtEdge, pointerOnStrip }) {
+export function stripShown({ autohide, overview, stageOverlapsStrip, stageCoversStrip = false, pointerAtEdge, pointerOnStrip }) {
     if (overview)
         return false;
-    if (!autohide)
+    if (!autohide && !stageCoversStrip)
         return true;
     if (!stageOverlapsStrip)
         return true;
@@ -404,6 +406,57 @@ export function tilePlan(area, count, gap = 8) {
         });
     }
     return out;
+}
+
+/**
+ * Second pass of a side-by-side layout, once the apps have answered. An app with a minimum
+ * size larger than its column keeps that size, and mutter then keeps the window's old
+ * position too, so it can end up overlapping its neighbours or past the screen edge. This
+ * places the windows at the sizes they really took, left to right, inside the area: equal
+ * gaps when they fit, else overlapping evenly (the first one at the left edge, the last at the
+ * right). A window narrower than its column is centred in it; one shorter than the area is
+ * centred vertically; one taller than the area keeps its top edge in view.
+ * @param {rect} area  the stage area tilePlan() used
+ * @param {{width: number, height: number}[]} sizes  real frame sizes, left to right
+ * @param {number} [gap]
+ * @returns {{x: number, y: number}[]} integer positions, left to right
+ */
+export function settleTiles(area, sizes, gap = 8) {
+    const n = sizes.length;
+    if (n === 0 || !(area?.width > 0) || !(area?.height > 0))
+        return [];
+    const plan = tilePlan(area, n, gap);
+    const colW = plan[0]?.width ?? 0;
+    const ys = sizes.map(s => {
+        const inner = area.height - 2 * gap;
+        if (s.height > area.height)
+            return area.y;
+        if (s.height > inner)
+            return area.y + Math.floor((area.height - s.height) / 2);
+        return area.y + gap + Math.floor((inner - s.height) / 2);
+    });
+    const cols = sizes.map(s => Math.max(colW, s.width));
+    const need = cols.reduce((a, b) => a + b, 0) + gap * (n + 1);
+    const xs = [];
+    if (need <= area.width) {
+        // Everyone fits: columns as planned, a narrower window centred in its column
+        let x = area.x + gap;
+        for (let i = 0; i < n; i++) {
+            xs.push(x + Math.floor((cols[i] - sizes[i].width) / 2));
+            x += cols[i] + gap;
+        }
+    } else {
+        // Too wide: overlap evenly, first at the left edge, last at the right
+        const total = sizes.reduce((a, s) => a + s.width, 0) + gap * (n + 1);
+        const overlap = n > 1 ? (total - area.width) / (n - 1) : 0;
+        let x = area.x + gap;
+        for (let i = 0; i < n; i++) {
+            const maxX = area.x + area.width - Math.min(area.width, sizes[i].width + (i === n - 1 ? gap : 0));
+            xs.push(Math.round(clamp(x, area.x, Math.max(area.x, maxX))));
+            x += sizes[i].width + gap - overlap;
+        }
+    }
+    return xs.map((x, i) => ({ x: Math.round(x), y: Math.round(ys[i]) }));
 }
 
 // ---- motion and input helpers ------------------------------------------------------------

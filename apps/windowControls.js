@@ -78,6 +78,10 @@ class WindowControlsIndicator extends PanelMenu.Button {
         for (const name of BUTTONS) {
             const button = new St.Button({ style_class: `window-control-button ${name}`, track_hover: true });
             this._buttons[name] = button;
+            // Shell shutdown destroys the buttons before the box gets its last leave-event
+            cleanup.connect(button, 'destroy', () => {
+                this._buttons[name] = null;
+            });
             cleanup.connect(button, 'notify::hover', () => this._updateIcon(name));
             cleanup.connect(button, 'button-press-event', () => {
                 button.add_style_pseudo_class('active');
@@ -145,7 +149,10 @@ class WindowControlsIndicator extends PanelMenu.Button {
         this._state = state;
         if (resetHover) {
             this._isContainerHovered = false;
-            BUTTONS.forEach(n => (this._buttons[n].hover = false));
+            BUTTONS.forEach(n => {
+                if (this._buttons[n])
+                    this._buttons[n].hover = false;
+            });
         }
         this._updateAllIcons();
     }
@@ -170,12 +177,16 @@ class WindowControlsIndicator extends PanelMenu.Button {
     _rebuild() {
         for (const name of BUTTONS) {
             const button = this._buttons[name];
+            if (!button)
+                continue;
             if (button.get_parent() === this._box)
                 this._box.remove_child(button);
             button._currentSystemIcon = null;
         }
-        for (const name of this._order)
-            this._box.add_child(this._buttons[name]);
+        for (const name of this._order) {
+            if (this._buttons[name])
+                this._box.add_child(this._buttons[name]);
+        }
         if (this._useMacosIcons)
             this._box.remove_style_class_name('system-mode');
         else
@@ -197,6 +208,8 @@ class WindowControlsIndicator extends PanelMenu.Button {
 
     _updateIcon(name) {
         const button = this._buttons[name];
+        if (!button)
+            return;
         const { maximized, fullscreen } = this._state;
         const disabled = this._isDisabled(name);
         button.reactive = !disabled;

@@ -2521,6 +2521,11 @@ Gjs_apps_windowControls_WindowControlsIndicator.panel-button:focus {
     text-align: right;
 }
 
+/* the bar's click target: taller than the 4px bar, transparent */
+.kiwi-notch-scrub-hit {
+    padding: 6px 0;
+}
+
 .kiwi-notch-scrub-track {
     height: 4px;
     border-radius: 2px;

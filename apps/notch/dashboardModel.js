@@ -93,6 +93,18 @@ export function trackProgress(positionUs, lengthUs) {
 }
 
 /**
+ * Where a click on the scrubber seeks to.
+ * @param {number} fraction 0..1 across the track (clamped)
+ * @param {number|null} lengthUs from mpris:length
+ * @returns {number|null} the target in microseconds, or null without a usable length
+ */
+export function seekTarget(fraction, lengthUs) {
+    if (!Number.isFinite(lengthUs) || lengthUs <= 0 || !Number.isFinite(fraction))
+        return null;
+    return Math.round(Math.max(0, Math.min(1, fraction)) * lengthUs);
+}
+
+/**
  * @param {number} hours 0..23
  * @param {number} minutes 0..59
  * @param {'24h'|'12h'} format org.gnome.desktop.interface clock-format

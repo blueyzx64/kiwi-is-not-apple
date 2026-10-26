@@ -2,7 +2,7 @@
 import {
     DEFAULTS, overlaps, thumbFit, cropThumb, stackLayers, cardTilt, fitCount, stripLayout,
     pointRect, clonePose, balancedFit, edgeZone, stageArea, fitToStage, centerOnStage, stripShown, StageModel, focusRoot, isExempt, edgeBarrier,
-    dropZone, dropZoneRect, tileOrder, tilePlan, scaleMs, workspaceDirection, isClick,
+    dropZone, dropZoneRect, tileOrder, tilePlan, settleTiles, scaleMs, workspaceDirection, isClick,
 } from '../apps/stageManager/model.js';
 
 let failed = 0;
@@ -210,6 +210,10 @@ const base = { autohide: true, overview: false, stageOverlapsStrip: false, point
 test('stripShown: overview always hides', () => eq(stripShown({ ...base, autohide: false, overview: true }), false));
 test('stripShown: no auto-hide always shows', () => eq(stripShown({ ...base, autohide: false, stageOverlapsStrip: true }), true));
 test('stripShown: auto-hide, no overlap shows', () => eq(stripShown(base), true));
+test('stripShown: no auto-hide, a maximized stage window over the strip hides it', () =>
+    eq(stripShown({ ...base, autohide: false, stageOverlapsStrip: true, stageCoversStrip: true }), false));
+test('stripShown: no auto-hide, covered, pointer at edge reveals', () =>
+    eq(stripShown({ ...base, autohide: false, stageOverlapsStrip: true, stageCoversStrip: true, pointerAtEdge: true }), true));
 test('stripShown: overlap hides', () => eq(stripShown({ ...base, stageOverlapsStrip: true }), false));
 test('stripShown: overlap + pointer at edge reveals', () =>
     eq(stripShown({ ...base, stageOverlapsStrip: true, pointerAtEdge: true }), true));
@@ -575,6 +579,33 @@ test('tilePlan: three columns, none, degenerate', () => {
     eq(tilePlan(AREA, 3).length, 3);
     eq(tilePlan(AREA, 0), []);
     eq(tilePlan({ x: 0, y: 0, width: 10, height: 10 }, 4, 8), []);
+});
+test('settleTiles: windows that took their columns stay where tilePlan put them', () => {
+    const plan = tilePlan(AREA, 2, 8);
+    eq(settleTiles(AREA, plan), plan.map(r => ({ x: r.x, y: r.y })));
+});
+test('settleTiles: min sizes wider than the columns overlap evenly inside the area', () => {
+    // Real case (GNOME 50, 1080 px stage): three apps with a 360 px minimum in 349 px columns
+    const area = { x: 200, y: 32, width: 1080, height: 768 };
+    const spots = settleTiles(area, [{ width: 360, height: 752 }, { width: 360, height: 752 }, { width: 360, height: 752 }]);
+    eq(spots.map(p => p.x), [208, 560, 912]);
+    eq(spots.every(p => p.y === 40), true);
+    eq(spots[2].x + 360 <= area.x + area.width, true);
+});
+test('settleTiles: a too-tall window keeps its top in view, a short one is centred', () => {
+    const spots = settleTiles(AREA, [{ width: 400, height: 900 }, { width: 400, height: 400 }]);
+    eq(spots[0].y, 0);
+    eq(spots[1].y, 200);
+});
+test('settleTiles: a narrow fixed-size window is centred in its column', () => {
+    const spots = settleTiles(AREA, [{ width: 488, height: 784 }, { width: 288, height: 784 }]);
+    eq(spots[0].x, 208);
+    eq(spots[1].x, 804);
+});
+test('settleTiles: a window wider than the area starts at its left edge; empty input', () => {
+    eq(settleTiles(AREA, [{ width: 1400, height: 700 }, { width: 400, height: 700 }])[0].x, 200);
+    eq(settleTiles(AREA, []), []);
+    eq(settleTiles(null, [{ width: 1, height: 1 }]), []);
 });
 test('scaleMs: speed multiplier, clamped, bad input is normal', () => {
     eq(scaleMs(300, 2), 150);
