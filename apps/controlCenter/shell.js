@@ -18,7 +18,7 @@
 
 import Clutter from 'gi://Clutter';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import { QuickToggle } from 'resource:///org/gnome/shell/ui/quickSettings.js';
+import { QuickMenuToggle, QuickToggle } from 'resource:///org/gnome/shell/ui/quickSettings.js';
 
 import { COLUMNS, restoreOrder } from './model.js';
 
@@ -276,6 +276,54 @@ export function setCompact(actor, on, saved) {
     was.box.x_expand = was.xExpand;
     was.box.x_align = was.xAlign;
     actor.remove_style_class_name(COMPACT_CLASS);
+}
+
+const ICON_CLASS = 'quick-toggle-icon';
+
+function _toggleIcon(actor) {
+    // QuickToggle has its icon as `_icon`; a QuickMenuToggle wraps a QuickToggle
+    if (actor._icon?.has_style_class_name?.(ICON_CLASS))
+        return actor._icon;
+    const contents = actor._box?.get_first_child?.();
+    return contents?._icon?.has_style_class_name?.(ICON_CLASS) ? contents._icon : null;
+}
+
+/**
+ * Keeps the icon circle of a toggle round. The stock icon fills the height of its row, so
+ * beside a two-line title (Wi-Fi with a network name) the circle the Control Center draws
+ * behind it became an upright oval. Centring it keeps it a circle. `saved` (actor -> what
+ * the stock code had) lets restoreToggleIcons() undo it.
+ *
+ * @param {Clutter.Actor} actor a grid item
+ * @param {Map<Clutter.Actor, object>} saved
+ */
+export function centerToggleIcon(actor, saved) {
+    if (saved.has(actor) || !(actor instanceof QuickToggle || actor instanceof QuickMenuToggle))
+        return;
+    const icon = _toggleIcon(actor);
+    if (!icon)
+        return;
+    const was = { icon, yAlign: icon.y_align, dead: false };
+    // An icon destroyed with its grid (Shell shutdown) is never touched again
+    was.destroyId = icon.connect('destroy', () => {
+        was.dead = true;
+    });
+    saved.set(actor, was);
+    icon.y_align = Clutter.ActorAlign.CENTER;
+}
+
+/** Undo centerToggleIcon() for one actor, or for every actor when `actor` is omitted. */
+export function restoreToggleIcons(saved, actor = null) {
+    for (const key of actor ? [actor] : [...saved.keys()]) {
+        const was = saved.get(key);
+        if (!was)
+            continue;
+        saved.delete(key);
+        if (was.dead)
+            continue;
+        was.icon.disconnect(was.destroyId);
+        was.icon.y_align = was.yAlign;
+    }
 }
 
 /** Undo setCompact() for every actor in `saved`. */

@@ -103,15 +103,25 @@ test('no slider visible: no caption', () => {
     eq([byId(plan, DISPLAY_HEADER_ID).visible, byId(plan, SOUND_HEADER_ID).visible], [false, false]);
 });
 
-test('leftover toggles: labelled first, then squares; a lone labelled tile is widened', () => {
+test('leftover toggles: squares first, then labelled; a labelled tile ending a row is widened', () => {
     const plan = planLayout([
         c('air', 'airplane'), e('power', 'power-saver'), c('rot', 'rotation'),
         e('kbd', 'backlight'), c('loc', 'location'), c('cam', 'camera'), c('tb', 'thunderbolt'),
     ]);
     const toggles = plan.filter(p => p.group === 'toggles');
-    eq(toggles.map(p => p.id), ['power', 'kbd', 'air', 'rot', 'loc', 'cam', 'tb']);
-    eq(toggles.map(p => p.span), [2, 2, 1, 1, 1, 1, 1]);
+    eq(toggles.map(p => p.id), ['air', 'rot', 'loc', 'cam', 'tb', 'power', 'kbd']);
+    eq(toggles.map(p => p.span), [1, 1, 1, 1, 1, 3, 4]);
     eq(planLayout([e('power', 'power-saver')]).find(p => p.id === 'power').span, COLUMNS);
+});
+
+test('a single leftover square shares its row with a labelled tile (real laptop set)', () => {
+    const plan = planLayout([
+        e('wifi', 'wifi'), e('bt', 'bluetooth'), e('dnd', 'dnd'),
+        c('dark', 'dark-style'), c('night', 'night-light'), c('air', 'airplane'),
+        e('power', 'power-saver'), e('kbd', 'backlight'),
+    ]);
+    const toggles = plan.filter(p => p.group === 'toggles');
+    eq(toggles.map(p => [p.id, p.span]), [['air', 1], ['power', 3], ['kbd', 4]]);
 });
 
 test('the Kiwi module is one full-width block after the toggles', () => {

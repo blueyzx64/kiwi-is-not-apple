@@ -27,8 +27,9 @@ import {
 import { NowPlaying } from './nowPlaying.js';
 import {
     ITEM_CLASS, JOIN_NEXT_CLASS, JOIN_PREV_CLASS,
-    applyPlan, columnSpan, compactable, gridAlive, hideLegacyDndButton, managedChildren, readyQuickSettings,
-    restoreCompact, restoreGrid, restoreLayoutClasses, setCompact, setLayoutClasses, snapshotGrid, stockKeys,
+    applyPlan, centerToggleIcon, columnSpan, compactable, gridAlive, hideLegacyDndButton, managedChildren,
+    readyQuickSettings, restoreCompact, restoreGrid, restoreLayoutClasses, restoreToggleIcons, setCompact,
+    setLayoutClasses, snapshotGrid, stockKeys,
 } from './shell.js';
 import { keepHidden } from '../util/keepHidden.js';
 import { createDndToggle, createKiwiModule } from './tiles.js';
@@ -56,6 +57,7 @@ export class ControlCenter {
         this._stockSpans = new Map();   // actor -> span it had in the 2-column grid
         this._own = new Map();          // actor -> model key, for the actors Kiwi added
         this._compact = new Map();      // stock toggle made icon-only -> what to put back
+        this._icons = new Map();        // stock toggle whose icon circle is centred -> its old align
         this._visibleTokens = new Map();
         this._idle = 0;
         this._userRow = null;
@@ -142,8 +144,9 @@ export class ControlCenter {
             this._unwatchVisible(actor);
             this._classed.delete(actor);
             this._stockSpans.delete(actor);
-            // A toggle that leaves the grid gets its label back on the way out
+            // A toggle that leaves the grid gets its label and icon back on the way out
             setCompact(actor, false, this._compact);
+            restoreToggleIcons(this._icons, actor);
             this._queueRelayout();
         });
         for (const actor of managedChildren(this._grid))
@@ -337,6 +340,7 @@ export class ControlCenter {
                 actor.visible = p.visible;
             if (p.compact || this._compact.has(actor))
                 setCompact(actor, p.compact, this._compact);
+            centerToggleIcon(actor, this._icons);
             setLayoutClasses(actor, [
                 ITEM_CLASS,
                 ...p.joinPrev ? [JOIN_PREV_CLASS] : [],
@@ -385,6 +389,7 @@ export class ControlCenter {
             box?.remove_style_class_name(LIGHT_CLASS);
 
             restoreCompact(this._compact);
+            restoreToggleIcons(this._icons);
             restoreGrid(this._grid, this._snapshot, this._stockSpans);
         } finally {
             // Hand Do Not Disturb back; the legacy module re-applies its own setting
@@ -397,6 +402,7 @@ export class ControlCenter {
             this._qs = this._grid = this._snapshot = this._stockKeys = null;
             this._stockSpans.clear();
             this._compact.clear();
+            this._icons.clear();
             this._visibleTokens.clear();
         }
     }
