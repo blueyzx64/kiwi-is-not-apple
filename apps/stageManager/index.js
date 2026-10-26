@@ -49,8 +49,8 @@ import { KiwiSettings } from '../../lib/settings.js';
 import { StageDropTarget } from './dropTarget.js';
 import { FADE_MS, Flights } from './flight.js';
 import {
-    StageModel, fitCount, fitToStage, isClick, overlaps, pointRect, scaleMs, stageArea, tileOrder, tilePlan,
-    workspaceDirection,
+    StageModel, fitCount, fitToStage, isClick, overlaps, pointRect, scaleMs, settleTiles, stageArea, tileOrder,
+    tilePlan, workspaceDirection,
 } from './model.js';
 import { StageStrip } from './strip.js';
 import { WindowSource } from './shellAdapter.js';
@@ -66,6 +66,9 @@ const KEYS = [
 ];
 
 const WINDOW_DRAG_POLL_MS = 60;
+// Side by side: how long the apps get to answer a resize before the second pass, and how many
+const SETTLE_MS = 250;
+const SETTLE_TRIES = 4;
 
 
 export class StageManager {
@@ -92,6 +95,7 @@ export class StageManager {
         this._wsIndex = -1;
         this._windowDrag = null;    // {win, frame, token} while a set window is dragged
         this._press = null;         // a press on the wallpaper, waiting for its release
+        this._settle = 0;           // timeout of the side-by-side second pass
     }
 
     _motion() {
@@ -193,6 +197,7 @@ export class StageManager {
             this._tileSig.clear();
             this._windowDrag = null;
             this._press = null;
+            this._settle = 0;
             this._drop = null;
             this._flights = null;
             this._source = null;
@@ -275,8 +280,12 @@ export class StageManager {
         if (!current)
             return [];
         const byId = new Map(this._source.windows().map(w => [w.id, w]));
+        // covers: Kiwi does not move it out of the strip's way (maximized, half-tiled, fullscreen)
         return current.windows.map(id => byId.get(id)).filter(w => w && !w.minimized)
-            .map(w => this._frame(w.win));
+            .map(({ win }) => ({
+                ...this._frame(win),
+                covers: !!(win.maximized_horizontally || win.maximized_vertically || win.is_fullscreen()),
+            }));
     }
 
     /** Cards the strip can really show: never hide a stage that would get no card. */
@@ -592,6 +601,7 @@ export class StageManager {
                 if (plan[i])
                     this._hider.tile(byId.get(id).win, plan[i]);
             });
+            this._scheduleSettle(model, sig);
         }
         this._tileSig.set(model, sig);
 
@@ -604,6 +614,61 @@ export class StageManager {
             if (!keep)
                 this._hider.untile(win);
         }
+    }
+
+    /**
+     * Second pass of a side-by-side layout: an app that keeps a minimum size wider than its
+     * column also keeps its old position (mutter applies a move only with the size it asked
+     * for), so it could overlap its neighbours or hang off the screen. Once the apps have
+     * answered, place the windows at the sizes they took (settleTiles), until they hold.
+     */
+    _scheduleSettle(model, sig) {
+        this._cleanup.release(this._settle);
+        let tries = 0;
+        this._settle = this._cleanup.timeout(SETTLE_MS, () => {
+            const again = ++tries < SETTLE_TRIES && this._settleTiles(model, sig);
+            if (!again)
+                this._settle = 0;
+            return again;
+        }, { name: 'stage-manager-settle' });
+    }
+
+    /** @returns {boolean} true when a window had to be moved (check again later) */
+    _settleTiles(model, sig) {
+        if (!this._source || this._tileSig.get(model) !== sig)
+            return false;
+        const current = model.current;
+        const tiles = current ? model.tilesOf(current.id) : null;
+        if (!tiles)
+            return false;
+        const byId = new Map(this._source.windows(this._workspaceOf(model)).map(w => [w.id, w]));
+        const wins = tiles.map(id => byId.get(id)).filter(w => w && !w.minimized).map(w => w.win);
+        if (wins.length < 2 || wins.some(w => !this._hider.isTiled(w)))
+            return false;
+        const frames = wins.map(w => this._frame(w));
+        const spots = settleTiles(this._tileArea(), frames);
+        let moved = false;
+        wins.forEach((win, i) => {
+            const spot = spots[i];
+            const f = frames[i];
+            if (!spot || (Math.abs(spot.x - f.x) <= 1 && Math.abs(spot.y - f.y) <= 1))
+                return;
+            moved = true;
+            try {
+                win.move_frame(true, spot.x, spot.y);
+            } catch (e) {
+                console.error(`[Kiwi] stage settle tile: ${e.message}`);
+            }
+        });
+        return moved;
+    }
+
+    _workspaceOf(model) {
+        for (const [ws, m] of this._models) {
+            if (m === model)
+                return ws;
+        }
+        return global.workspace_manager.get_active_workspace();
     }
 
     // ---- actions ---------------------------------------------------------------------------
