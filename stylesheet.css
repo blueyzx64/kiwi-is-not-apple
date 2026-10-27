@@ -3537,7 +3537,33 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
   background-color: rgba(255, 255, 255, 0.32);
 }
 
-/* Widgets area placeholders (until the widget model provides widgets) */
+/* Widgets area: rows of core/widgets cards (cards are 160 px cells 16 px apart) */
+.kiwi-nc .kiwi-nc-widget-row {
+  spacing: 16px;
+}
+
+.kiwi-nc .kiwi-nc-widgets {
+  spacing: 16px;
+}
+
+.kiwi-nc .kiwi-nc-edit-widgets {
+  border-radius: 999px;
+  padding: 4px 14px;
+  font-size: 0.85em;
+  font-weight: 600;
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.kiwi-nc .kiwi-nc-edit-widgets:hover,
+.kiwi-nc .kiwi-nc-edit-widgets:focus {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.kiwi-modal-light.kiwi-nc .kiwi-nc-edit-widgets {
+  background-color: rgba(0, 0, 0, 0.08);
+}
+
+/* Placeholders, only while no widget is registered */
 .kiwi-nc .kiwi-nc-placeholder-row {
   spacing: 10px;
 }
@@ -3556,18 +3582,13 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
 }
 
 .kiwi-nc .kiwi-nc-placeholder-icon,
-.kiwi-nc .kiwi-nc-placeholder-label,
-.kiwi-nc .kiwi-nc-placeholder-note {
+.kiwi-nc .kiwi-nc-placeholder-label {
   opacity: 0.55;
 }
 
 .kiwi-nc .kiwi-nc-placeholder-label {
   font-size: 0.8em;
   font-weight: 600;
-}
-
-.kiwi-nc .kiwi-nc-placeholder-note {
-  font-size: 0.75em;
 }
 
 /* ==== features/osd/style.css ==== */
@@ -4472,7 +4493,7 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
 
 .kiwi-widgets-gallery-row {
   spacing: 18px;
-  padding: 4px 2px;
+  padding: 4px 18px 12px 2px;
 }
 
 .kiwi-widgets-gallery-tile {

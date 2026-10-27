@@ -12,7 +12,7 @@ import GLib from 'gi://GLib';
 import St from 'gi://St';
 import * as Util from 'resource:///org/gnome/shell/misc/util.js';
 
-import { label, icon, themed, button, artwork, track, column } from './ui.js';
+import { label, icon, themed, button, artwork, track, column, setText } from './ui.js';
 import { trackProgress, seekTarget, formatClock } from './dashboardModel.js';
 export { DASH_SIZE } from './dashboardModel.js';
 import { nowRows } from './model.js';
@@ -90,11 +90,13 @@ function mediaColumn(env, media, width, live) {
                 if (!alive || !env.alive())
                     return;
                 const p = trackProgress(position, media.length);
-                scrub.opacity = p ? 255 : 0;
+                const shown = p ? 255 : 0;
+                if (scrub.opacity !== shown)
+                    scrub.opacity = shown;
                 if (!p)
                     return;
-                elapsed.text = p.elapsed;
-                remaining.text = p.remaining;
+                setText(elapsed, p.elapsed);
+                setText(remaining, p.remaining);
                 bar.kiwiSetFraction(p.fraction);
             }).catch(() => {});
         });
@@ -139,10 +141,10 @@ function clockColumn(env, width, live) {
     live.push(() => {
         const now = GLib.DateTime.new_now_local();
         const c = formatClock(now.get_hour(), now.get_minute(), env.clockFormat());
-        time.text = c.time;
-        suffix.text = c.suffix;
+        setText(time, c.time);
+        setText(suffix, c.suffix);
         suffix.visible = !!c.suffix;
-        day.text = now.format('%A, %e %B').replace(/\s+/g, ' ');
+        setText(day, now.format('%A, %e %B').replace(/\s+/g, ' '));
     });
     return col;
 }
@@ -236,9 +238,14 @@ function clipboardColumn(env, entries, width) {
  */
 export function nowTab(env, ctx) {
     const body = new St.BoxLayout({ style_class: 'kiwi-notch-tab-body kiwi-notch-tab-now', x_expand: true, y_expand: true });
-    body.add_child(ctx.media ? mediaColumn(env, ctx.media, WIDTH.hero, env.live) : clockColumn(env, WIDTH.hero, env.live));
+    // Both columns sit in the middle of the body's height, so a short one (the clock, one or
+    // two notifications) is balanced against the other instead of hugging the top
+    const hero = ctx.media ? mediaColumn(env, ctx.media, WIDTH.hero, env.live) : clockColumn(env, WIDTH.hero, env.live);
+    hero.y_align = Clutter.ActorAlign.CENTER;
+    body.add_child(hero);
 
     const col = column('kiwi-notch-list', WIDTH.list);
+    col.y_align = Clutter.ActorAlign.CENTER;
     const acts = (ctx.activities ?? []).filter(a => a.kind !== 'media' && a.kind !== 'media-paused');
     const recent = ctx.recent ?? [];
     const rows = nowRows(acts.length, Math.max(recent.length, ctx.count ?? 0));

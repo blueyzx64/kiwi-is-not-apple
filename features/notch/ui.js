@@ -117,6 +117,37 @@ class KiwiNotchFractionLayout extends Clutter.LayoutManager {
     }
 });
 
+// Centres each child horizontally from its own size and puts it at the top. Done in the
+// allocation, so a size change of the container needs no handler that moves children (a
+// handler on notify::width runs inside the allocation pass and queued a relayout from there).
+export const CenterLayout = GObject.registerClass(
+class KiwiNotchCenterLayout extends Clutter.LayoutManager {
+    vfunc_get_preferred_width(_container, _forHeight) {
+        return [0, 0];
+    }
+
+    vfunc_get_preferred_height(_container, _forWidth) {
+        return [0, 0];
+    }
+
+    vfunc_allocate(container, box) {
+        for (const actor of container.get_children()) {
+            const [, width] = actor.get_preferred_width(-1);
+            const [, height] = actor.get_preferred_height(width);
+            const child = new Clutter.ActorBox();
+            child.set_origin(box.x1 + Math.round((box.get_width() - width) / 2), box.y1);
+            child.set_size(width, height);
+            actor.allocate(child);
+        }
+    }
+});
+
+/** Set a label's text only when it differs: the same text would still queue a relayout. */
+export function setText(actor, text) {
+    if (actor.text !== text)
+        actor.text = text;
+}
+
 /** A bar with a fill. Returns the track; `track.kiwiSetFraction(f)` moves the fill. */
 export function track(trackClass, fillClass, height, fraction, opts = {}) {
     const layout = new FractionLayout();
@@ -127,6 +158,8 @@ export function track(trackClass, fillClass, height, fraction, opts = {}) {
     });
     t.add_child(new St.Widget({ style_class: fillClass }));
     t.kiwiSetFraction = f => {
+        if (layout.fraction === f)
+            return;
         layout.fraction = f;
         layout.layout_changed();
     };

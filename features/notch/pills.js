@@ -8,7 +8,7 @@ import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
 import St from 'gi://St';
 
-import { label, icon, themed, button, track } from './ui.js';
+import { label, icon, themed, button, track, setText } from './ui.js';
 import { formatCountdown, formatElapsed, formatBytes, minutesUntil } from './model.js';
 
 const monoNow = () => Math.floor(GLib.get_monotonic_time() / 1000);
@@ -101,7 +101,7 @@ function detailLabel(desc, styleClass, live) {
     const l = label('', styleClass);
     if (typeof desc.detail === 'function') {
         const fn = desc.detail;
-        live.push(() => (l.text = fn()));
+        live.push(() => setText(l, fn()));
         l.text = fn();
     } else {
         l.text = desc.detail ?? '';

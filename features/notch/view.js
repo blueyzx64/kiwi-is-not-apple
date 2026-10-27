@@ -15,6 +15,8 @@
 // so text never shows squeezed. Pages keep the size of their target shape and stay centred
 // while the island springs around them (it clips), so nothing reflows mid-animation. Tabs of
 // the expanded view share one shape; switching slides the body in from the side of the tab.
+// The three tab bodies are built once (the other two when the main loop is idle) and parked
+// hidden, so a switch only animates; a body is rebuilt when its data changed.
 //
 // Idle cost: no timers or animations run unless something is shown that moves (the playing
 // waveform, a countdown, the open dashboard's clock and scrubber).
@@ -26,7 +28,6 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import Pango from 'gi://Pango';
-import Shell from 'gi://Shell';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as Util from 'resource:///org/gnome/shell/misc/util.js';
@@ -35,7 +36,7 @@ import { CleanupRegistry } from '../../lib/disposables.js';
 import { SIZES } from './stateMachine.js';
 import { cardSize } from './dashboardModel.js';
 import { tabDirection, TABS } from './model.js';
-import { label, icon, themed, button, artwork, track } from './ui.js';
+import { label, icon, themed, button, artwork, track, CenterLayout } from './ui.js';
 import { pill, tickMs } from './pills.js';
 import { nowTab, trayTab, widgetsTab, DASH_SIZE } from './tabs.js';
 
@@ -74,7 +75,8 @@ export class NotchView {
         this._kind = null;
         this._content = null;
         this._page = null;
-        this._dash = null;           // {page, tabs: Map(tab -> button), body, tab, bodySig}
+        this._dash = null;           // {page, buttons, holder, bodies: Map(tab -> {actor, sig, live}),
+                                     //  current, tab, live, prebuild}
         this._barTimer = 0;
         this._liveTimer = 0;
         this._liveMs = null;         // the current pill's refresh interval (pills.js tickMs)
@@ -82,9 +84,8 @@ export class NotchView {
         this._fade = null;
         this._size = SIZES.idle;
         this._ears = null;
-        this._grab = null;           // Main.pushModal grab while a clicked dashboard is open
-        this._wantGrab = false;
-        this._captureId = 0;
+        this._pinned = false;        // a clicked (pinned) dashboard is open
+        this._captureId = 0;         // stage 'captured-event' while pinned
         this._pressOnSurface = false;
         this._hoverIntent = { enabled: true, delayMs: 300 };
         this._hoverTimer = 0;
@@ -103,7 +104,7 @@ export class NotchView {
         this._island = new St.Widget({
             name: 'kiwi-notch',
             style_class: 'kiwi-notch',
-            layout_manager: new Clutter.FixedLayout(),
+            layout_manager: new CenterLayout(),
             reactive: true,
             track_hover: true,
             clip_to_allocation: true,
@@ -115,12 +116,12 @@ export class NotchView {
         cleanup.add(() => {
             this._destroyed = true;
             this._page = null;
-            this._dash = null;
+            this._dropDash();
             this._stopShape();
             this._stopTimers();
             this._cancelHoverIntent();
             this._interface = null;
-            this._releaseGrab();
+            this._unwatchOutside();
             Main.layoutManager.removeChrome(this._island);
             this._island.destroy();
         });
@@ -132,13 +133,6 @@ export class NotchView {
                 this._startHoverIntent();
             else
                 this._cancelHoverIntent();
-        });
-        // The spring changes the width; keep the island centred and the pages in its middle
-        cleanup.connect(this._island, 'notify::width', () => {
-            const monitor = this._monitor();
-            if (monitor)
-                this._island.x = monitor.x + (monitor.width - this._island.width) / 2;
-            this._centerPages();
         });
         // A press or release on a button inside the card belongs to that button. Bubbling up
         // here it used to count as a click on the notch too, which collapsed the dashboard
@@ -209,47 +203,30 @@ export class NotchView {
     }
 
     // ---- outside click and Escape ---------------------------------------------------------
-    // While the dashboard is open the notch holds a Shell grab (like a panel menu): every
-    // pointer and key event comes to the island first, so a press anywhere outside it, on a
-    // window or the desktop, and Escape collapse it. The grab goes with the dashboard.
+    // While a clicked dashboard is open the view watches the stage's captured events, with no
+    // grab: a press outside the island, on a window or the desktop, collapses it and goes on
+    // to whatever was pressed, so the click is not lost. Escape collapses it and stops there.
+    // The island takes the key focus, so the keyboard reaches the tabs and buttons.
 
-    _syncGrab() {
-        if (this._wantGrab && this._island.visible)
-            this._takeGrab();
+    _syncOutside() {
+        if (this._pinned && this._island.visible)
+            this._watchOutside();
         else
-            this._releaseGrab();
+            this._unwatchOutside();
     }
 
-    _takeGrab() {
-        if (this._grab || this._destroyed)
+    _watchOutside() {
+        if (this._captureId || this._destroyed)
             return;
-        let grab = null;
-        try {
-            grab = Main.pushModal(this._island, { actionMode: Shell.ActionMode.POPUP });
-        } catch (e) {
-            console.warn(`[Kiwi] notch: no grab for the dashboard: ${e.message}`);
-        }
-        if (!grab)
-            return; // another grab is active; the dashboard still closes on leave
-        this._grab = grab;
-        this._captureId = this._island.connect('captured-event', (_a, event) => this._onCaptured(event));
+        this._captureId = global.stage.connect('captured-event', (_s, event) => this._onCaptured(event));
         this._island.grab_key_focus();
     }
 
-    _releaseGrab() {
-        if (this._captureId) {
-            this._island.disconnect(this._captureId);
-            this._captureId = 0;
-        }
-        const grab = this._grab;
-        this._grab = null;
-        if (!grab)
+    _unwatchOutside() {
+        if (!this._captureId)
             return;
-        try {
-            Main.popModal(grab);
-        } catch (e) {
-            console.warn(`[Kiwi] notch: popModal failed: ${e.message}`);
-        }
+        global.stage.disconnect(this._captureId);
+        this._captureId = 0;
     }
 
     _contains(x, y) {
@@ -265,10 +242,8 @@ export class NotchView {
         }
         if (type === Clutter.EventType.BUTTON_PRESS || type === Clutter.EventType.TOUCH_BEGIN) {
             const [x, y] = event.get_coords();
-            if (!this._contains(x, y)) {
+            if (!this._contains(x, y))
                 this._h.onCollapse?.();
-                return Clutter.EVENT_STOP;
-            }
         }
         return Clutter.EVENT_PROPAGATE;
     }
@@ -361,18 +336,21 @@ export class NotchView {
         island.style = `border-radius: 0 0 ${size.r}px ${size.r}px;`;
         this._stopShape();
         island.y = monitor.y;
+        const x = monitor.x + Math.round((monitor.width - size.w) / 2);
         if (!animate || !island.mapped) {
             island.set_size(size.w, size.h);
-            island.x = monitor.x + Math.round((monitor.width - size.w) / 2);
+            island.x = x;
             return;
         }
-        // Two springs on one curve (core/motion: reduced motion and animations-off jump to the
-        // end); notify::width keeps the island centred on every frame.
+        // Three springs on one curve (core/motion: reduced motion and animations-off jump to
+        // the end). The position springs with the size, so the island stays centred on every
+        // frame without a handler moving it from inside the allocation.
         const growing = size.w * size.h > island.width * island.height;
         const request = { spring: growing ? GROW_SPRING : SHRINK_SPRING };
         this._springs = [
             this._motion.spring(island, 'width', size.w, request, this._anim),
             this._motion.spring(island, 'height', size.h, request, this._anim),
+            this._motion.spring(island, 'x', x, request, this._anim),
         ];
     }
 
@@ -381,7 +359,7 @@ export class NotchView {
         if (this._destroyed)
             return;
         this._island.visible = show;
-        this._syncGrab();
+        this._syncOutside();
     }
 
     /**
@@ -401,8 +379,8 @@ export class NotchView {
 
         // The dashboard stays and only its body changes: a tab switch, or new data in a tab
         if (dashboard && this._dash && this._page === this._dash.page) {
-            this._wantGrab = !!vm.pinned;
-            this._syncGrab();
+            this._pinned = !!vm.pinned;
+            this._syncOutside();
             this._updateDashboard(vm, ctx);
             return;
         }
@@ -418,12 +396,12 @@ export class NotchView {
         const growing = size.w * size.h > this._island.width * this._island.height;
 
         this._place(size, true);
-        this._wantGrab = dashboard && !!vm.pinned;
-        this._syncGrab();
+        this._pinned = dashboard && !!vm.pinned;
+        this._syncOutside();
 
         const old = this._page;
         this._page = null;
-        this._dash = null;
+        this._dropDash();
         this._liveMs = null;
         this._stopTimers();
         if (old)
@@ -437,13 +415,12 @@ export class NotchView {
             console.error('[Kiwi] notch page failed:', e);
             this._stopTimers();
             this._signature = null;
-            this._dash = null;
+            this._dropDash();
             page = new St.Widget();
         }
         this._page = page;
         page.set_size(size.w, size.h);
         this._island.add_child(page);
-        this._centerPages();
         // A dashboard's refreshers live with its tab body (_fillDashboard)
         if (this._dash)
             this._startLive(page, this._dash.live);
@@ -463,19 +440,9 @@ export class NotchView {
     // What the current page depends on, as one string (render() skips an identical frame)
     _signatureOf(vm, ctx, dashboard) {
         const n = ctx.notification;
-        const media = ctx.media ? { ...ctx.media, appIcon: undefined } : null; // icons are not JSON
         let dash = null;
         if (dashboard) {
-            const acts = (vm.activities ?? []).map(a => [a.key, a.kind, a.data]);
-            const tab = vm.tab;
-            dash = [tab, vm.pinned, vm.dropping, ctx.dnd];
-            if (tab === 'now')
-                dash.push(media, acts, ctx.count, (ctx.recent ?? []).map(r => [r.title, r.app, r.when, r.body]));
-            else if (tab === 'tray')
-                dash.push(ctx.clipboard, ctx.selected, ctx.shelf.clipboardHasFiles,
-                    ctx.shelf.uris.map(u => [u, ctx.shelf.info(u).name, ctx.shelf.info(u).missing, !!ctx.shelf.info(u).gicon]));
-            else
-                dash.push(ctx.widgets);
+            dash = [vm.tab, vm.pinned, vm.dropping, ctx.dnd, this._tabData(vm.tab, vm, ctx)];
         }
         return JSON.stringify([
             vm.kind, vm.content, vm.notificationId, vm.badge,
@@ -487,11 +454,18 @@ export class NotchView {
         ]);
     }
 
-    // Pages are as wide as their target shape; keep them centred in the moving island.
-    _centerPages() {
-        const w = this._island.width;
-        for (const child of this._island.get_children())
-            child.set_position(Math.round((w - child.width) / 2), 0);
+    // What one tab's body depends on, plain data (its signature in the tab cache)
+    _tabData(tab, vm, ctx) {
+        if (tab === 'now') {
+            const media = ctx.media ? { ...ctx.media, appIcon: undefined } : null; // icons are not JSON
+            const acts = (vm.activities ?? []).map(a => [a.key, a.kind, a.data]);
+            return [media, acts, ctx.count, (ctx.recent ?? []).map(r => [r.title, r.app, r.when, r.body])];
+        }
+        if (tab === 'tray') {
+            return [ctx.clipboard, ctx.selected, ctx.shelf.clipboardHasFiles,
+                ctx.shelf.uris.map(u => [u, ctx.shelf.info(u).name, ctx.shelf.info(u).missing, !!ctx.shelf.info(u).gicon])];
+        }
+        return [ctx.widgets];
     }
 
     _stopTimers() {
@@ -564,53 +538,114 @@ export class NotchView {
             x_expand: true, y_expand: true, clip_to_allocation: true,
         });
         page.add_child(holder);
-        this._dash = { page, buttons, holder, body: null, tab: null };
-        this._fillDashboard(vm, ctx, false);
+        this._dash = { page, buttons, holder, bodies: new Map(), current: null, tab: null, live: [], prebuild: 0 };
+        this._fillDashboard(vm, ctx);
         return page;
+    }
+
+    _dropDash() {
+        if (this._dash?.prebuild)
+            this._cleanup.release(this._dash.prebuild);
+        this._dash = null;
     }
 
     _updateDashboard(vm, ctx) {
         this._stopTimers();
-        this._fillDashboard(vm, ctx, vm.tab !== this._dash.tab);
+        this._fillDashboard(vm, ctx);
         this._startLive(this._dash.page, this._dash.live);
     }
 
-    // Build the tab body; on a tab switch the old body slides out and the new one in
-    _fillDashboard(vm, ctx, animate) {
+    // Show the body of the tab. A switch slides the old body out and the new one in; both are
+    // already built (see _tabBody), so it only animates.
+    _fillDashboard(vm, ctx) {
         const dash = this._dash;
         const from = dash.tab;
         dash.tab = vm.tab;
         for (const [tab, b] of dash.buttons)
             b.checked = tab === vm.tab;
-        dash.live = [];
+        const old = dash.current;
+        const entry = this._tabBody(vm.tab, vm, ctx);
+        dash.current = entry;
+        dash.live = entry.live;
+        this._prebuildTabs(vm, ctx);
+        const switching = !!old && old.tab !== vm.tab;
+        if (!switching) {
+            entry.actor.visible = true;
+            return;
+        }
+        const dir = tabDirection(from, vm.tab);
+        const slide = (actor, to, onDone) => this._motion.ease(actor, to,
+            { duration: 'medium', curve: 'emphasized', onDone }, this._anim);
+        slide(old.actor, { opacity: 0, translation_x: -dir * TAB_SLIDE }, () => {
+            if (!this._destroyed && dash.current !== old)
+                old.actor.visible = false;
+        });
+        const actor = entry.actor;
+        actor.remove_all_transitions();
+        actor.set({ visible: true, opacity: 0, translation_x: dir * TAB_SLIDE });
+        slide(actor, { opacity: 255, translation_x: 0 });
+    }
+
+    // The tab's body: the built one while its data is unchanged, else a new one (and the old
+    // one is destroyed). A new body starts shown; a parked one is hidden.
+    _tabBody(tab, vm, ctx) {
+        const dash = this._dash;
+        const sig = JSON.stringify(this._tabData(tab, vm, ctx));
+        const cached = dash.bodies.get(tab);
+        if (cached?.sig === sig)
+            return cached;
+        const live = [];
         const env = {
-            _: this._, h: this._h, live: dash.live, alive: () => !this._destroyed,
+            _: this._, h: this._h, live, alive: () => !this._destroyed,
             clockFormat: () => this._clockFormat(),
         };
-        let body;
+        let actor;
         try {
-            body = vm.tab === 'tray' ? trayTab(env, { ...ctx, dropping: !!vm.dropping })
-                : vm.tab === 'widgets' ? widgetsTab(env, ctx.widgets)
+            actor = tab === 'tray' ? trayTab(env, { ...ctx, dropping: !!vm.dropping })
+                : tab === 'widgets' ? widgetsTab(env, ctx.widgets)
                     : nowTab(env, { ...ctx, activities: vm.activities });
         } catch (e) {
             console.error('[Kiwi] notch tab failed:', e);
             this._signature = null;
-            body = new St.Widget();
+            actor = new St.Widget();
         }
-        const old = dash.body;
-        dash.body = body;
-        dash.holder.add_child(body);
-        if (!old)
+        cached?.actor.destroy();
+        const entry = { tab, actor, sig, live };
+        dash.bodies.set(tab, entry);
+        dash.holder.add_child(actor);
+        return entry;
+    }
+
+    // Build the tabs that are not shown yet once the main loop is idle, then hide them after
+    // their first layout (style, icons and sizes are done by then), so they cost nothing but
+    // memory and a later switch has only the slide left.
+    _prebuildTabs(vm, ctx) {
+        const dash = this._dash;
+        if (dash.prebuild || dash.bodies.size === TABS.length)
             return;
-        const dir = tabDirection(from, vm.tab);
-        if (!animate || dir === 0) {
-            old.destroy();
-            return;
-        }
-        this._retire(old, true, { translation_x: -dir * TAB_SLIDE });
-        body.opacity = 0;
-        body.translation_x = dir * TAB_SLIDE;
-        this._motion.ease(body, { opacity: 255, translation_x: 0 }, { duration: 'medium', curve: 'emphasized' }, this._anim);
+        dash.prebuild = this._cleanup.idle(() => {
+            dash.prebuild = 0;
+            if (this._destroyed || this._dash !== dash)
+                return;
+            for (const tab of TABS) {
+                if (!dash.bodies.has(tab))
+                    this._park(this._tabBody(tab, vm, ctx));
+            }
+        }, { name: 'notch tabs' });
+    }
+
+    _park(entry) {
+        const { actor } = entry;
+        actor.opacity = 0;
+        const token = this._cleanup.connect(global.stage, 'after-update', () => {
+            this._cleanup.release(token);
+            const dash = this._dash;
+            if (dash?.bodies.get(entry.tab) !== entry)
+                return; // replaced or gone meanwhile
+            if (dash.current !== entry)
+                actor.visible = false;
+            actor.opacity = 255;
+        });
     }
 
     // ---- small pieces --------------------------------------------------------------------

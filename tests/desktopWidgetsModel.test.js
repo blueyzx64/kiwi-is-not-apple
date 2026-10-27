@@ -47,7 +47,7 @@ test('a drag starts past the threshold', () => {
     eq(isDrag(6, 6), true);
 });
 test('the gallery sits centred at the bottom and fits small screens', () => {
-    eq(galleryRect({ x: 0, y: 32, width: 1280, height: 700 }), { x: 100, y: 386, width: 1080, height: 330 });
+    eq(galleryRect({ x: 0, y: 32, width: 1280, height: 700 }), { x: 100, y: 336, width: 1080, height: 380 });
     const r = galleryRect({ x: 0, y: 0, width: 400, height: 300 });
     eq([r.width, r.height], [368, 268]);
 });

@@ -357,11 +357,11 @@ export class NotchFeature {
             media: media && showsActivity(media.status) ? { ...mediaInfo(media), appIcon: media.app?.get_icon() ?? null } : null,
             dnd: state.dnd,
             count: NotificationRouter.state().count,
-            recent: dashboard && vm.tab === 'now' ? this._recentNotifications() : null,
-            clipboard: dashboard && vm.tab === 'tray' ? this._clipboardEntries() : null,
+            recent: dashboard ? this._recentNotifications() : null,
+            clipboard: dashboard ? this._clipboardEntries() : null,
             shelf: this._shelf,
             selected: this._selected,
-            widgets: dashboard && vm.tab === 'widgets' ? {
+            widgets: dashboard ? {
                 events: this._events,
                 weather: this._widgets?.weather() ?? null,
                 mic: this._widgets?.mic() ?? { available: false, muted: false },

@@ -15,7 +15,12 @@
 // Widgets (L11's widget model): ctx.features.instance('notification-center')
 //   .addWidget(owner, {id, order, create: () => Clutter.Actor}) -> {release()}
 // create() runs on every open; the actor is destroyed when the column closes. Placeholders
-// show while none is registered.
+// show while none is registered. The feature registers its own rows of core/widgets views
+// (WIDGET_ROWS); "Edit Widgets…" hands over to the desktop widgets' gallery.
+//
+// Banners: while the column is open no banner shows (the stock tray's bannerBlocked, as the
+// calendar card does, and a router filter for banners that would arrive); what comes in
+// lands in the history list below.
 
 import Clutter from 'gi://Clutter';
 import Shell from 'gi://Shell';
@@ -23,6 +28,7 @@ import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import { NotificationRouter } from '../../core/notificationRouter.js';
+import { Widgets } from '../../core/widgets/index.js';
 import { MENU_CLOSE_ARGS } from '../../lib/compat.js';
 import { ModalSurface } from '../../lib/modalSurface.js';
 import { KiwiSettings } from '../../lib/settings.js';
@@ -30,6 +36,11 @@ import { groupByApp, orderWidgets, pruneExpanded } from './model.js';
 import { buildDateWidget, buildNotifications, buildWidgets } from './view.js';
 
 const WIDTH = 380;
+// The widgets area, row by row: two Small widgets or one Medium fill the column's width
+const WIDGET_ROWS = Object.freeze([
+    [['weather', 'small'], ['batteries', 'small']],
+    [['now-playing', 'medium']],
+]);
 
 export class NotificationCenter {
     constructor(ctx, cleanup) {
@@ -42,6 +53,9 @@ export class NotificationCenter {
         this._refreshIdle = 0;
         this._section = null;
         this._content = null;
+        this._host = null;
+        this._bannerFilter = null;
+        this._bannersWereBlocked = false;
     }
 
     enable() {
@@ -57,6 +71,10 @@ export class NotificationCenter {
         this._ctx.events.on('notification-center-requested', () => this.open(), cleanup);
         NotificationRouter.watchHistory(cleanup, () => this._queueRefresh());
         this._ks.watch('notification-center-widgets', () => this._rebuild());
+        this._host = Widgets.acquire(cleanup, this._ctx.gettext);
+        WIDGET_ROWS.forEach((row, order) =>
+            this.addWidget(cleanup, { id: `row-${order}`, order, create: () => this._widgetRow(row) }));
+        cleanup.add(() => this._showBanners());
     }
 
     disable() {
@@ -74,8 +92,11 @@ export class NotificationCenter {
         const dateMenu = Main.panel.statusArea.dateMenu;
         if (dateMenu?.menu?.isOpen)
             dateMenu.menu.close(MENU_CLOSE_ARGS);
-        if (!this.isOpen)
-            this._modal.open();
+        if (this.isOpen)
+            return;
+        this._modal.open();
+        if (this.isOpen)
+            this._hideBanners();
     }
 
     close() {
@@ -127,6 +148,49 @@ export class NotificationCenter {
     collapse(key) {
         this._expanded.delete(key);
         this._refreshNow();
+    }
+
+    // ---- banners ---------------------------------------------------------------------------
+
+    _hideBanners() {
+        if (this._bannerFilter)
+            return;
+        this._bannersWereBlocked = Main.messageTray.bannerBlocked;
+        Main.messageTray.bannerBlocked = true;
+        this._bannerFilter = NotificationRouter.setBannerFilter(null, () => false);
+    }
+
+    _showBanners() {
+        if (!this._bannerFilter)
+            return;
+        this._bannerFilter.release();
+        this._bannerFilter = null;
+        Main.messageTray.bannerBlocked = this._bannersWereBlocked;
+    }
+
+    // ---- widgets ---------------------------------------------------------------------------
+
+    // One row of live core/widgets views. They follow their data while the column is open
+    // (the column's actors, and with them the views, are destroyed when it closes).
+    _widgetRow(specs) {
+        const row = new St.BoxLayout({ style_class: 'kiwi-nc-widget-row', x_align: Clutter.ActorAlign.CENTER });
+        for (const [kind, size] of specs) {
+            const view = this._host.createView(kind, { size, config: {} });
+            const click = new Clutter.ClickAction();
+            click.connect('clicked', () => {
+                this.close();
+                view.activate();
+            });
+            view.actor.add_action(click);
+            row.add_child(view.actor);
+            view.setActive(true);
+        }
+        return row;
+    }
+
+    _editWidgets() {
+        this.close();
+        this._ctx.features.instance('desktop-widgets')?.editWidgets();
     }
 
     // ---- history ---------------------------------------------------------------------------
@@ -219,7 +283,8 @@ export class NotificationCenter {
         this._section = null;
         this._fillNotifications();
         if (this._ks.bool('notification-center-widgets'))
-            content.add_child(buildWidgets(_, orderWidgets(this._widgets)));
+            content.add_child(buildWidgets(_, orderWidgets(this._widgets),
+                this._ctx.features.instance('desktop-widgets') ? () => this._editWidgets() : null));
     }
 
     _fillNotifications() {
@@ -261,6 +326,7 @@ export class NotificationCenter {
     }
 
     _onClosed() {
+        this._showBanners();
         if (this._refreshIdle) {
             this._cleanup.release(this._refreshIdle);
             this._refreshIdle = 0;
