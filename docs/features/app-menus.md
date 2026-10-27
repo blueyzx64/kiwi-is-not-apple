@@ -44,11 +44,17 @@ experimental), `menubar-atspi-popovers` (off, experimental).
 
 ## Limits
 
-- **Status of the AT-SPI popover read (experimental, off):** in the Fedora 44 test session
-  Kiwi finds Text Editor on the accessibility bus, walks its window and finds the "Main Menu"
-  button, but the opened popover's items are not found yet (the menu node is not under the
-  button nor marked SHOWING when read). The App menu then simply has no extra items. Needs
-  more work before it can be recommended.
+- **Status of the AT-SPI popover read (FX12, still experimental, off by default):** on
+  Fedora 44 / GTK 4.20 the read now works. Facts found with an AT-SPI probe: the opened
+  popover is a `menu` node under the GtkMenuButton (the toggle's parent), about 30 levels deep,
+  built about 150 ms after `DoAction`; menu items have an empty name, their label is the
+  target of the `labelled-by` relation (read with `Text.GetText`), the shortcut is the third
+  part of `Action.GetKeyBinding` ('N;;Control+N'), check and radio state is `CHECKED`, and the
+  button shows `PRESSED` while the popover is open. The provider polls (bounded) until labelled
+  items exist, reads them, closes through the button's action and confirms by `PRESSED`.
+  Not done: sub-menu pages (read as lazy) and a flash-free proof; it stays off by default
+  because the app really opens and closes its menu (focus moves into the popover for about a
+  second, so a key typed in that moment goes to the popover).
 
 - DBusMenu submenus are told `AboutToShow` only at the top level when the menus are read;
   apps that build deeper submenus lazily show them as they were last built.
