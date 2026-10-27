@@ -514,6 +514,35 @@
         <description>Takes the focused window out of the set on the stage and puts it in the strip. Only active while Stage Manager is on.</description>
       </key>
 
+      <!-- Launchpad (features/launchpad) -->
+      <key name="launchpad" type="b">
+        <default>true</default>
+        <summary>Launchpad</summary>
+        <description>A full-screen grid of every app, with pages, search, folders and drag to reorder (macOS 11 to 15). Its folders and order are GNOME's own (org.gnome.desktop.app-folders and app-picker-layout), so the Activities app grid stays the same.</description>
+      </key>
+      <key name="launchpad-shortcut" type="as">
+        <default>['&lt;Super&gt;a', 'F4']</default>
+        <summary>Launchpad shortcut</summary>
+        <description>Opens and closes Launchpad. While Launchpad runs, GNOME's own "Show all apps" shortcut gives up these keys (Super+A by default) and gets them back when Launchpad stops. Empty means no shortcut.</description>
+      </key>
+      <key name="launchpad-delete-apps" type="b">
+        <default>true</default>
+        <summary>Delete apps in Launchpad</summary>
+        <description>In jiggle mode (hold Alt, or press and hold an icon), show a delete button on apps their owner can remove: Flatpak apps (through GNOME Software) and apps installed by the Installer. No other app gets one.</description>
+      </key>
+      <key name="dock-launchpad" type="b">
+        <default>true</default>
+        <summary>Launchpad in the Dock</summary>
+        <description>Show the Launchpad icon at the start of the Dock.</description>
+      </key>
+
+      <!-- Full screen Split View (features/splitView) -->
+      <key name="split-view" type="b">
+        <default>true</default>
+        <summary>Full screen Split View</summary>
+        <description>Hover the green button of a full-screen window to tile it to the left or right of the screen and pick the window for the other half (macOS Split View).</description>
+      </key>
+
       <!-- Show Desktop (features/showDesktop) -->
       <key name="show-desktop-button" type="b">
         <default>true</default>
@@ -524,6 +553,16 @@
         <default>['&lt;Super&gt;d']</default>
         <summary>Show Desktop shortcut</summary>
         <description>Shows the desktop or brings the windows back. Empty means no Kiwi shortcut; GNOME's own Show Desktop shortcut, if set, also plays this animation while Kiwi runs.</description>
+      </key>
+      <key name="click-wallpaper-reveals-desktop" type="s">
+        <choices>
+          <choice value="always"/>
+          <choice value="stage-manager"/>
+          <choice value="never"/>
+        </choices>
+        <default>'always'</default>
+        <summary>Click wallpaper to reveal desktop</summary>
+        <description>Clicking empty wallpaper slides the windows aside to show the desktop (Stage Manager, while on, sends the stage to the strip instead): always (macOS), only while Stage Manager is on, or never. With desktop icons (DING) only clicks that reach the wallpaper count.</description>
       </key>
       <key name="show-desktop-speed" type="s">
         <choices>

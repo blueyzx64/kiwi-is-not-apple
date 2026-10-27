@@ -93,7 +93,8 @@ Events (`EVENTS` in `core/events.js`): `window-added`, `window-changed`, `window
 `window-focused`, `app-focused`, `workspaces-changed`, `monitors-changed`, `work-area-changed`,
 `motion-changed`, `feature-changed`, `minimize-requested`, `notification-center-requested`
 (the clock), `app-hide-requested` and `window-tile-requested` (app-menu commands for the
-window manager; the menu bar runs a fallback when nobody listens).
+window manager; the menu bar runs a fallback when nobody listens), `launchpad-requested` (dock tile,
+pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view-changed` (Split View).
 
 ## 4. lib/
 
@@ -128,11 +129,13 @@ window manager; the menu bar runs a fallback when nobody listens).
 | `spotlight/` | `spotlight` | Super tap, providers; Tahoe browse views (Super+1..4), "/" filters, Actions, Quick Keys, history, Quick Look, menu items (`queryModel.js`, `actionsModel.js`, `results.js`) |
 | `clipboard/` | `clipboard-history` | history, popover, Quick Paste |
 | `stageManager/` | `stage-manager`, `stage-manager-shortcut` | strip, sets, flights (rebuilt in phase 4) |
-| `showDesktop/` | `show-desktop` | top-bar button, Super+D; delegates to Stage Manager |
+| `showDesktop/` | `show-desktop` | top-bar button, Super+D, click on empty wallpaper (`click-wallpaper-reveals-desktop`: always / stage-manager / never); delegates to Stage Manager |
+| `launchpad/` | `launchpad` | macOS 11–15 Launchpad: full-screen grid (`view.js`), GNOME's app folders and app-picker-layout as data (`store.js`), jiggle mode ⓧ through GNOME Software or the Installer (`uninstall.js`); opened by `launchpad-requested`, Super+A / F4 (takes them from GNOME's toggle-application-view through core/originals) |
 | `roundedCorners/` | `rounded-corners` | shader effect per window |
 | `liquidGlass/` | `liquid-glass` | attaches `lib/glass.js` to the panel, Control Center and calendar menus; the glass prefs |
 | `shellBehaviour/` | `shell-behaviour` | swipes stop at workspaces; no hot corner |
-| `fullscreenSpace/` | `move-window-to-new-workspace` | full screen in its own Space (kept as in 2.x) |
+| `fullscreenSpace/` | `move-window-to-new-workspace` | full screen in its own Space (kept as in 2.x); a `splitView`-flagged window stays in its Space when it leaves full screen |
+| `splitView/` | `split-view` | full screen Split View: green-button hover menu, tile a half, pick the partner from thumbnails; WindowState `splitView` |
 | `dock/` | `dock` | Kiwi's own dock: favourites, running and recent apps, minimized windows, Downloads stack (`stack.js`), Trash (`trash.js`), menus (`appMenu.js`), Open at Login (`autostart.js`); an edge claim in core/layout; keeps Dash to Dock off (`dashToDock.js`); `iconRect(appId)` / `minimizeTarget(win)` for Genie; P2: magnification (`magnify.js`), launch/attention bounce, LauncherEntry badges, grey background-app dots, minimized-window thumbnail on the app icon, folder Stacks (`dock-folders`) |
 | `minimizeEffect/` | `minimize-effect` | Genie (`genie.js`, a `Clutter.DeformEffect`) and Scale minimize/restore into the dock; blocks the stock Shell.WM minimize handlers only while it runs and hands GNOME the windows it does not animate; `setTargetProvider(owner, fn)` for Stage Manager |
 | `switcher/` | `app-switcher` | Cmd-Tab panel on Super+Tab (`popup.js`, a SwitcherPopup subclass) and Super+` window cycling; own handlers for `switch-applications`/`switch-group`, the Shell's given back on disable |

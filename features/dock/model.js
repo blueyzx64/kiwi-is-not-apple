@@ -59,6 +59,8 @@ export function readConfig(get) {
         runningDots: get.bool('dock-running-dots'),
         minimizeToApp: get.bool('dock-minimize-to-app'),
         downloads: get.bool('dock-downloads'),
+        // The Launchpad tile shows while Launchpad itself is on
+        launchpad: get.bool('dock-launchpad') && get.bool('launchpad'),
         stackView: STACK_VIEWS.includes(view) ? view : 'automatic',
         magnification: get.bool('dock-magnification'),
         magnifiedSize: clamp(get.int('dock-magnification-size'), ICON_SIZE_MIN, MAGNIFIED_SIZE_MAX),
@@ -114,7 +116,7 @@ export function pushRecent(recents, appId, max = RECENT_MAX) {
 
 /**
  * What the dock shows, in order (macOS):
- *   pinned apps | separator | running unpinned and recent apps | separator | minimized
+ *   Launchpad | pinned apps | separator | running unpinned and recent apps | separator | minimized
  *   windows, Downloads, Trash
  * With recents off, running unpinned apps follow the pinned ones with no separator.
  *
@@ -127,11 +129,14 @@ export function pushRecent(recents, appId, max = RECENT_MAX) {
  * @param {boolean} [p.downloads] show the Downloads stack
  * @param {string[]} [p.background] apps running in the background with no window (grey dot)
  * @param {string[]} [p.folders] folder stacks (absolute paths), after Downloads
- * @returns {object[]} {kind: 'app'|'separator'|'window'|'downloads'|'folder'|'trash', id, ...}
+ * @param {boolean} [p.launchpad] show the Launchpad tile first
+ * @returns {object[]} {kind: 'launchpad'|'app'|'separator'|'window'|'downloads'|'folder'|'trash', id, ...}
  *   app items carry `background: true` when only a background process runs
  */
-export function dockItems({ pinned, running, recents, showRecents, minimized = [], downloads = true, background = [], folders = [] }) {
+export function dockItems({ pinned, running, recents, showRecents, minimized = [], downloads = true, background = [], folders = [], launchpad = false }) {
     const items = [];
+    if (launchpad)
+        items.push({ kind: 'launchpad', id: 'launchpad' });
     const windowed = new Set(running);
     // A background app counts as running (macOS keeps its icon, with a grey indicator)
     running = [...running, ...background.filter(id => !windowed.has(id))];

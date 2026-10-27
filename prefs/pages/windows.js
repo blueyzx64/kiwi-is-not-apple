@@ -41,6 +41,9 @@ export function build(args) {
     spaces.add(switchRow(settings, _('Full Screen in Its Own Space'),
         _('A window that goes full screen moves to a new workspace of its own, and back when it leaves full screen'),
         'move-window-to-new-workspace'));
+    spaces.add(switchRow(settings, _('Split View'),
+        _('Hover the green button of a full-screen window to tile it to the left or right of the screen, then pick the other window'),
+        'split-view'));
     page.add(spaces);
 
     addFeatureGroups(page, roundedCornersPrefs, args);

@@ -53,13 +53,14 @@ import { Magnifier } from './magnify.js';
 import { AppItem, SeparatorItem, WindowItem } from './items.js';
 import { DownloadsItem, FolderStackItem, downloadsDir, installerFor } from './stack.js';
 import { TrashItem } from './trash.js';
+import { LaunchpadItem } from './launchpad.js';
 import { DockMenu, altHeld, fillAppMenu, isAltKey } from './appMenu.js';
 import { readAutostart, setAutostart } from './autostart.js';
 import { keepOtherDocksOff } from './dashToDock.js';
 
 const LAYOUT_KEYS = ['dock-position', 'dock-icon-size'];
 const CONTENT_KEYS = ['dock-show-recents', 'dock-running-dots', 'dock-minimize-to-app', 'dock-downloads',
-    'dock-background-apps', 'dock-folders', 'dock-badges'];
+    'dock-background-apps', 'dock-folders', 'dock-badges', 'dock-launchpad', 'launchpad'];
 const MOTION_KEYS = ['dock-magnification', 'dock-magnification-size', 'dock-launch-animation', 'dock-attention-bounce'];
 const HIDE_KEYS = ['dock-autohide', 'dock-autohide-delay'];
 // Pushing against the edge reveals an auto-hidden dock: the same pressure as the Shell's hot
@@ -268,6 +269,7 @@ export class Dock {
             downloads: this.config.downloads,
             background,
             folders: this.config.folders,
+            launchpad: this.config.launchpad,
         });
         this._view.setItems(items, spec => this._createItem(spec));
         const key = items.map(i => i.id).join('\n');
@@ -321,6 +323,8 @@ export class Dock {
         }
         case 'trash':
             return new TrashItem(this, spec);
+        case 'launchpad':
+            return new LaunchpadItem(this, spec);
         default:
             return null;
         }
@@ -413,6 +417,16 @@ export class Dock {
     activateWindow(win) {
         if (win)
             Main.activateWindow(win);
+    }
+
+    /** The Launchpad tile was clicked. */
+    requestLaunchpad() {
+        this._ctx.events.emit('launchpad-requested', { source: 'dock' });
+    }
+
+    /** A file of Kiwi's icons/ folder, or null. */
+    iconFile(name) {
+        return this._ctx.extension?.dir?.get_child('icons').get_child(name) ?? null;
     }
 
     openUri(uri) {

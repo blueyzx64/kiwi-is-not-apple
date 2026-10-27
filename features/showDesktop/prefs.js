@@ -6,7 +6,7 @@ import Adw from 'gi://Adw';
 import Gtk from 'gi://Gtk';
 import Gio from 'gi://Gio';
 
-import { shortcutRow } from '../../prefs/widgets.js';
+import { comboRow, shortcutRow } from '../../prefs/widgets.js';
 
 
 
@@ -51,6 +51,12 @@ export function buildPrefs({ settings, extension }) {
     const id = settings.connect('changed::show-desktop-speed', syncSpeed);
     speed.connect('destroy', () => settings.disconnect(id));
     main.add(speed);
+    main.add(comboRow(settings, {
+        title: _('Click wallpaper to reveal desktop'),
+        subtitle: _('Clicking empty wallpaper moves the windows aside to show the desktop'),
+        key: 'click-wallpaper-reveals-desktop', values: ['always', 'stage-manager', 'never'],
+        labels: [_('Always'), _('Only in Stage Manager'), _('Never')],
+    }));
 
     const note = new Adw.PreferencesGroup({
         description: _('GNOME\'s own "Hide all normal windows" shortcut, if you set one in Settings, plays the same animation while Kiwi runs. Kiwi never changes it. With Stage Manager on, Stage Manager handles Show Desktop.'),
