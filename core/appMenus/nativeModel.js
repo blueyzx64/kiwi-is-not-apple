@@ -376,8 +376,10 @@ export function findPrimaryMenuButton(frame) {
             walk(c);
     };
     walk(frame);
-    // 'Main Menu' beats a plain 'Menu' (a document's menu)
-    out.sort((a, b) => (/main|primary/i.test(b.name) ? 1 : 0) - (/main|primary/i.test(a.name) ? 1 : 0));
+    // 'Main Menu' beats a plain 'Menu' (a document's menu); GTK 4 names both the GtkMenuButton
+    // and its inner toggle button, and only the toggle has the click action
+    const rank = n => (/main|primary/i.test(n.name) ? 2 : 0) + (n.role === ROLE.TOGGLE_BUTTON ? 1 : 0);
+    out.sort((a, b) => rank(b) - rank(a));
     return out[0] ?? null;
 }
 
@@ -445,27 +447,6 @@ export function atspiToMenus(menubar, { provider = 'atspi' } = {}) {
  */
 export function atspiPopoverItems(menu, { provider = 'atspi' } = {}) {
     return tidy(atspiItems(menu, provider, [], 1));
-}
-
-/**
- * Build accessible nodes from org.a11y.atspi.Cache GetItems rows
- * (a((so)(so)(so)iiassusau): self, app, parent, index, childCount, ifaces, name, role,
- * description, states).
- *
- * @param {Array} rows
- * @returns {Map<string, object>} path -> node {path, role, name, states, ifaces, children}
- */
-export function nodesFromCache(rows) {
-    const nodes = new Map();
-    for (const r of rows ?? []) {
-        const [[, path], , [, parent], index, , ifaces, name, role, , states] = r;
-        nodes.set(path, { ref: path, parent, index, role, name, states, ifaces, children: [] });
-    }
-    for (const n of nodes.values())
-        nodes.get(n.parent)?.children.push(n);
-    for (const n of nodes.values())
-        n.children.sort((a, b) => a.index - b.index);
-    return nodes;
 }
 
 // ---- merging into Kiwi's menus -------------------------------------------------------------

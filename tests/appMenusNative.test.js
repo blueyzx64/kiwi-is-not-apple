@@ -2,7 +2,7 @@
 import {
     GMenuStore, gmenuToMenus, dbusmenuToMenus, dbusmenuShortcut, dbusmenuSubmenuIds, stripMnemonic,
     nativeMenuId, applyMenubar, atspiToMenus, atspiPopoverItems, findPrimaryMenuButton, findRole,
-    nodesFromCache, hasState, ROLE, STATE, MAX_ITEMS, gmenuActionNames,
+    hasState, ROLE, STATE, MAX_ITEMS, gmenuActionNames,
 } from '../core/appMenus/nativeModel.js';
 import { buildMenus, searchMenus, wellKnownNames, MAX_DESCRIBE_ALL } from '../core/appMenus/model.js';
 import { xidFromDescription } from '../lib/compatModel.js';
@@ -172,7 +172,8 @@ const frame = {
                 ] },
             ] },
         ] },
-        { role: ROLE.TOGGLE_BUTTON, name: 'Main Menu', ref: '/btn', children: [] },
+        { role: ROLE.PUSH_BUTTON, name: 'Main Menu', ref: '/outer', children: [
+            { role: ROLE.TOGGLE_BUTTON, name: 'Main Menu', ref: '/btn', children: [] }] },
         { role: ROLE.TOGGLE_BUTTON, name: 'Menu', ref: '/doc', children: [] },
     ],
 };
@@ -191,6 +192,7 @@ test('atspi: menu bar to menus', () => {
 
 test('atspi: primary menu button and popover items', () => {
     eq(findPrimaryMenuButton(frame).ref, '/btn');
+    eq([hasState(frame.states, STATE.ACTIVE), hasState(frame.states, STATE.CHECKED)], [true, false]);
     const pop = { role: ROLE.MENU, name: '', children: [
         { role: ROLE.MENU_ITEM, name: 'New Window', ref: '/1', states: st(STATE.SENSITIVE), children: [] },
         { role: ROLE.SEPARATOR, name: '', children: [] },
@@ -199,18 +201,6 @@ test('atspi: primary menu button and popover items', () => {
     const items = atspiPopoverItems(pop);
     eq(labels(items), ['New Window', '-', 'Keyboard Shortcuts']);
     eq(items[0].command.path, ['New Window']);
-});
-
-test('atspi: cache rows to a tree', () => {
-    const row = (path, parent, index, role, name) =>
-        [[':1.5', path], [':1.5', '/root'], [':1.5', parent], index, 0, [], name, role, '', st(STATE.SHOWING)];
-    const nodes = nodesFromCache([
-        row('/root', '/', 0, 75, 'app'), row('/f', '/root', 0, ROLE.FRAME, 'Doc'),
-        row('/b', '/f', 1, ROLE.MENU_BAR, ''), row('/x', '/f', 0, ROLE.PUSH_BUTTON, 'X'),
-    ]);
-    eq(nodes.get('/f').children.map(c => c.ref), ['/x', '/b']);
-    eq(hasState(nodes.get('/b').states, STATE.SHOWING), true);
-    eq(hasState(nodes.get('/b').states, STATE.ACTIVE), false);
 });
 
 // Bounds (reviewer R3): huge exports never build unbounded menus
