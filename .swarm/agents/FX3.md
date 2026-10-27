@@ -1,6 +1,6 @@
 # FX3 (fixer: R2 glass/dock findings)
 ## Status
-working: v3/fix-glass, all fixes committed, final real-Shell run in progress (/tmp/fx3-run.txt)
+done: v3/fix-glass, run /tmp/x2/runs/20261027-152244-kiwi-fix-glass-f44d (0 Kiwi errors)
 ## Progress log
 - F1 lib/wallpaperProbe.js + lib/wallpaperDecode.js (one off-process path: tint, Launchpad, menu bar), 64 MP cap, XML slide refresh in tint
 - F2 ListMembersOwner defer; dashToDock strips after DtD leaves ACTIVATING, from an idle
