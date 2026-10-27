@@ -7,6 +7,11 @@
 // the window does not qualify (maximized, tiled, fullscreen, excluded app); see model.qualifies.
 // Geometry follows size-changed; whether a window qualifies follows the maximize, fullscreen,
 // type and identity notifies.
+// While the overview shows (Mission Control, App Exposé), the effects are off: a Clutter.Clone
+// scaled down by the overview samples the effect's offscreen texture, and that comes out
+// visibly softer than the window's own texture (measured at a 0.9 overview progress, the
+// preview text lost about 40 % of its edge contrast). The overview shows the windows as they
+// are drawn, sharp; the corners come back with the desktop.
 // Disable removes every effect and disconnects every signal (per-window owners plus the
 // feature's CleanupRegistry). Clones (overview, Stage Manager strip and flights) paint the
 // source actor's effects, so they get the corners with no extra work.
@@ -14,6 +19,7 @@
 import Gio from 'gi://Gio';
 import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import { KiwiSettings } from '../../lib/settings.js';
 import { EFFECT_NAME, effectClass } from './effect.js';
@@ -71,6 +77,8 @@ export class RoundedCorners {
             this._untrackAll();
         });
         this._cleanup.connect(global.display, 'window-created', (_d, win) => this._onCreated(win));
+        this._cleanup.connect(Main.overview, 'showing', () => this._syncAll());
+        this._cleanup.connect(Main.overview, 'hidden', () => this._syncAll());
         for (const actor of global.get_window_actors())
             this._track(actor);
     }
@@ -162,7 +170,7 @@ export class RoundedCorners {
         if (!rec)
             return;
         const { win, effect } = rec;
-        const on = qualifies(this._info(win), this._config);
+        const on = !Main.overview.visible && qualifies(this._info(win), this._config);
         if (effect.enabled !== on)
             effect.enabled = on;
         this._syncGeometry(rec);

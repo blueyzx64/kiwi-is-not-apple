@@ -171,3 +171,31 @@ export function reorderIndex(centres, x) {
         i++;
     return i;
 }
+
+/**
+ * How far the stock ThumbnailsBox leaves its group of thumbnails off centre while Spaces
+ * collapse or expand. The box is as wide as it asks for (maxWidth per Space plus the spacing
+ * halves around it, each scaled by its Space's 1 - collapse), is centred in the screen, and
+ * puts its group at (maxWidth - thumbnailWidth) * n / 2 from its left edge, as if no Space
+ * were collapsing. The group's own width is the thumbnails and spacings that are left. With
+ * more Spaces than fit at maxWidth the box is no wider than the room it is given, and the
+ * stock offset puts the group off to the right.
+ *
+ * @param {{maxWidth: number, thumbnailWidth: number, spacing: number, collapse: number[],
+ *   available: number}} p
+ *   maxWidth: the width the box asks for per Space; thumbnailWidth: the width they get;
+ *   spacing: between Spaces; collapse: each Space's collapse fraction, 0 (full) to 1 (gone);
+ *   available: the width the box can be given
+ * @returns {number} the shift to apply (negative: to the left)
+ */
+export function centringShift({ maxWidth, thumbnailWidth, spacing, collapse, available }) {
+    const n = collapse.length;
+    let box = 0, group = 0;
+    collapse.forEach((c, i) => {
+        const open = 1 - c;
+        const halves = (i > 0 ? spacing / 2 : 0) + (i < n - 1 ? spacing / 2 : 0);
+        box += (maxWidth + halves) * open;
+        group += thumbnailWidth * open + (i > 0 ? spacing * open : 0);
+    });
+    return (Math.min(box, available) - group) / 2 - (maxWidth - thumbnailWidth) * n / 2;
+}

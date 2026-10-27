@@ -1,6 +1,6 @@
 // Run: gjs -m tests/missionControlModel.test.js
 import {
-    MODE, canRemoveSpace, exposeView, fullscreenAppOf, groupedOrder, mruOrder, reorderIndex,
+    MODE, canRemoveSpace, centringShift, exposeView, fullscreenAppOf, groupedOrder, mruOrder, reorderIndex,
     skipStartupOverview, spaceLabels, stripCardSize, touchRecent, windowPlace,
 } from '../features/missionControl/model.js';
 
@@ -104,6 +104,28 @@ test('reorderIndex: the slot whose half the pointer is in', () => {
     eq(reorderIndex(c, 450), 2);
     eq(reorderIndex(c, 9999), 2);
     eq(reorderIndex([], 50), 0);
+});
+
+const SHIFT = { maxWidth: 192, thumbnailWidth: 114, spacing: 22, available: 1280 };
+
+test('centringShift: nothing while every Space has its full width', () => {
+    eq(centringShift({ ...SHIFT, collapse: [0, 0, 0] }) === 0, true);
+    eq(centringShift({ ...SHIFT, collapse: [0] }) === 0, true);
+});
+
+test('centringShift: a Space coming in at the end', () => {
+    // half the slack (39) to the left, a quarter of the spacing back
+    eq(centringShift({ ...SHIFT, collapse: [0, 0, 0, 0, 1] }), -33.5);
+    eq(centringShift({ ...SHIFT, collapse: [0, 0, 0, 0, 0.5] }) > -33.5, true);
+});
+
+test('centringShift: more Spaces than fit: the group is centred in the room there is', () => {
+    const collapse = [0, 0, 0, 0, 0, 0, 0, 0];
+    eq(centringShift({ ...SHIFT, collapse }), -205);
+});
+
+test('centringShift: thumbnails at the maximum, no Space collapsing: none', () => {
+    eq(centringShift({ ...SHIFT, maxWidth: 114, collapse: [0, 0] }) === 0, true);
 });
 
 if (failed) {
