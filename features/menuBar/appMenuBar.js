@@ -24,7 +24,7 @@ import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import { PanelLayout } from '../../core/panelLayout.js';
-import { searchMenus, WM_ACCEL_SLOTS } from '../../core/appMenus/model.js';
+import { menuEntries, searchMenus, WM_ACCEL_SLOTS } from '../../core/appMenus/model.js';
 import { LazyMenu, menuItem } from './menuItems.js';
 import { MenuGlass } from './menuGlass.js';
 
@@ -226,6 +226,28 @@ export class AppMenuBar {
         first.menu.open(BoxPointer.PopupAnimation.FULL);
         first.menu.actor.navigate_focus(null, St.DirectionType.TAB_FORWARD, false);
         return true;
+    }
+
+    /**
+     * The focused app's menu items, for Spotlight's menu-item search (macOS Help search, but
+     * global). Reads the app's actions if they are not cached yet.
+     *
+     * @returns {Promise<{appName: string, entries: {path: string, label: string, run: Function}[]}|null>}
+     */
+    async menuItems() {
+        const target = this._currentTarget();
+        if (!target)
+            return null;
+        const results = this._service.peek(target) ?? (target.gtk ? await this._service.results(target) : null);
+        const menus = this._service.build(target, results, {
+            generic: this._generic(target), accels: this._accels(), _: this._ctx.gettext,
+        });
+        return {
+            appName: target.appName,
+            entries: menuEntries(menus).map(({ path, item }) => ({
+                path, label: item.label, run: () => this._service.activate(target, item.command),
+            })),
+        };
     }
 
     /** Open one menu by id ('app', 'file', ...); tests and the harness. */

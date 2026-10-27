@@ -41,6 +41,9 @@ export const EVENTS = Object.freeze({
     // policy listens; with no listener the app menu runs a plain fallback itself.
     'app-hide-requested': { appId: 'string|null', mode: "'hide' | 'others' | 'all'" },
     'window-tile-requested': { window: 'Meta.Window', mode: "'left' | 'right'" },
+    // Spotlight's "Start Timer" action (features/spotlight). The timers' owner (the notch's
+    // live activities, P5) listens; with no listener Spotlight runs a plain notification timer.
+    'timer-start-requested': { seconds: 'number', label: 'string', source: "string ('spotlight')" },
 });
 
 export class EventHub {
