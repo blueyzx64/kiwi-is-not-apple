@@ -125,7 +125,7 @@ window manager; the menu bar runs a fallback when nobody listens).
 | `calendar/` | `calendar`, `quick-settings-notifications`, `dnd-button` | date menu on the right as a card; notification list in Quick Settings; Kiwi's Do Not Disturb (beaten by `control-center`) |
 | `controlCenter/` | `control-center` | Quick Settings restyled |
 | `notch/` | `notch` | banners, media, OSD, dashboard |
-| `spotlight/` | `spotlight` | Super tap, providers |
+| `spotlight/` | `spotlight` | Super tap, providers; Tahoe browse views (Super+1..4), "/" filters, Actions, Quick Keys, history, Quick Look, menu items (`queryModel.js`, `actionsModel.js`, `results.js`) |
 | `clipboard/` | `clipboard-history` | history, popover, Quick Paste |
 | `stageManager/` | `stage-manager`, `stage-manager-shortcut` | strip, sets, flights (rebuilt in phase 4) |
 | `showDesktop/` | `show-desktop` | top-bar button, Super+D; delegates to Stage Manager |

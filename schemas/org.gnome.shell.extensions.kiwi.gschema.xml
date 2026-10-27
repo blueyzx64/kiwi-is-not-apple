@@ -799,6 +799,46 @@
         <summary>Spotlight: web search engine</summary>
         <description>One of duckduckgo, google, bing, brave, startpage, ecosia, or an https address that contains %s for the search words.</description>
       </key>
+      <key name="spotlight-views" type="b">
+        <default>true</default>
+        <summary>Spotlight: browse views</summary>
+        <description>Show the Applications, Files, Actions and Clipboard buttons next to the empty search field, as on macOS Tahoe. Super+1 to Super+4 open them while Spotlight is open.</description>
+      </key>
+      <key name="spotlight-actions" type="b">
+        <default>true</default>
+        <summary>Spotlight: actions</summary>
+        <description>Search and run actions: Kiwi's own (Show Desktop, Lock Screen, a timer, Do Not Disturb, Dark Mode, Empty Trash, Take Screenshot) and the actions apps list in their .desktop files, such as New Private Window.</description>
+      </key>
+      <key name="spotlight-quick-keys" type="as">
+        <default>[]</default>
+        <summary>Spotlight: Quick Keys</summary>
+        <description>Short aliases typed in Spotlight, as "alias=target". The alias is 1 to 12 lowercase letters or digits; the target is action:ID (show-desktop, lock, timer, dnd, dark-mode, empty-trash, screenshot) or app:DESKTOP-ID. Words after the alias are the action's parameter, as in "tm 5" for a 5-minute timer.</description>
+      </key>
+      <key name="spotlight-history" type="b">
+        <default>true</default>
+        <summary>Spotlight: search history</summary>
+        <description>Remember recent searches and opened results, shown when the field is empty and recalled with the Up arrow, as on macOS. Turning it off clears them.</description>
+      </key>
+      <key name="spotlight-history-queries" type="as">
+        <default>[]</default>
+        <summary>Spotlight: recent searches (internal)</summary>
+        <description>The last searches that opened a result, newest first. Written by Spotlight; cleared by "Clear History".</description>
+      </key>
+      <key name="spotlight-recent-results" type="as">
+        <default>[]</default>
+        <summary>Spotlight: recent results (internal)</summary>
+        <description>The last opened results (apps, files, actions, settings) as small JSON records, newest first. Written by Spotlight; cleared by "Clear History".</description>
+      </key>
+      <key name="spotlight-quick-look" type="b">
+        <default>true</default>
+        <summary>Spotlight: Quick Look</summary>
+        <description>Space on a selected file previews it with GNOME's previewer (Sushi), when it is installed.</description>
+      </key>
+      <key name="spotlight-menu-items" type="b">
+        <default>true</default>
+        <summary>Spotlight: menu items</summary>
+        <description>Search the menu items of the focused app (from Kiwi's menu bar), and Tab scopes the search to them.</description>
+      </key>
 
       <!-- Notch (features/notch) -->
       <key name="notch" type="b">

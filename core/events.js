@@ -46,6 +46,9 @@ export const EVENTS = Object.freeze({
     // runs (the overview, the app grid). appId null means the focused app.
     'app-expose-requested': { appId: 'string|null', source: "string ('corner'|'gesture'|'switcher')" },
     'launchpad-requested': { source: "string ('corner'|'gesture')" },
+    // Spotlight's "Start Timer" action (features/spotlight). The timers' owner (the notch's
+    // live activities, P5) listens; with no listener Spotlight runs a plain notification timer.
+    'timer-start-requested': { seconds: 'number', label: 'string', source: "string ('spotlight')" },
 });
 
 export class EventHub {
