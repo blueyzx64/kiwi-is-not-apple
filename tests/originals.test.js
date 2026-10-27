@@ -168,6 +168,22 @@ test('members: re-added by the user while held is taken out again and returns on
     owner.release();
     eq(gs.values['enabled-extensions'], ['a', DTD]);
 });
+test('members: a change of the list is stripped only when defer runs it, and not after release', () => {
+    const queue = [];
+    const gs = shell(['kiwi@kemma']);
+    const owner = new ListMembersOwner(new OriginalsStore(kiwi()), gs, 'enabled-extensions', [DTD], { defer: fn => queue.push(fn) });
+    owner.sync(true);
+    gs.set_strv('enabled-extensions', ['kiwi@kemma', DTD]);
+    gs.set_strv('enabled-extensions', ['kiwi@kemma', DTD, 'a']);
+    eq(queue.length, 1, 'one strip per burst');
+    eq(gs.values['enabled-extensions'], ['kiwi@kemma', DTD, 'a'], 'untouched meanwhile');
+    queue.shift()();
+    eq(gs.values['enabled-extensions'], ['kiwi@kemma', 'a']);
+    gs.set_strv('enabled-extensions', ['kiwi@kemma', DTD]);
+    owner.release();
+    queue.shift()();
+    eq(gs.values['enabled-extensions'], ['kiwi@kemma', DTD], 'a strip queued before release does nothing');
+});
 test('members: absent member means no store entry and no write', () => {
     const k = kiwi();
     const gs = shell(['kiwi@kemma']);
