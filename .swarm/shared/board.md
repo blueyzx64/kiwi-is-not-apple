@@ -114,3 +114,14 @@ Groups (about 6 agents): (1) dock and minimize effects; (2) Stage Manager and wi
 
 ## Installer integration: PAUSED INDEFINITELY (owner, 2026-10-27)
 No more installer work: no new pieces (Trash-drag uninstall, fly-to-dock, update dot, installing Kiwi itself), no installer cleanups (Launchpad `ctx.installer` / `can_uninstall`), and no verification of installer paths. The merged code stays as it is: it is idle and does nothing when no installer is on the bus. Onboarding and Login Items are not installer work and stay in scope. V6 skips the installer paths.
+
+## Verification results
+- V3 (Mission Control, Launchpad, switcher, hot corners, Show Desktop): no S1.
+  - S2: Launchpad session stalls (p95 168 ms, 4 stalls up to 84 ms; the open has a 94 ms gap before the fade, likely the backdrop load). A slow drag onto an icon swaps instead of making a folder (the 200 ms reflow at launchpad/view.js:49 fires before the centre zone). Folder open and jiggle are not verified.
+  - S3s in V3.md.
+  - MC perf beats the stock overview (p95 26 vs 60 ms, 0 jitter).
+  - Orchestrator screenshot review:
+    - MC (mc-open.png): good structure. The Spaces thumbnails show no wallpaper (grey) and the current Space is a rounded inset card, not full-bleed as on macOS (S3).
+    - Launchpad (lp2-open.png): clean grid, search and dots.
+    - Switcher (switcher.png): matches macOS Cmd-Tab, with the menu bar app name and menus correct.
+- Pending: Launchpad re-test (fast drag to folder, folder open, jiggle) goes to the Launchpad fixer.
