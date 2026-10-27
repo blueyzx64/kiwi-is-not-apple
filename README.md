@@ -9,20 +9,26 @@ Kiwi brings the macOS desktop to GNOME: traffic-light window controls, Spotlight
 
 ## Features
 
-- **Window controls**: close, minimize and maximize as macOS traffic lights in the top bar for the focused window (apps lose their own titlebar buttons; your GNOME button layout is saved and restored exactly), or in the apps' own titlebars, macOS or GNOME style.
-- **Spotlight**: tap Super to search apps, files, settings, the clipboard and the web, and to calculate.
-- **Control Center**: Quick Settings in a macOS layout, with toggles for Kiwi's features.
-- **Notification notch**: notifications, Now Playing, volume and brightness in a pill at the top centre.
-- **Stage Manager** (off by default, as on macOS): recent apps in a strip at the screen edge; sets, side by side, click the wallpaper to show the desktop.
-- **Clipboard history** with Quick Paste (history saved in `~/.local/share/kiwi/clipboard/`; the shortcut is empty by default).
-- **Show Desktop**: a top-bar button and Super+D slide the windows aside.
-- **Liquid Glass**: translucent top bar, menus and overlays.
-- **Rounded window corners**, **full screen in its own Space**, the **calendar card** with notifications in Quick Settings, and overview swipes that stop at the workspaces.
+Kiwi 3 rebuilds the whole macOS desktop on GNOME, with every part working together. Each feature can be turned off in preferences, and the defaults follow macOS.
 
-Coming next (the v3 plan): the macOS menu bar with app menus, Kiwi's own dock with Genie, Mission Control, tiling and the app switcher.
+- **Menu bar**: the logo menu, the focused app's menus (from GTK, Qt and Electron apps, with generic File/Edit/View/Window/Help otherwise), Help search across all menus, Ctrl+F2 to reach the menus from the keyboard, and adaptive text colour over the wallpaper.
+- **Dock**: Kiwi's own dock (replaces Dash to Dock). Recent apps, magnification, launch and attention bounce, badges and progress, Downloads and folder Stacks (Fan, Grid, List), Trash, Open at Login, and **Genie** or Scale minimize.
+- **Windows**: traffic-light controls, Sequoia tiling (drag to edges and corners, keyboard shortcuts, arrangements), the green-button menu, full screen in its own Space, **Split View**, and Hide (Super+H).
+- **Stage Manager** (off by default): rebuilt from scratch with sets, a strip on the side away from the dock, drag to add or remove, and Genie into the strip.
+- **Mission Control** and **App Exposé** (F3, Ctrl+Up, Ctrl+Down), a Spaces bar you can add to, remove from and reorder, and start on the desktop.
+- **Launchpad** with pages, search, folders and jiggle mode, the **app switcher** (Super+Tab, Super+`), touchpad gestures and **hot corners**.
+- **Spotlight**: apps, files, actions, the clipboard and menu items, with `/` filters, Quick Keys, history and Quick Look.
+- **Control Center** with Edit Controls, controls pinned to the menu bar, a status-icon host, menu bar item ordering and Low Power Mode.
+- **Notch**: hover to expand, live activities (media, timers, recording, charging, headphones, downloads, one-time codes), a file shelf and widgets.
+- **Notification Center** (click the clock) and **Focus** modes with schedules.
+- **Desktop widgets** with a gallery.
+- **Screenshots** (Shift+Super+3/4/5) with a toolbar and a floating thumbnail; a volume and brightness pill; glass dialogs; colour filters.
+- **Input**: a Caps Lock and input-source badge, and Emoji & Symbols (Super+Ctrl+Space).
+- **Liquid Glass** (faux, no blur), accent colours, icon styles, a Setup Assistant and a Login Items page.
+- **Clipboard history** with Quick Paste, and rounded window corners.
 
 ### Removed in v3
-The Dash to Dock add-ons, Firefox and Thunderbird theming, the GTK3 hover module (`advanced/`), the small panel tweaks (transparency, styling, lock icons, username, keyboard indicator, battery percentage), the window and overview tweaks, the window title and the panel media menu. On first start Kiwi removes what it had written for them into your files (the Kiwi block in `userChrome.css`, its `user.js` line, its `gtk.css` imports and its `environment.d` entry), and nothing else.
+The Dash to Dock add-ons (Kiwi's own dock replaces Dash to Dock), Firefox and Thunderbird theming, the GTK3 hover module (`advanced/`), the small panel tweaks (transparency, styling, lock icons, username, keyboard indicator, battery percentage), the window and overview tweaks, the window title and the panel media menu. On first start Kiwi removes what it had written for them into your files (the Kiwi block in `userChrome.css`, its `user.js` line, its `gtk.css` imports and its `environment.d` entry), and nothing else.
 
 <details>
 <summary><H2>Recommended Gnome Shell Extensions</H2> <b>(click to open)</b></summary>
@@ -109,10 +115,11 @@ You can also use the Extensions app. To open Kiwi's preferences, run `gnome-exte
 
 The defaults follow macOS; each feature can be turned off in preferences.
 
-- Close, minimize and maximize sit on the left of the top bar.
-- A tap on Super opens Spotlight. The overview is still on Super+A and the touchpad gesture.
-- Notifications, volume and brightness show in the notch at the top centre.
-- Clipboard history is on, with no shortcut until you set one in preferences. Stage Manager is off until you turn it on (Control Center or preferences).
+- The Setup Assistant opens once in preferences (Not Now skips it; About → Run Again).
+- The menu bar shows the logo menu and the focused app's menus; traffic lights sit on the left.
+- Kiwi's dock is at the bottom (Dash to Dock is turned off while it runs and comes back when it stops). Minimize uses Genie.
+- A tap on Super opens Spotlight; F3 opens Mission Control; Super+A or F4 opens Launchpad; clicking the clock opens the Notification Center.
+- Stage Manager, hot corners and magnification are off until you turn them on.
 
 ### Update
 
@@ -149,6 +156,8 @@ Then log out and back in. To restore your old settings, run `dconf load /org/gno
 
 ## Known Issues
 
+- Qt and Electron app menus reach the menu bar only when those apps run under X11 (Xwayland); see `docs/features/app-menus.md`.
+- Spaces are shared across displays, as GNOME does not have per-display workspaces.
 - in multimonitor setup sometimes max number of workspaces are created. See issue #49.
 - *move to fullscreen* can behave unexpectedly due to built in GNOME dynamic workspace management. Disabling it might help.
 - Window controls in the top bar hide the titlebar buttons of GTK client-side decorated windows only. Windows drawn by the compositor (server-side decorations, some Qt/X11 apps) keep their own buttons. Flatpak GTK apps need the overrides under *Flatpak theming* for the hide-titlebar CSS to apply.
