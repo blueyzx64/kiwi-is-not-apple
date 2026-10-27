@@ -171,3 +171,19 @@ No more installer work: no new pieces (Trash-drag uninstall, fly-to-dock, update
     - The OSD pill (o1-osd-volume.png) looks right.
     - CC: a stray empty circle left of the battery row; the Wi-Fi icon shows the disconnected glyph while connected to "Kiwi Home" (S3).
 - FX5 → merged: installer code removed (core/installer*, contract doc, mock, dock Open with Installer, Launchpad installer path, installer-* events). Real Shell run clean (/tmp/x2/runs/20261027-163344-kiwi-rm-installer-f44d).
+- V2 (Stage Manager, tiling, green menu, Split View, Hide):
+  - **S1:** the green menu leaves a stuck modal grab after Esc plus a hover wiggle. Main.modalCount stays 1 and the shortcuts are dead (greenMenu.js ~97, windowControls/index.js 149-160 and 220-243).
+  - S2:
+    - Esc during a tile drag still tiles (windows/drag.js `_end`).
+    - App.activate() doesn't unhide a Super+H app (windows/hide.js; maybe a harness artefact).
+  - S3:
+    - the first SM flight frame jumps;
+    - the green menu square shadow (same root as V4's ghost rect);
+    - the tile outline is a dark slab in light mode;
+    - the strip autohides while the pointer is at x=0 (strip starts at x=3);
+    - Split View exit keeps the half size.
+  - All Stage Manager flows, tiling shortcuts and zones, Split View and Hide otherwise pass. SM swaps p95 22 ms.
+  - Orchestrator review:
+    - SM with 6 windows (sm-01-six.png) is correct apart from the opaque strip panel;
+    - the green menu (w-05) has the ghost shadow box at its left and bottom;
+    - the Split View picker (w5-03) is fine.
