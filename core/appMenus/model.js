@@ -61,6 +61,27 @@ export const WELL_KNOWN = Object.freeze([
     { slot: 'shortcuts', names: ['app.shortcuts', 'app.show-shortcuts', 'win.show-help-overlay', 'app.show-help-overlay'], accel: '<Control>question' },
 ]);
 
+/** DescribeAll replies with more actions than this are not walked (gtkActions.js). */
+export const MAX_DESCRIBE_ALL = 2000;
+
+/**
+ * The well-known action names of one group, without the group prefix: what an app with too
+ * many actions is asked for, one by one.
+ *
+ * @param {'app'|'win'} group
+ * @returns {string[]}
+ */
+export function wellKnownNames(group) {
+    const out = new Set();
+    for (const { names } of WELL_KNOWN) {
+        for (const n of names) {
+            if (n.startsWith(`${group}.`))
+                out.add(n.slice(group.length + 1));
+        }
+    }
+    return [...out];
+}
+
 // Generic commands every app gets: slot -> generic command name. A slot an app's action
 // fills replaces the generic command (app.quit beats Shell.App.request_quit()).
 const GENERIC = Object.freeze({
@@ -180,7 +201,8 @@ export function buildMenus({ appName, actions = [], generic = {}, accels = {}, _
     const filled = slotsFromActions(actions);
     const ctx = { filled, accels };
     const win = !!generic.hasWindow;
-    const fmt = (s, v) => s.replace('%s', v);
+    // A replacer function: an app name with '$&' or '$1' is inserted as is
+    const fmt = (s, v) => s.replace('%s', () => v);
     const item = (slot, label, opts) => slotItem(slot, label, ctx, opts);
 
     const about = item('about', fmt(_('About %s'), appName));
@@ -275,7 +297,7 @@ function workspaceSubmenu(ws, _) {
     const items = [];
     for (let i = 0; i < count; i++) {
         items.push({
-            kind: 'item', id: `workspace:${i}`, label: _('Workspace %d').replace('%d', String(i + 1)),
+            kind: 'item', id: `workspace:${i}`, label: _('Workspace %d').replace('%d', () => String(i + 1)),
             enabled: i !== current, accel: null, checked: i === current,
             command: { provider: 'generic', name: 'move-to-workspace', target: i },
         });

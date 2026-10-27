@@ -153,5 +153,10 @@ test('cache keys separate the app and the window', () => {
     eq(cacheKeys({ gtk: null }), { app: null, window: null });
 });
 
+test('app names with $ patterns are shown as they are', () => {
+    const m = buildMenus({ appName: 'Cash $& $1 $$', _, generic: {} });
+    eq(m[0].items.find(i => i.id === 'quit').label, 'Quit Cash $& $1 $$');
+});
+
 if (failed)
     throw new Error(`${failed} failed`);
