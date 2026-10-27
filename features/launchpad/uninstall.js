@@ -6,10 +6,8 @@
 //   Flatpak apps -> GNOME Software (org.gnome.Software, a DBusActivatable GApplication):
 //                   org.freedesktop.Application.ActivateAction('uninstall', [<app id>], {}).
 //                   GNOME Software runs the removal (and may show its own window).
-//   installer-owned apps -> the owner's installer, io.github.blueyzx64.Installer1 (its planned
-//                   D-Bus API, §4.1): OwnsDesktopId(s) -> (bs), Uninstall(s app_id, s parent),
-//                   signal UninstallFinished(s app_id, s outcome). Behind a capability check:
-//                   nothing is offered while the name is neither owned nor activatable.
+//                   Behind a capability check: nothing is offered while the name is neither
+//                   owned nor activatable.
 //
 // Every call is async with a timeout; an absent service means "no ⓧ", never an error.
 
@@ -19,11 +17,6 @@ import GLib from 'gi://GLib';
 import { flatpakAppId, uninstallRule } from './model.js';
 
 const SOFTWARE = { name: 'org.gnome.Software', path: '/org/gnome/Software' };
-const INSTALLER = {
-    name: 'io.github.blueyzx64.Installer',
-    path: '/io/github/blueyzx64/Installer',
-    iface: 'io.github.blueyzx64.Installer1',
-};
 const CALL_TIMEOUT_MS = 5000;
 
 const cancelled = e => e?.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED);
@@ -43,24 +36,16 @@ function call(bus, name, path, iface, method, params, replyType, cancellable) {
 
 export class UninstallService {
     /**
-     * @param {object} cleanup CleanupRegistry; cancels calls and drops the signal on dispose
-     * @param {{onFinished: (appId: string, outcome: string) => void}} opts
+     * @param {object} cleanup CleanupRegistry; cancels calls on dispose
      */
-    constructor(cleanup, { onFinished }) {
+    constructor(cleanup) {
         this._bus = Gio.DBus.session;
         this._cancellable = new Gio.Cancellable();
-        this._caps = { installer: false, software: false };
-        this._owned = new Map();   // desktop id -> {owned, appId} from the installer
+        this._caps = { software: false };
         cleanup.add(() => this._cancellable.cancel());
-        const sub = this._bus.signal_subscribe(INSTALLER.name, INSTALLER.iface, 'UninstallFinished',
-            INSTALLER.path, null, Gio.DBusSignalFlags.NONE, (_c, _s, _p, _i, _sig, params) => {
-                const [appId, outcome] = params.deepUnpack();
-                onFinished(appId, outcome);
-            });
-        cleanup.add(() => this._bus.signal_unsubscribe(sub));
     }
 
-    /** Which back ends are reachable now ({installer, software}); refreshed by probe(). */
+    /** Which back ends are reachable now ({software}); refreshed by probe(). */
     get capabilities() {
         return { ...this._caps };
     }
@@ -73,13 +58,12 @@ export class UninstallService {
             const [activatable] = (await call(this._bus, 'org.freedesktop.DBus', '/org/freedesktop/DBus',
                 'org.freedesktop.DBus', 'ListActivatableNames', null, '(as)', this._cancellable)).deepUnpack();
             const has = n => names.includes(n) || activatable.includes(n);
-            this._caps = { installer: has(INSTALLER.name), software: has(SOFTWARE.name) };
+            this._caps = { software: has(SOFTWARE.name) };
         } catch (e) {
             if (!cancelled(e))
                 console.warn('[Kiwi] launchpad: cannot list D-Bus names:', e.message);
-            this._caps = { installer: false, software: false };
+            this._caps = { software: false };
         }
-        this._owned.clear();
         return this.capabilities;
     }
 
@@ -87,38 +71,17 @@ export class UninstallService {
     _facts(app) {
         const info = app.get_app_info?.();
         const desktopId = app.get_id();
-        let path = null, xFlatpak = null, managed = false;
+        let path = null, xFlatpak = null;
         try {
             path = info?.get_filename?.() ?? null;
             xFlatpak = info?.get_string?.('X-Flatpak') ?? null;
-            managed = String(info?.get_string?.('X-Installer-Managed') ?? '').toLowerCase() === 'true';
         } catch (_e) {
             // not a desktop entry (window-backed app): nobody can remove it
         }
         return {
             desktopId,
             flatpakId: flatpakAppId({ desktopId, path, xFlatpak }),
-            installerManaged: managed,
-            installerOwned: this._owned.get(desktopId) ?? null,
         };
-    }
-
-    /** Ask the installer which of these desktop ids it owns (RPMs in its ledger). */
-    async learnOwners(apps) {
-        if (!this._caps.installer)
-            return;
-        await Promise.all(apps.map(async app => {
-            const id = app.get_id();
-            try {
-                const reply = await call(this._bus, INSTALLER.name, INSTALLER.path, INSTALLER.iface,
-                    'OwnsDesktopId', new GLib.Variant('(s)', [id]), '(bs)', this._cancellable);
-                const [owned, appId] = reply.deepUnpack();
-                this._owned.set(id, { owned, appId });
-            } catch (e) {
-                if (!cancelled(e))
-                    this._owned.set(id, { owned: false, appId: '' });
-            }
-        }));
     }
 
     /** {backend, appId} for an app that gets an ⓧ, else null. */
@@ -136,9 +99,6 @@ export class UninstallService {
             await call(this._bus, SOFTWARE.name, SOFTWARE.path, 'org.freedesktop.Application', 'ActivateAction',
                 new GLib.Variant('(sava{sv})', ['uninstall', [new GLib.Variant('s', rule.appId)], {}]),
                 null, this._cancellable);
-        } else if (rule.backend === 'installer') {
-            await call(this._bus, INSTALLER.name, INSTALLER.path, INSTALLER.iface, 'Uninstall',
-                new GLib.Variant('(ss)', [rule.appId, '']), null, this._cancellable);
         } else {
             throw new Error(`unknown uninstall back end ${rule.backend}`);
         }

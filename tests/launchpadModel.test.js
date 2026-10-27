@@ -183,19 +183,14 @@ test('flatpakAppId: X-Flatpak first, then the export path', () => {
     eq(flatpakAppId({ desktopId: 'nautilus.desktop', path: '/usr/share/applications/nautilus.desktop', xFlatpak: '' }), null);
 });
 
-test('uninstallRule: installer first, then Flatpak, else nothing', () => {
-    const both = { installer: true, software: true };
-    eq(uninstallRule({ desktopId: 'a.desktop', installerManaged: true, flatpakId: null }, both),
-        { backend: 'installer', appId: 'a' });
-    eq(uninstallRule({ desktopId: 'b.desktop', installerOwned: { owned: true, appId: 'rpm-b' } }, both),
-        { backend: 'installer', appId: 'rpm-b' });
-    eq(uninstallRule({ desktopId: 'c.desktop', flatpakId: 'org.c' }, both), { backend: 'flatpak', appId: 'org.c' });
-    eq(uninstallRule({ desktopId: 'files.desktop', flatpakId: null }, both), null);
+test('uninstallRule: Flatpak apps only, else nothing', () => {
+    const caps = { software: true };
+    eq(uninstallRule({ desktopId: 'c.desktop', flatpakId: 'org.c' }, caps), { backend: 'flatpak', appId: 'org.c' });
+    eq(uninstallRule({ desktopId: 'files.desktop', flatpakId: null }, caps), null);
 });
 
 test('uninstallRule: an absent back end offers nothing', () => {
-    eq(uninstallRule({ desktopId: 'a.desktop', installerManaged: true }, { installer: false, software: true }), null);
-    eq(uninstallRule({ desktopId: 'c.desktop', flatpakId: 'org.c' }, { installer: true, software: false }), null);
+    eq(uninstallRule({ desktopId: 'c.desktop', flatpakId: 'org.c' }, { software: false }), null);
 });
 
 test('jiggleParams: neighbours differ, deterministic', () => {

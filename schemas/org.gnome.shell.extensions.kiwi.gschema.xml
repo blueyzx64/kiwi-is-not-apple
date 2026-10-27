@@ -850,7 +850,7 @@
       <key name="launchpad-delete-apps" type="b">
         <default>true</default>
         <summary>Delete apps in Launchpad</summary>
-        <description>In jiggle mode (hold Alt, or press and hold an icon), show a delete button on apps their owner can remove: Flatpak apps (through GNOME Software) and apps installed by the Installer. No other app gets one.</description>
+        <description>In jiggle mode (hold Alt, or press and hold an icon), show a delete button on apps their owner can remove: Only Flatpak apps (through GNOME Software). No other app gets one.</description>
       </key>
       <key name="dock-launchpad" type="b">
         <default>true</default>

@@ -20,7 +20,7 @@ export function buildPrefs({ settings, _ }) {
         shortcutRow(settings, _, { key: 'launchpad-shortcut', title: _('Shortcut'), example: '<Super>a' }),
         switchRow(settings, _('Show Launchpad in the Dock'), null, 'dock-launchpad'),
         switchRow(settings, _('Delete apps in jiggle mode'),
-            _('Hold Alt, or press and hold an icon. Only Flatpak apps (through GNOME Software) and apps from the Installer can be deleted'),
+            _('Hold Alt, or press and hold an icon. Only Flatpak apps (through GNOME Software) can be deleted'),
             'launchpad-delete-apps'),
     ];
     for (const row of rows) {

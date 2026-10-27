@@ -15,8 +15,7 @@ Status: built in P7. Code: `features/onboarding/` (the Shell trigger and the dec
 | Look | libadwaita cards, not faux glass | Matches Kiwi's glass |
 | Live preview | The Shell applies each choice while the dialog is open (the dock moves as you pick a side) | Same |
 
-The glass look is the only loss, and the installer can later render the same step list in its
-own AppKit-style skin when it is what installed Kiwi (research option B).
+The glass look is the only loss.
 
 ## Flow
 1. `onboarding` is `'new'` after the first enable. `features.js` runs the `onboarding` feature

@@ -2,8 +2,7 @@
 // The Downloads stack: a dock tile showing a pile of the newest files, kept current by a file
 // monitor, that opens as a Fan, a Grid or a List (model.stackView). Files sort by Date Added;
 // packages (.rpm, .flatpakref, .AppImage) carry a badge; partial downloads show greyed, and the
-// tile bounces when one finishes. Files can be opened, dragged onto app icons or the Trash, or
-// opened with the installer from their menu (installer-and-app-lifecycle.md §4.2).
+// tile bounces when one finishes. Files can be opened or dragged onto app icons or the Trash.
 //
 // Shell API: Main.pushModal/popModal, ui/dnd.js, lib/modalSurface.js registerForeign (one
 // Kiwi overlay at a time).
@@ -19,10 +18,8 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as DND from 'resource:///org/gnome/shell/ui/dnd.js';
 
 import { CleanupRegistry } from '../../lib/disposables.js';
-import { DesktopAppInfo } from '../../lib/compat.js';
 import { Glass } from '../../lib/glass.js';
 import { ModalSurface } from '../../lib/modalSurface.js';
-import { INSTALLER_DESKTOP_ID as INSTALLER_ID } from '../../core/installerModel.js';
 import { DockItem } from './items.js';
 import { FAN_MAX, STACK_PAGE, downloadEntry, downloadFinished, fanLayout, isHorizontal, isPartialWrite, sortDownloads, stackView } from './model.js';
 
@@ -486,26 +483,4 @@ class StackPopup {
     destroy() {
         this._cleanup.dispose();
     }
-}
-
-/**
- * "Open with Installer" for a package of this type: offered when the installer is there (its
- * Installer1 API, or its desktop file) and is not already the default handler (then Open does
- * it). `api` says whether to call Installer1.Open; `info` is the desktop file to launch.
- *
- * @param {?string} contentType
- * @param {boolean} apiAvailable core/installer.js `available`
- * @returns {?{api: boolean, info: ?Gio.DesktopAppInfo}}
- */
-export function installerFor(contentType, apiAvailable) {
-    let info = null;
-    try {
-        info = DesktopAppInfo.new(INSTALLER_ID);
-    } catch (_e) {
-        info = null;
-    }
-    if (!info && !apiAvailable)
-        return null;
-    const current = contentType ? Gio.AppInfo.get_default_for_type(contentType, false) : null;
-    return current?.get_id() === INSTALLER_ID ? null : { api: apiAvailable, info };
 }
