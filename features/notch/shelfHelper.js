@@ -12,6 +12,7 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
+import { WindowState } from '../../core/windowState.js';
 import { HELPER, CLEAR_LINE, isHelperWindow, layoutOf, parseEvent, pointerOnNotch } from './shelfHelperModel.js';
 
 export class ShelfHelper {
@@ -53,7 +54,14 @@ export class ShelfHelper {
 
     /** @returns {boolean} true if the window belongs to the helper */
     isHelperWindow(window) {
-        return !!window && isHelperWindow(window.get_wm_class?.(), window.get_title?.());
+        return !!window && (WindowState.has(window, 'kiwiHelper') ||
+            isHelperWindow(window.get_wm_class?.(), window.get_title?.()));
+    }
+
+    // The helper's own window: by the process id (known at once), else by class and title
+    _isMine(window) {
+        const pid = this._proc ? Number(this._proc.get_identifier()) : 0;
+        return (pid > 0 && window.get_pid() === pid) || this.isHelperWindow(window);
     }
 
     /**
@@ -157,17 +165,11 @@ export class ShelfHelper {
     }
 
     _onWindow(window) {
-        if (!this._frame)
+        if (!this._frame || !this._isMine(window))
             return;
-        // The title and class arrive with the first commit: wait for them
-        const id = window.connect('notify::title', () => {
-            window.disconnect(id);
-            this._place(window);
-        });
-        if (this.isHelperWindow(window)) {
-            window.disconnect(id);
-            this._place(window);
-        }
+        // Not a user window for any Kiwi feature (dock, Stage Manager, switchers) from now on
+        WindowState.set(window, 'kiwiHelper', true);
+        this._place(window);
         const check = () => this._check(window);
         window.connect('shown', () => this._place(window));
         window.connect('position-changed', check);
@@ -190,8 +192,10 @@ export class ShelfHelper {
 
     _placeAll() {
         for (const actor of global.get_window_actors()) {
-            if (this.isHelperWindow(actor.meta_window))
+            if (this._isMine(actor.meta_window)) {
+                WindowState.set(actor.meta_window, 'kiwiHelper', true);
                 this._place(actor.meta_window);
+            }
         }
     }
 
@@ -227,6 +231,7 @@ export class ShelfHelper {
         for (const id of this._windows)
             global.display.disconnect(id);
         this._windows = [];
+        WindowState.clearFlag('kiwiHelper');
         const proc = this._proc;
         this._proc = null;
         if (proc) {

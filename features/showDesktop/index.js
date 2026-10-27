@@ -33,6 +33,7 @@ import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 
+import { skipsTaskbar } from '../../core/windowState.js';
 import { PanelLayout } from '../../core/panelLayout.js';
 import { watchReducedMotion } from '../../lib/compat.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
@@ -59,7 +60,7 @@ function facts(win, ws) {
     return {
         type: TYPE_NAMES.get(win.get_window_type()) ?? 'other',
         minimized: win.minimized,
-        skipTaskbar: win.is_skip_taskbar(),
+        skipTaskbar: skipsTaskbar(win),
         onWorkspace: win.located_on_workspace(ws),
         visible: !!actor?.visible,
         opacity: actor?.opacity ?? 0,

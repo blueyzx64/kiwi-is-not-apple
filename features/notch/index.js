@@ -188,6 +188,8 @@ export class NotchFeature {
         // The active Focus mode's icon (features/focus) shows on the Widgets tab's Focus toggle
         this._ctx.events.on('focus-changed', () => this._sync(), cleanup);
         cleanup.connect(global.display, 'in-fullscreen-changed', () => this._syncExternal());
+        // The overview shows the helper's window among the real ones: close the dashboard (and so the helper) first
+        cleanup.connect(Main.overview, 'showing', () => this._dispatch({ type: 'collapse' }));
         this._syncExternal(true);
 
         // The clipboard feature can start or stop after the notch
