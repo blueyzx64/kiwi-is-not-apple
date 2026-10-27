@@ -1,7 +1,7 @@
 // Run: gjs -m tests/spotlightProviderInfo.test.js
 import {
     parseProviderIni, selectProviders, normalizeMeta, externalScore, pickIds,
-} from '../apps/spotlight/providerInfo.js';
+} from '../features/spotlight/providerInfo.js';
 
 let failed = 0;
 function test(name, fn) {

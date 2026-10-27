@@ -13,8 +13,7 @@ function check(name, cond) {
 
 const snap = (over = {}) => ({
     liquid: true, style: 'tinted', blur: 30, tint: 55, highlight: true, refraction: false,
-    surfaces: ['panel', 'menus', 'dock', 'overlays'], performance: false, offInPowersave: true,
-    panelBlur: false, dockBlur: true, ...over,
+    surfaces: ['panel', 'menus', 'dock', 'overlays'], performance: false, offInPowersave: true, ...over,
 });
 const env = (over = {}) => ({ highContrast: false, reducedMotion: false, powerSaver: false,
     dark: true, blurOk: true, ...over });
@@ -22,10 +21,7 @@ const env = (over = {}) => ({ highContrast: false, reducedMotion: false, powerSa
 // surfaces
 check('on: panel wanted', wantsSurface(snap(), 'panel'));
 check('surface list respected', !wantsSurface(snap({ surfaces: ['menus'] }), 'panel'));
-check('off + legacy dock-blur true -> wanted', wantsSurface(snap({ liquid: false }), 'dock'));
-check('off + legacy panel-blur false -> not wanted', !wantsSurface(snap({ liquid: false }), 'panel'));
-check('off: menus never wanted', !wantsSurface(snap({ liquid: false }), 'menus'));
-check('on but legacy key does not add surface', !wantsSurface(snap({ surfaces: [], panelBlur: true }), 'panel'));
+check('off: no surface wanted', ['panel', 'menus', 'dock', 'overlays'].every(s => !wantsSurface(snap({ liquid: false }), s)));
 
 // tiers
 check('tinted blur tier', resolve(snap(), env(), 'panel').tier === 'blur');
@@ -38,11 +34,7 @@ check('no blur available -> light tier, more alpha', (() => {
     const p = resolve(snap(), env({ blurOk: false }), 'dock');
     return p.tier === 'light' && p.alpha > a;
 })());
-check('legacy mode: plain blur 30, no tint', (() => {
-    const p = resolve(snap({ liquid: false }), env(), 'dock');
-    return p.tier === 'blur' && p.legacy && p.radius === 30 && p.alpha === 0;
-})());
-check('legacy ignores high contrast (as before)', resolve(snap({ liquid: false }), env({ highContrast: true }), 'dock').tier === 'blur');
+check('off: every surface is off', resolve(snap({ liquid: false }), env(), 'dock').tier === 'off');
 check('unwanted surface off', resolve(snap({ surfaces: [] }), env(), 'panel').tier === 'off');
 check('reduced motion flag', resolve(snap(), env({ reducedMotion: true }), 'panel').motion === false);
 check('powersave -> still', resolve(snap(), env({ powerSaver: true }), 'panel').still);
@@ -87,7 +79,7 @@ check('migrate: dock off only', JSON.stringify(legacySurfaces({ panelBlur: null,
 check('migrate: both off', JSON.stringify(legacySurfaces({ panelBlur: false, dockBlur: false }))
     === JSON.stringify(['menus', 'overlays']));
 
-check('every field has a key', Object.keys(SETTING_FIELDS).length === 11);
+check('every field has a key', Object.keys(SETTING_FIELDS).length === 9);
 
 // Glass.wants(surface, gs) reads a passed Gio.Settings fresh (no stale snapshot)
 {

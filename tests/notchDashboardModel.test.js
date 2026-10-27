@@ -1,7 +1,7 @@
 // Run: gjs -m tests/notchDashboardModel.test.js
 import {
     dashboardLayout, cardSize, formatTrackTime, trackProgress, seekTarget, formatClock, moreCount, spring, GRID,
-} from '../apps/notch/dashboardModel.js';
+} from '../features/notch/dashboardModel.js';
 
 let failed = 0;
 function test(name, fn) {

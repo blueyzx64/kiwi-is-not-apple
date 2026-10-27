@@ -4,7 +4,7 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
-import { DBusSearch } from '../apps/spotlight/providers/dbusSearch.js';
+import { DBusSearch } from '../features/spotlight/providers/dbusSearch.js';
 
 const BUS = 'org.kiwi.test.SearchProvider';
 const PATH = '/org/kiwi/test/SearchProvider';

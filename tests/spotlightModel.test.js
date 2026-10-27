@@ -3,7 +3,7 @@ import {
     normalize, scoreToken, scoreFields, scoreItem, rank, groupOf, buildSections,
     buildEmptySections, flatten, moveSelection, jumpGroup, locate, reselect, webSearchUrl,
     looksLikeUrl, SearchSession, TOP_HIT_MIN_SCORE, SuperTapTracker, SUPER_TAP_MAX_MS,
-} from '../apps/spotlight/model.js';
+} from '../features/spotlight/model.js';
 
 let failed = 0;
 function test(name, fn) {

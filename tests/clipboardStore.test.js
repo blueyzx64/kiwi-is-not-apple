@@ -2,8 +2,8 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
-import { ClipboardStore } from '../apps/clipboard/store.js';
-import { History, imageFileName, makeEntry, orphanFiles } from '../apps/clipboard/model.js';
+import { ClipboardStore } from '../features/clipboard/store.js';
+import { History, imageFileName, makeEntry, orphanFiles } from '../features/clipboard/model.js';
 
 let failed = 0;
 const loop = new GLib.MainLoop(null, false);
