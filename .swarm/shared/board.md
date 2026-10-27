@@ -12,7 +12,7 @@
 | L6 | sonnet | P3 App switcher (Super+Tab, Super+`) + trackpad gestures + hot corners | kiwi-l6 / v3/l6 | | merged |
 | L7 | sonnet | P3 Launchpad (folders, jiggle delete with installer/Flatpak rules) + click-wallpaper/Show Desktop wiring + full screen Split View | kiwi-l7 / v3/l7-launchpad | | merged |
 | L8 | sonnet | P4 Stage Manager v3 rebuild on core (sets, strip, other-side rule with dock, scenario + fuzz suites) | kiwi-l8 / v3/l8-stage | | done, held |
-| L9 | sonnet | P5 Notch v3: hover, tabs, live activities, file shelf, perf | kiwi-l9 / v3/l9-notch | | started |
+| L9 | sonnet | P5 Notch v3: hover, tabs, live activities, file shelf, perf | kiwi-l9 / v3/l9-notch | | merged |
 | L10 | sonnet | P5 Notification Center column (clock click), Focus modes, time-sensitive | kiwi-l10 / v3/l10-nc | | started |
 | L11 | sonnet | P5 Widget model + desktop widget layer + gallery + built-in widgets | kiwi-l11 / v3/l11-widgets | | started |
 | L12 | sonnet | P6 App menu providers: GTK menubar, DBusMenu registrar, AT-SPI, Help search | kiwi-l12 / v3/l12 | P1-menubar | started |
@@ -97,3 +97,4 @@ Groups (about 6 agents): (1) dock and minimize effects; (2) Stage Manager and wi
 - H13 (now): build the frame-time and jitter probes into the harness library so the leads' final runs and the verifiers can use them.
 - L8: resumed to fix its 3 open failures before it merges.
 - Next leads: L10, L12 (running with L9, L8 and H13); then L11, L14, L15.
+- L9 → merged (hover expand, tabs, live activities, file shelf via Mutter DnD, core/timers.js `ctx.timers`). The orchestrator dropped L9's own `notch-osd` part in favour of L2's core/osd routing. For verification: drop-onto-notch was not confirmed in the final full run (it was in a notch-only run); the expand animation's worst frame is 29 ms in software rendering; the source app shows a drop onto the notch as a cancelled drag.
