@@ -1,6 +1,6 @@
 // Run: gjs -m tests/menuBarModel.test.js
 import {
-    chooseText, touchesBar, barLook, parseOsRelease, parseCpuInfo, parseMemTotal,
+    chooseText, touchesBar, barLook, parseOsRelease, systemLogoSource, parseCpuInfo, parseMemTotal,
     formatBytes, deviceModel, chassisIcon, gpuNames, parseRecentXbel, forceQuitRows,
     privacyDots, micApps, confirmationHolds, fillPlaceholders, fitMenus,
 } from '../features/menuBar/model.js';
@@ -211,6 +211,12 @@ test('privacy dots and mic apps', () => {
     eq(privacyDots({ mic: false, camera: false, screen: false }), []);
     eq(micApps([{ appId: 'org.gnome.VolumeControl', name: 'Settings' }, { appId: 'x', name: 'Recorder' },
         { appId: 'y', name: 'Recorder' }, { appId: 'z', name: null }]), ['Recorder', 'z']);
+});
+
+test('systemLogoSource bundles a symbolic mark for Fedora and uses the theme elsewhere', () => {
+    eq(systemLogoSource('fedora-logo-icon'), { file: 'icons/fedora-logo-symbolic.svg' });
+    eq(systemLogoSource('ubuntu-logo-icon').names,
+        ['ubuntu-logo-icon-symbolic', 'ubuntu-logo-symbolic', 'start-here-symbolic']);
 });
 
 if (failed)

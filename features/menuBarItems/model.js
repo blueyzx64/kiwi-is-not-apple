@@ -7,6 +7,8 @@
 //   sni:<Id>        a StatusNotifierItem (an app's tray icon), hosted by Kiwi or AppIndicator
 //   stock:<role>    a GNOME status-area item Kiwi may hide or move (the input-source menu)
 
+import { MAX_DEPTH, MAX_ITEMS, stripMnemonic } from '../../core/appMenus/nativeModel.js';
+
 // Pinned controls: lib/menuBarPins.js (shared with the Control Center editor and the prefs)
 
 // ---- status-item host -----------------------------------------------------------------
@@ -120,28 +122,34 @@ export function argbToRgba(argb) {
     return out;
 }
 
-/** A DBusMenu label without its mnemonic underscore ("_File" -> "File", "a__b" -> "a_b"). */
-export function stripMnemonic(label) {
-    return String(label ?? '').replace(/__|_/g, m => m === '__' ? '_' : '');
-}
-
 /**
  * A DBusMenu layout node, recursively unpacked ([id, {props}, [children]]), as a menu tree.
- * Invisible items are dropped; separators kept, but never first, last or doubled.
+ * Invisible items are dropped; separators kept, but never first, last or doubled. At most
+ * MAX_ITEMS items are read and submenus nest MAX_DEPTH deep.
  *
  * @returns {{id: number, label: string, separator: boolean, enabled: boolean,
  *   toggle: ''|'checkmark'|'radio', checked: boolean, icon: ?string, children: object[]}}
  */
 export function parseMenu(node) {
+    return unpackMenu(node, 0, { left: MAX_ITEMS });
+}
+
+// Bounded like core/appMenus: an app cannot make the Shell build an endless tree
+function unpackMenu(node, depth, budget) {
     const [id, props = {}, children = []] = node ?? [0, {}, []];
     const kids = [];
-    for (const child of children ?? []) {
-        const item = parseMenu(child);
-        if (!item.visible)
-            continue;
-        if (item.separator && (!kids.length || kids[kids.length - 1].separator))
-            continue;
-        kids.push(item);
+    if (depth < MAX_DEPTH) {
+        for (const child of children ?? []) {
+            if (budget.left <= 0)
+                break;
+            budget.left--;
+            const item = unpackMenu(child, depth + 1, budget);
+            if (!item.visible)
+                continue;
+            if (item.separator && (!kids.length || kids[kids.length - 1].separator))
+                continue;
+            kids.push(item);
+        }
     }
     while (kids.length && kids[kids.length - 1].separator)
         kids.pop();

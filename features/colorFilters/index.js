@@ -3,19 +3,22 @@
 // colour tint on the whole screen, like macOS Accessibility > Display > Colour Filters.
 //
 // GNOME 50 has no colour-filter keys (org.gnome.desktop.a11y.* has none; the magnifier's
-// colour effects only act on its zoom region), so Kiwi puts a shader effect on every child of
-// Main.uiGroup: window_group (the wallpaper and the windows) and each piece of chrome. The
-// effects hand out no paint volume (lib/compat.js), so any damage redraws a whole child: with
-// a volume Clutter repaints only the damaged part into the effect's cached picture and the
-// rest of it, the wallpaper above all, stays black (also seen with the stock DesaturateEffect
-// on global.stage). Each effect is a 3x3 colour matrix (model.js) given as nine float
-// uniforms, so a change of type, intensity or hue costs a uniform update, not a recompile.
-// Children that come later get one; all go on disable.
+// colour effects only act on its zoom region), so Kiwi puts one shader effect on Main.uiGroup,
+// the parent of the wallpaper, the windows and all the chrome. One effect means one offscreen
+// picture and one attach at enable, when the group already has its size (an effect added to a
+// 0x0 child makes Cogl assert on its viewport). With a partial redraw clip Clutter culls every
+// descendant outside the damage while the effect clears its picture, so after a window
+// animation the rest, the wallpaper above all, stayed empty. So the stage's paint-view handler
+// widens each frame's clip to the whole view, which only enlarges frames that are drawn
+// anyway: an idle desktop stays idle. The effect is a 3x3 colour matrix (model.js) given as
+// nine float uniforms, so a change of type, intensity or hue costs a uniform update, not a
+// recompile.
 //
-// Shell API: Main.uiGroup child-added / child-removed; lib/compat.js createShaderEffect
-// (48-51 shader APIs).
+// Shell API: Main.uiGroup effects, global.stage paint-view; lib/compat.js
+// createShaderEffect (48-51 shader APIs).
 
 import GObject from 'gi://GObject';
+import Mtk from 'gi://Mtk';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import { KiwiSettings } from '../../lib/settings.js';
@@ -47,11 +50,15 @@ export class ColorFilters {
     constructor(ctx, cleanup) {
         this._ctx = ctx;
         this._cleanup = cleanup;
-        this._effects = new Map();   // child of uiGroup -> its effect
+        this._effect = null;
         this._values = null;         // the nine uniform values now in force
     }
 
     enable() {
+        const effect = createShaderEffect({ declarations: DECLARATIONS, effectFn: EFFECT_FN });
+        if (!effect)
+            return;
+        this._effect = effect;
         const ks = new KiwiSettings(this._ctx.settings);
         ks.attach(this._cleanup);
         const sync = () => {
@@ -61,45 +68,27 @@ export class ColorFilters {
                 hue: ks.int('color-filter-hue'),
             });
             this._values = m.flat();
-            for (const effect of this._effects.values()) {
-                this._setUniforms(effect);
-                effect.queue_repaint();
-            }
+            this._setUniforms(effect);
+            effect.queue_repaint();
         };
         sync();
         ks.watch(KEYS, sync);
         const group = Main.uiGroup;
-        for (const child of group.get_children())
-            this._attach(child);
-        this._cleanup.connect(group, 'child-added', (_g, child) => this._attach(child));
-        this._cleanup.connect(group, 'child-removed', (_g, child) => this._detach(child));
+        group.add_effect_with_name(EFFECT_NAME, effect);
+        // Widen each frame's redraw clip to the whole view, before it is painted
+        this._cleanup.connect(global.stage, 'paint-view', (_stage, _view, clip) => {
+            const { width, height } = global.stage;
+            clip.union(Mtk.Region.create_rectangle(
+                new Mtk.Rectangle({ x: 0, y: 0, width: Math.ceil(width), height: Math.ceil(height) })));
+        });
         this._cleanup.add(() => {
-            for (const child of [...this._effects.keys()])
-                this._detach(child);
+            group.remove_effect(effect);
+            this._effect = null;
         });
     }
 
     disable() {
         // Everything is in the cleanup registry
-    }
-
-    _attach(child) {
-        if (this._effects.has(child))
-            return;
-        const effect = createShaderEffect({ declarations: DECLARATIONS, effectFn: EFFECT_FN });
-        if (!effect)
-            return;
-        this._setUniforms(effect);
-        this._effects.set(child, effect);
-        child.add_effect_with_name(EFFECT_NAME, effect);
-    }
-
-    _detach(child) {
-        const effect = this._effects.get(child);
-        if (!effect)
-            return;
-        this._effects.delete(child);
-        child.remove_effect(effect);
     }
 
     _setUniforms(effect) {

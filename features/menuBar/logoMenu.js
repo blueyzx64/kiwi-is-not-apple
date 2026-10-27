@@ -20,7 +20,7 @@ import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as SystemActions from 'resource:///org/gnome/shell/misc/systemActions.js';
 
-import { fillPlaceholders, parseOsRelease, parseRecentXbel } from './model.js';
+import { fillPlaceholders, parseOsRelease, parseRecentXbel, systemLogoSource } from './model.js';
 import { menuHeading, menuItem } from './menuItems.js';
 import { readText } from './systemInfo.js';
 
@@ -107,14 +107,20 @@ class KiwiLogoMenu extends PanelMenu.Button {
             this._icon.gicon = Gio.FileIcon.new(this._ctx.extension.dir.resolve_relative_path(KIWI_LOGO));
             return;
         }
-        // The system's logo: os-release LOGO, symbolic first (follows the bar's text colour)
-        const names = logoNames('fedora-logo-icon');
-        this._icon.gicon = Gio.ThemedIcon.new_from_names(names);
+        // The system's logo: os-release LOGO, symbolic so it follows the bar's text colour
+        this._setSystemLogo('fedora-logo-icon');
         readText('/etc/os-release', this._cancellable).then(text => {
             const logo = parseOsRelease(text ?? '').LOGO;
             if (logo && !this._cancellable.is_cancelled() && this._icon)
-                this._icon.gicon = Gio.ThemedIcon.new_from_names(logoNames(logo));
+                this._setSystemLogo(logo);
         });
+    }
+
+    _setSystemLogo(logo) {
+        const source = systemLogoSource(logo);
+        this._icon.gicon = source.file
+            ? Gio.FileIcon.new(this._ctx.extension.dir.resolve_relative_path(source.file))
+            : Gio.ThemedIcon.new_from_names(source.names);
     }
 
     _fillRecent() {
@@ -157,10 +163,3 @@ class KiwiLogoMenu extends PanelMenu.Button {
         });
     }
 });
-
-// Symbolic names only: the full-colour logo does not follow the bar's text colour, so it
-// vanishes on a wallpaper of its own colour (the Fedora blue on a blue one)
-function logoNames(logo) {
-    return [`${logo}-symbolic`, logo.replace(/-icon$/, '-symbolic'), 'start-here-symbolic'];
-}
-

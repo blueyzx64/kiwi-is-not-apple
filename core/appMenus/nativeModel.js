@@ -21,6 +21,9 @@ export const MAX_REPLY_BYTES = 1024 * 1024;
 /** At most this many items are built for one app's menus. */
 export const MAX_ITEMS = 3000;
 
+/** Submenus nest at most this deep. */
+export const MAX_DEPTH = 8;
+
 /** Drop a mnemonic: '_File' -> 'File', '__init' -> '_init' (GTK, and Qt through DBusMenu). */
 export function stripMnemonic(label) {
     return String(label ?? '').replace(/_(_)?/g, (_m, u) => u ?? '');
@@ -297,7 +300,7 @@ function itemFromLayout([id, props, children], provider, depth, budget) {
         return SEP;
     const label = stripMnemonic(props.label ?? '');
     const enabled = props.enabled !== false;
-    if ((props['children-display'] === 'submenu' || children?.length) && depth < 8) {
+    if ((props['children-display'] === 'submenu' || children?.length) && depth < MAX_DEPTH) {
         const inner = tidy((children ?? []).map(c => itemFromLayout(c, provider, depth + 1, budget)));
         return { kind: 'submenu', id: `${provider}:${id}`, label, enabled, items: inner, nativeId: id };
     }
@@ -335,7 +338,7 @@ export const ROLE = Object.freeze({
 });
 
 /** AtspiStateType bits (two uint32 words from GetState). */
-export const STATE = Object.freeze({ ACTIVE: 1, CHECKED: 4, ENABLED: 8, SENSITIVE: 24, SHOWING: 25, VISIBLE: 30 });
+export const STATE = Object.freeze({ ACTIVE: 1, CHECKED: 4, ENABLED: 8, SENSITIVE: 24, SHOWING: 25, VISIBLE: 30, PRESSED: 20 });
 
 export function hasState(states, bit) {
     const word = states?.[bit >> 5] ?? 0;
@@ -343,7 +346,7 @@ export function hasState(states, bit) {
 }
 
 const MENU_ROLES = new Set([ROLE.MENU, ROLE.POPUP_MENU]);
-const ITEM_ROLES = new Set([ROLE.MENU_ITEM, ROLE.CHECK_MENU_ITEM, ROLE.RADIO_MENU_ITEM, ROLE.MENU]);
+export const ITEM_ROLES = new Set([ROLE.MENU_ITEM, ROLE.CHECK_MENU_ITEM, ROLE.RADIO_MENU_ITEM, ROLE.MENU]);
 
 /** Depth-first search for the first node with a role (null when none). */
 export function findRole(node, role, depth = 0, maxDepth = 24) {
@@ -383,6 +386,27 @@ export function findPrimaryMenuButton(frame) {
     return out[0] ?? null;
 }
 
+/**
+ * The accelerator of an Action key binding ('N;;Control+N': mnemonic;;shortcut) as a GTK
+ * accelerator string ('<Control>n'); null when it has none.
+ */
+export function atspiAccel(binding) {
+    const combo = (binding ?? '').split(';;')[1]?.trim();
+    if (!combo)
+        return null;
+    const parts = combo.split('+');
+    const key = parts.pop();
+    const mods = parts.map(m => `<${m}>`).join('');
+    const names = { '?': 'question', ',': 'comma', '+': 'plus', '-': 'minus', '.': 'period' };
+    return mods + (names[key] ?? (key.length === 1 ? key.toLowerCase() : key));
+}
+
+/** The node a relation set says labels this one ([bus, path]) or null. */
+export function labelTarget(relations, LABELLED_BY = 2) {
+    const rel = (relations ?? []).find(r => r[0] === LABELLED_BY);
+    return rel?.[1]?.[0] ?? null;
+}
+
 /** Path of labels from the root to a node: the key to find an item again after a reopen. */
 function atspiItems(node, provider, path, depth) {
     const out = [];
@@ -401,7 +425,7 @@ function atspiItems(node, provider, path, depth) {
                 out.push(...atspiItems(c, provider, path, depth + 1));
             continue;
         }
-        const label = (c.name ?? '').trim();
+        const label = (c.label || c.name || '').trim();
         if (!label)
             continue;
         const enabled = c.states ? hasState(c.states, STATE.SENSITIVE) || hasState(c.states, STATE.ENABLED) : true;
@@ -414,7 +438,7 @@ function atspiItems(node, provider, path, depth) {
         const checkable = c.role === ROLE.CHECK_MENU_ITEM || c.role === ROLE.RADIO_MENU_ITEM;
         out.push({
             kind: 'item', id: `${provider}:${subPath.join('/')}`, label, enabled,
-            accel: c.accel ?? null,
+            accel: c.accel ?? atspiAccel(c.keyBinding),
             checked: checkable ? hasState(c.states, STATE.CHECKED) : null,
             radio: c.role === ROLE.RADIO_MENU_ITEM,
             command: { provider, path: subPath, ref: c.ref ?? null },

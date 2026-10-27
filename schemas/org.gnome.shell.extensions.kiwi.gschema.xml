@@ -65,7 +65,7 @@
       <key name="menubar-atspi-popovers" type="b">
         <default>false</default>
         <summary>Read primary menus of apps without a menu bar (experimental)</summary>
-        <description>With accessibility menus on, open the primary menu (the ☰ button) of apps without a menu bar out of sight, read its items into the app menu, and remember them per app. The app sees its menu open and close.</description>
+        <description>With accessibility menus on, open the primary menu (the ☰ button) of apps without a menu bar out of sight, read its items into the app menu, and remember them per app. The app sees its menu open and close. Needs the accessibility bus, which GNOME starts on demand; Kiwi never changes the toolkit-accessibility setting.</description>
       </key>
       <key name="menubar-transparent" type="b">
         <default>true</default>

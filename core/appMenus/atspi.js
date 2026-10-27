@@ -29,7 +29,7 @@ import Gio from 'gi://Gio';
 import Meta from 'gi://Meta';
 
 import {
-    ROLE, STATE, atspiPopoverItems, atspiToMenus, findPrimaryMenuButton, findRole, hasState,
+    ROLE, STATE, ITEM_ROLES, atspiPopoverItems, atspiToMenus, findPrimaryMenuButton, findRole, hasState, labelTarget,
 } from './nativeModel.js';
 
 const ACCESSIBLE = 'org.a11y.atspi.Accessible';
@@ -38,9 +38,19 @@ const REGISTRY = 'org.a11y.atspi.Registry';
 const ROOT = '/org/a11y/atspi/accessible/root';
 const TIMEOUT_MS = 1500;
 const NODE_BUDGET = 1500;
-const MAX_DEPTH = 24;
+const MAX_DEPTH = 48; // GTK 4 nests a popover item about 30 levels deep
+const OPEN_POLLS = 10;
+const OPEN_POLL_MS = 150;
+const CLOSE_WAIT_MS = 200;
 const POPUP_WAIT_MS = 1500; // fail-safe only: the read waits for the popup's first frame
 const POPUP_TYPES = new Set([Meta.WindowType.DROPDOWN_MENU, Meta.WindowType.POPUP_MENU, Meta.WindowType.MENU]);
+
+function sleep(ms) {
+    return new Promise(resolve => GLib.timeout_add(GLib.PRIORITY_DEFAULT, ms, () => {
+        resolve();
+        return GLib.SOURCE_REMOVE;
+    }));
+}
 
 function call(conn, dest, path, iface, method, params, replyType, cancellable, flags = Gio.DBusCallFlags.NO_AUTO_START) {
     return new Promise((resolve, reject) => {
@@ -180,17 +190,17 @@ export class AtspiProvider {
 
     // The window's frame: the app's top-level whose name is the window title, else the active
     // one; then the whole frame, walked within the node budget
-    async _frame(conn, app, title, cancellable) {
+    async _frame(conn, app, title, cancellable, items = false) {
         const top = await this._walk(conn, app.name, app.path, cancellable, 1);
         const frames = (top?.children ?? []).filter(n => n.role === ROLE.FRAME || n.role === ROLE.WINDOW);
         const frame = frames.find(f => f.name === title) ??
             frames.find(f => hasState(f.states, STATE.ACTIVE)) ?? frames[0] ?? null;
-        return frame ? this._walk(conn, app.name, frame.ref, cancellable) : null;
+        return frame ? this._walk(conn, app.name, frame.ref, cancellable, MAX_DEPTH, items) : null;
     }
 
     // Walk from a node: role, name, states and children of every node, in parallel per level,
     // within a node budget
-    async _walk(conn, name, path, cancellable, maxDepth = MAX_DEPTH) {
+    async _walk(conn, name, path, cancellable, maxDepth = MAX_DEPTH, items = false) {
         let budget = NODE_BUDGET;
         const visit = async (p, depth) => {
             if (budget-- <= 0 || depth > maxDepth)
@@ -206,9 +216,43 @@ export class AtspiProvider {
             const kids = await Promise.all((children ?? [])
                 .filter(([n]) => n === name)
                 .map(([, cp]) => visit(cp, depth + 1)));
-            return { ref: p, role, name: label, states, children: kids.filter(Boolean) };
+            const node = { ref: p, role, name: label, states, children: kids.filter(Boolean) };
+            // GTK 4 menu items have no name: their label is a separate node (relation
+            // labelled-by) and the shortcut is the Action's key binding
+            if (items && ITEM_ROLES.has(role)) {
+                const [text, binding] = await Promise.all([
+                    this._labelText(conn, name, p, cancellable), this._keyBinding(conn, name, p, cancellable)]);
+                node.label = text;
+                node.keyBinding = binding;
+            }
+            return node;
         };
         return visit(path, 0);
+    }
+
+    async _labelText(conn, name, path, cancellable) {
+        try {
+            const reply = await call(conn, name, path, ACCESSIBLE, 'GetRelationSet', null, '(a(ua(so)))', cancellable);
+            const [rels] = reply.recursiveUnpack();
+            const target = labelTarget(rels);
+            if (!target)
+                return null;
+            const text = await call(conn, target[0], target[1], 'org.a11y.atspi.Text', 'GetText',
+                new GLib.Variant('(ii)', [0, -1]), '(s)', cancellable);
+            return text.deepUnpack()[0] || null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    async _keyBinding(conn, name, path, cancellable) {
+        try {
+            const reply = await call(conn, name, path, ACTION, 'GetKeyBinding', new GLib.Variant('(i)', [0]), '(s)',
+                cancellable);
+            return reply.deepUnpack()[0] || null;
+        } catch (e) {
+            return null;
+        }
     }
 
     _doAction(conn, name, path) {
@@ -230,16 +274,21 @@ export class AtspiProvider {
             try {
                 await this._doAction(conn, app.name, button.ref);
                 await popup.shown;
-                const sub = await this._walk(conn, app.name, button.ref, this._cancellable);
-                let menu = findRole(sub, ROLE.MENU) ?? findRole(sub, ROLE.POPUP_MENU);
-                if (!menu) {
-                    // Some toolkits parent the popover to the window, not to its button
-                    const all = await this._frame(conn, app, target.title, this._cancellable);
-                    menu = findShowingMenu(all);
+                // The items are built a moment after the popover maps: poll (bounded)
+                // until the menu has labelled items
+                let menu = null;
+                for (let i = 0; i < OPEN_POLLS && !menu; i++) {
+                    // GTK 4 parents the popover to the GtkMenuButton, the toggle's parent: read the frame
+                    const all = await this._frame(conn, app, target.title, this._cancellable, true);
+                    const found = findShowingMenu(all);
+                    if (found && atspiPopoverItems(found).length)
+                        menu = found;
+                    else
+                        await sleep(OPEN_POLL_MS);
                 }
                 const result = menu ? await read(menu) : null;
                 if (closeAfter || !result)
-                    await this._doAction(conn, app.name, button.ref).catch(() => {});
+                    await this._close(conn, app, button);
                 return result;
             } finally {
                 popup.release();
@@ -251,6 +300,19 @@ export class AtspiProvider {
         } finally {
             if (this._busy === run)
                 this._busy = null;
+        }
+    }
+
+    // Close the popover through the button's action and confirm by its pressed state
+    async _close(conn, app, button) {
+        for (let i = 0; i < 3; i++) {
+            await this._doAction(conn, app.name, button.ref).catch(() => {});
+            await sleep(CLOSE_WAIT_MS);
+            const reply = await call(conn, app.name, button.ref, ACCESSIBLE, 'GetState', null, '(au)', this._cancellable)
+                .catch(() => null);
+            const states = reply?.deepUnpack()[0];
+            if (!states || !hasState(states, STATE.PRESSED))
+                return;
         }
     }
 
@@ -275,6 +337,7 @@ export class AtspiProvider {
                 return;
             actor.opacity = 0;
             hidden.add(actor);
+            actor.connect('destroy', () => hidden.delete(actor));
             const id = actor.connect('first-frame', () => {
                 actor.disconnect(id);
                 resolveShown();
@@ -289,10 +352,8 @@ export class AtspiProvider {
                 failSafeId = 0;
                 resolveShown();
                 // Popups that are still there (an item opened a submenu) show again
-                for (const actor of hidden) {
-                    if (!actor.is_destroyed?.())
-                        actor.opacity = 255;
-                }
+                for (const actor of hidden)
+                    actor.opacity = 255;
             },
         };
     }
@@ -315,9 +376,9 @@ function findByPath(menu, path) {
             for (const c of n.children ?? []) {
                 if (hit)
                     return;
-                if ((c.name ?? '').trim() === label)
+                if ((c.label || c.name || '').trim() === label)
                     hit = c;
-                else if (!c.name)
+                else if (!c.name && !c.label)
                     look(c);
             }
         };
