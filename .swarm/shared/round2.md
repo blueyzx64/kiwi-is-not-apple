@@ -23,3 +23,13 @@ The owner tested 3.0.0 on real hardware (Fedora 44, GNOME 50) and reported the b
 - **Fedora logo:** use the real Fedora logo from the system (fedora-logos, for example `fedora-logo-icon`), recoloured to match the bar's text colour; don't bundle Fedora's artwork. Keep Kiwi's own mark as the fallback.
 - **Notch file shelf drag-out:** build the helper app in this repo (helpers/, an RPM spec, its own make target; it is not shipped in the extension zip).
 - **Drag to the top-centre of the screen:** shows the tiling layout picker (as on the green-button hover); drop on a layout to tile. Dragging to the top edge elsewhere fills (maximizes) immediately and reliably.
+
+## Owner decisions, part 2: window controls and title bars (for R2A)
+1. **Where the controls show:**
+   - **App with no controls of its own:** a plain title bar showing only the title and buttons (server-side frames, plain GTK3 title bars). Its window controls always show in Kiwi's top bar while it is focused.
+   - **App with its own controls:** a GTK4/libadwaita or GTK3 header bar with app buttons. Its controls stay on the app while it neither touches the top bar nor is maximized.
+   - **When a window is maximized, full screen, or touching the top bar:** its controls move to the top bar and its own buttons are hidden for that window only.
+2. **"Touching the top bar"** means every layout in the green-button menu whose top edge is the work area's top: left and right halves, top halves and quarters, Fill, and every arrangement. It also covers a window dragged up so its top edge sits against the bar. The rule is per window: other windows keep their own buttons.
+   - GTK only knows "tiled" states when Mutter tiles the window, so investigate whether Kiwi's tiling can set Mutter's tiled state on GNOME 50 so apps hide their own buttons via their CSS state.
+   - If that's impossible, find the best per-window alternative and report the limits.
+3. **Optional setting "Hide title bars of maximized windows", OFF by default.** It acts only where it's safe: server-side and X11 frames (via _MOTIF_WM_HINTS on Xwayland windows) and plain GTK3 title bars (CSS). It never hides GTK4/libadwaita header bars.
