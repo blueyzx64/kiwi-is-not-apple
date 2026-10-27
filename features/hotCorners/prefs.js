@@ -33,11 +33,11 @@ export function buildPrefs({ settings, _ }) {
     for (const corner of CORNERS) {
         const row = new Adw.ExpanderRow({ title: cornerTitles[corner] });
         const action = comboRow(settings, {
-            title: _('Action'), key: actionKey(corner),
+            title: _('Action'), subtitle: _('What the corner does'), key: actionKey(corner),
             values: [...DESKTOP_ACTIONS], labels: DESKTOP_ACTIONS.map(a => actionLabels[a]),
         });
         const modifier = comboRow(settings, {
-            title: _('Only While Holding'), key: modifierKey(corner),
+            title: _('Only While Holding'), subtitle: _('A key that must be down, so the corner never fires by accident'), key: modifierKey(corner),
             values: [...MODIFIERS], labels: MODIFIERS.map(m => modifierLabels[m]),
         });
         const sync = () => {

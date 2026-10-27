@@ -14,7 +14,7 @@ import St from 'gi://St';
 import * as SwitcherPopup from 'resource:///org/gnome/shell/ui/switcherPopup.js';
 
 import { Glass } from '../../lib/glass.js';
-import { indexAfterRemoval, initialIndex, keyAction, step } from './model.js';
+import { indexAfterRemoval, initialIndex, keyAction, pickAfterHide, step } from './model.js';
 
 const KEY_NAMES = new Map([
     [Clutter.KEY_Tab, 'Tab'], [Clutter.KEY_ISO_Left_Tab, 'ISO_Left_Tab'],
@@ -75,6 +75,7 @@ class KiwiAppSwitcherPopup extends SwitcherPopup.SwitcherPopup {
         this.add_style_class_name('kiwi-switcher-popup');
         this._callbacks = callbacks;
         this._frontIsFirst = frontIsFirst;
+        this._hidden = new Set(); // apps H hid while the panel was open
 
         this._switcherList = new SwitcherPopup.SwitcherList(true);
         this._switcherList.add_style_class_name('kiwi-switcher');
@@ -130,8 +131,10 @@ class KiwiAppSwitcherPopup extends SwitcherPopup.SwitcherPopup {
                 this._callbacks.quit(app);
             return Clutter.EVENT_STOP;
         case 'hide':
-            if (app)
+            if (app) {
+                this._hidden.add(app);
                 this._callbacks.hide(app);
+            }
             return Clutter.EVENT_STOP;
         case 'expose':
             this.fadeAndDestroy();
@@ -149,7 +152,10 @@ class KiwiAppSwitcherPopup extends SwitcherPopup.SwitcherPopup {
     }
 
     _finish(timestamp) {
-        const app = this._items[this._selectedIndex]?.app;
+        // Releasing Super right after H keeps that app hidden: the front-most app that was not
+        // hidden gets the focus instead (pickAfterHide)
+        const index = pickAfterHide(this._selectedIndex, this._items.map(i => this._hidden.has(i.app)));
+        const app = this._items[index]?.app;
         const [, , mods] = global.get_pointer();
         // Pop the grab before activating, so the activated window gets the keyboard focus
         super._finish(timestamp);

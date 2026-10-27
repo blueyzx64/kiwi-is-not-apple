@@ -1,6 +1,6 @@
 // Run: gjs -m tests/switcherModel.test.js
 import {
-    ICON_SIZES, iconSizeFor, indexAfterRemoval, initialIndex, keyAction, planActivation, step,
+    ICON_SIZES, iconSizeFor, indexAfterRemoval, initialIndex, keyAction, pickAfterHide, planActivation, step,
     switcherApps,
 } from '../features/switcher/model.js';
 
@@ -84,6 +84,13 @@ test('planActivation: minimized windows stay minimized unless asked (Alt)', () =
 test('planActivation: a hidden app comes back (all its hidden windows)', () => {
     eq(planActivation([W(1, 0, true, true), W(2, 0, true, true), W(3, 0, true)], OPTS),
         { kind: 'focus', windowId: 1, unhide: [1, 2] });
+});
+
+test('pickAfterHide: releasing after H keeps the hidden app hidden', () => {
+    eq(pickAfterHide(1, [false, false, false]), 1);
+    eq(pickAfterHide(1, [false, true, false]), 0);
+    eq(pickAfterHide(0, [true, false]), 1);
+    eq(pickAfterHide(0, [true, true]), -1);
 });
 
 test('iconSizeFor: largest size that fits', () => {

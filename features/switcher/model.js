@@ -56,6 +56,20 @@ export function indexAfterRemoval(index, removed, countAfter) {
 }
 
 /**
+ * The app to activate at release when H hid some apps while the panel was open: the
+ * selected app unless it was just hidden, else the most recent one that was not.
+ *
+ * @param {number} index the selection
+ * @param {boolean[]} hidden per item: H hid it while the panel was open
+ * @returns {number} -1: every app was hidden, activate nothing
+ */
+export function pickAfterHide(index, hidden) {
+    if (!hidden[index])
+        return index;
+    return hidden.findIndex(h => !h);
+}
+
+/**
  * What a key does while the switcher is open (macOS: Tab/⇧Tab/` move, arrows move, Q quits,
  * H hides, ↓ or ↑ shows the app's windows, Esc or . cancels, Return activates). Kiwi also
  * takes 1 for App Exposé (the brief's "Down arrow or 1").

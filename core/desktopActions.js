@@ -24,7 +24,7 @@ import { actionAllowed, normalizeAction } from './desktopActionsModel.js';
 const LOG = '[Kiwi] desktop actions:';
 
 export class DesktopActions {
-    /** @param {{events, features}} ctx */
+    /** @param {{events, features, desktop}} ctx */
     constructor(ctx) {
         this._ctx = ctx;
     }
@@ -52,10 +52,13 @@ export class DesktopActions {
             Main.overview.toggle();
             return true;
         case 'app-expose':
-            if (events.listenerCount('app-expose-requested') > 0)
+            if (events.listenerCount('app-expose-requested') > 0) {
+                // The front app, while core/desktop tracks (it does whenever a feature uses it)
+                appId ??= this._ctx.desktop?.tracking ? this._ctx.desktop.model.focusedApp : null;
                 events.emit('app-expose-requested', { appId, source });
-            else
+            } else {
                 Main.overview.show();
+            }
             return true;
         case 'desktop': {
             const desktop = this._ctx.features.instance('show-desktop');
