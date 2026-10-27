@@ -9,8 +9,8 @@
 // Geometry follows size-changed; whether a window qualifies follows the maximize, fullscreen,
 // type and identity notifies.
 // Disable removes every effect and disconnects every signal (per-window owners plus the
-// feature's CleanupRegistry). Clones (overview, Stage Manager strip and flights) paint the
-// source actor's effects, so they get the corners with no extra work.
+// feature's CleanupRegistry). Clones (overview, Stage Manager strip and flights) skip the
+// effect on purpose (effect.js): sharp thumbnails matter more than corners at that size.
 
 import Gio from 'gi://Gio';
 import Meta from 'gi://Meta';

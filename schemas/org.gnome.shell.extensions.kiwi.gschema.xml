@@ -753,12 +753,6 @@
         <summary>Show an app's windows all at once</summary>
         <description>On ("All at Once", macOS default): an app's windows come onto the stage together and share one strip entry; a new window joins its app on the stage. Off ("One at a Time"): each window is its own entry, and a new window gets its own stage.</description>
       </key>
-      <key name="stage-manager-recent-count" type="i">
-        <default>6</default>
-        <range min="1" max="10"/>
-        <summary>Recent apps in the strip</summary>
-        <description>The most thumbnails the strip lists. Fewer are shown when the screen is too short.</description>
-      </key>
       <key name="stage-manager-shortcut" type="as">
         <default>[]</default>
         <summary>Stage Manager shortcut</summary>
