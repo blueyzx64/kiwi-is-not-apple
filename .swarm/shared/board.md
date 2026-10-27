@@ -55,3 +55,7 @@ Deploy conservatively, sized to the scope and type of work. Resume in waves of a
 - Wave 2: L1, L2, L3, L4, L5, L8
 - Wave 3: L9, L10, L11, L12, L14, L15
 - Reviewers R4 and R5 and helpers H10–H12 run only after waves land, on merged code.
+
+## Merges (2026-10-27, after the reset)
+- L6 → merged (switcher, gestures, hot corners; core/desktopActions; events `app-expose-requested` for L5 and `launchpad-requested` for L7).
+- FX1 → merged (R1 F1–F5, F7–F15, F21; dock view.js guard; Reset Everything uses schema "(internal)" summaries). R1's F6 and F16–F20 (S3) are deferred. The final 20-cycle run will be done on ccr by the orchestrator.
