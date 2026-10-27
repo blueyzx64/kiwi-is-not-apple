@@ -35,6 +35,9 @@ export const EVENTS = Object.freeze({
     'timer-finished': { timer: 'object' },
     // lib/featureRegistry.js, through extension.js: a feature started or stopped
     'feature-changed': { id: 'string', active: 'boolean' },
+    // features/focus: the active Focus mode changed (id null: Focus off). The notch and the
+    // menu bar show its icon; ctx.features.instance('focus').state() gives the same at any time.
+    'focus-changed': { id: 'string|null', name: 'string|null', icon: 'string|null', reason: "'manual'|'app'|'schedule'|null" },
     // features/screenshots: a screen recording started (kind 'screen' or 'area') or ended
     // (path of the video file when GNOME reports it, else null). The notch shows it live.
     'recording-started': { kind: "'screen'|'area'" },

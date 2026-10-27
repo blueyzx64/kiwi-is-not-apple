@@ -88,7 +88,7 @@ prefs.js metadata.json stylesheet.css schemas/ po/`). `make pack-check` verifies
 | `tileActions.js` | tiling vocabulary: zones, arrangements, `parseAction` (payload of `window-tile-requested`) | `ZONES`, `ARRANGEMENTS`, `parseAction` |
 | `panelLayout.js` (+`Model`) | who sits where in the top bar; hides stock items | `PanelLayout.claim(cleanup, {id, actor, box, anchor})`, `PanelLayout.hide(cleanup, role)` |
 | `windowState.js` | why a window is not in its normal place (`staged`, ...) | `WindowState.set/has/list/watch`, `interceptMinimize`, `setStageActive` |
-| `notificationRouter.js` | banners to the notch or stock, shared `{count, dnd}` | `setBannerSink`, `pinBanners`, `connect`, `state`, `setDnd` |
+| `notificationRouter.js` | banners to the notch or stock, shared `{count, dnd}`, banner filters (Focus), the history | `setBannerSink`, `setBannerFilter`, `pinBanners`, `connect`, `watchHistory`, `sources`, `appIdOf`, `state`, `setDnd` |
 | `mprisWatcher.js` | one MPRIS source for the extension | `MprisWatcher.acquire(cleanup, gettext)` |
 | `widgets/` | the one widget model for the desktop layer, Notification Center and notch: pure `model.js` (sizes, grid, snapping, layout JSON, `ProviderPool`, `WidgetRegistry`), `data.js` (pure data shaping), `view.js` (the glass card), `providers/` (time, calendar, weather, batteries, media, system; lazy and shared), `kinds/` (the built-in widgets) | `Widgets.acquire(cleanup, gettext)` -> `host.registry`, `host.createView(kind, {size, config, scale}, owner)` -> `view.actor`, `setActive(bool)`, `activate()`, `menuItems()` |
 | `osdModel.js` / `osd.js` | the one interception of the Shell OSD (`_showOsdWindow`): classifies volume / brightness / keyboard backlight and routes each change to ONE sink from `osd-location` (notch while it runs, else the menu-bar pill; 'system' = stock); other OSDs and other monitors stay stock | `classifyOsd`, `route`; `OsdRouter.start(cleanup)`, `setSink(owner, name, fn)` |
@@ -97,7 +97,7 @@ prefs.js metadata.json stylesheet.css schemas/ po/`). `make pack-check` verifies
 
 Events (`EVENTS` in `core/events.js`): `window-added`, `window-changed`, `window-removed`,
 `window-focused`, `app-focused`, `workspaces-changed`, `monitors-changed`, `work-area-changed`,
-`motion-changed`, `feature-changed`, `minimize-requested`, `notification-center-requested`
+`motion-changed`, `feature-changed`, `minimize-requested`, `notification-center-requested`, `focus-changed`
 (the clock), `app-hide-requested` and `window-tile-requested` (app-menu commands for the
 window manager; the menu bar runs a fallback when nobody listens), `launchpad-requested` (dock tile,
 pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view-changed` (Split View), `recording-started` /
@@ -148,6 +148,10 @@ pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view
 | `roundedCorners/` | `rounded-corners` | shader effect per window |
 | `liquidGlass/` | `liquid-glass` | attaches `lib/glass.js` to the panel, Control Center and calendar menus; the glass prefs |
 | `shellBehaviour/` | `shell-behaviour` | swipes stop at workspaces; no hot corner |
+| `fullscreenSpace/` | `move-window-to-new-workspace` | full screen in its own Space (kept as in 2.x) |
+| `dock/` | `dock` | Kiwi's own dock: favourites, running and recent apps, minimized windows, Downloads stack (`stack.js`), Trash (`trash.js`), menus (`appMenu.js`), Open at Login (`autostart.js`); an edge claim in core/layout; keeps Dash to Dock off (`dashToDock.js`); `iconRect(appId)` / `minimizeTarget(win)` for Genie |
+| `notificationCenter/` | `notification-center` | the right-side column the clock opens (`notification-center-requested`): date and small month, history grouped by app (stacks, expand, Clear/Clear All, actions), widgets slot `addWidget(owner, {id, order, create})`; on `lib/modalSurface.js` position `'right'` |
+| `focus/` | `focus` | Focus modes (DND, Sleep, Work, Personal, custom): allowed apps, schedules, app triggers, time-sensitive break-through (`model.js`); banner filter via the router; GNOME DND synced both ways; Control Center tile with the mode menu and menu-bar icon (`indicator.js`); `state()`, event `focus-changed` |
 | `missionControl/` | `mission-control` | overview restyled as Mission Control: Spaces bar (+, ×, reorder), App Exposé with minimized strip, F3 / Ctrl+Up / Ctrl+Down, start on the desktop, static Spaces (dynamic-workspaces via core/originals) |
 | `windows/` | `window-tiling`, `app-hide` | Sequoia tiling: drag zones with a glass outline (`drag.js`), shortcuts, arrangements, margins, tile book (`model.js`); owns mutter `edge-tiling`; answers `window-tile-requested`. Hide / Hide Others (`hide.js`, `hideModel.js`), WindowState `hidden`, answers `app-hide-requested`, takes Super+H from GNOME's minimize while on |
 | `fullscreenSpace/` | `move-window-to-new-workspace` | full screen in its own Space (kept as in 2.x); a `splitView`-flagged window stays in its Space when it leaves full screen |

@@ -1416,6 +1416,43 @@
         <description>Internal. Kiwi's running and paused timers, so they survive the lock screen and a restart. Written by core/timers.js.</description>
       </key>
 
+      <!-- Notification Center and Focus (features/notificationCenter, features/focus) -->
+      <key name="notification-center" type="b">
+        <default>true</default>
+        <summary>Notification Center</summary>
+        <description>Clicking the clock opens a column at the right of the screen with the date, the notifications grouped by app and the widgets, as on macOS. Off: the clock opens the calendar card.</description>
+      </key>
+      <key name="notification-center-widgets" type="b">
+        <default>true</default>
+        <summary>Widgets in the Notification Center</summary>
+        <description>Show the widgets area below the notifications.</description>
+      </key>
+      <key name="focus-modes" type="b">
+        <default>true</default>
+        <summary>Focus modes</summary>
+        <description>Do Not Disturb becomes one of several Focus modes (Do Not Disturb, Sleep, Work, Personal and custom ones), each with allowed apps, schedules and app triggers. The Control Center shows a Focus menu.</description>
+      </key>
+      <key name="focus-profiles" type="s">
+        <default>''</default>
+        <summary>Focus mode settings</summary>
+        <description>JSON list of the Focus modes and their allowed apps, schedules and app triggers. Empty: the built-in modes with nothing allowed and nothing automatic (the macOS default).</description>
+      </key>
+      <key name="focus-state" type="s">
+        <default>''</default>
+        <summary>Focus chosen by the user (internal)</summary>
+        <description>Written by Kiwi: the mode the user turned on, and until when, as JSON. Empty: the schedules and app triggers decide.</description>
+      </key>
+      <key name="focus-last" type="s">
+        <default>'dnd'</default>
+        <summary>Last Focus mode used (internal)</summary>
+        <description>Written by Kiwi: the mode a click on the Focus tile turns on.</description>
+      </key>
+      <key name="focus-menubar-icon" type="b">
+        <default>true</default>
+        <summary>Show the Focus icon in the menu bar</summary>
+        <description>Show the active Focus mode's icon in the top bar.</description>
+      </key>
+
       <!-- On-screen display (core/osd.js, features/osd) -->
       <key name="osd-location" type="s">
         <choices>

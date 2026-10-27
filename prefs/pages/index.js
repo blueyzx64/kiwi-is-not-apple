@@ -11,6 +11,7 @@ import * as dock from './dock.js';
 import * as windows from './windows.js';
 import * as navigation from './navigation.js';
 import * as appearance from './appearance.js';
+import * as notifications from './notifications.js';
 import * as keyboard from './keyboard.js';
 import * as about from './about.js';
 import * as controlCenter from './controlCenter.js';
@@ -45,6 +46,7 @@ export const SECTIONS = [
         featurePage('stage-manager', N_('Stage Manager'), 'view-app-grid-symbolic', stageManagerPrefs),
         featurePage('widgets', N_('Widgets'), 'preferences-desktop-apps-symbolic', widgetsPrefs)] },
     { title: N_('Features'), pages: [
+        notifications,
         featurePage('notch', N_('Notch'), 'preferences-system-notifications-symbolic', notchPrefs),
         featurePage('spotlight', N_('Spotlight'), 'system-search-symbolic', spotlightPrefs),
         controlCenter,

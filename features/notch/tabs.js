@@ -413,7 +413,10 @@ export function widgetsTab(env, ctx) {
         box.add_child(label(name, 'kiwi-notch-toggle-caption', { x_align: Clutter.ActorAlign.CENTER }));
         toggles.add_child(box);
     };
-    toggle('weather-clear-night-symbolic', env._('Focus'), ctx.dnd, () => env.h.onToggleDnd());
+    // The active Focus mode's icon and name (features/focus), else the Do Not Disturb moon
+    const focus = ctx.focus?.id ? ctx.focus : null;
+    toggle(focus?.icon ?? 'weather-clear-night-symbolic', focus?.name ?? env._('Focus'),
+        ctx.dnd || !!focus, () => env.h.onToggleDnd());
     toggle(ctx.mic.muted ? 'microphone-disabled-symbolic' : 'audio-input-microphone-symbolic',
         env._('Mic Off'), ctx.mic.muted, () => env.h.onToggleMic(), ctx.mic.available);
     ctl.add_child(toggles);

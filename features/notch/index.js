@@ -174,6 +174,8 @@ export class NotchFeature {
 
         // Shared inputs
         NotificationRouter.connect(cleanup, () => this._syncExternal());
+        // The active Focus mode's icon (features/focus) shows on the Widgets tab's Focus toggle
+        this._ctx.events.on('focus-changed', () => this._sync(), cleanup);
         cleanup.connect(global.display, 'in-fullscreen-changed', () => this._syncExternal());
         this._syncExternal(true);
 
@@ -364,6 +366,7 @@ export class NotchFeature {
                 weather: this._widgets?.weather() ?? null,
                 mic: this._widgets?.mic() ?? { available: false, muted: false },
                 dnd: state.dnd,
+                focus: this._ctx.features.instance('focus')?.state() ?? null,
                 timersEnabled: !!this._ctx.timers && this._ks.bool('notch-activity-timers'),
             } : null,
         });

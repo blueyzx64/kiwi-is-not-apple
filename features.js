@@ -13,6 +13,8 @@
 //   - Stage Manager owns window placement: fullscreen-to-its-own-Space pauses (its saved
 //     value is kept).
 //   - The notch owns the centre of the top bar: the date menu moves right (calendar).
+//   - Focus owns Do Not Disturb's tile while it runs (the stock one is hidden; the Control
+//     Center places the Focus tile in its slot); the notch's banners pass Focus's filter.
 //   - Tiling shortcuts: window-tiling binds only accelerators that no stock GNOME binding and no
 //     running Kiwi shortcut holds (Stage Manager's Ctrl+Super+Down wins while it runs).
 //   - Status items: the AppIndicator extension, when enabled, owns org.kde.StatusNotifierWatcher;
@@ -223,6 +225,18 @@ export const FEATURES = [
         // come from core/osd.js while osd-location is 'notch').
         id: 'notch', setting: 'notch',
         load: async () => (await import('./features/notch/index.js')).NotchFeature,
+    },
+    {
+        // The clock opens a right-side column (the menu bar emits notification-center-requested):
+        // the date, the history grouped by app, widgets. Off: the calendar card opens instead.
+        id: 'notification-center', setting: 'notification-center',
+        load: async () => (await import('./features/notificationCenter/index.js')).NotificationCenter,
+    },
+    {
+        // Focus modes over GNOME's Do Not Disturb: holds back banners through
+        // NotificationRouter.setBannerFilter; its tile takes Do Not Disturb's place
+        id: 'focus', setting: 'focus-modes',
+        load: async () => (await import('./features/focus/index.js')).Focus,
     },
     {
         // Shift+Super+3/4/5, the toolbar and the floating thumbnail, on GNOME's own screenshot UI

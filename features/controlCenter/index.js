@@ -410,6 +410,9 @@ export class ControlCenter {
         const key = this._own.get(actor) ?? this._stockKeys.get(actor);
         if (key)
             return key;
+        // The Focus tile of features/focus takes Do Not Disturb's place
+        if (actor.style_class?.includes('kiwi-focus-toggle'))
+            return 'dnd';
         // The notification list of features/calendar/notificationList.js
         return actor.style_class?.includes('kiwi-notifications') ? 'notifications' : null;
     }
