@@ -140,6 +140,10 @@ export class PrivacyDots {
         for (const kind of KINDS)
             this._button.dots[kind].visible = shown.includes(kind);
         this._button.visible = shown.length > 0;
+        // The dots are told apart by colour: say which sensors are in use
+        const _ = this._ctx.gettext;
+        const inUse = { mic: _('Microphone'), camera: _('Camera'), screen: _('Screen Recording') };
+        this._button.accessible_name = [_('Privacy Indicators'), ...shown.map(kind => inUse[kind])].join(', ');
         if (!shown.length)
             this._button.menu.close();
     }

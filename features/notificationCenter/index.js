@@ -259,6 +259,7 @@ export class NotificationCenter {
     _build(frame) {
         const scroll = new St.ScrollView({
             style_class: 'kiwi-nc-scroll', x_expand: true, y_expand: true,
+            accessible_name: this._ctx.gettext('Notifications'),
             hscrollbar_policy: St.PolicyType.NEVER, vscrollbar_policy: St.PolicyType.AUTOMATIC,
         });
         const content = new St.BoxLayout({ style_class: 'kiwi-nc-content', orientation: Clutter.Orientation.VERTICAL, x_expand: true });

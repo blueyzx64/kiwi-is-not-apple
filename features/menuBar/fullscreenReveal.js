@@ -17,6 +17,8 @@ import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
+import * as A11y from '../../lib/a11y.js';
+
 export class FullscreenReveal {
     /**
      * @param {object} ctx the feature ctx (motion)
@@ -89,6 +91,13 @@ export class FullscreenReveal {
         panel.track_hover = true;
         cleanup.add(() => (panel.track_hover = hover));
         cleanup.connect(panel, 'notify::hover', () => this._maybeConceal());
+        // Keyboard: over a full-screen window the edge is the only mapped piece, so it stands
+        // for the bar in Ctrl+Alt+Tab; choosing it slides the bar in and focuses it. The bar
+        // stays while the focus is in it and goes when the focus leaves.
+        A11y.focusGroup(cleanup, edge, this._ctx.gettext('Top Bar'), 'view-app-grid-symbolic', {
+            focus: () => this.reveal(() => Main.panel.navigate_focus(null, St.DirectionType.TAB_FORWARD, false)),
+        });
+        cleanup.connect(global.stage, 'notify::key-focus', () => this._maybeConceal());
 
         const sync = () => this._sync();
         cleanup.connect(global.display, 'in-fullscreen-changed', sync);
@@ -146,7 +155,7 @@ export class FullscreenReveal {
     }
 
     _maybeConceal() {
-        if (!this._revealed || Main.panel.hover)
+        if (!this._revealed || Main.panel.hover || A11y.focusWithin(Main.panel))
             return;
         const menu = Main.panel.menuManager.activeMenu;
         if (menu) {

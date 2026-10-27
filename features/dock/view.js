@@ -86,6 +86,14 @@ export class DockView {
             x_align: horizontal ? ALIGN.CENTER : position === 'left' ? ALIGN.START : ALIGN.END,
             y_align: horizontal ? ALIGN.END : ALIGN.CENTER,
         }));
+        // The frame can be destroyed on its own at shutdown (before the band's signal): a sync
+        // queued for that moment must not touch it
+        this.alive = true;
+        const frame = this.frame;
+        frame.connect('destroy', () => {
+            if (this.frame === frame)
+                this.alive = false;
+        });
         // The gap between the pill and the edge belongs to the frame (hover, struts)
         const pad = { bottom: `padding-bottom: ${m.gap}px;`, left: `padding-left: ${m.gap}px;`, right: `padding-right: ${m.gap}px;` };
         this.frame.set_style(pad[position]);
@@ -121,7 +129,7 @@ export class DockView {
         // Keyboard: Ctrl+Alt+Tab lists the dock, Tab and the arrows walk the icons, and keyboard
         // focus inside keeps an auto-hidden dock up like the pointer does
         A11y.focusGroup(reg, this.frame, this._host.gettext('Dock'), 'user-desktop-symbolic');
-        const dockUp = () => this.frame.hover || this.frame.contains(global.stage.key_focus);
+        const dockUp = () => this.frame.hover || A11y.focusWithin(this.frame);
         reg.connect(this.frame, 'notify::hover', () => this._host.dockHovered(dockUp()));
         reg.connect(global.stage, 'notify::key-focus', () => this._host.dockHovered(dockUp()));
         reg.connect(this.edge, 'notify::hover', () => this._host.edgeHovered(this.edge.hover));

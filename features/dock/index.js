@@ -250,6 +250,8 @@ export class Dock {
     }
 
     _sync() {
+        if (!this._view.alive)
+            return;
         const model = this._desktop.model;
         const withWindows = [...model.apps()];
         const live = new Set(withWindows);

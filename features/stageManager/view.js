@@ -123,7 +123,7 @@ export class StripView {
             },
         });
         cleanup.connect(global.stage, 'notify::key-focus', () => {
-            const within = this._floor.contains(global.stage.key_focus);
+            const within = A11y.focusWithin(this._floor);
             if (within === this._focusWithin)
                 return;
             this._focusWithin = within;
