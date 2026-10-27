@@ -29,13 +29,13 @@ import { DesktopService } from './core/desktop.js';
 import { LayoutService } from './core/layout.js';
 import { Motion } from './core/motion.js';
 import { AppMenuService } from './core/appMenus/service.js';
-import { OriginalsStore, STORE_KEY, restoreStale } from './core/originals.js';
+import { OriginalsStore, STORE_BACKUP_KEY, STORE_KEY, restoreStale } from './core/originals.js';
 import { FEATURES } from './features.js';
 
 // Keys Kiwi writes itself at run time. No `when` or restartOn reads them, and a write made
 // during a refresh would re-enter the registry, so they do not trigger a pass.
 const KEYS_THAT_NEVER_AFFECT_FEATURES = new Set(['clipboard-recording', 'migrations-done', STORE_KEY,
-    'dock-recent-apps']);
+    STORE_BACKUP_KEY, 'dock-recent-apps']);
 
 // Schemas whose keys Kiwi may own through core/originals.js
 const openSettings = schemaId =>
@@ -62,10 +62,19 @@ export default class KiwiExtension extends Extension {
         this._originals = new OriginalsStore(this._settings);
         try {
             restoreLegacyButtonLayout(this._settings, openSettings('org.gnome.desktop.wm.preferences'));
-            restoreStale(this._originals, openSettings);
+        } catch (err) {
+            console.error('[Kiwi] could not restore the saved 2.x button layout:', err);
+        }
+        // Lists a feature takes members out of (Dash to Dock) are left: GNOME never calls
+        // disable() at logout, so the entry is there at every login, and giving the member back
+        // now would make the Shell enable it just for the dock to remove it again. The dock
+        // adopts the entry; whatever nobody adopted is given back once the features have started.
+        try {
+            restoreStale(this._originals, openSettings, { members: 'leave' });
         } catch (err) {
             console.error('[Kiwi] could not restore saved GNOME settings:', err);
         }
+        const generation = this._generation = (this._generation ?? 0) + 1;
 
         this._events = new EventHub();
         this._desktop = new DesktopService(this._events);
@@ -78,9 +87,19 @@ export default class KiwiExtension extends Extension {
             onChange: (id, active) => this._events?.emit('feature-changed', { id, active }),
         });
         this._features.registerAll(FEATURES);
+        // Many keys can change at once (Reset Everything): one pass for all of them
+        const changedKeys = new Set();
         this._cleanup.connect(this._settings, 'changed', (_settings, key) => {
-            if (!KEYS_THAT_NEVER_AFFECT_FEATURES.has(key))
-                this._features.refresh(key);
+            if (KEYS_THAT_NEVER_AFFECT_FEATURES.has(key))
+                return;
+            if (!changedKeys.size) {
+                this._cleanup.idle(() => {
+                    const keys = [...changedKeys];
+                    changedKeys.clear();
+                    this._features?.refreshKeys(keys);
+                }, { name: 'features: refresh' });
+            }
+            changedKeys.add(key);
         });
 
         this._features.start({
@@ -97,15 +116,26 @@ export default class KiwiExtension extends Extension {
             appMenus: this._appMenus,
         });
 
+        // After the dock took its entry (it does so from an idle queued before this one)
+        this._features.settled().then(() => {
+            if (this._generation === generation)
+                this._cleanup?.idle(() => restoreStale(this._originals, openSettings, { members: 'only' }),
+                    { name: 'originals: unclaimed lists' });
+        });
+
         // What Kiwi 2.x left in the user's files for features v3 dropped: once, in the
         // background, Kiwi-marked content only (lib/cleanup/index.js)
-        const generation = this._generation = (this._generation ?? 0) + 1;
-        runCleanup(this._settings, { isCurrent: () => this._generation === generation && !!this._settings })
-            .catch(e => console.error('[Kiwi] user file cleanup failed:', e));
+        this._cancellable = new Gio.Cancellable();
+        runCleanup(this._settings, {
+            isCurrent: () => this._generation === generation && !!this._settings,
+            cancellable: this._cancellable,
+        }).catch(e => console.error('[Kiwi] user file cleanup failed:', e));
     }
 
     disable() {
         this._generation++;
+        this._cancellable?.cancel();
+        this._cancellable = null;
         this._cleanup?.dispose();
         this._cleanup = null;
         this._features?.stop();
