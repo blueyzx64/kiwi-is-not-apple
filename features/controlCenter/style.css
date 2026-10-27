@@ -601,3 +601,32 @@
 .quick-settings.kiwi-cc-calm.kiwi-glass-contrast .kiwi-cc-item.kiwi-cc-join-next {
     border-bottom-width: 0;
 }
+
+/* Light glass: off glyphs and the slider track need more weight over the pale panel */
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-toggle .quick-toggle-icon,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .kiwi-cc-kiwi-tile {
+    color: #1d1d1f;
+    background-color: rgba(0, 0, 0, 0.11);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-toggle:checked .quick-toggle-icon,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .kiwi-cc-kiwi-tile:checked {
+    color: -st-accent-fg-color;
+    background-color: -st-accent-color;
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .kiwi-cc-np-button,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-settings-system-item .icon-button,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-settings-system-item .power-item,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-slider .icon-button {
+    color: rgba(0, 0, 0, 0.85);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-slider .slider {
+    -barlevel-background-color: rgba(0, 0, 0, 0.2);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light.kiwi-glass-contrast .quick-slider .slider {
+    -barlevel-background-color: rgba(0, 0, 0, 0.2);
+    -barlevel-active-background-color: rgba(0, 0, 0, 0.7);
+}
