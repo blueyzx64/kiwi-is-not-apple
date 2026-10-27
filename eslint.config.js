@@ -27,8 +27,12 @@ const gjsGlobals = {
     ngettext: 'readonly',
 };
 
+// EGO: legacy modules are rejected (every file)
+const LEGACY = {group: ['resource:///org/gnome/gjs/modules/*'], message: 'Legacy module; EGO rejects it.'};
+const restrict = (...patterns) => ['error', {patterns: [LEGACY, ...patterns]}];
+
 export default [
-    {ignores: ['advanced/**', 'po/**', 'icons/**', 'docs/**', 'node_modules/**']},
+    {ignores: ['po/**', 'icons/**', 'docs/**', 'node_modules/**', 'dist/**']},
     {
         files: ['**/*.js'],
         languageOptions: {
@@ -62,9 +66,8 @@ export default [
             'prefer-arrow-callback': 'warn',
             camelcase: ['warn', {properties: 'never'}],
             // EGO: legacy modules are rejected
-            'no-restricted-imports': ['error', {
-                patterns: [{group: ['resource:///org/gnome/gjs/modules/*'], message: 'Legacy module; EGO rejects it.'}],
-            }],
+            // Shell code never loads GTK (EGO); prefs override this below
+            'no-restricted-imports': restrict({group: ['gi://Gtk', 'gi://Gdk', 'gi://Adw'], message: 'GTK in the Shell process.'}),
             'no-restricted-properties': ['error',
                 {object: 'imports', property: 'mainloop', message: 'Use GLib.timeout_add.'},
                 {object: 'imports', property: 'lang', message: 'Use native classes.'},
@@ -80,9 +83,25 @@ export default [
     {
         // prefs runs in its own process: no Shell globals. gettext must be imported
         // (`gettext as _`) or taken from the extension; N_ is not provided there.
-        files: ['prefs.js', 'apps/**/prefs.js', 'prefs/**/*.js'],
+        files: ['prefs.js', 'features/**/prefs.js', 'prefs/**/*.js'],
         languageOptions: {
             globals: {global: 'off', _: 'off', C_: 'off', N_: 'off', ngettext: 'off'},
+        },
+    },
+    {
+        // Pure models and core logic run under plain `gjs -m` in tests: no Shell, no GTK
+        files: ['core/*Model.js', 'core/events.js', 'core/originals.js', 'features/**/model.js',
+            'lib/*Model.js', 'lib/featureRegistry.js', 'lib/settings.js', 'lib/jobQueue.js',
+            'lib/migrations.js', 'lib/cleanup/*Model.js'],
+        rules: {
+            'no-restricted-imports': restrict({group: ['gi://*', 'resource://*'], message: 'Pure module: no gi:// or resource:// imports (move it to the adapter).'}),
+        },
+    },
+    {
+        // Prefs never load Shell modules, and Shell code never loads GTK (EGO)
+        files: ['prefs.js', 'prefs/**/*.js', 'features/**/prefs.js'],
+        rules: {
+            'no-restricted-imports': restrict({group: ['gi://Clutter', 'gi://Meta', 'gi://St', 'gi://Shell', 'resource:///org/gnome/shell/*'], caseSensitive: true, message: 'Shell module in the prefs process.'}),
         },
     },
 ];
