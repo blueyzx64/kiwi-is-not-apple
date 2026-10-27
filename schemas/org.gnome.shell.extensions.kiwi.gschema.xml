@@ -49,6 +49,76 @@
         <description>Replace the system Do Not Disturb quick settings button with Kiwi's custom implementation.</description>
       </key>
 
+      <!-- Dock (features/dock) -->
+      <key name="dock" type="b">
+        <default>true</default>
+        <summary>Kiwi Dock</summary>
+        <description>Kiwi's own macOS-style dock: pinned apps (GNOME favourites), running and recent apps, a Downloads stack and the Trash. Dash to Dock is turned off while it runs and turned back on after.</description>
+      </key>
+      <key name="dock-position" type="s">
+        <choices>
+          <choice value="bottom"/>
+          <choice value="left"/>
+          <choice value="right"/>
+        </choices>
+        <default>'bottom'</default>
+        <summary>Dock position on screen</summary>
+        <description>The screen edge the dock sits on: bottom, left or right.</description>
+      </key>
+      <key name="dock-icon-size" type="i">
+        <range min="24" max="128"/>
+        <default>48</default>
+        <summary>Dock size</summary>
+        <description>Size of the dock's icons in pixels.</description>
+      </key>
+      <key name="dock-autohide" type="b">
+        <default>false</default>
+        <summary>Automatically hide and show the Dock</summary>
+        <description>Hide the dock until the pointer rests on, or pushes against, its screen edge. Windows may then use the whole screen.</description>
+      </key>
+      <key name="dock-autohide-delay" type="i">
+        <range min="0" max="2000"/>
+        <default>500</default>
+        <summary>Auto-hide reveal delay</summary>
+        <description>Milliseconds the pointer rests on the edge before the hidden dock shows. Pushing against the edge shows it at once.</description>
+      </key>
+      <key name="dock-show-recents" type="b">
+        <default>true</default>
+        <summary>Show suggested and recent apps in Dock</summary>
+        <description>Keep up to three recently used apps that are not pinned in their own section after the pinned apps.</description>
+      </key>
+      <key name="dock-recent-apps" type="as">
+        <default>[]</default>
+        <summary>Recent apps (internal)</summary>
+        <description>Internal. The recently used unpinned apps the dock shows, newest first. Written by the dock.</description>
+      </key>
+      <key name="dock-running-dots" type="b">
+        <default>true</default>
+        <summary>Show indicators for open applications</summary>
+        <description>A small dot under the icon of every running app.</description>
+      </key>
+      <key name="dock-minimize-to-app" type="b">
+        <default>false</default>
+        <summary>Minimize windows into application icon</summary>
+        <description>Minimized windows go into their app's icon. Off: each minimized window gets its own tile next to the Downloads stack.</description>
+      </key>
+      <key name="dock-downloads" type="b">
+        <default>true</default>
+        <summary>Downloads stack in the Dock</summary>
+        <description>Show the Downloads folder before the Trash; click it to see the newest files.</description>
+      </key>
+      <key name="dock-downloads-view" type="s">
+        <choices>
+          <choice value="automatic"/>
+          <choice value="fan"/>
+          <choice value="grid"/>
+          <choice value="list"/>
+        </choices>
+        <default>'automatic'</default>
+        <summary>Downloads stack view</summary>
+        <description>How the Downloads stack opens: automatic (a fan for a few files from a bottom dock, else a grid), fan, grid or list.</description>
+      </key>
+
       <!-- Windows (features/windowControls, features/fullscreenSpace, features/roundedCorners) -->
       <key name="enable-app-window-buttons" type="b">
         <default>true</default>

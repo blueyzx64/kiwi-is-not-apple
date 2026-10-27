@@ -1,6 +1,6 @@
 // Run: gjs -m tests/originals.test.js
 // core/originals.js: the user's own value of every GNOME key Kiwi takes over, crash-safe.
-import { OriginalsStore, SettingOwner, STORE_KEY, originalId, parseOriginalId, restoreStale } from '../core/originals.js';
+import { ListMembersOwner, OriginalsStore, SettingOwner, STORE_KEY, originalId, parseOriginalId, restoreStale, withMembers } from '../core/originals.js';
 
 let failed = 0;
 function test(name, fn) {
@@ -123,6 +123,80 @@ test('unsupported types are refused', () => {
     let threw = false;
     try { new SettingOwner(new OriginalsStore(kiwi()), fake('s', {}), 'k', { type: 'a{sv}' }); } catch (_e) { threw = true; }
     eq(threw, true);
+});
+
+// ListMembersOwner: Dash to Dock out of enabled-extensions while Kiwi's dock runs
+const DTD = 'dash-to-dock@micxgx.gmail.com';
+const shell = list => fake('org.gnome.shell', { 'enabled-extensions': list });
+test('withMembers appends only what is missing', () => {
+    eq(withMembers(['a', 'b'], ['b', 'c']), ['a', 'b', 'c']);
+    eq(withMembers([], []), []);
+});
+test('members: take removes only the member, release adds it back to the list as it is then', () => {
+    const k = kiwi();
+    const gs = shell(['kiwi@kemma', DTD, 'other@x']);
+    const owner = new ListMembersOwner(new OriginalsStore(k), gs, 'enabled-extensions', [DTD]);
+    owner.sync(true);
+    eq(gs.values['enabled-extensions'], ['kiwi@kemma', 'other@x']);
+    eq(owner.held, [DTD]);
+    // The user enables another extension meanwhile: kept on release
+    gs.set_strv('enabled-extensions', ['kiwi@kemma', 'other@x', 'new@y']);
+    owner.release();
+    eq(gs.values['enabled-extensions'], ['kiwi@kemma', 'other@x', 'new@y', DTD]);
+    eq(new OriginalsStore(k).ids(), []);
+    eq(gs.nHandlers, 0);
+});
+test('members: Kiwi itself leaving the list (user disables Kiwi) keeps the member', () => {
+    const k = kiwi();
+    const gs = shell(['kiwi@kemma', DTD]);
+    const owner = new ListMembersOwner(new OriginalsStore(k), gs, 'enabled-extensions', [DTD]);
+    owner.sync(true);
+    gs.set_strv('enabled-extensions', []);
+    eq(owner.held, [DTD]);
+    owner.sync(false);
+    eq(gs.values['enabled-extensions'], [DTD]);
+});
+test('members: re-added by the user while held is taken out again and returns on release', () => {
+    const k = kiwi();
+    const gs = shell([DTD]);
+    const owner = new ListMembersOwner(new OriginalsStore(k), gs, 'enabled-extensions', [DTD]);
+    owner.sync(true);
+    gs.set_strv('enabled-extensions', ['a', DTD]);
+    eq(gs.values['enabled-extensions'], ['a']);
+    owner.release();
+    eq(gs.values['enabled-extensions'], ['a', DTD]);
+});
+test('members: absent member means no store entry and no write', () => {
+    const k = kiwi();
+    const gs = shell(['kiwi@kemma']);
+    const owner = new ListMembersOwner(new OriginalsStore(k), gs, 'enabled-extensions', [DTD]);
+    owner.sync(true);
+    eq(k.values[STORE_KEY], '');
+    owner.release();
+    eq(gs.values['enabled-extensions'], ['kiwi@kemma']);
+});
+test('members: keepStored release (a Shell re-base) leaves the list and the entry for the next take', () => {
+    const k = kiwi();
+    const gs = shell(['kiwi@kemma', DTD]);
+    const store = new OriginalsStore(k);
+    const a = new ListMembersOwner(store, gs, 'enabled-extensions', [DTD]);
+    a.sync(true);
+    a.release({ keepStored: true });
+    eq(gs.values['enabled-extensions'], ['kiwi@kemma']);
+    const b = new ListMembersOwner(store, gs, 'enabled-extensions', [DTD]);
+    b.sync(true);
+    eq(b.held, [DTD]);
+    b.release();
+    eq(gs.values['enabled-extensions'], ['kiwi@kemma', DTD]);
+});
+test('members: a crash restores only the member, keeping the rest of the list', () => {
+    const k = kiwi();
+    // The dying session's settings object (and its handler) are gone; the next one is new
+    new ListMembersOwner(new OriginalsStore(k), shell(['kiwi@kemma', DTD]), 'enabled-extensions', [DTD]).sync(true);
+    const gs = shell(['kiwi@kemma', 'later@z']);   // edits went on after the crash
+    const restored = restoreStale(new OriginalsStore(k), id => (id === gs.schema_id ? gs : null));
+    eq(restored, ['org.gnome.shell::enabled-extensions']);
+    eq(gs.values['enabled-extensions'], ['kiwi@kemma', 'later@z', DTD]);
 });
 
 if (failed) {

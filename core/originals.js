@@ -19,6 +19,11 @@
 //   owner.reapply();     // Kiwi's inputs changed: write transform(original) again
 //   owner.release();     // the user's value back
 //
+// A string list shared with the Shell and the user (org.gnome.shell enabled-extensions) is not
+// owned whole: a ListMembersOwner takes only some members out (Dash to Dock while Kiwi's dock
+// runs) and puts back just those, so every other change made meanwhile is kept. Its store entry
+// has mode 'members' and holds the members that were present; restoreStale() adds them back.
+//
 // No gi imports: settings objects are passed in (Gio.Settings in the Shell, fakes in tests).
 
 /** Kiwi key holding the store: JSON {"<schema>::<key>": {"type": "s", "value": ...}}. */
@@ -91,14 +96,23 @@ export class OriginalsStore {
         return this._read()[id] ?? null;
     }
 
-    /** Save a value, replacing any stored one. */
-    set(id, type, value) {
+    /**
+     * Save a value, replacing any stored one.
+     *
+     * @param {string} id
+     * @param {string} type GVariant type
+     * @param {*} value
+     * @param {string} [mode] 'members' for a ListMembersOwner entry (value: the members to add
+     *   back), omitted for a whole value
+     */
+    set(id, type, value, mode = undefined) {
         if (!GETTERS[type])
             throw new Error(`originals: unsupported type '${type}'`);
         const data = this._read();
-        if (same(data[id], { type, value }))
+        const entry = mode ? { type, value, mode } : { type, value };
+        if (same(data[id], entry))
             return;
-        data[id] = { type, value };
+        data[id] = entry;
         this._write(data);
     }
 
@@ -109,6 +123,16 @@ export class OriginalsStore {
         delete data[id];
         this._write(data);
     }
+}
+
+/** `list` with every one of `members` it lacks appended (order of `list` kept). */
+export function withMembers(list, members) {
+    const out = [...list];
+    for (const m of members ?? []) {
+        if (!out.includes(m))
+            out.push(m);
+    }
+    return out;
 }
 
 /**
@@ -128,8 +152,10 @@ export function restoreStale(store, openSettings) {
         try {
             const gs = parsed ? openSettings(parsed.schemaId) : null;
             if (gs && entry && SETTERS[entry.type]) {
-                if (!same(GETTERS[entry.type](gs, parsed.key), entry.value))
-                    SETTERS[entry.type](gs, parsed.key, entry.value);
+                const live = GETTERS[entry.type](gs, parsed.key);
+                const value = entry.mode === 'members' ? withMembers(live, entry.value) : entry.value;
+                if (!same(live, value))
+                    SETTERS[entry.type](gs, parsed.key, value);
                 restored.push(id);
             }
         } catch (e) {
@@ -262,6 +288,98 @@ export class SettingOwner {
         const saved = this._store.get(this._id);
         if (saved)
             this._set(saved.value);
+        this._store.forget(this._id);
+    }
+}
+
+/**
+ * Keeps some members out of a string-list key while Kiwi runs, and puts back only those.
+ *
+ *   const owner = new ListMembersOwner(ctx.originals, shellSettings, 'enabled-extensions',
+ *       ['dash-to-dock@micxgx.gmail.com']);
+ *   owner.sync(true);    // the members present are saved, then removed from the list
+ *   owner.release();     // the saved members are added back to the list as it is now
+ *
+ * A member the user adds back while Kiwi holds the key is saved too and taken out again: it
+ * returns with the rest on release. Entries other than the members are never touched.
+ */
+export class ListMembersOwner {
+    /**
+     * @param {OriginalsStore} store
+     * @param {object} settings the Gio.Settings that has `key` (it needs schema_id)
+     * @param {string} key a string-list ('as') key
+     * @param {string[]} members
+     */
+    constructor(store, settings, key, members) {
+        this._store = store;
+        this._gs = settings;
+        this._key = key;
+        this._members = [...members];
+        this._id = originalId(settings.schema_id, key);
+        this._owning = false;
+        this._changedId = 0;
+    }
+
+    get owning() {
+        return this._owning;
+    }
+
+    /** @returns {string[]} the members Kiwi took out and will add back */
+    get held() {
+        return this._store.get(this._id)?.value ?? [];
+    }
+
+    _live() {
+        return this._gs.get_strv(this._key);
+    }
+
+    /** Take (true) or give back (false). */
+    sync(want) {
+        if (want && !this._owning)
+            this._take();
+        else if (!want && this._owning)
+            this.release();
+    }
+
+    _take() {
+        this._owning = true;
+        this._strip();
+        this._changedId = this._gs.connect(`changed::${this._key}`, () => this._strip());
+    }
+
+    // Save the members now in the list (added to any already stored), then take them out.
+    // Runs on take and whenever the key changes; the write re-enters it with nothing to do.
+    _strip() {
+        const live = this._live();
+        const present = this._members.filter(m => live.includes(m));
+        if (!present.length)
+            return;
+        this._store.set(this._id, 'as', withMembers(this.held, present), 'members');
+        this._gs.set_strv(this._key, live.filter(m => !this._members.includes(m)));
+    }
+
+    /**
+     * Add the saved members back to the list and forget them.
+     *
+     * @param {{keepStored?: boolean}} [opts] keepStored: leave the list and the store as they
+     *   are (Kiwi is only being restarted, e.g. by the Shell re-basing its extension order); the
+     *   next take, or restoreStale() at the next start, finds the entry
+     */
+    release({ keepStored = false } = {}) {
+        if (this._changedId) {
+            this._gs.disconnect(this._changedId);
+            this._changedId = 0;
+        }
+        if (!this._owning)
+            return;
+        this._owning = false;
+        if (keepStored)
+            return;
+        const held = this.held;
+        const live = this._live();
+        const next = withMembers(live, held);
+        if (!same(live, next))
+            this._gs.set_strv(this._key, next);
         this._store.forget(this._id);
     }
 }

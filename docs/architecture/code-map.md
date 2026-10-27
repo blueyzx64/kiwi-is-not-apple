@@ -74,13 +74,13 @@ prefs.js metadata.json stylesheet.css schemas/ po/`). `make pack-check` verifies
 | File | Role | Main API |
 |---|---|---|
 | `events.js` | typed signal hub; events declared once in `EVENTS` | `on(name, fn, owner?)`, `once`, `emit(name, payload)`, `listenerCount`, `clear` |
-| `desktopModel.js` | pure desktop picture | `upsertWindow(id, fields)`, `removeWindow`, `window(id)`, `windows(filter)`, `apps(filter)`, `setFocus`, `focusedWindow`, `focusedApp`, `setWorkspaces`, `setMonitors`; `isHelperWindowInfo`, `isUserFacing` |
+| `desktopModel.js` | pure desktop picture | `upsertWindow(id, fields)`, `removeWindow`, `window(id)`, `windows(filter)`, `apps(filter)`, `setFocus`, `focusedWindow`, `focusedApp`, `setWorkspaces`, `setMonitors`; `isHelperWindowInfo`, `isUserFacing`, `appIdCandidates` (web-app ids for window-backed apps) |
 | `desktop.js` | feeds the model from Mutter; one tracker, ref-counted | `acquire(owner)`, `model`, `metaWindow(id)`, `tracking`, `stop()` |
 | `layoutModel.js` | edge claims -> rects and work area | `claim(spec)`, `update(id, fields)`, `release(id)`, `compute(index, monitorRect, {base, primary, strutsApplied})` |
-| `layout.js` | claims the menu bar itself; Mutter's work area as the base; chrome with struts for `actor` claims | `acquire(owner)`, `claim(owner, spec)` -> `{rect, update, release}`, `rect(id, monitor)`, `workArea(monitor)` |
+| `layout.js` | claims the menu bar itself; Mutter's work area as the base; an `actor` claim is chrome (hidden over full screen), with struts while its reserve is `strut` (`update({reserve})` switches live) | `acquire(owner)`, `claim(owner, spec)` -> `{rect, update, release}`, `rect(id, monitor)`, `workArea(monitor)` |
 | `motionModel.js` | durations, curves, springs; animations-off and reduced-motion rules | `DURATIONS`, `CURVES`, `SPRINGS`, `resolve(request, env)`, `splitProps`, `springAt`, `springDuration`, `springKeyframes` |
 | `motion.js` | applies them to actors; cancellable | `start/stop`, `env`, `duration(req)`, `ease(actor, props, req, owner)`, `spring(actor, prop, to, req, owner)` |
-| `originals.js` | the user's value of GNOME keys Kiwi owns (pure; the Shell side is a Gio.Settings) | `OriginalsStore`, `SettingOwner(store, settings, key, {type, transform/value, onOriginalChanged})` with `sync/reapply/release/original`, `restoreStale(store, openSettings)` |
+| `originals.js` | the user's value of GNOME keys Kiwi owns (pure; the Shell side is a Gio.Settings) | `OriginalsStore`, `SettingOwner(store, settings, key, {type, transform/value, onOriginalChanged})` with `sync/reapply/release/original`, `restoreStale(store, openSettings)`; `ListMembersOwner(store, settings, key, members)` takes only some members out of a string list (Dash to Dock from `enabled-extensions`) and adds back just those |
 | `panelLayout.js` (+`Model`) | who sits where in the top bar; hides stock items | `PanelLayout.claim(cleanup, {id, actor, box, anchor})`, `PanelLayout.hide(cleanup, role)` |
 | `windowState.js` | why a window is not in its normal place (`staged`, ...) | `WindowState.set/has/list/watch`, `interceptMinimize`, `setStageActive` |
 | `notificationRouter.js` | banners to the notch or stock, shared `{count, dnd}` | `setBannerSink`, `pinBanners`, `connect`, `state`, `setDnd` |
@@ -126,6 +126,7 @@ Events (`EVENTS` in `core/events.js`): `window-added`, `window-changed`, `window
 | `liquidGlass/` | `liquid-glass` | attaches `lib/glass.js` to the panel, Control Center and calendar menus; the glass prefs |
 | `shellBehaviour/` | `shell-behaviour` | swipes stop at workspaces; no hot corner |
 | `fullscreenSpace/` | `move-window-to-new-workspace` | full screen in its own Space (kept as in 2.x) |
+| `dock/` | `dock` | Kiwi's own dock: favourites, running and recent apps, minimized windows, Downloads stack (`stack.js`), Trash (`trash.js`), menus (`appMenu.js`), Open at Login (`autostart.js`); an edge claim in core/layout; keeps Dash to Dock off (`dashToDock.js`); `iconRect(appId)` / `minimizeTarget(win)` for Genie |
 | `appearance/` | `appearance`, `popup-menu-styling` | Auto Light/Dark (owns `color-scheme` through core/originals), accent (`accent-color`) and highlight colours (`scheme.js`, `model.js`); accent menus (`index.js`; the GTK app fixes are in `gtk-theme`) |
 
 Shared-resource rules (defined once in `features.js`): `window-controls`/`app-buttons` are

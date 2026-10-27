@@ -13,6 +13,7 @@
 //   - Stage Manager owns window placement: fullscreen-to-its-own-Space pauses (its saved
 //     value is kept).
 //   - The notch owns the centre of the top bar: the date menu moves right (calendar).
+//   - Kiwi's dock owns the dock: Dash to Dock is kept off while it runs (core/originals).
 
 // ctx: see extension.js (settings, gettext, events, desktop, layout, motion, originals, ...)
 const bool = (ctx, key) => ctx.settings.get_boolean(key);
@@ -125,6 +126,12 @@ export const FEATURES = [
         id: 'control-center', setting: 'control-center',
         conflictsWith: ['dnd-button'],
         load: async () => (await import('./features/controlCenter/index.js')).ControlCenter,
+    },
+    {
+        // Kiwi's own dock on the bottom (or a side) edge, claimed through core/layout. It takes
+        // Dash to Dock out of the enabled extensions while it runs and puts it back after.
+        id: 'dock', setting: 'dock',
+        load: async () => (await import('./features/dock/index.js')).Dock,
     },
     {
         // Stage Manager wins over fullscreen-to-its-own-Space; its saved value is kept
