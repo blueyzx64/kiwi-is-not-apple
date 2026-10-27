@@ -8,6 +8,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
+import { MAX_REPLY_BYTES } from '../../core/appMenus/nativeModel.js';
 import { parseMenu } from './model.js';
 
 const IFACE = 'com.canonical.dbusmenu';
@@ -73,7 +74,7 @@ export class DBusMenuClient {
 
     refresh() {
         this._call('GetLayout', new GLib.Variant('(iias)', [0, -1, []]), '(u(ia{sv}av))', reply => {
-            if (!reply)
+            if (!reply || reply.get_size() > MAX_REPLY_BYTES)
                 return;
             const [, layout] = reply.recursiveUnpack();
             this._tree = parseMenu(layout);
