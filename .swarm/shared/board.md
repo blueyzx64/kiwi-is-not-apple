@@ -221,3 +221,8 @@ No more installer work: no new pieces (Trash-drag uninstall, fly-to-dock, update
   - SM: first flight frame fixed, the strip reaches x=0, the panel is removed so thumbnails float (macOS), Split View exit restores the size.
   - The outline follows the scheme. minimizeEffect blocks the exact stock handler ids.
   - Limit: the GNOME 51 snippet shader path lacks the paint-volume override.
+- FX10 → merged:
+  - The stock screenshot banner is gone (root cause: Source has `icon`, not `gicon`).
+  - The toolbar sits above the dock.
+  - The Spotlight list height eases (reversals 17→0, stalls 6→0; the typing p95 number isn't comparable because the probes differ, so R4 re-measures).
+  - "No Results" empty state, app icons on menu rows, Setup Assistant icons (not rendered in the harness).
