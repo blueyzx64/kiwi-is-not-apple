@@ -21,44 +21,6 @@ import { QuickMenuToggle, QuickToggle } from 'resource:///org/gnome/shell/ui/qui
 
 import { COLUMNS, restoreOrder } from './model.js';
 
-/** @returns {Map<Clutter.Actor, string>} stock item actor -> model key */
-export function stockKeys(qs) {
-    const keys = new Map();
-    const tag = (key, items) => {
-        for (const item of items ?? []) {
-            if (item)
-                keys.set(item, key);
-        }
-    };
-    const items = indicator => indicator?.quickSettingsItems;
-
-    const net = qs._network;
-    tag('wifi', [net?._wirelessToggle]);
-    tag('wired', [net?._wiredToggle]);
-    tag('modem', [net?._modemToggle]);
-    tag('bt-tether', [net?._btToggle]);
-    tag('vpn', [net?._vpnToggle]);
-    tag('bluetooth', items(qs._bluetooth));
-    tag('dnd', items(qs._doNotDisturb));
-    tag('brightness', items(qs._brightness));
-    tag('backlight', items(qs._backlight));
-    tag('volume-out', items(qs._volumeOutput));
-    tag('volume-in', items(qs._volumeInput));
-    tag('dark-style', items(qs._darkMode));
-    tag('night-light', items(qs._nightLight));
-    tag('power-saver', items(qs._powerProfiles));
-    tag('rotation', items(qs._autoRotate));
-    tag('airplane', items(qs._rfkill));
-    tag('location', items(qs._location));
-    tag('camera', items(qs._camera));
-    tag('remote-access', items(qs._remoteAccess));
-    tag('thunderbolt', items(qs._thunderbolt));
-    tag('unsafe', items(qs._unsafeMode));
-    tag('background-apps', items(qs._backgroundApps));
-    tag('system', items(qs._system));
-    return keys;
-}
-
 /**
  * True while the grid can still be laid out. During its destruction (Shell shutdown, or a
  * rebuilt Quick Settings menu) Clutter has already dropped the layout manager.

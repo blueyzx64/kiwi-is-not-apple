@@ -387,7 +387,7 @@ export class NotchView {
     /**
      * @param {object} vm stateMachine.view(state)
      * @param {object} ctx {notification, media, dnd, count, recent, clipboard, shelf, selected,
-     *   widgets: {events, weather, mic, timersEnabled}}
+     *   widgets: {events, weather, mic, dnd, focus (features/focus state()), timersEnabled}}
      */
     render(vm, ctx) {
         if (this._destroyed)

@@ -40,7 +40,7 @@ import { AppMenuBar } from './appMenuBar.js';
 import { ForceQuit } from './forceQuit.js';
 import { FullscreenReveal } from './fullscreenReveal.js';
 import { LogoMenu } from './logoMenu.js';
-import { MenuGlass } from './menuGlass.js';
+import { MenuGlass } from '../../lib/menuGlass.js';
 import { PrivacyDots } from './privacyDots.js';
 
 export const LOGO_ROLE = 'kiwi-menubar-logo';

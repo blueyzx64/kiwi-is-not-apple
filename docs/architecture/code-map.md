@@ -78,7 +78,7 @@ prefs.js metadata.json stylesheet.css schemas/ po/`). `make pack-check` verifies
 | File | Role | Main API |
 |---|---|---|
 | `events.js` | typed signal hub; events declared once in `EVENTS` | `on(name, fn, owner?)`, `once`, `emit(name, payload)`, `listenerCount`, `clear` |
-| `desktopModel.js` | pure desktop picture | `upsertWindow(id, fields)`, `removeWindow`, `window(id)`, `windows(filter)`, `apps(filter)`, `setFocus`, `focusedWindow`, `focusedApp`, `setWorkspaces`, `setMonitors`; `isHelperWindowInfo`, `isUserFacing`, `appIdCandidates` (web-app ids for window-backed apps) |
+| `desktopModel.js` | pure desktop picture | `upsertWindow(id, fields)`, `removeWindow`, `window(id)`, `windows(filter)`, `apps(filter)`, `setFocus`, `focusedWindow`, `focusedApp`, `setWorkspaces`, `setMonitors` (WindowInfo has `above` and `parent`, the transient-for id); `isHelperWindowInfo`, `isUserFacing`, `appIdCandidates` (web-app ids for window-backed apps) |
 | `desktop.js` | feeds the model from Mutter; one tracker, ref-counted | `acquire(owner)`, `model`, `metaWindow(id)`, `tracking`, `stop()` |
 | `layoutModel.js` | edge claims -> rects and work area | `claim(spec)`, `update(id, fields)`, `release(id)`, `compute(index, monitorRect, {base, primary, strutsApplied})` |
 | `layout.js` | claims the menu bar itself; Mutter's work area as the base; an `actor` claim is chrome (hidden over full screen), with struts while its reserve is `strut` (`update({reserve})` switches live) | `acquire(owner)`, `claim(owner, spec)` -> `{rect, update, release}`, `rect(id, monitor)`, `workArea(monitor)` |
@@ -89,16 +89,17 @@ prefs.js metadata.json stylesheet.css schemas/ po/`). `make pack-check` verifies
 | `tileActions.js` | tiling vocabulary: zones, arrangements, `parseAction` (payload of `window-tile-requested`) | `ZONES`, `ARRANGEMENTS`, `parseAction` |
 | `panelLayout.js` (+`Model`) | who sits where in the top bar; hides stock items | `PanelLayout.claim(cleanup, {id, actor, box, anchor})`, `PanelLayout.hide(cleanup, role)` |
 | `windowState.js` | why a window is not in its normal place (`staged`, ...) | `WindowState.set/has/list/watch`, `interceptMinimize`, `setStageActive` |
-| `notificationRouter.js` | banners to the notch or stock, shared `{count, dnd}` | `setBannerSink`, `pinBanners`, `connect`, `state`, `setDnd` |
+| `notificationRouter.js` | banners to the notch or stock, shared `{count, dnd}`, banner filters (Focus), the history | `setBannerSink`, `setBannerFilter`, `pinBanners`, `connect`, `watchHistory`, `sources`, `appIdOf`, `state`, `setDnd` |
 | `mprisWatcher.js` | one MPRIS source for the extension | `MprisWatcher.acquire(cleanup, gettext)` |
 | `installerModel.js` / `installer.js` | the Installer1 contract as data (`INSTALLER1_XML`, kept equal to `installer-dbus-contract.md` by a test) and its client: availability (running / activatable / incompatible / absent), calls with timeouts, signals as events, a `ProgressBook` | `acquire`, `available`, `listApps`, `ownsDesktopId`, `open(path)`, `uninstall(appId)` -> outcome, `progress`; events `installer-*` |
+| `widgets/` | the one widget model for the desktop layer, Notification Center and notch: pure `model.js` (sizes, grid, snapping, layout JSON, `ProviderPool`, `WidgetRegistry`), `data.js` (pure data shaping), `view.js` (the glass card), `providers/` (time, calendar, weather, batteries, media, system; lazy and shared), `kinds/` (the built-in widgets) | `Widgets.acquire(cleanup, gettext)` -> `host.registry`, `host.createView(kind, {size, config, scale}, owner)` -> `view.actor`, `setActive(bool)`, `activate()`, `menuItems()` |
 | `osdModel.js` / `osd.js` | the one interception of the Shell OSD (`_showOsdWindow`): classifies volume / brightness / keyboard backlight and routes each change to ONE sink from `osd-location` (notch while it runs, else the menu-bar pill; 'system' = stock); other OSDs and other monitors stay stock | `classifyOsd`, `route`; `OsdRouter.start(cleanup)`, `setSink(owner, name, fn)` |
 | `appMenus/` | the focused app's menus (ctx.appMenus): pure `model.js` (generic menus, well-known GTK actions, Help search, ⌘ shortcut labels), `gtkActions.js` (org.gtk.Actions provider), `commands.js` (generic commands), `service.js` (providers, cache, activation); P6 menu bar providers: pure `nativeModel.js` (GMenu store, DBusMenu layout, AT-SPI nodes, `applyMenubar`), `gtkMenus.js` (org.gtk.Menus exported menu bar), `dbusMenu.js` (com.canonical.AppMenu.Registrar + com.canonical.dbusmenu, Xwayland apps by X11 id), `atspi.js` (experimental: async a11y-bus reads, libadwaita primary menu off-sight) | `acquire(owner)`, `targetFor(win)`, `peek/results(target)`, `build(target, results, opts)`, `activate(target, command)`, `registerProvider(owner, provider)`, `onChanged(owner, fn)` |
 | `timersModel.js` / `timers.js` | Kiwi's own countdown timers (wall clock, stored in `timers-state`, survive the lock screen); one alarm timeout, no tick | `ctx.timers.startTimer({seconds, label})` -> id, `pause`, `resume`, `cancel`, `list`, `remaining`; events `timers-changed`, `timer-finished` |
 
 Events (`EVENTS` in `core/events.js`): `window-added`, `window-changed`, `window-removed`,
 `window-focused`, `app-focused`, `workspaces-changed`, `monitors-changed`, `work-area-changed`,
-`motion-changed`, `feature-changed`, `minimize-requested`, `notification-center-requested`
+`motion-changed`, `feature-changed`, `minimize-requested`, `notification-center-requested`, `focus-changed`
 (the clock), `app-hide-requested` and `window-tile-requested` (app-menu commands for the
 window manager; the menu bar runs a fallback when nobody listens), `launchpad-requested` (dock tile,
 pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view-changed` (Split View), `recording-started` /
@@ -120,7 +121,10 @@ pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view
 | `modalSurface.js` (+`modalLook.js`, `modalModel.js`) | one Kiwi modal at a time (Spotlight, Quick Paste, clipboard popover) |
 | `keybindings.js` (+`Model`) | registers Kiwi shortcuts, conflict list |
 | `mpris.js` (+`Model`) | MPRIS players |
-| `quickSettings.js` | `readyQuickSettings()`, `whenQuickSettingsReady(cleanup, fn, name)` (bounded wait) |
+| `quickSettings.js` | `readyQuickSettings()`, `whenQuickSettingsReady(cleanup, fn, name)` (bounded wait), `stockKeys(qs)` (stock items by model key) |
+| `menuGlass.js`, `lazyMenu.js` | glass on Kiwi's panel menus; a panel popup filled as it opens |
+| `menuBarPins.js` | the `menubar-pinned` contract (Always / When Active / Never) for the Control Center editor, the prefs and menu-bar-items |
+| `batteryModel.js` | battery time from UPower values (user row, Battery item) |
 | `keepHidden.js` | keep a Shell actor hidden while a feature runs, give back its wanted visibility |
 | `jobQueue.js` | promise queue (`createJobQueue`) |
 | `launcherEntry.js` (+`Model`) | `com.canonical.Unity.LauncherEntry` badges, progress, urgent (entries go with their sender) |
@@ -134,16 +138,23 @@ pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view
 | `windowControls/` | `window-controls`, `app-buttons`, `gtk-theme` | traffic lights in the top bar (`index.js`), the apps' own buttons when off (`appButtons.js`), both owning `button-layout` through `buttonLayout.js` (a `SettingOwner`); GTK stylesheets in `gtk/` imported into the user's gtk.css by `gtkTheme.js` |
 | `menuBar/` | `menu-bar` | the macOS menu bar: logo menu, app name and menus (core/appMenus), transparent adaptive bar, full-screen reveal, privacy dots, About This PC, Force Quit, clock hook, Activities policy |
 | `calendar/` | `calendar`, `quick-settings-notifications`, `dnd-button` | date menu on the right as a card; notification list in Quick Settings; Kiwi's Do Not Disturb (beaten by `control-center`) |
-| `controlCenter/` | `control-center` | Quick Settings restyled |
+| `controlCenter/` | `control-center` | Quick Settings restyled; Edit Controls (`editor.js`, `customModel.js`: gallery, sizes, `control-center-layout`, empty = default plan), Kiwi's own controls (`controls.js`: feature and accessibility switches, Screenshot, Screen Recording, Timer, Keep Awake, Low Power Mode) |
+| `lowPower/` | `low-power` | Low Power Mode per power source (`low-power-battery`/`-adapter`) via power-profiles-daemon HoldProfile; battery health; event `low-power-changed` |
+| `menuBarItems/` | `menu-bar-items` | right side of the menu bar: StatusNotifierItem host (`host.js`: owns org.kde.StatusNotifierWatcher, or joins another watcher, or defers to the AppIndicator extension; `sniItem.js`, `dbusMenu.js`), pinned Control Center controls (`pinned.js`, mirrors of the stock items), item manager (`manager.js`: order, hidden, overflow chevron, input-source menu, AppIndicator icons) |
 | `notch/` | `notch` | banners, live activities, OSD; hover/click opens Now / Tray / Widgets tabs. `stateMachine.js` (queue, shape, tabs) and `model.js` (activity priority, code detection, shelf, derivations) are pure; `sources/` feed activities (UPower, BlueZ, core timers, recording, calendar server, downloads, one-time codes, mic and weather); `shelf.js` + `drop.js` (files dropped from apps via the DND selection); `view.js`, `pills.js`, `tabs.js`, `ui.js` draw |
 | `spotlight/` | `spotlight` | Super tap, providers; Tahoe browse views (Super+1..4), "/" filters, Actions, Quick Keys, history, Quick Look, menu items (`queryModel.js`, `actionsModel.js`, `results.js`) |
 | `clipboard/` | `clipboard-history` | history, popover, Quick Paste |
-| `stageManager/` | `stage-manager`, `stage-manager-shortcut` | strip, sets, flights (rebuilt in phase 4) |
+| `stageManager/` | `stage-manager`, `stage-manager-shortcut` | v3 (P4): `model.js` pure `StageMachine` (events in, effects out: stage, entries, strip order per workspace, desktop); `geometry.js` strip maths; `index.js` adapter on core/desktop, core/layout claim `stage-strip` (opposite a side dock), core/motion; `view.js` strip, drop target and flight layer in one container; `flights.js`; `windows.js` hide by opacity+pick. Public: `toggleDesktop()`, `isDesktopShown`, `openIntoStage(appId)` |
 | `showDesktop/` | `show-desktop` | top-bar button, Super+D, click on empty wallpaper (`click-wallpaper-reveals-desktop`: always / stage-manager / never); delegates to Stage Manager |
 | `launchpad/` | `launchpad` | macOS 11–15 Launchpad: full-screen grid (`view.js`), GNOME's app folders and app-picker-layout as data (`store.js`), jiggle mode ⓧ through GNOME Software or the Installer (`uninstall.js`); opened by `launchpad-requested`, Super+A / F4 (takes them from GNOME's toggle-application-view through core/originals) |
+| `widgets/` | `desktop-widgets` | Sonoma desktop widgets: a layer per monitor above the wallpaper (and DING), drag to place, right-click size/remove, gallery (`gallery.js`), dimming, "Edit Widgets…" in the wallpaper menu; `editWidgets()` for the Notification Center |
 | `roundedCorners/` | `rounded-corners` | shader effect per window |
 | `liquidGlass/` | `liquid-glass` | attaches `lib/glass.js` to the panel, Control Center and calendar menus; the glass prefs |
 | `shellBehaviour/` | `shell-behaviour` | swipes stop at workspaces; no hot corner |
+| `fullscreenSpace/` | `move-window-to-new-workspace` | full screen in its own Space (kept as in 2.x) |
+| `dock/` | `dock` | Kiwi's own dock: favourites, running and recent apps, minimized windows, Downloads stack (`stack.js`), Trash (`trash.js`), menus (`appMenu.js`), Open at Login (`autostart.js`); an edge claim in core/layout; keeps Dash to Dock off (`dashToDock.js`); `iconRect(appId)` / `minimizeTarget(win)` for Genie |
+| `notificationCenter/` | `notification-center` | the right-side column the clock opens (`notification-center-requested`): date and small month, history grouped by app (stacks, expand, Clear/Clear All, actions), widgets slot `addWidget(owner, {id, order, create})`; on `lib/modalSurface.js` position `'right'` |
+| `focus/` | `focus` | Focus modes (DND, Sleep, Work, Personal, custom): allowed apps, schedules, app triggers, time-sensitive break-through (`model.js`); banner filter via the router; GNOME DND synced both ways; Control Center tile with the mode menu and menu-bar icon (`indicator.js`); `state()`, event `focus-changed` |
 | `missionControl/` | `mission-control` | overview restyled as Mission Control: Spaces bar (+, ×, reorder), App Exposé with minimized strip, F3 / Ctrl+Up / Ctrl+Down, start on the desktop, static Spaces (dynamic-workspaces via core/originals) |
 | `windows/` | `window-tiling`, `app-hide` | Sequoia tiling: drag zones with a glass outline (`drag.js`), shortcuts, arrangements, margins, tile book (`model.js`); owns mutter `edge-tiling`; answers `window-tile-requested`. Hide / Hide Others (`hide.js`, `hideModel.js`), WindowState `hidden`, answers `app-hide-requested`, takes Super+H from GNOME's minimize while on |
 | `fullscreenSpace/` | `move-window-to-new-workspace` | full screen in its own Space (kept as in 2.x); a `splitView`-flagged window stays in its Space when it leaves full screen |

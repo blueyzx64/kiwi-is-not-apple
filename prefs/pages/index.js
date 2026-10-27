@@ -12,14 +12,16 @@ import * as dock from './dock.js';
 import * as windows from './windows.js';
 import * as navigation from './navigation.js';
 import * as appearance from './appearance.js';
+import * as notifications from './notifications.js';
 import * as keyboard from './keyboard.js';
 import * as about from './about.js';
+import * as controlCenter from './controlCenter.js';
 import * as stageManagerPrefs from '../../features/stageManager/prefs.js';
 import * as missionControlPrefs from '../../features/missionControl/prefs.js';
 import * as notchPrefs from '../../features/notch/prefs.js';
 import * as spotlightPrefs from '../../features/spotlight/prefs.js';
-import * as controlCenterPrefs from '../../features/controlCenter/prefs.js';
 import * as clipboardPrefs from '../../features/clipboard/prefs.js';
+import * as widgetsPrefs from '../../features/widgets/prefs.js';
 import * as screenshotsPrefs from '../../features/screenshots/prefs.js';
 import { addFeatureGroups } from '../widgets.js';
 
@@ -42,11 +44,13 @@ export const SECTIONS = [
     { title: N_('General'), pages: [general, loginItems] },
     { title: N_('Desktop'), pages: [menuBar, dock, windows, navigation,
         featurePage('mission-control', N_('Mission Control'), 'view-grid-symbolic', missionControlPrefs),
-        featurePage('stage-manager', N_('Stage Manager'), 'view-app-grid-symbolic', stageManagerPrefs)] },
+        featurePage('stage-manager', N_('Stage Manager'), 'view-app-grid-symbolic', stageManagerPrefs),
+        featurePage('widgets', N_('Widgets'), 'preferences-desktop-apps-symbolic', widgetsPrefs)] },
     { title: N_('Features'), pages: [
+        notifications,
         featurePage('notch', N_('Notch'), 'preferences-system-notifications-symbolic', notchPrefs),
         featurePage('spotlight', N_('Spotlight'), 'system-search-symbolic', spotlightPrefs),
-        featurePage('control-center', N_('Control Center'), 'preferences-system-symbolic', controlCenterPrefs),
+        controlCenter,
         featurePage('clipboard', N_('Clipboard'), 'edit-paste-symbolic', clipboardPrefs),
         featurePage('screenshots', N_('Screenshots'), 'camera-photo-symbolic', screenshotsPrefs),
         keyboard,

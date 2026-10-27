@@ -1430,6 +1430,199 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
     -barlevel-active-background-color: rgba(0, 0, 0, 0.7);
 }
 
+/* ---- Edit Controls (editor.js) and Kiwi's own controls ---- */
+.quick-settings.kiwi-control-center .kiwi-cc-edit-controls {
+    margin-top: 8px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 9.5pt;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.78);
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-edit-controls:hover,
+.quick-settings.kiwi-control-center .kiwi-cc-edit-controls:focus {
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-editor {
+    width: 306px;
+    spacing: 10px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-editor-head {
+    spacing: 6px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-editor-title {
+    font-size: 11pt;
+    font-weight: 700;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-editor-text-button {
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 9.5pt;
+    font-weight: 600;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-editor-done {
+    color: #ffffff;
+    background-color: -st-accent-color;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-editor-text-button:hover {
+    background-color: rgba(255, 255, 255, 0.18);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-editor-done:hover {
+    background-color: st-lighten(-st-accent-color, 6%);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-edit-tile {
+    min-height: 58px;
+    padding: 4px;
+    border-radius: 14px;
+    background-color: rgba(255, 255, 255, 0.08);
+    border: 1px dashed rgba(255, 255, 255, 0.22);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-edit-body {
+    spacing: 6px;
+    padding: 2px 0;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-edit-label {
+    font-size: 9pt;
+    font-weight: 600;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-edit-button {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border-radius: 999px;
+    color: rgba(255, 255, 255, 0.85);
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-edit-button:hover,
+.quick-settings.kiwi-control-center .kiwi-cc-edit-button:focus {
+    background-color: rgba(255, 255, 255, 0.24);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-edit-button:checked {
+    color: #ffffff;
+    background-color: -st-accent-color;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-edit-button:insensitive {
+    color: rgba(255, 255, 255, 0.3);
+    background-color: transparent;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-edit-empty {
+    padding: 8px;
+    font-size: 9pt;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-editor-search {
+    padding: 4px 8px;
+    border-radius: 10px;
+    font-size: 9.5pt;
+    background-color: rgba(255, 255, 255, 0.08);
+    border: none;
+    box-shadow: none;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-editor-preview-scroll {
+    max-height: 290px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-gallery-scroll {
+    max-height: 200px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-gallery {
+    spacing: 8px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-gallery-title {
+    padding: 0 4px 2px 4px;
+    font-size: 8.5pt;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-gallery-item {
+    padding: 5px 8px;
+    border-radius: 10px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-gallery-item > StBoxLayout {
+    spacing: 8px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-gallery-item:hover,
+.quick-settings.kiwi-control-center .kiwi-cc-gallery-item:focus {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-gallery-label {
+    font-size: 9.5pt;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-gallery-add {
+    color: #30d158;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-gallery-added {
+    color: rgba(255, 255, 255, 0.45);
+}
+
+/* light style */
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-edit-controls,
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-edit-tile,
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-editor-search,
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-editor-text-button {
+    color: rgba(0, 0, 0, 0.8);
+    background-color: rgba(0, 0, 0, 0.06);
+    border-color: rgba(0, 0, 0, 0.2);
+}
+
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-editor-done {
+    color: #ffffff;
+    background-color: -st-accent-color;
+}
+
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-edit-button {
+    color: rgba(0, 0, 0, 0.75);
+    background-color: rgba(0, 0, 0, 0.08);
+}
+
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-edit-button:checked {
+    color: #ffffff;
+    background-color: -st-accent-color;
+}
+
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-gallery-title,
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-edit-empty,
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-gallery-added {
+    color: rgba(0, 0, 0, 0.5);
+}
+
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-gallery-item:hover,
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-gallery-item:focus {
+    background-color: rgba(0, 0, 0, 0.06);
+}
+
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-gallery-add {
+    color: #28a745;
+}
+
 /* ==== features/dialogs/style.css ==== */
 
 /* feature: dialogs */
@@ -1789,6 +1982,15 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
 
 .kiwi-emoji-tab-icon {
   icon-size: 15px;
+}
+
+/* ==== features/focus/style.css ==== */
+
+/* feature: focus (features/focus)
+   The active Focus mode's icon in the top bar (indicator.js). */
+
+.kiwi-focus-indicator {
+  opacity: 0.95;
 }
 
 /* ==== features/inputIndicator/style.css ==== */
@@ -2266,6 +2468,50 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
 .kiwi-force-quit-button {
   border-radius: 7px;
   padding: 5px 16px;
+}
+
+/* ==== features/menuBarItems/style.css ==== */
+
+/* feature: menu-bar-items */
+/* Status items, pinned controls and the overflow chevron: plain icons like the rest of the
+   macOS menu bar (the bar itself is styled by menu-bar). */
+
+.kiwi-menubar-pinned-box {
+    spacing: 4px;
+}
+
+.kiwi-menubar-pinned-label {
+    font-size: 10pt;
+    font-weight: 500;
+    font-feature-settings: "tnum";
+}
+
+.kiwi-menubar-chevron .system-status-icon {
+    icon-size: 12px;
+}
+
+.kiwi-menubar-items-info {
+    font-size: 9.5pt;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.kiwi-menubar-pinned-slider {
+    spacing: 8px;
+    min-width: 220px;
+}
+
+.kiwi-menubar-pinned-media-box {
+    spacing: 18px;
+}
+
+.kiwi-menubar-pinned-media-button {
+    padding: 6px;
+    border-radius: 999px;
+}
+
+.kiwi-menubar-pinned-media-button:hover,
+.kiwi-menubar-pinned-media-button:focus {
+    background-color: rgba(255, 255, 255, 0.12);
 }
 
 /* ==== features/missionControl/style.css ==== */
@@ -3061,6 +3307,269 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
     font-size: 12px;
 }
 
+/* ==== features/notificationCenter/style.css ==== */
+
+/* feature: notification-center (features/notificationCenter)
+   The right-side column (lib/modalSurface.js position 'right', glass frame .kiwi-nc): the
+   date widget, grouped notification stacks and the widgets area. Cards are lighter rounded
+   tiles on the glass, as in macOS Big Sur's Notification Center. */
+
+.kiwi-nc {
+  padding: 0;
+}
+
+.kiwi-nc .kiwi-nc-content {
+  padding: 12px;
+  spacing: 14px;
+}
+
+.kiwi-nc .kiwi-nc-card {
+  border-radius: 16px;
+  background-color: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px 12px;
+}
+
+.kiwi-modal-light.kiwi-nc .kiwi-nc-card {
+  background-color: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* Date widget */
+.kiwi-nc .kiwi-nc-date {
+  spacing: 6px;
+}
+
+.kiwi-nc .kiwi-nc-date-weekday {
+  font-size: 0.75em;
+  font-weight: 700;
+  color: #ff453a;
+}
+
+.kiwi-nc .kiwi-nc-date-day {
+  font-size: 1.35em;
+  font-weight: 600;
+}
+
+.kiwi-nc .kiwi-nc-month-weekday {
+  font-size: 0.7em;
+  font-weight: 600;
+  opacity: 0.6;
+  padding: 2px 0;
+}
+
+.kiwi-nc .kiwi-nc-month-day {
+  font-size: 0.8em;
+  min-width: 24px;
+  min-height: 20px;
+  padding: 2px 0;
+  text-align: center;
+  border-radius: 999px;
+}
+
+.kiwi-nc .kiwi-nc-month-other {
+  opacity: 0.35;
+}
+
+.kiwi-nc .kiwi-nc-month-today {
+  background-color: #ff453a;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+/* Sections */
+.kiwi-nc .kiwi-nc-section {
+  spacing: 8px;
+}
+
+.kiwi-nc .kiwi-nc-section-head,
+.kiwi-nc .kiwi-nc-group-head {
+  spacing: 6px;
+  padding: 0 4px;
+}
+
+.kiwi-nc .kiwi-nc-section-title {
+  font-weight: 700;
+  font-size: 1.05em;
+}
+
+.kiwi-nc .kiwi-nc-group-title {
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.kiwi-nc .kiwi-nc-pill {
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.8em;
+  font-weight: 600;
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.kiwi-nc .kiwi-nc-pill:hover,
+.kiwi-nc .kiwi-nc-pill:focus {
+  background-color: rgba(255, 255, 255, 0.22);
+}
+
+.kiwi-modal-light.kiwi-nc .kiwi-nc-pill {
+  background-color: rgba(0, 0, 0, 0.07);
+}
+
+.kiwi-modal-light.kiwi-nc .kiwi-nc-pill:hover,
+.kiwi-modal-light.kiwi-nc .kiwi-nc-pill:focus {
+  background-color: rgba(0, 0, 0, 0.13);
+}
+
+.kiwi-nc .kiwi-nc-pill-icon {
+  padding: 3px 5px;
+}
+
+.kiwi-nc .kiwi-nc-button-icon {
+  icon-size: 12px;
+}
+
+.kiwi-nc .kiwi-nc-empty {
+  padding: 18px 0;
+  opacity: 0.55;
+}
+
+/* Notification cards and stacks */
+.kiwi-nc .kiwi-nc-group {
+  spacing: 6px;
+}
+
+.kiwi-nc .kiwi-nc-stacked {
+  spacing: 0;
+}
+
+.kiwi-nc .kiwi-nc-notification:hover,
+.kiwi-nc .kiwi-nc-notification:focus {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.kiwi-modal-light.kiwi-nc .kiwi-nc-notification:hover,
+.kiwi-modal-light.kiwi-nc .kiwi-nc-notification:focus {
+  background-color: rgba(255, 255, 255, 0.85);
+}
+
+.kiwi-nc .kiwi-nc-notification-row {
+  spacing: 10px;
+}
+
+.kiwi-nc .kiwi-nc-app-icon {
+  border-radius: 8px;
+}
+
+.kiwi-nc .kiwi-nc-title {
+  font-weight: 700;
+  font-size: 0.9em;
+}
+
+.kiwi-nc .kiwi-nc-age {
+  font-size: 0.75em;
+  opacity: 0.55;
+  padding-left: 6px;
+}
+
+.kiwi-nc .kiwi-nc-body {
+  font-size: 0.85em;
+  opacity: 0.85;
+}
+
+.kiwi-nc .kiwi-nc-actions {
+  spacing: 6px;
+  padding-top: 8px;
+}
+
+.kiwi-nc .kiwi-nc-action {
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 0.8em;
+  font-weight: 600;
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.kiwi-nc .kiwi-nc-action:hover,
+.kiwi-nc .kiwi-nc-action:focus {
+  background-color: rgba(255, 255, 255, 0.22);
+}
+
+.kiwi-modal-light.kiwi-nc .kiwi-nc-action {
+  background-color: rgba(0, 0, 0, 0.07);
+}
+
+.kiwi-nc .kiwi-nc-close {
+  border-radius: 999px;
+  padding: 3px;
+  margin-left: 6px;
+  background-color: rgba(90, 90, 96, 0.95);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.kiwi-modal-light.kiwi-nc .kiwi-nc-close {
+  background-color: rgba(245, 245, 247, 0.98);
+  color: #1d1d1f;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+/* The cards peeking out under a collapsed stack */
+.kiwi-nc .kiwi-nc-peek {
+  height: 8px;
+  border-radius: 0 0 12px 12px;
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.kiwi-nc .kiwi-nc-peek-1 {
+  margin: 0 10px;
+}
+
+.kiwi-nc .kiwi-nc-peek-2 {
+  margin: 0 20px;
+  background-color: rgba(255, 255, 255, 0.07);
+}
+
+.kiwi-modal-light.kiwi-nc .kiwi-nc-peek {
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+.kiwi-modal-light.kiwi-nc .kiwi-nc-peek-2 {
+  background-color: rgba(255, 255, 255, 0.32);
+}
+
+/* Widgets area placeholders (until the widget model provides widgets) */
+.kiwi-nc .kiwi-nc-placeholder-row {
+  spacing: 10px;
+}
+
+.kiwi-nc .kiwi-nc-placeholder {
+  min-height: 72px;
+  padding: 14px 12px;
+  spacing: 6px;
+  border: 1px dashed rgba(255, 255, 255, 0.22);
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.kiwi-modal-light.kiwi-nc .kiwi-nc-placeholder {
+  border: 1px dashed rgba(0, 0, 0, 0.2);
+  background-color: rgba(255, 255, 255, 0.35);
+}
+
+.kiwi-nc .kiwi-nc-placeholder-icon,
+.kiwi-nc .kiwi-nc-placeholder-label,
+.kiwi-nc .kiwi-nc-placeholder-note {
+  opacity: 0.55;
+}
+
+.kiwi-nc .kiwi-nc-placeholder-label {
+  font-size: 0.8em;
+  font-weight: 600;
+}
+
+.kiwi-nc .kiwi-nc-placeholder-note {
+  font-size: 0.75em;
+}
+
 /* ==== features/osd/style.css ==== */
 
 /* feature: osd */
@@ -3543,6 +4052,11 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
 /* One floor under the whole strip: Kiwi glass (lib/glass.js) while Liquid Glass is on, else
    this plain translucent rounded panel with a rim and a soft shadow. The windows lie on it,
    tilted toward the stage. */
+.kiwi-stage-shadow {
+    border-radius: 20px;
+    background-color: transparent;
+}
+
 .kiwi-stage-strip {
     border-radius: 20px;
     background-color: rgba(255, 255, 255, 0.09);
@@ -3597,14 +4111,10 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
     padding: 3px 10px;
 }
 
-/* Drop target over the stage while a strip entry is dragged */
+/* While an entry is dragged, the stage is a drop target: "Add to Stage" */
 .kiwi-stage-drop {
-    background-color: transparent;
-}
-
-.kiwi-stage-drop-zone {
     border-radius: 18px;
-    background-color: rgba(255, 255, 255, 0.12);
+    background-color: rgba(255, 255, 255, 0.10);
     border: 2px solid -st-accent-color;
 }
 
@@ -3678,6 +4188,337 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
 /* The arrows the stock list draws under apps with several windows are not part of macOS */
 .kiwi-switcher .switcher-arrow {
   color: transparent;
+}
+
+/* ==== features/widgets/style.css ==== */
+
+/* feature: desktop-widgets */
+/* Widget cards (core/widgets/view.js) are shared by the desktop layer, the Notification
+   Center and the notch, so their rules live here for every surface. lib/glass.js ('overlays')
+   gives the fill and rim; this is the solid look when glass is off. Radius and padding are
+   inline (view.js RADIUS / PADDING, scaled). */
+.kiwi-widget {
+  background-color: rgba(36, 36, 40, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+.kiwi-widget.kiwi-glass-light {
+  color: #1d1d1f;
+}
+
+.kiwi-widget-content {
+  spacing: 4px;
+}
+
+.kiwi-widget-row {
+  spacing: 10px;
+}
+
+.kiwi-widget-column {
+  spacing: 2px;
+}
+
+.kiwi-widget-hero {
+  font-size: 2.4em;
+  font-weight: 600;
+}
+
+.kiwi-widget-medium .kiwi-widget-hero,
+.kiwi-widget-large .kiwi-widget-hero {
+  font-size: 2.1em;
+}
+
+.kiwi-widget-body {
+  font-size: 1em;
+}
+
+.kiwi-widget-caption {
+  font-size: 0.85em;
+}
+
+.kiwi-widget-strong {
+  font-weight: 700;
+}
+
+.kiwi-widget-dim {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.kiwi-glass-light .kiwi-widget-dim {
+  color: rgba(0, 0, 0, 0.55);
+}
+
+/* The calendar's weekday and the clock's date: macOS red */
+.kiwi-widget-accent {
+  color: #ff453a;
+}
+
+.kiwi-glass-light .kiwi-widget-accent {
+  color: #d70015;
+}
+
+.kiwi-widget-icon {
+  color: inherit;
+}
+
+/* Calendar */
+.kiwi-widget-date {
+  min-width: 90px;
+}
+
+.kiwi-widget-events {
+  spacing: 6px;
+}
+
+.kiwi-widget-event {
+  spacing: 6px;
+}
+
+.kiwi-widget-event-bar {
+  width: 3px;
+  border-radius: 2px;
+  background-color: #ff453a;
+}
+
+.kiwi-widget-month {
+  spacing-rows: 2px;
+}
+
+.kiwi-widget-month-head {
+  font-size: 0.75em;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.kiwi-widget-month-day {
+  font-size: 0.8em;
+  min-width: 22px;
+  padding: 2px 0;
+  border-radius: 11px;
+  text-align: center;
+}
+
+.kiwi-widget-month-day.kiwi-widget-today {
+  background-color: #ff453a;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+/* Weather */
+.kiwi-widget-forecast {
+  spacing: 4px;
+  padding-top: 6px;
+}
+
+.kiwi-widget-hour {
+  spacing: 4px;
+}
+
+/* Clocks, batteries, system */
+.kiwi-widget-clocks {
+  spacing: 10px;
+}
+
+.kiwi-widget-world {
+  spacing: 6px;
+}
+
+.kiwi-widget-batteries,
+.kiwi-widget-battery,
+.kiwi-widget-gauge {
+  spacing: 6px;
+}
+
+/* Now Playing: art concentric with the card (22 - 14 = 8 px) */
+.kiwi-widget-artwork {
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.kiwi-widget-art-icon {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.kiwi-widget-controls {
+  spacing: 6px;
+}
+
+.kiwi-widget-button {
+  border-radius: 999px;
+  padding: 6px;
+  background-color: rgba(255, 255, 255, 0.14);
+  color: inherit;
+}
+
+.kiwi-widget-button:hover {
+  background-color: rgba(255, 255, 255, 0.24);
+}
+
+.kiwi-widget-button:active {
+  background-color: rgba(255, 255, 255, 0.32);
+}
+
+.kiwi-widget-button:focus {
+  box-shadow: inset 0 0 0 2px -st-accent-color;
+}
+
+.kiwi-widget-button:insensitive {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.kiwi-glass-light .kiwi-widget-button {
+  background-color: rgba(0, 0, 0, 0.08);
+}
+
+.kiwi-glass-light .kiwi-widget-button:hover {
+  background-color: rgba(0, 0, 0, 0.14);
+}
+
+/* Desktop layer */
+.kiwi-widgets-layer {
+  background-color: transparent;
+}
+
+.kiwi-widget-dragging {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+/* The snap target while dragging */
+.kiwi-widget-outline {
+  border-radius: 22px;
+  border: 2px dashed rgba(255, 255, 255, 0.55);
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.kiwi-widget-remove {
+  width: 22px;
+  height: 22px;
+  border-radius: 11px;
+  background-color: rgba(60, 60, 64, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.kiwi-widget-remove:hover {
+  background-color: rgba(90, 90, 96, 0.98);
+}
+
+/* Gallery */
+.kiwi-widgets-gallery {
+  border-radius: 26px;
+  padding: 14px 18px;
+  spacing: 10px;
+  background-color: rgba(36, 36, 40, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.kiwi-widgets-gallery-header {
+  spacing: 10px;
+}
+
+.kiwi-widgets-gallery-title {
+  font-size: 1.25em;
+  font-weight: 700;
+  padding-right: 6px;
+}
+
+.kiwi-widgets-gallery-search {
+  border-radius: 999px;
+  padding: 4px 10px;
+  max-width: 360px;
+}
+
+.kiwi-widgets-gallery-search-icon {
+  icon-size: 14px;
+  padding-right: 4px;
+}
+
+.kiwi-widgets-gallery-pill {
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-weight: 600;
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+.kiwi-widgets-gallery-pill:hover {
+  background-color: rgba(255, 255, 255, 0.22);
+}
+
+.kiwi-widgets-gallery-done {
+  background-color: -st-accent-color;
+  color: -st-accent-fg-color;
+}
+
+.kiwi-widgets-gallery-categories {
+  spacing: 6px;
+}
+
+.kiwi-widgets-gallery-chip {
+  border-radius: 8px;
+  padding: 3px 10px;
+  font-size: 0.9em;
+}
+
+.kiwi-widgets-gallery-chip:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.kiwi-widgets-gallery-chip:checked {
+  background-color: rgba(255, 255, 255, 0.2);
+  font-weight: 700;
+}
+
+.kiwi-widgets-gallery-row {
+  spacing: 18px;
+  padding: 4px 2px;
+}
+
+.kiwi-widgets-gallery-tile {
+  spacing: 6px;
+}
+
+.kiwi-widgets-gallery-preview {
+  border-radius: 14px;
+}
+
+.kiwi-widgets-gallery-preview:hover,
+.kiwi-widgets-gallery-preview:focus {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.kiwi-widgets-gallery-name {
+  font-weight: 600;
+}
+
+.kiwi-widgets-gallery-add {
+  width: 24px;
+  height: 24px;
+  border-radius: 12px;
+  background-color: -st-accent-color;
+  color: -st-accent-fg-color;
+}
+
+.kiwi-widgets-gallery-sizes {
+  spacing: 4px;
+}
+
+.kiwi-widgets-gallery-size {
+  border-radius: 6px;
+  padding: 1px 8px;
+  font-size: 0.8em;
+  font-weight: 600;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.kiwi-widgets-gallery-size:checked {
+  background-color: rgba(255, 255, 255, 0.28);
+}
+
+.kiwi-widgets-gallery-empty {
+  padding: 24px;
+  color: rgba(255, 255, 255, 0.62);
 }
 
 /* ==== features/windowControls/style.css ==== */

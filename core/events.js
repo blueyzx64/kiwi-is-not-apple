@@ -35,6 +35,9 @@ export const EVENTS = Object.freeze({
     'timer-finished': { timer: 'object' },
     // lib/featureRegistry.js, through extension.js: a feature started or stopped
     'feature-changed': { id: 'string', active: 'boolean' },
+    // features/focus: the active Focus mode changed (id null: Focus off). The notch and the
+    // menu bar show its icon; ctx.features.instance('focus').state() gives the same at any time.
+    'focus-changed': { id: 'string|null', name: 'string|null', icon: 'string|null', reason: "'manual'|'app'|'schedule'|null" },
     // features/screenshots: a screen recording started (kind 'screen' or 'area') or ended
     // (path of the video file when GNOME reports it, else null). The notch shows it live.
     'recording-started': { kind: "'screen'|'area'" },
@@ -64,7 +67,7 @@ export const EVENTS = Object.freeze({
     'launchpad-requested': { source: "string ('corner'|'gesture'|'dock')" },
     // Spotlight's "Start Timer" action (features/spotlight). The timers' owner (the notch's
     // live activities, P5) listens; with no listener Spotlight runs a plain notification timer.
-    'timer-start-requested': { seconds: 'number', label: 'string', source: "string ('spotlight')" },
+    'timer-start-requested': { seconds: 'number', label: 'string', source: "string ('spotlight'|'control-center')" },
     // The green button of the top-bar controls (features/windowControls) was hovered or left;
     // Split View (features/splitView) offers its menu for a full-screen window
     'green-button-hover': { window: 'Meta.Window|null', actor: 'Clutter.Actor', hovered: 'boolean' },
@@ -73,6 +76,9 @@ export const EVENTS = Object.freeze({
     'split-view-requested': { window: 'Meta.Window', side: "'left' | 'right'" },
     // A Split View pair formed (active) or ended (features/splitView)
     'split-view-changed': { windows: 'Meta.Window[]', active: 'boolean' },
+    // features/lowPower: Low Power Mode started or stopped applying, the power source changed,
+    // or the daemon or the battery was found
+    'low-power-changed': { active: 'boolean' },
     // core/installer.js (the owner's installer, Installer1; P7)
     'installer-availability-changed': { availability: "'running' | 'activatable' | 'incompatible' | 'absent'" },
     'installer-progress': { operations: 'object[] in flight', fraction: 'number 0..1 | null' },

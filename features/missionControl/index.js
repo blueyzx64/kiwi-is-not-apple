@@ -379,12 +379,20 @@ export class MissionControl {
         this.startupState = { startingUp: !!lm._startingUp, first, overview: Main.overview.visible };
         if (!skipStartupOverview({ wanted: this._ks.bool(KEYS.startOnDesktop), startingUp: !!lm._startingUp, firstStart: first }))
             return;
-        // Kiwi came up while the startup animation runs, or after it with the login overview
-        // still open: hide it now (the Shell handles "Overview got hidden during startup
-        // animation")
+        // Kiwi came up after the startup animation with the login overview still open: hide
+        // it now. While the animation still runs it must finish first: hiding the overview
+        // mid-animation unmaps the controls, their ensureAllocation() never resolves, and the
+        // Shell's startup (cover pane, startup-complete) never completes
         if (Main.overview.visible) {
             this.startupSkipped = true;
-            Main.overview.hide();
+            if (!lm._startingUp) {
+                Main.overview.hide();
+                return;
+            }
+            const after = c.connect(lm, 'startup-complete', () => {
+                c.release(after);
+                Main.overview.hide();
+            });
             return;
         }
         if (!lm._startingUp || typeof Main.overview.runStartupAnimation !== 'function')

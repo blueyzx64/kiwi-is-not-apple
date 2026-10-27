@@ -672,6 +672,60 @@
         <summary>Always show battery percentage</summary>
         <description>Show the battery charge in the top bar at any level, not only when it is low. Not shown while GNOME's own battery percentage is on.</description>
       </key>
+      <key name="control-center-layout" type="as">
+        <default>[]</default>
+        <summary>Control Center layout</summary>
+        <description>The controls of the Control Center in order, each "id:size" (small, medium or large), as arranged with Edit Controls. Empty means Kiwi's default arrangement. Controls left out are hidden; other extensions' items are always kept.</description>
+      </key>
+
+      <!-- Low Power Mode (features/lowPower) -->
+      <key name="low-power-battery" type="b">
+        <default>false</default>
+        <summary>Low Power Mode on battery</summary>
+        <description>Hold the power-saver profile of power-profiles-daemon while the computer runs on battery. The hold is released on power or when Kiwi stops, so GNOME's own choice comes back.</description>
+      </key>
+      <key name="low-power-adapter" type="b">
+        <default>false</default>
+        <summary>Low Power Mode on power adapter</summary>
+        <description>Hold the power-saver profile while the computer is plugged in (or has no battery).</description>
+      </key>
+
+      <!-- Menu bar items (features/menuBarItems) -->
+      <key name="menubar-status-items" type="b">
+        <default>true</default>
+        <summary>App status icons</summary>
+        <description>Show apps' status icons (StatusNotifierItem tray icons: Discord, Steam, Nextcloud...) in the menu bar with their menus. When the AppIndicator extension is enabled, it draws them and Kiwi only hides and orders them.</description>
+      </key>
+      <key name="menubar-pinned" type="as">
+        <default>[]</default>
+        <summary>Controls in the menu bar</summary>
+        <description>Control Center controls shown in the menu bar, each "id=always" or "id=active" (only while active). Ids: wifi, bluetooth, sound, battery, focus, now-playing, keyboard-brightness, screen-recording.</description>
+      </key>
+      <key name="menubar-battery-percentage" type="b">
+        <default>false</default>
+        <summary>Battery percentage in the menu bar</summary>
+        <description>Show the charge next to the pinned Battery item (macOS shows no percentage by default).</description>
+      </key>
+      <key name="menubar-item-order" type="as">
+        <default>[]</default>
+        <summary>Menu bar item order</summary>
+        <description>The order of the managed menu bar items, left to right (pin:wifi, sni:discord, stock:keyboard...). New items go first.</description>
+      </key>
+      <key name="menubar-item-hidden" type="as">
+        <default>[]</default>
+        <summary>Hidden menu bar items</summary>
+        <description>Managed menu bar items the user hid.</description>
+      </key>
+      <key name="menubar-item-registry" type="as">
+        <default>[]</default>
+        <summary>Known menu bar items (internal)</summary>
+        <description>Written by Kiwi: the items it has seen ("id&#9;title"), so the preferences can list them.</description>
+      </key>
+      <key name="menubar-overflow" type="b">
+        <default>true</default>
+        <summary>Menu bar overflow</summary>
+        <description>When the menu bar is crowded, put the items that do not fit behind a chevron.</description>
+      </key>
 
       <!-- Stage Manager (features/stageManager) -->
       <key name="stage-manager" type="b">
@@ -682,17 +736,17 @@
       <key name="stage-manager-side" type="s">
         <default>'left'</default>
         <summary>Stage Manager strip side</summary>
-        <description>Which screen edge holds the strip: "left" or "right".</description>
+        <description>Which screen edge holds the strip: "left" or "right". With the dock on the left or right edge, the strip always takes the other side.</description>
       </key>
       <key name="stage-manager-autohide" type="b">
         <default>true</default>
         <summary>Auto-hide the strip</summary>
-        <description>Hide the strip while a window on the stage overlaps it, and show it again when the pointer reaches the screen edge.</description>
+        <description>Hide the strip while a window on the stage overlaps it, and show it again when the pointer pushes against the screen edge.</description>
       </key>
       <key name="stage-manager-group-by-app" type="b">
         <default>true</default>
-        <summary>Group windows by app</summary>
-        <description>Windows of the same app share one stack in the strip. Off gives each window its own thumbnail.</description>
+        <summary>Show an app's windows all at once</summary>
+        <description>On ("All at Once", macOS default): an app's windows come onto the stage together and share one strip entry; a new window joins its app on the stage. Off ("One at a Time"): each window is its own entry, and a new window gets its own stage.</description>
       </key>
       <key name="stage-manager-recent-count" type="i">
         <default>6</default>
@@ -712,7 +766,7 @@
         </choices>
         <default>'replace'</default>
         <summary>New windows in Stage Manager</summary>
-        <description>"replace": a new app window takes the stage and the previous set goes to the strip as one entry (macOS). "join": the new window joins the set on the stage.</description>
+        <description>"replace": a new app window takes the stage and the previous set goes to the strip as one entry (macOS). "join": the new window joins the set on the stage. Alt-click an app (dock, app grid) to open it into the current stage once.</description>
       </key>
       <key name="stage-manager-wallpaper-click" type="b">
         <default>true</default>
@@ -735,6 +789,51 @@
         <default>['&lt;Control&gt;&lt;Super&gt;Down']</default>
         <summary>Remove from set shortcut</summary>
         <description>Takes the focused window out of the set on the stage and puts it in the strip. Only active while Stage Manager is on.</description>
+      </key>
+      <key name="stage-manager-show-recent" type="b">
+        <default>true</default>
+        <summary>Show recent apps</summary>
+        <description>Show the strip of recent apps beside the stage. Off keeps it hidden until the pointer pushes against the screen edge (macOS "Show recent apps in Stage Manager").</description>
+      </key>
+      <key name="stage-manager-next-shortcut" type="as">
+        <default>['&lt;Super&gt;&lt;Alt&gt;Page_Down']</default>
+        <summary>Next set shortcut</summary>
+        <description>Puts the next set or app on the stage, in the order they were opened. Only active while Stage Manager is on.</description>
+      </key>
+      <key name="stage-manager-previous-shortcut" type="as">
+        <default>['&lt;Super&gt;&lt;Alt&gt;Page_Up']</default>
+        <summary>Previous set shortcut</summary>
+        <description>Puts the previous set or app on the stage. Only active while Stage Manager is on.</description>
+      </key>
+      <key name="stage-manager-slot-1-shortcut" type="as">
+        <default>['&lt;Super&gt;&lt;Alt&gt;1']</default>
+        <summary>Switch to strip entry 1</summary>
+        <description>Puts entry 1 of the strip (counted from the top) on the stage. Only active while Stage Manager is on.</description>
+      </key>
+      <key name="stage-manager-slot-2-shortcut" type="as">
+        <default>['&lt;Super&gt;&lt;Alt&gt;2']</default>
+        <summary>Switch to strip entry 2</summary>
+        <description>Puts entry 2 of the strip (counted from the top) on the stage. Only active while Stage Manager is on.</description>
+      </key>
+      <key name="stage-manager-slot-3-shortcut" type="as">
+        <default>['&lt;Super&gt;&lt;Alt&gt;3']</default>
+        <summary>Switch to strip entry 3</summary>
+        <description>Puts entry 3 of the strip (counted from the top) on the stage. Only active while Stage Manager is on.</description>
+      </key>
+      <key name="stage-manager-slot-4-shortcut" type="as">
+        <default>['&lt;Super&gt;&lt;Alt&gt;4']</default>
+        <summary>Switch to strip entry 4</summary>
+        <description>Puts entry 4 of the strip (counted from the top) on the stage. Only active while Stage Manager is on.</description>
+      </key>
+      <key name="stage-manager-slot-5-shortcut" type="as">
+        <default>['&lt;Super&gt;&lt;Alt&gt;5']</default>
+        <summary>Switch to strip entry 5</summary>
+        <description>Puts entry 5 of the strip (counted from the top) on the stage. Only active while Stage Manager is on.</description>
+      </key>
+      <key name="stage-manager-slot-6-shortcut" type="as">
+        <default>['&lt;Super&gt;&lt;Alt&gt;6']</default>
+        <summary>Switch to strip entry 6</summary>
+        <description>Puts entry 6 of the strip (counted from the top) on the stage. Only active while Stage Manager is on.</description>
       </key>
 
       <!-- Launchpad (features/launchpad) -->
@@ -838,6 +937,28 @@
         <default>'normal'</default>
         <summary>Show Desktop animation speed</summary>
         <description>How fast the windows slide aside and back: fast, normal or slow.</description>
+      </key>
+
+      <!-- Desktop widgets (features/widgets, core/widgets) -->
+      <key name="widgets" type="b">
+        <default>true</default>
+        <summary>Desktop widgets</summary>
+        <description>Widgets on the desktop, above the wallpaper and below windows. None are placed until you add some with Edit Widgets… (right-click the desktop).</description>
+      </key>
+      <key name="widgets-layout" type="s">
+        <default>''</default>
+        <summary>Desktop widget layout</summary>
+        <description>The placed widgets as JSON (kind, size, options, monitor and grid position). Empty means no widgets. Written by Kiwi when you add, move, resize or remove a widget.</description>
+      </key>
+      <key name="widgets-style" type="s">
+        <choices>
+          <choice value="automatic"/>
+          <choice value="monochrome"/>
+          <choice value="full-color"/>
+        </choices>
+        <default>'automatic'</default>
+        <summary>Widget style</summary>
+        <description>automatic: monochrome and dimmed while an app window is in front, full colour when the desktop is. monochrome: always dimmed. full-color: never dimmed.</description>
       </key>
 
       <!-- Screenshots (features/screenshots) -->
@@ -1306,6 +1427,43 @@
         <default>'[]'</default>
         <summary>Timers (internal)</summary>
         <description>Internal. Kiwi's running and paused timers, so they survive the lock screen and a restart. Written by core/timers.js.</description>
+      </key>
+
+      <!-- Notification Center and Focus (features/notificationCenter, features/focus) -->
+      <key name="notification-center" type="b">
+        <default>true</default>
+        <summary>Notification Center</summary>
+        <description>Clicking the clock opens a column at the right of the screen with the date, the notifications grouped by app and the widgets, as on macOS. Off: the clock opens the calendar card.</description>
+      </key>
+      <key name="notification-center-widgets" type="b">
+        <default>true</default>
+        <summary>Widgets in the Notification Center</summary>
+        <description>Show the widgets area below the notifications.</description>
+      </key>
+      <key name="focus-modes" type="b">
+        <default>true</default>
+        <summary>Focus modes</summary>
+        <description>Do Not Disturb becomes one of several Focus modes (Do Not Disturb, Sleep, Work, Personal and custom ones), each with allowed apps, schedules and app triggers. The Control Center shows a Focus menu.</description>
+      </key>
+      <key name="focus-profiles" type="s">
+        <default>''</default>
+        <summary>Focus mode settings</summary>
+        <description>JSON list of the Focus modes and their allowed apps, schedules and app triggers. Empty: the built-in modes with nothing allowed and nothing automatic (the macOS default).</description>
+      </key>
+      <key name="focus-state" type="s">
+        <default>''</default>
+        <summary>Focus chosen by the user (internal)</summary>
+        <description>Written by Kiwi: the mode the user turned on, and until when, as JSON. Empty: the schedules and app triggers decide.</description>
+      </key>
+      <key name="focus-last" type="s">
+        <default>'dnd'</default>
+        <summary>Last Focus mode used (internal)</summary>
+        <description>Written by Kiwi: the mode a click on the Focus tile turns on.</description>
+      </key>
+      <key name="focus-menubar-icon" type="b">
+        <default>true</default>
+        <summary>Show the Focus icon in the menu bar</summary>
+        <description>Show the active Focus mode's icon in the top bar.</description>
       </key>
 
       <!-- On-screen display (core/osd.js, features/osd) -->

@@ -8,6 +8,7 @@ import Gio from 'gi://Gio';
 import { addFeatureGroups, comboRow, switchRow, watchKey } from '../widgets.js';
 import * as menuBarPrefs from '../../features/menuBar/prefs.js';
 import * as osdPrefs from '../../features/osd/prefs.js';
+import * as menuBarItemsPrefs from '../../features/menuBarItems/prefs.js';
 
 export const PAGE = { id: 'menu-bar', icon: 'focus-top-bar-symbolic' };
 
@@ -58,5 +59,6 @@ export function build(args) {
     bar.add(dnd);
     page.add(bar);
     addFeatureGroups(page, osdPrefs, args);
+    addFeatureGroups(page, menuBarItemsPrefs, args);
     return page;
 }

@@ -13,8 +13,12 @@
 //   - Stage Manager owns window placement: fullscreen-to-its-own-Space pauses (its saved
 //     value is kept).
 //   - The notch owns the centre of the top bar: the date menu moves right (calendar).
+//   - Focus owns Do Not Disturb's tile while it runs (the stock one is hidden; the Control
+//     Center places the Focus tile in its slot); the notch's banners pass Focus's filter.
 //   - Tiling shortcuts: window-tiling binds only accelerators that no stock GNOME binding and no
 //     running Kiwi shortcut holds (Stage Manager's Ctrl+Super+Down wins while it runs).
+//   - Status items: the AppIndicator extension, when enabled, owns org.kde.StatusNotifierWatcher;
+//     menu-bar-items then only orders and hides its icons (decided at run time, not here).
 //   - Kiwi's dock owns the dock: Dash to Dock is kept off while it runs (core/originals).
 
 // ctx: see extension.js (settings, gettext, events, desktop, layout, motion, originals, ...)
@@ -157,11 +161,24 @@ export const FEATURES = [
         load: async () => (await import('./features/roundedCorners/index.js')).RoundedCorners,
     },
     {
+        // Low Power Mode per power source (power-profiles-daemon holds). Always runs; it holds
+        // nothing until one of its two choices is on, and idles without the daemon.
+        id: 'low-power',
+        load: async () => (await import('./features/lowPower/index.js')).LowPower,
+    },
+    {
         // Quick Settings restyled as a Control Center; last of the panel features so it sees
         // the others
         id: 'control-center', setting: 'control-center',
         conflictsWith: ['dnd-button'],
         load: async () => (await import('./features/controlCenter/index.js')).ControlCenter,
+    },
+    {
+        // The right side of the menu bar: apps' status icons (StatusNotifierItem host, or the
+        // AppIndicator extension's icons when it is enabled), Control Center controls pinned
+        // to the bar, and the item manager (order, hidden items, overflow chevron)
+        id: 'menu-bar-items',
+        load: async () => (await import('./features/menuBarItems/index.js')).MenuBarItems,
     },
     {
         // Kiwi's own dock on the bottom (or a side) edge, claimed through core/layout. It takes
@@ -181,6 +198,8 @@ export const FEATURES = [
         // Stage Manager wins over fullscreen-to-its-own-Space; its saved value is kept
         id: 'stage-manager', setting: 'stage-manager',
         conflictsWith: ['move-window-to-new-workspace'],
+        // How entries are grouped is the shape of the whole state: rebuilt from scratch
+        restartOn: ['stage-manager-group-by-app'],
         load: async () => (await import('./features/stageManager/index.js')).StageManager,
     },
     {
@@ -206,6 +225,18 @@ export const FEATURES = [
         // come from core/osd.js while osd-location is 'notch').
         id: 'notch', setting: 'notch',
         load: async () => (await import('./features/notch/index.js')).NotchFeature,
+    },
+    {
+        // The clock opens a right-side column (the menu bar emits notification-center-requested):
+        // the date, the history grouped by app, widgets. Off: the calendar card opens instead.
+        id: 'notification-center', setting: 'notification-center',
+        load: async () => (await import('./features/notificationCenter/index.js')).NotificationCenter,
+    },
+    {
+        // Focus modes over GNOME's Do Not Disturb: holds back banners through
+        // NotificationRouter.setBannerFilter; its tile takes Do Not Disturb's place
+        id: 'focus', setting: 'focus-modes',
+        load: async () => (await import('./features/focus/index.js')).Focus,
     },
     {
         // Shift+Super+3/4/5, the toolbar and the floating thumbnail, on GNOME's own screenshot UI
@@ -247,6 +278,11 @@ export const FEATURES = [
         // Accessibility colour filters on the whole screen (one shader effect on the stage)
         id: 'color-filters', setting: 'color-filter',
         load: async () => (await import('./features/colorFilters/index.js')).ColorFilters,
+    },
+    {
+        // Desktop widgets above the wallpaper, below windows (core/widgets is the shared model)
+        id: 'desktop-widgets', setting: 'widgets',
+        load: async () => (await import('./features/widgets/index.js')).DesktopWidgets,
     },
     {
         // The Setup Assistant, offered once (features/onboarding/model.js): runs only while
