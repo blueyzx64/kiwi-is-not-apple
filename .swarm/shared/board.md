@@ -125,3 +125,18 @@ No more installer work: no new pieces (Trash-drag uninstall, fly-to-dock, update
     - Launchpad (lp2-open.png): clean grid, search and dots.
     - Switcher (switcher.png): matches macOS Cmd-Tab, with the menu bar app name and menus correct.
 - Pending: Launchpad re-test (fast drag to folder, folder open, jiggle) goes to the Launchpad fixer.
+- V5 (notch, NC/Focus, widgets): no S1.
+  - S2:
+    - The pinned notch dashboard takes a modal grab and swallows the first outside click (notch/view.js:260-274). Fix: a stage captured-event listener, no pushModal.
+    - Every tab switch has a ~95 ms frame plus jitter (prebuild or defer the body).
+    - The widget gallery layout is broken (orchestrator confirms in v5-widgets-gallery.png: tiles misaligned vertically, Now Playing and System on another baseline, System clipped, chips at the edge).
+  - S3:
+    - a 288 ms tick frame while expanded;
+    - the NC placeholder "Widgets arrive with the widget gallery": L11 never registered `addWidget`, so wire the NC widget slot to core/widgets;
+    - the banner stays beside the open NC (macOS hides banners while NC is open);
+    - duplicate dock icons for the test windows;
+    - "kiwi-notch needs an allocation" warnings.
+  - Orchestrator review:
+    - NC (v5-nc-open-after-banner.png) looks right.
+    - The expanded notch (v5-notch-now.png) covers the menu bar's "Window" menu and status icons; acceptable on macOS for the island, but the Now tab is mostly empty (S3).
+    - Real drop onto the notch passed.
