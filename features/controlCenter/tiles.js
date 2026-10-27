@@ -17,17 +17,19 @@ import { kiwiTiles } from './model.js';
 
 const ICON_SIZE = 16;
 
+/** An icon by name; Kiwi's own icons ship in icons/ (the Shell's icon theme does not know them). */
+export function kiwiGicon(name, extensionDir) {
+    if (name.startsWith('kiwi-') && extensionDir)
+        return new Gio.FileIcon({ file: extensionDir.get_child('icons').get_child(`${name}.svg`) });
+    return new Gio.ThemedIcon({ name });
+}
+
 function _icon(name, extensionDir) {
-    // Kiwi's own icons ship in icons/ (the Shell's icon theme does not know them)
-    if (name.startsWith('kiwi-') && extensionDir) {
-        const file = extensionDir.get_child('icons').get_child(`${name}.svg`);
-        return new St.Icon({
-            gicon: new Gio.FileIcon({ file }),
-            fallback_icon_name: 'window-maximize-symbolic',
-            icon_size: ICON_SIZE,
-        });
-    }
-    return new St.Icon({ icon_name: name, icon_size: ICON_SIZE });
+    return new St.Icon({
+        gicon: kiwiGicon(name, extensionDir),
+        fallback_icon_name: 'window-maximize-symbolic',
+        icon_size: ICON_SIZE,
+    });
 }
 
 /**

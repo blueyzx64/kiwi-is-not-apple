@@ -630,3 +630,196 @@
     -barlevel-background-color: rgba(0, 0, 0, 0.2);
     -barlevel-active-background-color: rgba(0, 0, 0, 0.7);
 }
+
+/* ---- Edit Controls (editor.js) and Kiwi's own controls ---- */
+.quick-settings.kiwi-control-center .kiwi-cc-edit-controls {
+    margin-top: 8px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 9.5pt;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.78);
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-edit-controls:hover,
+.quick-settings.kiwi-control-center .kiwi-cc-edit-controls:focus {
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-editor {
+    width: 306px;
+    spacing: 10px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-editor-head {
+    spacing: 6px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-editor-title {
+    font-size: 11pt;
+    font-weight: 700;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-editor-text-button {
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 9.5pt;
+    font-weight: 600;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-editor-done {
+    color: #ffffff;
+    background-color: -st-accent-color;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-editor-text-button:hover {
+    background-color: rgba(255, 255, 255, 0.18);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-editor-done:hover {
+    background-color: st-lighten(-st-accent-color, 6%);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-edit-tile {
+    min-height: 58px;
+    padding: 4px;
+    border-radius: 14px;
+    background-color: rgba(255, 255, 255, 0.08);
+    border: 1px dashed rgba(255, 255, 255, 0.22);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-edit-body {
+    spacing: 6px;
+    padding: 2px 0;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-edit-label {
+    font-size: 9pt;
+    font-weight: 600;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-edit-button {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border-radius: 999px;
+    color: rgba(255, 255, 255, 0.85);
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-edit-button:hover,
+.quick-settings.kiwi-control-center .kiwi-cc-edit-button:focus {
+    background-color: rgba(255, 255, 255, 0.24);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-edit-button:checked {
+    color: #ffffff;
+    background-color: -st-accent-color;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-edit-button:insensitive {
+    color: rgba(255, 255, 255, 0.3);
+    background-color: transparent;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-edit-empty {
+    padding: 8px;
+    font-size: 9pt;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-editor-search {
+    padding: 4px 8px;
+    border-radius: 10px;
+    font-size: 9.5pt;
+    background-color: rgba(255, 255, 255, 0.08);
+    border: none;
+    box-shadow: none;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-editor-preview-scroll {
+    max-height: 290px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-gallery-scroll {
+    max-height: 200px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-gallery {
+    spacing: 8px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-gallery-title {
+    padding: 0 4px 2px 4px;
+    font-size: 8.5pt;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-gallery-item {
+    padding: 5px 8px;
+    border-radius: 10px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-gallery-item > StBoxLayout {
+    spacing: 8px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-gallery-item:hover,
+.quick-settings.kiwi-control-center .kiwi-cc-gallery-item:focus {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-gallery-label {
+    font-size: 9.5pt;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-gallery-add {
+    color: #30d158;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-gallery-added {
+    color: rgba(255, 255, 255, 0.45);
+}
+
+/* light style */
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-edit-controls,
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-edit-tile,
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-editor-search,
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-editor-text-button {
+    color: rgba(0, 0, 0, 0.8);
+    background-color: rgba(0, 0, 0, 0.06);
+    border-color: rgba(0, 0, 0, 0.2);
+}
+
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-editor-done {
+    color: #ffffff;
+    background-color: -st-accent-color;
+}
+
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-edit-button {
+    color: rgba(0, 0, 0, 0.75);
+    background-color: rgba(0, 0, 0, 0.08);
+}
+
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-edit-button:checked {
+    color: #ffffff;
+    background-color: -st-accent-color;
+}
+
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-gallery-title,
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-edit-empty,
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-gallery-added {
+    color: rgba(0, 0, 0, 0.5);
+}
+
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-gallery-item:hover,
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-gallery-item:focus {
+    background-color: rgba(0, 0, 0, 0.06);
+}
+
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-gallery-add {
+    color: #28a745;
+}

@@ -15,6 +15,8 @@
 //   - The notch owns the centre of the top bar: the date menu moves right (calendar).
 //   - Tiling shortcuts: window-tiling binds only accelerators that no stock GNOME binding and no
 //     running Kiwi shortcut holds (Stage Manager's Ctrl+Super+Down wins while it runs).
+//   - Status items: the AppIndicator extension, when enabled, owns org.kde.StatusNotifierWatcher;
+//     menu-bar-items then only orders and hides its icons (decided at run time, not here).
 //   - Kiwi's dock owns the dock: Dash to Dock is kept off while it runs (core/originals).
 
 // ctx: see extension.js (settings, gettext, events, desktop, layout, motion, originals, ...)
@@ -157,11 +159,24 @@ export const FEATURES = [
         load: async () => (await import('./features/roundedCorners/index.js')).RoundedCorners,
     },
     {
+        // Low Power Mode per power source (power-profiles-daemon holds). Always runs; it holds
+        // nothing until one of its two choices is on, and idles without the daemon.
+        id: 'low-power',
+        load: async () => (await import('./features/lowPower/index.js')).LowPower,
+    },
+    {
         // Quick Settings restyled as a Control Center; last of the panel features so it sees
         // the others
         id: 'control-center', setting: 'control-center',
         conflictsWith: ['dnd-button'],
         load: async () => (await import('./features/controlCenter/index.js')).ControlCenter,
+    },
+    {
+        // The right side of the menu bar: apps' status icons (StatusNotifierItem host, or the
+        // AppIndicator extension's icons when it is enabled), Control Center controls pinned
+        // to the bar, and the item manager (order, hidden items, overflow chevron)
+        id: 'menu-bar-items',
+        load: async () => (await import('./features/menuBarItems/index.js')).MenuBarItems,
     },
     {
         // Kiwi's own dock on the bottom (or a side) edge, claimed through core/layout. It takes

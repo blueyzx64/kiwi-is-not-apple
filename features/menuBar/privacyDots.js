@@ -26,7 +26,7 @@ import { keepHidden } from '../../lib/keepHidden.js';
 import { whenQuickSettingsReady } from '../../lib/quickSettings.js';
 import { micApps, privacyDots } from './model.js';
 import { LazyMenu, menuHeading, menuItem } from './menuItems.js';
-import { MenuGlass } from './menuGlass.js';
+import { MenuGlass } from '../../lib/menuGlass.js';
 
 export const PRIVACY_ROLE = 'kiwi-menubar-privacy';
 const KINDS = ['screen', 'camera', 'mic'];
