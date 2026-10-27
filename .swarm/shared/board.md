@@ -7,7 +7,7 @@
 | L1 | sonnet | P2 Dock motion & extras: Genie/Scale minimize, bounce, magnification, LauncherEntry badges, grey background-app dots, folder Stacks | kiwi-l1 / v3/l1 | dock merged | merged |
 | L2 | sonnet | P2 System surfaces: Tahoe volume/brightness OSD under the menu bar, centred dialogs, colour filters | kiwi-l2 / v3/l2-surfaces | | started |
 | L3 | sonnet | P2 Screenshot toolbar (Shift+Super+3/4/5) + floating thumbnail | kiwi-l3 / v3/l3-screenshot | | merged |
-| L4 | sonnet | P2 Input: Caps Lock / input-source badge, emoji popover, icon styles (dark/tinted) | kiwi-l4 / v3/l4-input | | started |
+| L4 | sonnet | P2 Input: Caps Lock / input-source badge, emoji popover, icon styles (dark/tinted) | kiwi-l4 / v3/l4-input | | merged |
 | L5 | sonnet | P3 Mission Control + App Exposé + start-on-desktop | kiwi-l5 / v3/l5-mission | | merged |
 | L6 | sonnet | P3 App switcher (Super+Tab, Super+`) + trackpad gestures + hot corners | kiwi-l6 / v3/l6 | | merged |
 | L7 | sonnet | P3 Launchpad (folders, jiggle delete with installer/Flatpak rules) + click-wallpaper/Show Desktop wiring + full screen Split View | kiwi-l7 / v3/l7-launchpad | | merged |
@@ -84,3 +84,5 @@ Deploy conservatively, sized to the scope and type of work. Resume in waves of a
 - L3 → merged (Shift+Super+3/4/5, glass toolbar, timer, floating thumbnail, macOS file naming; events `recording-started`/`recording-stopped` for L9). Fact for L9/L10: on GNOME 50, `Source.iconName` is null for themed-icon sources, so match `gicon.get_names()`. Limits: no real recording was tested (no recorder in the roots); GNOME still copies every shot to the clipboard.
 - Resumed L8 Stage Manager (cap 5: L2, L4, FX3, L8). Notes for L8: minimizeEffect `setTargetProvider`; the Sushi preview must stay on stage; skip `hidden` and `splitView` windows; `click-wallpaper-reveals-desktop` lives in lib/clickModel.js.
 - ccr after the L5 merge: run-f44.sh 20 gave 0 Kiwi errors, 8/8 PASS (/tmp/x2/runs/20261027-151342-kiwi-is-not-apple-f44). A run on HEAD with P1-windows and L3 is in progress (scratchpad/ccr-run4.txt).
+- L4 → merged (Caps Lock/input badge with lib/caret.js, Emoji & Symbols on Super+Ctrl+Space from the IBus dict, icon styles via lib/iconStyle.js, shared lib/paste.js). Facts: `St.Clipboard.get_content` crashed Shell 50 in the harness, so use `Meta.Selection.transfer_async`; `addTopChrome` rejects `affectsInputRegion` on 50. Open (R4 to judge): the paste fallback restores the clipboard after a fixed 1 s (Mutter has no "read" signal); clipboard history records pasted emoji; the Launchpad, Downloads and Trash dock tiles are not icon-styled.
+- Resumed L9 notch (running: L2, FX3, L8, L9).
