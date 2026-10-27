@@ -24,7 +24,7 @@ export class AboutThisPc {
         this._cancellable = null;
         cleanup.add(() => this._cancel());
         this._modal = new ModalSurface(cleanup, {
-            id: 'about-this-pc', width: 340, position: 'center', radius: 22,
+            id: 'about-this-pc', accessibleName: _('About This Computer'), width: 340, position: 'center', radius: 22,
             styleClass: 'kiwi-about',
             build: frame => this._build(frame),
             onClosed: () => this._cancel(),

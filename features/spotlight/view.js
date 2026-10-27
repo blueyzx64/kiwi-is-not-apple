@@ -12,6 +12,7 @@ import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 import { ensureActorVisibleInScrollView } from 'resource:///org/gnome/shell/misc/animationUtils.js';
 
+import * as A11y from '../../lib/a11y.js';
 import { IconStyle } from '../../lib/iconStyle.js';
 import { SuperTapTracker, flatten, jumpGroup, locate, reselect } from './model.js';
 import { VIEWS, moveIn, viewForDigit } from './queryModel.js';
@@ -126,6 +127,7 @@ export class SpotlightView {
         VIEWS.forEach((v, i) => {
             const button = new St.Button({
                 style_class: 'kiwi-spotlight-view-button', can_focus: false, toggle_mode: false,
+                accessible_role: A11y.Role.TOGGLE_BUTTON,
                 accessible_name: `${_(v.title)} (Super+${i + 1})`,
                 child: new St.Icon({ icon_name: v.icon, icon_size: VIEW_ICON }),
             });
@@ -135,7 +137,10 @@ export class SpotlightView {
         });
         bar.add_child(views);
 
-        const list = new St.BoxLayout({ style_class: 'kiwi-spotlight-list', orientation: Clutter.Orientation.VERTICAL });
+        const list = new St.BoxLayout({
+            style_class: 'kiwi-spotlight-list', orientation: Clutter.Orientation.VERTICAL,
+            accessible_name: _('Results'), accessible_role: A11y.Role.LIST,
+        });
         const scroll = new St.ScrollView({
             style_class: 'kiwi-spotlight-scroll', overlay_scrollbars: true, visible: false,
             hscrollbar_policy: St.PolicyType.NEVER, vscrollbar_policy: St.PolicyType.AUTOMATIC,
@@ -193,10 +198,7 @@ export class SpotlightView {
         const ui = this._ui;
         ui.views.visible = views;
         for (const [id, button] of ui.viewButtons) {
-            if (id === activeView)
-                button.add_style_pseudo_class('checked');
-            else
-                button.remove_style_pseudo_class('checked');
+            button.checked = id === activeView;
         }
         ui.chip.visible = !!chip;
         ui.chip.text = chip ?? '';
@@ -339,6 +341,7 @@ export class SpotlightView {
         const tile = new St.BoxLayout({
             style_class: 'kiwi-spotlight-row kiwi-spotlight-tile', orientation: Clutter.Orientation.VERTICAL,
             reactive: true, track_hover: true, accessible_name: item.title,
+            accessible_role: A11y.Role.LIST_ITEM,
         });
         const icon = makeIcon(item, TILE_ICON);
         icon.x_align = Clutter.ActorAlign.CENTER;
@@ -361,6 +364,7 @@ export class SpotlightView {
             style_class: `kiwi-spotlight-row${extra}`,
             reactive: true, track_hover: true, x_expand: true,
             accessible_name: item.subtitle ? `${item.title}, ${item.subtitle}` : item.title,
+            accessible_role: A11y.Role.LIST_ITEM,
         });
         row.add_child(makeIcon(item, isTop ? TOP_ICON : ROW_ICON));
         const texts = new St.BoxLayout({
@@ -429,6 +433,7 @@ export class SpotlightView {
                 row.remove_style_pseudo_class('selected');
         });
         const row = this._rows[this._index];
+        A11y.describeSelection(this._ui.entry, row?.accessible_name);
         if (row && scroll)
             ensureActorVisibleInScrollView(this._ui.scroll, row);
     }

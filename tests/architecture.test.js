@@ -7,6 +7,8 @@
 //      only prefs pages compose feature prefs.
 //   3. Every St.Button Kiwi builds has an accessible name (or a label).
 //   4. Removed 2.x folders stay gone.
+//   5. Every St.Entry has an accessible name, and every ModalSurface announces itself
+//      (a hint_text alone is not a name for a screen reader).
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 
@@ -116,6 +118,44 @@ test('every St.Button has an accessible name or a label', () => {
     }
     if (hits.length)
         throw new Error(`unnamed buttons at ${hits.join(', ')}`);
+});
+
+// The object literal after `new <ctor>({`, by brace depth
+function literalAfter(text, index, length) {
+    let i = index + length;
+    for (let depth = 1; depth && i < text.length; i++)
+        depth += text[i] === '{' ? 1 : text[i] === '}' ? -1 : 0;
+    return [text.slice(index, i), i];
+}
+
+test('every St.Entry has an accessible name', () => {
+    const hits = [];
+    for (const f of sources()) {
+        const text = read(f);
+        for (const m of text.matchAll(/new St\.Entry\(\{/g)) {
+            const [props, end] = literalAfter(text, m.index, m[0].length);
+            if (!/accessible_name/.test(props) && !/accessible_name\s*=|set_accessible_name/.test(text.slice(end, end + 600)))
+                hits.push(`${f}:${text.slice(0, m.index).split('\n').length}`);
+        }
+    }
+    if (hits.length)
+        throw new Error(`unnamed entries at ${hits.join(', ')}`);
+});
+
+test('every ModalSurface has an accessibleName', () => {
+    const hits = [];
+    for (const f of sources()) {
+        if (f === 'lib/modalSurface.js')
+            continue;
+        const text = read(f);
+        for (const m of text.matchAll(/new ModalSurface\(\w+, \{/g)) {
+            const [props] = literalAfter(text, m.index, m[0].length);
+            if (!/accessibleName/.test(props))
+                hits.push(`${f}:${text.slice(0, m.index).split('\n').length}`);
+        }
+    }
+    if (hits.length)
+        throw new Error(`unnamed modals at ${hits.join(', ')}`);
 });
 
 test('the removed 2.x folders are gone', () => {

@@ -63,6 +63,7 @@ class FocusIndicator extends SystemIndicator {
         this._toggle.menu.setHeader(icon, _('Focus'), profile ? profile.name : _('Off'));
         this._icon.icon_name = icon;
         this._icon.visible = !!profile && showIcon;
+        this._icon.accessible_name = profile ? `${_('Focus')}: ${profile.name}` : '';
         if (this._toggle.menu.isOpen)
             this._fill();
     }

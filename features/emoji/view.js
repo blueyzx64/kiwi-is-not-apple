@@ -12,6 +12,7 @@ import St from 'gi://St';
 import {
     CATEGORIES, COLUMNS, TONE_SWATCHES, categoryCells, moveInGrid, nextCategory, search, withTone,
 } from './model.js';
+import * as A11y from '../../lib/a11y.js';
 
 const MOVES = new Map([
     [Clutter.KEY_Left, 'left'], [Clutter.KEY_Right, 'right'],
@@ -45,7 +46,7 @@ export class EmojiView {
         this._category = category;
         const header = new St.BoxLayout({ style_class: 'kiwi-emoji-header', x_expand: true });
         const entry = new St.Entry({
-            style_class: 'kiwi-emoji-search', hint_text: _('Search'), can_focus: true, x_expand: true,
+            style_class: 'kiwi-emoji-search', hint_text: _('Search'), accessible_name: _('Search Emoji'), can_focus: true, x_expand: true,
             primary_icon: new St.Icon({ icon_name: 'system-search-symbolic', style_class: 'kiwi-emoji-search-icon' }),
         });
         entry.clutter_text.connect('text-changed', () => {
@@ -84,6 +85,7 @@ export class EmojiView {
         for (const c of CATEGORIES) {
             const b = new St.Button({
                 style_class: 'kiwi-emoji-tab', can_focus: true, toggle_mode: false, x_expand: true,
+                accessible_role: A11y.Role.TOGGLE_BUTTON,
                 accessible_name: _(c.label),
                 child: new St.Icon({ icon_name: c.icon, style_class: 'kiwi-emoji-tab-icon' }),
             });
@@ -137,10 +139,7 @@ export class EmojiView {
             return;
         const _ = this._p.gettext;
         for (const [id, b] of ui.tabButtons) {
-            if (id === this._category && !this._query)
-                b.add_style_pseudo_class('checked');
-            else
-                b.remove_style_pseudo_class('checked');
+            b.checked = id === this._category && !this._query;
         }
         ui.grid.destroy_all_children();
         this._cells = [];
@@ -196,6 +195,7 @@ export class EmojiView {
             return;
         cell.button.add_style_pseudo_class('selected');
         this._ui.name.text = cell.item.name;
+        A11y.describeSelection(this._ui.entry, cell.item.name);
         this._scrollTo(cell.button.get_parent());
     }
 

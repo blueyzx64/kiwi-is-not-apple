@@ -149,6 +149,34 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
   border: 1px solid rgba(0, 0, 0, 0.55);
 }
 
+/* Keyboard focus ring, shared: every control below takes the key focus (Tab, arrow keys) and
+   shows the same 2 px accent ring the dock and the notch use. A feature that wants another
+   look for its own control writes its own :focus rule after this one. */
+.kiwi-emoji-tab:focus,
+.kiwi-menubar-search:focus,
+.kiwi-about-button:focus,
+.kiwi-force-quit-button:focus,
+.kiwi-mc-space-close:focus,
+.kiwi-mc-space-label:focus,
+.kiwi-clip-filter:focus,
+.kiwi-clip-recording:focus,
+.kiwi-stage-card:focus,
+.kiwi-launchpad-search:focus,
+.kiwi-launchpad-delete:focus,
+.kiwi-cc-editor-text-button:focus,
+.kiwi-cc-editor-search:focus,
+.kiwi-cc-np-button:focus,
+.window-control-button:focus,
+.kiwi-widgets-gallery-search:focus,
+.kiwi-widgets-gallery-pill:focus,
+.kiwi-widgets-gallery-chip:focus,
+.kiwi-widgets-gallery-add:focus,
+.kiwi-widgets-gallery-size:focus,
+.kiwi-widget-remove:focus,
+.kiwi-notch-scrub-hit:focus {
+  box-shadow: inset 0 0 0 2px -st-accent-color;
+}
+
 /* ==== features/appearance/style.css ==== */
 
 /* feature: popup-menu-styling */

@@ -120,6 +120,7 @@ export class AppSwitcher {
         const iconSize = iconSizeFor(ids.length, monitor.width - 2 * SIDE_MARGIN, ITEM_EXTRA);
         const popup = new AppSwitcherPopup(ids.map(id => byId.get(id)), {
             iconSize,
+            label: this._ctx.gettext('Application Switcher'),
             frontIsFirst: this._desktop.model.focusedApp === ids[0],
             callbacks: {
                 activate: (app, ts, alt) => this._activate(app, ts, alt),

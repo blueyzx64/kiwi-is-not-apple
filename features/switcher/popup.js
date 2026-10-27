@@ -13,6 +13,7 @@ import Shell from 'gi://Shell';
 import St from 'gi://St';
 import * as SwitcherPopup from 'resource:///org/gnome/shell/ui/switcherPopup.js';
 
+import * as A11y from '../../lib/a11y.js';
 import { Glass } from '../../lib/glass.js';
 import { indexAfterRemoval, initialIndex, keyAction, pickAfterHide, step } from './model.js';
 
@@ -68,10 +69,12 @@ export const AppSwitcherPopup = GObject.registerClass(
 class KiwiAppSwitcherPopup extends SwitcherPopup.SwitcherPopup {
     /**
      * @param {Shell.App[]} apps most recently used first
-     * @param {{iconSize: number, frontIsFirst: boolean, callbacks: SwitcherCallbacks}} opts
+     * @param {{iconSize: number, frontIsFirst: boolean, callbacks: SwitcherCallbacks, label: string}} opts
+     *   label: the panel's accessible name
      */
-    _init(apps, { iconSize, frontIsFirst, callbacks }) {
+    _init(apps, { iconSize, frontIsFirst, callbacks, label }) {
         super._init();
+        A11y.dialog(this, label);
         this.add_style_class_name('kiwi-switcher-popup');
         this._callbacks = callbacks;
         this._frontIsFirst = frontIsFirst;

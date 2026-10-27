@@ -27,6 +27,7 @@ import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as DND from 'resource:///org/gnome/shell/ui/dnd.js';
 
+import * as A11y from '../../lib/a11y.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { Glass } from '../../lib/glass.js';
 import { decodeWallpaper, resolveWallpaper } from '../../lib/wallpaperDecode.js';
@@ -190,12 +191,14 @@ class FolderPanel {
         this.panel = new St.BoxLayout({
             style_class: 'kiwi-launchpad-folder-panel', orientation: Clutter.Orientation.VERTICAL,
             reactive: true, width, height,
+            accessible_name: folderTile.item.name, accessible_role: A11y.Role.DIALOG,
             x: Math.round((view.monitor.width - width) / 2), y: Math.round((view.monitor.height - height) / 2),
         });
         this.panel.set_pivot_point(0.5, 0.5);
         this.name = new St.Entry({
             style_class: 'kiwi-launchpad-folder-name', text: folderTile.item.name,
             can_focus: true, x_align: Clutter.ActorAlign.CENTER, hint_text: _('Folder name'),
+            accessible_name: _('Folder name'),
         });
         this.name.clutter_text.set_line_alignment(Pango.Alignment.CENTER);
         this.name.clutter_text.connect('activate', () => this._rename());
@@ -317,6 +320,7 @@ export class LaunchpadView {
         const _ = this.gettext;
         this.overlay = this.cleanup.actor(new St.Widget({
             name: 'kiwi-launchpad', style_class: 'kiwi-launchpad', reactive: true, can_focus: true,
+            accessible_name: _('Launchpad'), accessible_role: A11y.Role.DIALOG,
             layout_manager: new Clutter.FixedLayout(),
             x: mon.x, y: mon.y, width: mon.width, height: mon.height,
         }));
@@ -330,7 +334,7 @@ export class LaunchpadView {
 
         const searchWidth = Math.min(280, mon.width - 32);
         this.search = new St.Entry({
-            style_class: 'kiwi-launchpad-search', hint_text: _('Search'), can_focus: true,
+            style_class: 'kiwi-launchpad-search', hint_text: _('Search'), accessible_name: _('Search Apps'), can_focus: true,
             x: Math.round((mon.width - searchWidth) / 2), y: m.searchTop, width: searchWidth,
             primary_icon: new St.Icon({ icon_name: 'edit-find-symbolic', style_class: 'kiwi-launchpad-search-icon' }),
         });
@@ -583,10 +587,7 @@ export class LaunchpadView {
             }
         }
         this.dots.get_children().forEach((d, i) => {
-            if (i === this.page)
-                d.add_style_pseudo_class('checked');
-            else
-                d.remove_style_pseudo_class('checked');
+            d.checked = i === this.page;
         });
         this.dots.visible = pages > 1;
         const [w] = this.dots.get_preferred_width(-1);
@@ -850,6 +851,7 @@ export class LaunchpadView {
         const box = new St.BoxLayout({
             style_class: 'kiwi-launchpad-alert', orientation: Clutter.Orientation.VERTICAL,
             reactive: true, width: 280,
+            accessible_name: _('Delete “%s”?').replace('%s', app.get_name()), accessible_role: A11y.Role.ALERT,
         });
         box.add_child(new St.Bin({ child: app.create_icon_texture(64), x_align: Clutter.ActorAlign.CENTER }));
         box.add_child(new St.Label({

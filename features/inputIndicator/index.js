@@ -15,6 +15,7 @@ import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { getInputSourceManager } from 'resource:///org/gnome/shell/ui/status/keyboard.js';
 
+import * as A11y from '../../lib/a11y.js';
 import { Caret } from '../../lib/caret.js';
 import { Glass } from '../../lib/glass.js';
 import { KiwiSettings } from '../../lib/settings.js';
@@ -112,8 +113,8 @@ export class InputIndicator {
         this._capsIcon.visible = caps;
         this._label.visible = !caps;
         this._label.text = caps ? '' : content.text;
-        badge.accessible_name = content.style === 'source' ? content.text
-            : content.style === 'caps-on' ? this._ctx.gettext('Caps Lock on') : this._ctx.gettext('Caps Lock off');
+        A11y.name(badge, content.style === 'source' ? content.text
+            : content.style === 'caps-on' ? this._ctx.gettext('Caps Lock on') : this._ctx.gettext('Caps Lock off'), A11y.Role.ALERT);
 
         const [px, py] = global.get_pointer();
         const caret = this._caret.rect;

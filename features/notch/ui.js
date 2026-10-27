@@ -6,6 +6,7 @@ import Gio from 'gi://Gio';
 import GObject from 'gi://GObject';
 import Pango from 'gi://Pango';
 import St from 'gi://St';
+import { Role } from '../../lib/a11y.js';
 
 export const label = (text, styleClass, opts = {}) => {
     const l = new St.Label({
@@ -38,6 +39,7 @@ export function button({ styleClass, iconName = null, text = null, accessibleNam
     if (toggle !== null) {
         opts.toggle_mode = true;
         opts.checked = !!toggle;
+        opts.accessible_role = Role.TOGGLE_BUTTON;
     }
     const b = new St.Button(opts);
     if (iconName && text) {

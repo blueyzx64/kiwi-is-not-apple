@@ -12,6 +12,7 @@ import GLib from 'gi://GLib';
 import St from 'gi://St';
 import * as Util from 'resource:///org/gnome/shell/misc/util.js';
 
+import * as A11y from '../../lib/a11y.js';
 import { label, icon, themed, button, artwork, track, column, setText } from './ui.js';
 import { trackProgress, seekTarget, formatClock } from './dashboardModel.js';
 export { DASH_SIZE } from './dashboardModel.js';
@@ -21,6 +22,7 @@ import { row as activityRow } from './pills.js';
 const WIDTH = Object.freeze({ hero: 340, list: 248, clipboard: 196, inner: 608 });
 const SHELF_VISIBLE = 8;
 const TIMER_PRESETS = [1, 5, 15];
+const SEEK_STEP_S = 5;      // a Left / Right press on the scrubber
 
 function mediaColumn(env, media, width, live) {
     const col = column('kiwi-notch-media', width);
@@ -65,20 +67,33 @@ function mediaColumn(env, media, width, live) {
         x_expand: true,
         y_align: Clutter.ActorAlign.CENTER,
         reactive: seekable,
-        can_focus: false,
+        can_focus: seekable,
         accessible_name: env._('Seek'),
+        accessible_role: A11y.Role.SLIDER,
     });
+    let position = 0;       // the last fraction shown, the start of a keyboard step
+    const seekTo = fraction => {
+        if (seekTarget(fraction, media.length) === null)
+            return;
+        position = Math.max(0, Math.min(1, fraction));
+        bar.kiwiSetFraction(position);
+        env.h.onSeek(fraction);
+    };
     hit.connect('clicked', () => {
         const [px] = global.get_pointer();
         const [tx] = bar.get_transformed_position();
         const [tw] = bar.get_transformed_size();
-        if (!(tw > 0))
-            return;
-        const fraction = (px - tx) / tw;
-        if (seekTarget(fraction, media.length) === null)
-            return;
-        bar.kiwiSetFraction(Math.max(0, Math.min(1, fraction)));
-        env.h.onSeek(fraction);
+        if (tw > 0)
+            seekTo((px - tx) / tw);
+    });
+    // Left and Right skip SEEK_STEP_S seconds, as a media player's slider does
+    hit.connect('key-press-event', (_a, event) => {
+        const sym = event.get_key_symbol();
+        if (sym !== Clutter.KEY_Left && sym !== Clutter.KEY_Right)
+            return Clutter.EVENT_PROPAGATE;
+        const step = SEEK_STEP_S / media.length;
+        seekTo(position + (sym === Clutter.KEY_Right ? step : -step));
+        return Clutter.EVENT_STOP;
     });
     scrub.add_child(elapsed);
     scrub.add_child(hit);
@@ -97,6 +112,7 @@ function mediaColumn(env, media, width, live) {
                     return;
                 setText(elapsed, p.elapsed);
                 setText(remaining, p.remaining);
+                position = p.fraction;
                 bar.kiwiSetFraction(p.fraction);
             }).catch(() => {});
         });

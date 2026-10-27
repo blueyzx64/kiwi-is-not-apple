@@ -35,6 +35,7 @@ import * as DND from 'resource:///org/gnome/shell/ui/dnd.js';
 import * as Layout from 'resource:///org/gnome/shell/ui/layout.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
+import * as A11y from '../../lib/a11y.js';
 import {
     METRICS, clonePose, edgeBarrier, fitCount, layerRect, slotBox, slotAt, stackLayers, stripLayout,
     stripVisible, tiltAngle,
@@ -108,6 +109,26 @@ export class StripView {
         this._floor = new St.Widget({ style_class: 'kiwi-stage-strip', reactive: true, track_hover: true });
         this._strip.add_child(this._floor);
         this._floor.connect('notify::hover', () => this._syncShown());
+        // Keyboard: Ctrl+Alt+Tab lists the strip even while it is tucked away; choosing it slides
+        // it out and puts the focus on its first card. The strip stays out while focus is inside.
+        this._focusWithin = false;
+        this._floor.accessible_name = this._env.gettext('Stage Manager');
+        this._floor.accessible_role = A11y.Role.TOOL_BAR;
+        A11y.focusGroup(cleanup, this._floor, this._env.gettext('Stage Manager'), 'view-grid-symbolic', {
+            proxy: this.container,
+            focus: () => {
+                this._focusWithin = true;
+                this._syncShown();
+                this._floor.navigate_focus(null, St.DirectionType.TAB_FORWARD, false);
+            },
+        });
+        cleanup.connect(global.stage, 'notify::key-focus', () => {
+            const within = A11y.focusWithin(this._floor);
+            if (within === this._focusWithin)
+                return;
+            this._focusWithin = within;
+            this._syncShown();
+        });
 
         this._flights = new Clutter.Actor({ reactive: false });
         this.container.add_child(this._flights);
@@ -320,7 +341,8 @@ export class StripView {
         button.set_position(rect.x - floor.x, rect.y - floor.y);
         button.set_size(rect.width, rect.height);
         button.connect('clicked', () => {
-            const [, , mods] = global.get_pointer();
+            // The click's or the key press's modifiers, so Shift+Enter adds as Shift+click does
+            const mods = Clutter.get_current_event()?.get_state() ?? 0;
             this._env.onActivate(entry.id, { add: (mods & Clutter.ModifierType.SHIFT_MASK) !== 0 });
         });
 
@@ -569,7 +591,7 @@ export class StripView {
         const show = !!this._floorRect && stripVisible({
             showRecent: s.showRecent, autohide: s.autohide, overlapped: s.overlapped,
             suppressed: s.suppressed,
-            revealed: this._edge || this._floor.hover || !!this._dragging || !!this._dropHint,
+            revealed: this._edge || this._floor.hover || this._focusWithin || !!this._dragging || !!this._dropHint,
         });
         if (show === this._shown)
             return;

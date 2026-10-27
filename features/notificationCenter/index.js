@@ -62,7 +62,7 @@ export class NotificationCenter {
         this._ks = new KiwiSettings(this._ctx.settings);
         this._ks.attach(cleanup);
         this._modal = new ModalSurface(cleanup, {
-            id: 'notification-center', position: 'right', width: WIDTH, radius: 22, dim: false,
+            id: 'notification-center', accessibleName: this._ctx.gettext('Notification Center'), position: 'right', width: WIDTH, radius: 22, dim: false,
             styleClass: 'kiwi-nc',
             build: frame => this._build(frame),
             onClosed: () => this._onClosed(),
@@ -259,6 +259,7 @@ export class NotificationCenter {
     _build(frame) {
         const scroll = new St.ScrollView({
             style_class: 'kiwi-nc-scroll', x_expand: true, y_expand: true,
+            accessible_name: this._ctx.gettext('Notifications'),
             hscrollbar_policy: St.PolicyType.NEVER, vscrollbar_policy: St.PolicyType.AUTOMATIC,
         });
         const content = new St.BoxLayout({ style_class: 'kiwi-nc-content', orientation: Clutter.Orientation.VERTICAL, x_expand: true });

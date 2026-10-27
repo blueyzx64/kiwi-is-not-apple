@@ -17,6 +17,7 @@ import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as DND from 'resource:///org/gnome/shell/ui/dnd.js';
 
+import * as A11y from '../../lib/a11y.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { Glass } from '../../lib/glass.js';
 import { IconStyle } from '../../lib/iconStyle.js';
@@ -242,6 +243,8 @@ class StackPopup {
         const monitor = Main.layoutManager.primaryMonitor;
         this.actor = this._cleanup.actor(new St.Widget({
             name: 'kiwi-dock-stack', reactive: true, can_focus: true,
+            accessible_name: stack.name,
+            accessible_role: A11y.Role.DIALOG,
             x: monitor.x, y: monitor.y, width: monitor.width, height: monitor.height,
         }));
         Main.layoutManager.uiGroup.add_child(this.actor);
@@ -280,6 +283,10 @@ class StackPopup {
             this._buildFan(files, anchor);
         else
             this._buildPanel(files, anchor, view);
+        // Arrow keys and Tab walk the files; the first one has the focus
+        global.focus_manager.add_group(this.actor);
+        this._cleanup.add(() => global.focus_manager.remove_group(this.actor));
+        this.actor.navigate_focus(null, St.DirectionType.TAB_FORWARD, false);
         return true;
     }
 
@@ -333,6 +340,8 @@ class StackPopup {
             else
                 this._open(f);
         });
+        // The Menu key and Shift+F10 open the same file menu
+        button.connect('popup-menu', () => this._host.openFileMenu(button, f, this._stack));
         if (!f.entry.partial) {
             button._delegate = {
                 kiwiFile: f.file,

@@ -6,12 +6,13 @@
 // and the feature brings the desktop forward.
 //
 // Not modal: the desktop widgets stay draggable while the gallery is open. It closes with
-// Done, Esc in the search field, the overview, or the feature's disable.
+// Done, Esc, the overview, or the feature's disable.
 
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
+import * as A11y from '../../lib/a11y.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { Glass } from '../../lib/glass.js';
 import { pixelSize } from '../../core/widgets/view.js';
@@ -53,9 +54,12 @@ export class Gallery {
             style_class: 'kiwi-widgets-gallery',
             orientation: Clutter.Orientation.VERTICAL,
             reactive: true,
+            accessible_name: _('Widgets'),
+            accessible_role: A11y.Role.DIALOG,
             x: rect.x, y: rect.y, width: rect.width, height: rect.height,
         });
         Main.layoutManager.addTopChrome(panel);
+        A11y.keyNavGroup(cleanup, panel);
         cleanup.add(() => {
             Main.layoutManager.removeChrome(panel);
             panel.destroy();
@@ -70,6 +74,7 @@ export class Gallery {
         const search = new St.Entry({
             style_class: 'kiwi-widgets-gallery-search',
             hint_text: _('Search Widgets'),
+            accessible_name: _('Search Widgets'),
             can_focus: true,
             x_expand: true,
             primary_icon: new St.Icon({ icon_name: 'edit-find-symbolic', style_class: 'kiwi-widgets-gallery-search-icon' }),
@@ -94,6 +99,7 @@ export class Gallery {
             const b = new St.Button({
                 style_class: 'kiwi-widgets-gallery-chip',
                 label: cat ? _(cat) : _('All Widgets'),
+                accessible_role: A11y.Role.TOGGLE_BUTTON,
                 toggle_mode: true,
                 can_focus: true,
             });
@@ -124,7 +130,8 @@ export class Gallery {
             this._query = search.get_text();
             this._fill(cleanup);
         });
-        cleanup.connect(search.clutter_text, 'key-press-event', (_a, event) => {
+        // On the panel, so Esc closes it from any control the keyboard has reached
+        cleanup.connect(panel, 'key-press-event', (_a, event) => {
             if (event.get_key_symbol() !== Clutter.KEY_Escape)
                 return Clutter.EVENT_PROPAGATE;
             this._feature.closeGallery();
@@ -222,6 +229,7 @@ export class Gallery {
                 style_class: 'kiwi-widgets-gallery-size',
                 label: SIZE_NAMES[s],
                 accessible_name: { small: _('Small'), medium: _('Medium'), large: _('Large'), extraLarge: _('Extra Large') }[s],
+                accessible_role: A11y.Role.TOGGLE_BUTTON,
                 toggle_mode: true,
                 checked: s === size,
                 can_focus: true,
