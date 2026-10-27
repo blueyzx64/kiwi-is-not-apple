@@ -86,6 +86,7 @@ prefs.js metadata.json stylesheet.css schemas/ po/`). `make pack-check` verifies
 | `windowState.js` | why a window is not in its normal place (`staged`, ...) | `WindowState.set/has/list/watch`, `interceptMinimize`, `setStageActive` |
 | `notificationRouter.js` | banners to the notch or stock, shared `{count, dnd}` | `setBannerSink`, `pinBanners`, `connect`, `state`, `setDnd` |
 | `mprisWatcher.js` | one MPRIS source for the extension | `MprisWatcher.acquire(cleanup, gettext)` |
+| `widgets/` | the one widget model for the desktop layer, Notification Center and notch: pure `model.js` (sizes, grid, snapping, layout JSON, `ProviderPool`, `WidgetRegistry`), `data.js` (pure data shaping), `view.js` (the glass card), `providers/` (time, calendar, weather, batteries, media, system; lazy and shared), `kinds/` (the built-in widgets) | `Widgets.acquire(cleanup, gettext)` -> `host.registry`, `host.createView(kind, {size, config, scale}, owner)` -> `view.actor`, `setActive(bool)`, `activate()`, `menuItems()` |
 | `appMenus/` | the focused app's menus (ctx.appMenus): pure `model.js` (generic menus, well-known GTK actions, Help search, ⌘ shortcut labels), `gtkActions.js` (org.gtk.Actions provider), `commands.js` (generic commands), `service.js` (providers, cache, activation) | `acquire(owner)`, `targetFor(win)`, `peek/results(target)`, `build(target, results, opts)`, `activate(target, command)`, `registerProvider(owner, provider)` |
 
 Events (`EVENTS` in `core/events.js`): `window-added`, `window-changed`, `window-removed`,
@@ -126,6 +127,7 @@ window manager; the menu bar runs a fallback when nobody listens).
 | `clipboard/` | `clipboard-history` | history, popover, Quick Paste |
 | `stageManager/` | `stage-manager`, `stage-manager-shortcut` | strip, sets, flights (rebuilt in phase 4) |
 | `showDesktop/` | `show-desktop` | top-bar button, Super+D; delegates to Stage Manager |
+| `widgets/` | `desktop-widgets` | Sonoma desktop widgets: a layer per monitor above the wallpaper (and DING), drag to place, right-click size/remove, gallery (`gallery.js`), dimming, "Edit Widgets…" in the wallpaper menu; `editWidgets()` for the Notification Center |
 | `roundedCorners/` | `rounded-corners` | shader effect per window |
 | `liquidGlass/` | `liquid-glass` | attaches `lib/glass.js` to the panel, Control Center and calendar menus; the glass prefs |
 | `shellBehaviour/` | `shell-behaviour` | swipes stop at workspaces; no hot corner |

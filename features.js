@@ -153,4 +153,9 @@ export const FEATURES = [
         id: 'notch', setting: 'notch',
         load: async () => (await import('./features/notch/index.js')).NotchFeature,
     },
+    {
+        // Desktop widgets above the wallpaper, below windows (core/widgets is the shared model)
+        id: 'desktop-widgets', setting: 'widgets',
+        load: async () => (await import('./features/widgets/index.js')).DesktopWidgets,
+    },
 ];

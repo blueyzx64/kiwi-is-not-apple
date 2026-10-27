@@ -485,6 +485,28 @@
         <description>How fast the windows slide aside and back: fast, normal or slow.</description>
       </key>
 
+      <!-- Desktop widgets (features/widgets, core/widgets) -->
+      <key name="widgets" type="b">
+        <default>true</default>
+        <summary>Desktop widgets</summary>
+        <description>Widgets on the desktop, above the wallpaper and below windows. None are placed until you add some with Edit Widgets… (right-click the desktop).</description>
+      </key>
+      <key name="widgets-layout" type="s">
+        <default>''</default>
+        <summary>Desktop widget layout</summary>
+        <description>The placed widgets as JSON (kind, size, options, monitor and grid position). Empty means no widgets. Written by Kiwi when you add, move, resize or remove a widget.</description>
+      </key>
+      <key name="widgets-style" type="s">
+        <choices>
+          <choice value="automatic"/>
+          <choice value="monochrome"/>
+          <choice value="full-color"/>
+        </choices>
+        <default>'automatic'</default>
+        <summary>Widget style</summary>
+        <description>automatic: monochrome and dimmed while an app window is in front, full colour when the desktop is. monochrome: always dimmed. full-color: never dimmed.</description>
+      </key>
+
       <!-- Clipboard history (features/clipboard) -->
       <key name="clipboard-history" type="b">
         <default>true</default>

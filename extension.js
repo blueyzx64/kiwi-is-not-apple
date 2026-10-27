@@ -35,7 +35,7 @@ import { FEATURES } from './features.js';
 // Keys Kiwi writes itself at run time. No `when` or restartOn reads them, and a write made
 // during a refresh would re-enter the registry, so they do not trigger a pass.
 const KEYS_THAT_NEVER_AFFECT_FEATURES = new Set(['clipboard-recording', 'migrations-done', STORE_KEY,
-    'dock-recent-apps']);
+    'dock-recent-apps', 'widgets-layout']);
 
 // Schemas whose keys Kiwi may own through core/originals.js
 const openSettings = schemaId =>
