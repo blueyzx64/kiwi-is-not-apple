@@ -191,6 +191,16 @@ export const FEATURES = [
         load: async () => (await import('./features/stageManager/shortcut.js')).StageManagerShortcut,
     },
     {
+        // Caps Lock and input-source badge at the text caret (lib/caret.js)
+        id: 'input-indicator', setting: 'input-indicator',
+        load: async () => (await import('./features/inputIndicator/index.js')).InputIndicator,
+    },
+    {
+        // Emoji & Symbols popover (Super+Ctrl+Space); types through lib/paste.js
+        id: 'emoji-picker', setting: 'emoji-picker',
+        load: async () => (await import('./features/emoji/index.js')).EmojiPicker,
+    },
+    {
         // Pill in the centre of the bar for banners, media and volume. Replaces the stock banners
         // and OSD (parts switch live on notch-notifications / notch-osd / notch-live-activities).
         id: 'notch', setting: 'notch',

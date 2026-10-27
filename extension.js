@@ -24,6 +24,7 @@ import { FeatureRegistry } from './lib/featureRegistry.js';
 import { restoreLegacyButtonLayout, runAllMigrations } from './lib/migrations.js';
 import { runCleanup } from './lib/cleanup/index.js';
 import { Glass } from './lib/glass.js';
+import { IconStyle } from './lib/iconStyle.js';
 import { EventHub } from './core/events.js';
 import { DesktopService } from './core/desktop.js';
 import { LayoutService } from './core/layout.js';
@@ -35,7 +36,7 @@ import { FEATURES } from './features.js';
 // Keys Kiwi writes itself at run time. No `when` or restartOn reads them, and a write made
 // during a refresh would re-enter the registry, so they do not trigger a pass.
 const KEYS_THAT_NEVER_AFFECT_FEATURES = new Set(['clipboard-recording', 'migrations-done', STORE_KEY,
-    STORE_BACKUP_KEY, 'dock-recent-apps', 'screenshots-last-selection']);
+    STORE_BACKUP_KEY, 'dock-recent-apps', 'screenshots-last-selection', 'emoji-recents', 'emoji-skin-tone']);
 
 // Schemas whose keys Kiwi may own through core/originals.js
 const openSettings = schemaId =>
@@ -54,6 +55,7 @@ export default class KiwiExtension extends Extension {
         this._cleanup = new CleanupRegistry();
         this._settings = this.getSettings();
         Glass.configure(this._settings);
+        IconStyle.configure(this._settings);
 
         // Before anything reads settings or owns a GNOME key: a migration write during the
         // registry's first pass would re-enter it with half-migrated values, and a GNOME key a
@@ -147,6 +149,7 @@ export default class KiwiExtension extends Extension {
         this._events?.clear();
         this._appMenus = this._motion = this._layout = this._desktop = this._events = null;
         this._originals = null;
+        IconStyle.configure(null);
         Glass.configure(null);
         this._settings = null;
     }
