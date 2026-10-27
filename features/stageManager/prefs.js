@@ -182,10 +182,10 @@ export function buildPrefs({ settings, window, extension }) {
         description: _('Every set operation has a shortcut. They work while Stage Manager is on.'),
     });
     keys.add(shortcutRow(settings, _, {
-        key: 'stage-manager-next-shortcut', title: _('Next set'), example: '<Super><Alt>Down',
+        key: 'stage-manager-next-shortcut', title: _('Next set'), example: '<Super><Alt>Page_Down',
     }));
     keys.add(shortcutRow(settings, _, {
-        key: 'stage-manager-previous-shortcut', title: _('Previous set'), example: '<Super><Alt>Up',
+        key: 'stage-manager-previous-shortcut', title: _('Previous set'), example: '<Super><Alt>Page_Up',
     }));
     const slots = new Adw.ExpanderRow({ title: _('Strip entries 1 to 6'), subtitle: _('Super+Alt+1 to 6') });
     for (let n = 1; n <= 6; n++) {

@@ -665,12 +665,12 @@
         <description>Show the strip of recent apps beside the stage. Off keeps it hidden until the pointer pushes against the screen edge (macOS "Show recent apps in Stage Manager").</description>
       </key>
       <key name="stage-manager-next-shortcut" type="as">
-        <default>['&lt;Super&gt;&lt;Alt&gt;Down']</default>
+        <default>['&lt;Super&gt;&lt;Alt&gt;Page_Down']</default>
         <summary>Next set shortcut</summary>
         <description>Puts the next set or app on the stage, in the order they were opened. Only active while Stage Manager is on.</description>
       </key>
       <key name="stage-manager-previous-shortcut" type="as">
-        <default>['&lt;Super&gt;&lt;Alt&gt;Up']</default>
+        <default>['&lt;Super&gt;&lt;Alt&gt;Page_Up']</default>
         <summary>Previous set shortcut</summary>
         <description>Puts the previous set or app on the stage. Only active while Stage Manager is on.</description>
       </key>
