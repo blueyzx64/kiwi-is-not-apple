@@ -218,6 +218,23 @@ test('splitProps: every transform prop jumps; opacity and unknown props animate'
     eq(splitProps({ x: 0 }, resolve({}, OFF).transforms), { animate: {}, jump: { x: 0 } }, 'off: jump');
 });
 
+// ---- bug fixes (board F1): a missing `animations` field means animations are on ----------
+test('F1: reduced motion without an animations field stays reduced (animations default on)', () => {
+    eq(resolve({ duration: 'extraLong', spring: 'bouncy' }, { reducedMotion: true }),
+        resolve({ duration: 'extraLong', spring: 'bouncy' }, REDUCED));
+    eq(resolve({ duration: 'long' }, { reducedMotion: true }).transforms, false);
+    eq(resolve({ duration: 'long' }, { reducedMotion: true }).duration, REDUCED_MAX_MS);
+});
+test('F1: an env with neither field, or only reducedMotion false, is animated', () => {
+    eq(resolve({ duration: 'long' }, {}), resolve({ duration: 'long' }, ON));
+    eq(resolve({ duration: 'long' }, { reducedMotion: false }), resolve({ duration: 'long' }, ON));
+    eq(resolve({ duration: 'long' }, { reducedMotion: false }).duration, DURATIONS.long);
+});
+test('F1: animations false still switches off with or without the other field', () => {
+    eq(resolve({ duration: 'long' }, { animations: false }), resolve({ duration: 'long' }, OFF));
+    eq(resolve({ duration: 'long' }, { reducedMotion: true, animations: false }).duration, 0);
+});
+
 if (failed) {
     print(`${failed} failed`);
     imports.system.exit(1);
