@@ -100,6 +100,7 @@ export function buildPrefs({ settings, extension }) {
 
     const access = new Adw.PreferencesGroup({
         title: _('Accessibility'),
+        name: 'accessibility',     // prefs/pages/appearance.js adds the colour filters here
         description: _('Like macOS Accessibility > Display. GNOME\'s High Contrast also makes Kiwi\'s surfaces solid with strong borders.'),
     });
     access.add(switchRow(settings, _('Reduce Transparency'),

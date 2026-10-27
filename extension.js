@@ -31,6 +31,7 @@ import { DesktopService } from './core/desktop.js';
 import { LayoutService } from './core/layout.js';
 import { Motion } from './core/motion.js';
 import { AppMenuService } from './core/appMenus/service.js';
+import { OsdRouter } from './core/osd.js';
 import { OriginalsStore, STORE_BACKUP_KEY, STORE_KEY, restoreStale } from './core/originals.js';
 import { FEATURES } from './features.js';
 
@@ -49,7 +50,7 @@ const openSettings = schemaId =>
  * gets the same ctx:
  *   extension, settings (Kiwi's Gio.Settings), gettext, features ({instance(id)}),
  *   events (core/events.js), desktop (core/desktop.js), layout (core/layout.js),
- *   motion (core/motion.js), originals (core/originals.js), appMenus (core/appMenus/service.js)
+ *   motion (core/motion.js), osd (core/osd.js), originals (core/originals.js), appMenus (core/appMenus/service.js)
  */
 // The Shell disables every extension while the screen is locked and enables it again at unlock
 // (Kiwi has no 'unlock-dialog' session mode: its UI has no place on the lock screen). The GNOME
@@ -94,6 +95,8 @@ export default class KiwiExtension extends Extension {
         this._motion = new Motion(this._events);
         this._motion.start();
         this._appMenus = new AppMenuService({ events: this._events, desktop: this._desktop, layout: this._layout });
+        this._osd = new OsdRouter(this._settings);
+        this._osd.start(this._cleanup);
 
         this._features = new FeatureRegistry(CleanupRegistry, {
             onChange: (id, active) => this._events?.emit('feature-changed', { id, active }),
@@ -124,6 +127,7 @@ export default class KiwiExtension extends Extension {
             desktop: this._desktop,
             layout: this._layout,
             motion: this._motion,
+            osd: this._osd,
             originals: this._originals,
             appMenus: this._appMenus,
         });
@@ -160,7 +164,7 @@ export default class KiwiExtension extends Extension {
         this._layout?.stop();
         this._desktop?.stop();
         this._events?.clear();
-        this._appMenus = this._motion = this._layout = this._desktop = this._events = null;
+        this._appMenus = this._motion = this._layout = this._desktop = this._events = this._osd = null;
         this._originals = null;
         IconStyle.configure(null);
         Glass.configure(null);

@@ -1202,11 +1202,6 @@
         <summary>Notch shows live activities</summary>
         <description>Show what is happening now, such as the playing song, in the notch.</description>
       </key>
-      <key name="notch-osd" type="b">
-        <default>true</default>
-        <summary>Notch shows volume and brightness</summary>
-        <description>Show volume and brightness changes in the notch instead of the standard on-screen display.</description>
-      </key>
       <key name="notch-timeout" type="i">
         <default>5</default>
         <range min="2" max="30"/>
@@ -1217,6 +1212,56 @@
         <default>false</default>
         <summary>Show clipboard in the notch dashboard</summary>
         <description>Show the latest clipboard entries in the notch dashboard, which opens when you click the notch. Turn it off to keep copied text off the screen while sharing it.</description>
+      </key>
+
+      <!-- On-screen display (core/osd.js, features/osd) -->
+      <key name="osd-location" type="s">
+        <choices>
+          <choice value="notch"/>
+          <choice value="menu-bar"/>
+          <choice value="system"/>
+        </choices>
+        <default>'notch'</default>
+        <summary>Show volume and brightness in</summary>
+        <description>'notch' shows them in the notch while it is on, and in a glass pill under the menu bar when it is off (macOS 26 style); 'menu-bar' always uses the pill; 'system' keeps GNOME's centred pop-up.</description>
+      </key>
+
+      <!-- Dialogs (features/dialogs) -->
+      <key name="dialogs-glass" type="b">
+        <default>true</default>
+        <summary>Glass system dialogs</summary>
+        <description>Restyle the Shell's modal dialogs (authentication, log out, restart and shut down, Run a Command) as macOS-style glass alerts: an icon on top, buttons at the right, the default one in the accent colour.</description>
+      </key>
+
+      <!-- Colour filters (features/colorFilters) -->
+      <key name="color-filter" type="b">
+        <default>false</default>
+        <summary>Colour filter</summary>
+        <description>Filter every colour on screen, like macOS Accessibility > Display > Colour Filters. Off by default.</description>
+      </key>
+      <key name="color-filter-kind" type="s">
+        <choices>
+          <choice value="greyscale"/>
+          <choice value="protanopia"/>
+          <choice value="deuteranopia"/>
+          <choice value="tritanopia"/>
+          <choice value="tint"/>
+        </choices>
+        <default>'greyscale'</default>
+        <summary>Colour filter type</summary>
+        <description>Greyscale, a correction for red/green (protanopia), green/red (deuteranopia) or blue/yellow (tritanopia) colour blindness, or a colour tint.</description>
+      </key>
+      <key name="color-filter-intensity" type="i">
+        <default>100</default>
+        <range min="0" max="100"/>
+        <summary>Colour filter intensity</summary>
+        <description>How strongly the filter applies, in percent.</description>
+      </key>
+      <key name="color-filter-hue" type="i">
+        <default>40</default>
+        <range min="0" max="359"/>
+        <summary>Colour tint hue</summary>
+        <description>The hue of the colour tint filter, in degrees.</description>
       </key>
 
       <!-- Deprecated in v3, unused: kept one release so dconf stays valid, then removed. Nothing reads them except the one-shot migrations in lib/migrations.js and lib/cleanup/ (tests/deprecatedKeys.test.js checks). -->
@@ -1482,6 +1527,11 @@
         <description>Switch to performance mode automatically while the Power Saver profile is active.</description>
       </key>
 
+      <key name="notch-osd" type="b">
+        <default>true</default>
+        <summary>(Deprecated, unused) Notch shows volume and brightness</summary>
+        <description>Replaced by osd-location.</description>
+      </key>
       <key name="show-window-controls-fullscreen-only" type="b">
         <default>false</default>
         <summary>(Deprecated, unused) Show Window Controls on Panel only when Fullscreen</summary>
