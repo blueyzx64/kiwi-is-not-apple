@@ -26,16 +26,32 @@
 | ID | Task | Status |
 |---|---|---|
 | H1 | Unit-test hardening: core/events + core/layout models | merged |
-| H2 | Unit-test hardening: core/desktop + core/motion models | started |
-| H3 | Unit-test hardening: core/originals (incl. ListMembersOwner, crash restore) | queued |
-| H4 | Verify on GNOME 50 source: the reduced-motion key and the notification-grouping API | queued |
-| H5 | Verify: Input Capture portal, localsearch xattr tags, Clocks timer D-Bus, Night Light location keys | queued |
-| H6 | SVG icon set for new features (symbolic, GNOME style): show-desktop, logo-kiwi, mission-control, launchpad, stage-manager, notification-center, widgets | queued |
-| H7 | Accessibility audit: accessible names and keyboard focus for every new Kiwi actor (report only) | queued |
-| H8 | Prefs consistency audit: every schema key has a prefs row or is internal (report only) | queued |
-| H9 | Harness library: reusable scenario helpers (launch app, wait window, click actor, drag, shot) → /home/user/kiwi-swarm-tools/lib.sh | queued |
+| H2 | Unit-test hardening: core/desktop + core/motion models | merged |
+| H3 | Unit-test hardening: core/originals (incl. ListMembersOwner, crash restore) | merged |
+| H4 | Verify on GNOME 50 source: the reduced-motion key and the notification-grouping API | done (findings in v3-swarm.md) |
+| H5 | Verify: Input Capture portal, localsearch xattr tags, Clocks timer D-Bus, Night Light location keys | done (findings in v3-swarm.md) |
+| H6 | SVG icon set for new features (symbolic, GNOME style): show-desktop, logo-kiwi, mission-control, launchpad, stage-manager, notification-center, widgets | merged |
+| H7 | Accessibility audit: accessible names and keyboard focus for every new Kiwi actor (report only) | done (30 findings logged) |
+| H8 | Prefs consistency audit: every schema key has a prefs row or is internal (report only) | done |
+| H9 | Harness library: reusable scenario helpers (launch app, wait window, click actor, drag, shot) → /home/user/kiwi-swarm-tools/lib.sh | started |
 | H10 | Dock scenario script set using H9's library (regression suite) | queued |
 | H11 | Glass/Appearance scenario script set (regression suite) | queued |
 | H12 | i18n audit: user-visible strings missing _() / N_() (report only) | queued |
 
 Concurrency cap: 20 agents at once (environment limit). H2–H12 are queued and start as slots free.
+
+## Open findings to fix (orchestrator triage)
+- ✅ F1 (H2, fixed by H3): `core/motionModel resolve(req, {reducedMotion:true})` with no `animations` field is treated as animations OFF. It should default to animations on.
+- ✅ F2 (H2, fixed by H3): `core/desktopModel windows({minimized:true})` doesn't filter (only `false` does); it should return only minimized windows.
+- ✅ F3 (H2, fixed by H3): `upsertWindow(id, {appId: undefined})` stores undefined instead of keeping the default.
+- F4 (H1): EventHub snapshots listeners per emit, so an owner released mid-emit still receives that emit (acceptable, documented).
+- F5 (H1): a layout claim with `stack:false` and `reserve:'soft'` doesn't shrink the work area (intended: soft means no strut).
+- A11y (H7): 30 violations (10 medium, 20 low); the list is in .swarm/agents/H7.md. Biggest: the modal overlay has no dialog role or name (lib/modalSurface.js:112); no keyboard entry to the notch; Spotlight rows have no role or focus; no keyboard context menu on dock files. Plan: a fixer pass after the P2–P6 leads merge, because many of these files are changing now.
+- Prefs (H8): all 97 live user keys have prefs rows, and no row points at a missing or deprecated key. Defaults match §12. `clipboard-recording` / `dock-recent-apps` Reset Everything fix → FX1. The accent default `multicolor` matches macOS's default ("Multicolor"). Click-wallpaper "Always / Only in Stage Manager" → L7 adds the key. The planned keys (hot corners, magnification, Genie, input-source, SNI, Focus) belong to L6, L1, L14 and L10.
+
+## Pacing (owner, 2026-10-27)
+Deploy conservatively, sized to the scope and type of work. Resume in waves of about 8, closest-to-done first; the rest wait in the queue.
+- Wave 1: P1-windows, FX1, FX2, L6, L7, L13, H9, R2
+- Wave 2: L1, L2, L3, L4, L5, L8
+- Wave 3: L9, L10, L11, L12, L14, L15
+- Reviewers R4 and R5 and helpers H10–H12 run only after waves land, on merged code.
