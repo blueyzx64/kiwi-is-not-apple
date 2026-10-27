@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // gjs -m tests/wallpaperModel.test.js
 // lib/wallpaperModel.js: what to sample for the glass wallpaper tint, and the average.
-import { ColorCache, averageRgb, isXmlBackground, parseHexColor, wallpaperSource, xmlFirstImage, xmlSlideAt }
+import { ColorCache, MAX_PROBE_PIXELS, averageRgb, slideDelayMs, withinProbeCap, isXmlBackground, parseHexColor, wallpaperSource, xmlFirstImage, xmlSlideAt }
     from '../lib/wallpaperModel.js';
 
 let failed = 0;
@@ -93,6 +93,18 @@ test('cache keeps the most recent entries', () => {
     c.get('a');
     c.set('c', [3, 3, 3]);
     eq([c.get('a'), c.get('b'), c.get('c'), c.size], [[1, 1, 1], undefined, [3, 3, 3], 2]);
+});
+
+test('the probe refuses a picture over the size cap', () => {
+    eq(withinProbeCap(7680, 4320), true, '8K');
+    eq(withinProbeCap(14000, 14000), false, '196 MP');
+    eq(withinProbeCap(MAX_PROBE_PIXELS, 1), true, 'at the cap');
+    eq(withinProbeCap(0, 100), false, 'no size');
+});
+
+test('the next slide is waited for at least a second', () => {
+    eq(slideDelayMs(3600.2), 3600200);
+    eq(slideDelayMs(0.1), 1000);
 });
 
 if (failed) {
