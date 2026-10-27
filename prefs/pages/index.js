@@ -18,6 +18,7 @@ import * as notchPrefs from '../../features/notch/prefs.js';
 import * as spotlightPrefs from '../../features/spotlight/prefs.js';
 import * as controlCenterPrefs from '../../features/controlCenter/prefs.js';
 import * as clipboardPrefs from '../../features/clipboard/prefs.js';
+import * as screenshotsPrefs from '../../features/screenshots/prefs.js';
 import { addFeatureGroups } from '../widgets.js';
 
 const N_ = s => s;
@@ -45,6 +46,7 @@ export const SECTIONS = [
         featurePage('spotlight', N_('Spotlight'), 'system-search-symbolic', spotlightPrefs),
         featurePage('control-center', N_('Control Center'), 'preferences-system-symbolic', controlCenterPrefs),
         featurePage('clipboard', N_('Clipboard'), 'edit-paste-symbolic', clipboardPrefs),
+        featurePage('screenshots', N_('Screenshots'), 'camera-photo-symbolic', screenshotsPrefs),
     ] },
     { title: N_('Look'), pages: [appearance] },
     { title: N_('Kiwi'), pages: [about] },

@@ -32,6 +32,10 @@ export const EVENTS = Object.freeze({
     'motion-changed': { reducedMotion: 'boolean', animations: 'boolean' },
     // lib/featureRegistry.js, through extension.js: a feature started or stopped
     'feature-changed': { id: 'string', active: 'boolean' },
+    // features/screenshots: a screen recording started (kind 'screen' or 'area') or ended
+    // (path of the video file when GNOME reports it, else null). The notch shows it live.
+    'recording-started': { kind: "'screen'|'area'" },
+    'recording-stopped': { path: 'string|null' },
     // Requests between features (the owner of the policy listens, see features.js)
     'minimize-requested': { window: 'Meta.Window', source: 'string' },
     // The menu bar (features/menuBar): the clock was clicked. The Notification Center (P5)

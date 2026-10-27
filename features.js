@@ -197,6 +197,12 @@ export const FEATURES = [
         load: async () => (await import('./features/notch/index.js')).NotchFeature,
     },
     {
+        // Shift+Super+3/4/5, the toolbar and the floating thumbnail, on GNOME's own screenshot UI
+        id: 'screenshots', setting: 'screenshots',
+        restartOn: ['screenshots-shortcut-screen', 'screenshots-shortcut-selection', 'screenshots-shortcut-toolbar'],
+        load: async () => (await import('./features/screenshots/index.js')).Screenshots,
+    },
+    {
         // Super+Tab and Super+`: Kiwi's handlers for switch-applications and switch-group while
         // on, the Shell's own given back after (the user's shortcuts are never written)
         id: 'app-switcher', setting: 'app-switcher',

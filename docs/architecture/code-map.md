@@ -95,7 +95,8 @@ Events (`EVENTS` in `core/events.js`): `window-added`, `window-changed`, `window
 `motion-changed`, `feature-changed`, `minimize-requested`, `notification-center-requested`
 (the clock), `app-hide-requested` and `window-tile-requested` (app-menu commands for the
 window manager; the menu bar runs a fallback when nobody listens), `launchpad-requested` (dock tile,
-pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view-changed` (Split View).
+pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view-changed` (Split View), `recording-started` /
+`recording-stopped` (screenshots; for the notch's recording live activity).
 
 ## 4. lib/
 
