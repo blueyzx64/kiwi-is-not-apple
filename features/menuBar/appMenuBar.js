@@ -26,6 +26,7 @@ import * as BoxPointer from 'resource:///org/gnome/shell/ui/boxpointer.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
+import { skipsTaskbar } from '../../core/windowState.js';
 import { PanelLayout } from '../../core/panelLayout.js';
 import { menuEntries, searchMenus, WM_ACCEL_SLOTS } from '../../core/appMenus/model.js';
 import { GtkMenusProvider } from '../../core/appMenus/gtkMenus.js';
@@ -349,7 +350,7 @@ export class AppMenuBar {
         const wm = global.workspace_manager;
         const active = wm.get_active_workspace_index();
         const windows = (app?.get_windows() ?? [])
-            .filter(w => !w.skip_taskbar)
+            .filter(w => !skipsTaskbar(w))
             .map(w => ({ id: w.get_stable_sequence(), title: w.get_title() ?? '', focused: w === win }));
         return {
             hasWindow: !!win,

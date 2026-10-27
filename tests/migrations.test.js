@@ -97,6 +97,50 @@ test('window controls and control center keys migrate', () => {
     eq(gs.get_boolean('control-center-user-row'), false);
 });
 
+test('round 2: the window controls side defaults to the right', () => {
+    const gs = fresh();
+    runAllMigrations(gs);
+    eq(gs.get_string('window-controls-side'), 'right');
+    eq(gs.get_string('window-controls-scope'), 'maximized');
+    eq(userSet(gs, 'window-controls-side'), false);
+});
+
+test('round 2: a chosen top-bar position becomes the side, left stays left', () => {
+    const left = fresh();
+    left.set_string('window-controls-position', 'left');
+    runAllMigrations(left);
+    eq(left.get_string('window-controls-side'), 'left');
+    const right = fresh();
+    right.set_string('window-controls-position', 'right');
+    runAllMigrations(right);
+    eq(right.get_string('window-controls-side'), 'right');
+});
+
+test('round 2: position "system" takes the side of the user\'s own layout', () => {
+    for (const side of ['left', 'right']) {
+        const gs = fresh();
+        gs.set_string('window-controls-position', 'system');
+        runAllMigrations(gs, { buttonLayoutSide: () => side });
+        eq(gs.get_string('window-controls-side'), side);
+    }
+    const noLayout = fresh();
+    noLayout.set_string('window-controls-position', 'system');
+    runAllMigrations(noLayout);
+    eq(noLayout.get_string('window-controls-side'), 'right');
+});
+
+test('round 2: the apps side counts when the top bar side was never chosen, and loses to it', () => {
+    const appsOnly = fresh();
+    appsOnly.set_string('app-buttons-position', 'left');
+    runAllMigrations(appsOnly);
+    eq(appsOnly.get_string('window-controls-side'), 'left');
+    const both = fresh();
+    both.set_string('window-controls-position', 'right');
+    both.set_string('app-buttons-position', 'left');
+    runAllMigrations(both);
+    eq(both.get_string('window-controls-side'), 'right');
+});
+
 test('second run is a no-op even after the user resets a new key', () => {
     const gs = fresh();
     gs.set_boolean('add-username-to-quick-menu', false);

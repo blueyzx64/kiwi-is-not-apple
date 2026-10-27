@@ -2,7 +2,7 @@
 // Stage Manager state machine. Pure: no gi imports, no clock, no Shell objects
 // (tests: tests/stageManagerModel.test.js scenarios, tests/stageManagerFuzz.test.js).
 //
-//   const sm = new StageMachine({ allAtOnce: true, newWindows: 'replace', recentCount: 6 });
+//   const sm = new StageMachine({ allAtOnce: true, newWindows: 'replace' });
 //   const effects = sm.dispatch({ type: 'add', window: info, now });
 //
 // Events in, effects out. The Shell adapter (index.js) turns desktop changes and user input
@@ -57,7 +57,6 @@ export const JOIN_MS = 10000;
 export const DEFAULT_CONFIG = Object.freeze({
     allAtOnce: true,        // stage-manager-group-by-app
     newWindows: 'replace',  // stage-manager-new-windows: 'replace' | 'join'
-    recentCount: 6,         // stage-manager-recent-count: most entries the strip shows
 });
 
 const PIP_TITLE = /picture[\s-]*in[\s-]*picture/i;
@@ -131,9 +130,9 @@ export class StageMachine {
         return [...(this._spaces.get(ws)?.strip ?? [])];
     }
 
-    /** The entries the strip shows (at most recentCount), as copies. */
+    /** Every strip entry, in slot order, as copies (the strip scrolls past what fits). */
     shownStrip(ws = this._active) {
-        return this.strip(ws).slice(0, this._config.recentCount).map(id => this.entry(id));
+        return this.strip(ws).map(id => this.entry(id));
     }
 
     /** Is the desktop shown on a workspace? */
@@ -204,7 +203,7 @@ export class StageMachine {
     // ---- event handlers (called through HANDLERS) ----------------------------------------
 
     _onConfig(e) {
-        for (const k of ['newWindows', 'recentCount']) {
+        for (const k of ['newWindows']) {
             if (k in e)
                 this._config[k] = e[k];
         }
@@ -437,8 +436,7 @@ export class StageMachine {
     // Keyboard: strip slot n (1-based)
     _onSlot(e, now) {
         const space = this._space(this._active);
-        const shown = space.strip.slice(0, this._config.recentCount);
-        const id = shown[e.n - 1];
+        const id = space.strip[e.n - 1];
         if (id === undefined)
             return;
         space.quietUntil = now + QUIET_MS;
@@ -659,7 +657,7 @@ export class StageMachine {
         if (slot >= 0)
             space.strip.splice(slot, 1);
         if (old !== null) {
-            if (placement === 'swap' && slot >= 0 && slot < this._config.recentCount)
+            if (placement === 'swap' && slot >= 0)
                 space.strip.splice(slot, 0, old);
             else
                 space.strip.unshift(old);

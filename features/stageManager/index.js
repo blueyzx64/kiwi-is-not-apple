@@ -13,7 +13,7 @@
 //     disable, after every window got its actor back.
 //
 // Input: strip clicks (Shift adds to the set), entry drags onto the stage (adds), stage
-// window drags onto the strip (removes, or joins the entry dropped on), the wallpaper click
+// window drags dropped on a strip entry (joins it; never a resize, never the tiling edge zone), the wallpaper click
 // (stage-manager-wallpaper-click), Alt-click anywhere outside the windows (the dock, the app
 // grid: the next window opens into the current stage), the window controls' minimize
 // (WindowState.interceptMinimize), and the shortcuts (cycle sets, strip slot n, remove).
@@ -25,15 +25,17 @@ import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
 import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
+import St from 'gi://St';
 import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
+import { cornerSpec } from './thumbEffect.js';
 import { WindowState } from '../../core/windowState.js';
 import { Keybindings } from '../../lib/keybindings.js';
 import { KiwiSettings } from '../../lib/settings.js';
 import { Flights } from './flights.js';
 import { isClick } from '../../lib/clickModel.js';
-import { METRICS, overlaps, pointRect, scaleMs, stripSide, workspaceDirection } from './geometry.js';
+import { METRICS, dropHint, overlaps, pointRect, scaleMs, stripSide, workspaceDirection } from './geometry.js';
 import { StageMachine } from './model.js';
 import { StripView } from './view.js';
 import { WindowHider } from './windows.js';
@@ -41,8 +43,9 @@ import { WindowHider } from './windows.js';
 export const STRIP_CLAIM = 'stage-strip';
 
 // Keys read live; the rest need a restart (features.js restartOn)
-const VIEW_KEYS = ['stage-manager-side', 'stage-manager-tilt', 'stage-manager-recent-count',
-    'stage-manager-autohide', 'stage-manager-show-recent'];
+const VIEW_KEYS = ['stage-manager-side', 'stage-manager-tilt',
+    'stage-manager-autohide', 'stage-manager-show-recent', 'rounded-corners',
+    'rounded-corners-radius', 'rounded-corners-which'];
 const SHORTCUTS = [
     ['stage-manager-remove-shortcut', sm => sm._removeFocused()],
     ['stage-manager-next-shortcut', sm => sm._send({ type: 'cycle', dir: 1 })],
@@ -53,6 +56,8 @@ const SHORTCUTS = [
 const SET_ASIDE = ['hidden', 'splitView'];
 // While a stage window is dragged, how often the pointer is checked against the strip
 const WINDOW_DRAG_SAMPLE_MS = 60;
+// Mutter tiles or maximizes a dragged window within drag-threshold x 6 of a screen edge
+const TILE_ZONE_FACTOR = 6;
 
 const rectOf = r => ({ x: r.x, y: r.y, width: r.width, height: r.height });
 const nowMs = () => Math.round(GLib.get_monotonic_time() / 1000);
@@ -87,14 +92,18 @@ export class StageManager {
         this._machine = new StageMachine({
             allAtOnce: ks.bool('stage-manager-group-by-app'),
             newWindows: ks.string('stage-manager-new-windows'),
-            recentCount: ks.int('stage-manager-recent-count'),
         });
 
+        const corners = () => cornerSpec({
+            enabled: ks.bool('rounded-corners'), radius: ks.int('rounded-corners-radius'),
+            which: ks.string('rounded-corners-which'),
+        });
         // Disposed in reverse: flights land, windows come back, the claim goes, the view last
         this._view = new StripView(cleanup, {
             motion: ctx.motion,
             ms: d => this._ms(d),
             gettext: _,
+            corners,
             onActivate: (id, { add }) => this._send({ type: 'activate', entry: id, add }),
             onDrop: id => this._send({ type: 'activate', entry: id, add: true }),
             onLayout: () => this._syncGeometryWatch(),
@@ -113,7 +122,7 @@ export class StageManager {
         });
         this._hider = new WindowHider(cleanup);
         this._flights = new Flights(cleanup, {
-            layer: this._view.flightLayer, motion: ctx.motion, ms: d => this._ms(d),
+            layer: this._view.flightLayer, motion: ctx.motion, ms: d => this._ms(d), corners,
             onLanded: win => this._view.setFlying(win, false),
         });
         cleanup.add(() => this._stopGeometryWatch());
@@ -158,10 +167,9 @@ export class StageManager {
         }, cleanup);
 
         ks.watch(VIEW_KEYS, () => this._layoutChanged());
-        ks.watch(['stage-manager-new-windows', 'stage-manager-recent-count'], () => this._send({
+        ks.watch(['stage-manager-new-windows'], () => this._send({
             type: 'config',
             newWindows: ks.string('stage-manager-new-windows'),
-            recentCount: ks.int('stage-manager-recent-count'),
         }));
         for (const [key, fn] of SHORTCUTS)
             Keybindings.add(cleanup, key, ctx.settings, () => fn(this));
@@ -472,7 +480,6 @@ export class StageManager {
         const tilt = this._ks.int('stage-manager-tilt');
         this._view.update({
             side: this._side, entries, tilt, slide,
-            recentCount: this._ks.int('stage-manager-recent-count'),
             workArea: this._layout.workArea(this._layout.primaryIndex),
         });
         this._syncConditions();
@@ -586,7 +593,20 @@ export class StageManager {
         return Clutter.EVENT_PROPAGATE;
     }
 
-    // A stage window dragged by its titlebar onto the strip leaves the stage
+    // What the pointer of a dragged stage window is over: an entry, the strip, or neither
+    _dragProbe() {
+        const [x, y] = global.get_pointer();
+        const hint = dropHint({ x, y }, {
+            floor: this._view.floorRect(),
+            onEntry: this._view.entryAt(x, y) !== null,
+            workArea: this._layout.workArea(this._layout.primaryIndex),
+            zone: St.Settings.get().drag_threshold * TILE_ZONE_FACTOR,
+        });
+        return { hint, entry: hint === 'over' ? this._view.entryAt(x, y) : null };
+    }
+
+    // A stage window dragged by its titlebar and dropped on an entry of the strip joins it.
+    // Resizes (RESIZING_*) never get here, and the screen-edge zone is left to tiling.
     _dragBegin(win, op) {
         const moving = op === Meta.GrabOp.MOVING || op === Meta.GrabOp.MOVING_UNCONSTRAINED ||
             op === Meta.GrabOp.KEYBOARD_MOVING;
@@ -594,13 +614,10 @@ export class StageManager {
         if (!moving || id === undefined || !this._machine.stageWindows().includes(id))
             return;
         this._endDrag();
-        const drag = { win, frame: rectOf(win.get_frame_rect()), token: 0, over: false };
+        const drag = { win, frame: rectOf(win.get_frame_rect()), token: 0 };
         this._drag = drag;
-        this._view.setDropHint('near');
         drag.token = this._cleanup.timeout(WINDOW_DRAG_SAMPLE_MS, () => {
-            const [px, py] = global.get_pointer();
-            drag.over = overlaps({ x: px, y: py, width: 1, height: 1 }, this._view.floorRect());
-            this._view.setDropHint(drag.over ? 'over' : 'near');
+            this._view.setDropHint(this._dragProbe().hint);
             return GLib.SOURCE_CONTINUE;
         }, { name: 'stage-manager-window-drag' });
     }
@@ -609,11 +626,9 @@ export class StageManager {
         const drag = this._drag;
         if (!drag || drag.win !== win)
             return;
-        const [px, py] = global.get_pointer();
-        const over = overlaps({ x: px, y: py, width: 1, height: 1 }, this._view.floorRect());
-        const target = over ? this._view.entryAt(px, py) : null;
+        const { entry } = this._dragProbe();
         this._endDrag();
-        if (!over)
+        if (entry === null)
             return;
         // Once Mutter has ended the grab (focus changes are refused during it)
         this._cleanup.idle(() => {
@@ -622,12 +637,7 @@ export class StageManager {
                 return GLib.SOURCE_REMOVE;
             // It comes back where it was picked up
             win.move_frame(true, drag.frame.x, drag.frame.y);
-            if (target)
-                this._send({ type: 'move-to-entry', id, entry: target });
-            else if (this._machine.stageWindows().length > 1)
-                this._send({ type: 'remove-from-set', id });
-            else
-                this._send({ type: 'minimize', id });
+            this._send({ type: 'move-to-entry', id, entry });
             return GLib.SOURCE_REMOVE;
         }, { name: 'stage-manager-window-drop' });
     }

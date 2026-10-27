@@ -58,6 +58,12 @@ test('qualifies: maximized, tiled and fullscreen stay square', () => {
     eq(qualifies(normal({ fullscreen: true }), cfg()), false);
 });
 
+test('qualifies: roundMaximized rounds a window maximized both ways, nothing else', () => {
+    eq(qualifies(normal({ maximizedH: true, maximizedV: true }), cfg({ roundMaximized: true })), true);
+    eq(qualifies(normal({ maximizedV: true }), cfg({ roundMaximized: true })), false);
+    eq(qualifies(normal({ fullscreen: true, maximizedH: true, maximizedV: true }), cfg({ roundMaximized: true })), false);
+});
+
 test('qualifies: menus, popups, docks, desktops, OR windows and the Shell never', () => {
     for (const type of ['other', 'menu', 'popup-menu', 'tooltip', 'dnd', 'dock', 'desktop', 'utility'])
         eq(qualifies(normal({ type }), cfg()), false);

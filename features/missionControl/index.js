@@ -32,6 +32,7 @@ import { ControlsState } from 'resource:///org/gnome/shell/ui/overviewControls.j
 import * as Workspace from 'resource:///org/gnome/shell/ui/workspace.js';
 import { SearchController } from 'resource:///org/gnome/shell/ui/searchController.js';
 
+import { skipsTaskbar } from '../../core/windowState.js';
 import { KiwiSettings } from '../../lib/settings.js';
 import { Keybindings, MODAL_MODES } from '../../lib/keybindings.js';
 import { ModalSurface } from '../../lib/modalSurface.js';
@@ -170,7 +171,7 @@ export class MissionControl {
             fullscreenApp: fullscreenAppOf(ws.list_windows().map(w => ({
                 appName: appOf(w)?.get_name() ?? null,
                 fullscreen: w.is_fullscreen(),
-                normal: w.get_window_type() === Meta.WindowType.NORMAL && !w.skip_taskbar,
+                normal: w.get_window_type() === Meta.WindowType.NORMAL && !skipsTaskbar(w),
             }))),
         }));
     }
@@ -223,7 +224,7 @@ export class MissionControl {
         const app = appId ? Shell.AppSystem.get_default().lookup_app(appId) : null;
         const windows = app?.get_windows() ?? global.display.list_all_windows()
             .filter(w => appOf(w)?.get_id() === appId);
-        return windows.filter(w => w.minimized && !w.skip_taskbar &&
+        return windows.filter(w => w.minimized && !skipsTaskbar(w) &&
             windowPlace({ appId, minimized: true }, this._view) === 'strip');
     }
 

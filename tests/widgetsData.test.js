@@ -1,6 +1,6 @@
 // Run: gjs -m tests/widgetsData.test.js
 import {
-    handAngles, msToNextMinute, offsetLabel, upcomingEvents, monthGrid, batteryList, batteryLevel,
+    handAngles, msToNextMinute, offsetLabel, cityFromTimezone, worldLabel, highLow, upcomingEvents, monthGrid, batteryList, batteryLevel,
     parseCpu, cpuUsage, parseMemory, formatBytes, mediaState,
 } from '../core/widgets/data.js';
 
@@ -88,6 +88,28 @@ test('media state', () => {
     eq(mediaState(null).has, false);
     const m = mediaState({ trackTitle: 'T', trackArtists: ['A', '', 'B'], status: 'Playing', canGoNext: true, appName: 'X' });
     eq([m.has, m.playing, m.title, m.artist, m.canNext, m.canPrev], [true, true, 'T', 'A, B', true, false]);
+});
+
+test('a time zone names its city', () => {
+    eq(cityFromTimezone('Europe/Riga'), 'Riga');
+    eq(cityFromTimezone('America/New_York'), 'New York');
+    eq(cityFromTimezone('America/Argentina/Buenos_Aires'), 'Buenos Aires');
+    eq(cityFromTimezone('UTC'), '');
+    eq(cityFromTimezone(null), '');
+});
+
+test('a world clock says the day and the hours ahead', () => {
+    eq(worldLabel(0, 0), 'Today, Same time');
+    eq(worldLabel(1, 13 * 3600), 'Tomorrow, +13h');
+    eq(worldLabel(-1, -5 * 3600 - 1800), 'Yesterday, −5h 30m');
+});
+
+test('high and low come from the forecast, or are left out', () => {
+    eq(highLow([{ temp: '18°C' }, { temp: '21 °C' }, { temp: '12°C' }]), 'H:21° L:12°');
+    eq(highLow([{ temp: '-3°C' }, { temp: '1°C' }]), 'H:1° L:-3°');
+    eq(highLow([{ temp: '18°C' }]), '');
+    eq(highLow([]), '');
+    eq(highLow(null), '');
 });
 
 if (failed) {

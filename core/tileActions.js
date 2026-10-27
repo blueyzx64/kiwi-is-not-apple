@@ -5,6 +5,9 @@
 // the green-button menu (features/windowControls) and the menu bar's Window menu draw and
 // request them. Pure JS, no gi imports.
 
+// Marks a string for translation; the view translates it
+const N_ = s => s;
+
 /** Single-window tiles, as fractions of the work area. */
 export const ZONES = Object.freeze({
     'fill': Object.freeze({ x: 0, y: 0, w: 1, h: 1 }),
@@ -52,3 +55,50 @@ export function parseAction(action) {
         return { kind: 'arrange', name: action.slice(8) };
     return null;
 }
+
+/**
+ * Does a tile put the window's top edge at the top of the work area? (Left and right halves,
+ * top halves and quarters, Fill: the windows whose controls belong in the top bar.)
+ *
+ * @param {?string} zone a key of ZONES, or anything else (center, null)
+ */
+export function zoneTouchesTop(zone) {
+    return !!zone && zone in ZONES && ZONES[zone].y === 0;
+}
+
+/**
+ * The zone to show for an action: a zone is its own; an arrangement puts the active window in
+ * its first zone.
+ *
+ * @param {string} action see parseAction
+ * @returns {?string} a key of ZONES
+ */
+export function leadZone(action) {
+    const parsed = parseAction(action);
+    if (parsed?.kind === 'zone')
+        return parsed.name;
+    return parsed?.kind === 'arrange' ? ARRANGEMENTS[parsed.name][0] : null;
+}
+
+/**
+ * The layouts of the picker (the green-button menu and the drag picker): the glyph rows with
+ * their section titles. the names are gettext keys (marked with N_).
+ */
+export const PICKER_SECTIONS = Object.freeze([
+    Object.freeze({
+        title: N_('Move & Resize'),
+        rows: Object.freeze([
+            Object.freeze([['left', N_('Left')], ['right', N_('Right')], ['top', N_('Top')], ['bottom', N_('Bottom')]]),
+            Object.freeze([['top-left', N_('Top Left')], ['top-right', N_('Top Right')],
+                ['bottom-left', N_('Bottom Left')], ['bottom-right', N_('Bottom Right')]]),
+        ]),
+    }),
+    Object.freeze({
+        title: N_('Fill & Arrange'),
+        rows: Object.freeze([
+            Object.freeze([['fill', N_('Fill')], ['arrange-left-right', N_('Left & Right')],
+                ['arrange-right-left', N_('Right & Left')], ['arrange-top-bottom', N_('Top & Bottom')],
+                ['arrange-quarters', N_('Quarters')]]),
+        ]),
+    }),
+]);

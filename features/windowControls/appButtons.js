@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The apps' own titlebar buttons while the top-bar window controls are off (features.js runs
 // this entry only then). Kiwi sets the WM button-layout to all three buttons (or close only,
-// app-buttons-set) on the side from app-buttons-position, through the same crash-safe owner as
+// app-buttons-set) on the side from window-controls-side, through the same crash-safe owner as
 // the panel controls: the user's layout is saved in saved-button-layout and written back
 // exactly when the top-bar controls come back on or Kiwi is disabled.
 // The look (stock GNOME or Kiwi's macOS CSS) is the GTK CSS in gtkThemeManager.js, which reads
@@ -13,7 +13,7 @@ import { KiwiSettings } from '../../lib/settings.js';
 import { ButtonLayoutOwner, WM_SCHEMA } from './buttonLayout.js';
 import { appButtonsLayout } from './model.js';
 
-const KEYS = ['app-buttons-position', 'app-buttons-set'];
+const KEYS = ['window-controls-side', 'app-buttons-set'];
 
 export class AppButtonsFeature {
     constructor(ctx, cleanup) {
@@ -31,7 +31,7 @@ export class AppButtonsFeature {
         const wm = new Gio.Settings({ schema_id: WM_SCHEMA });
         this._owner = new ButtonLayoutOwner(this._ctx.originals, wm, () => {},
             original => appButtonsLayout(original, {
-                position: ks.string('app-buttons-position'),
+                position: ks.string('window-controls-side'),
                 set: ks.string('app-buttons-set'),
             }));
         // LIFO: released before the settings watcher goes

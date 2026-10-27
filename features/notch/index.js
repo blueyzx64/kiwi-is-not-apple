@@ -37,6 +37,7 @@ import {
 import { seekTarget } from './dashboardModel.js';
 import { NotchView } from './view.js';
 import { Shelf } from './shelf.js';
+import { ShelfHelper } from './shelfHelper.js';
 import { watchDrops } from './drop.js';
 import { dropZone } from './model.js';
 import { watchPower } from './sources/power.js';
@@ -116,6 +117,8 @@ export class NotchFeature {
             onTab: tab => this._dispatch({ type: 'tab', tab }),
             onActivityAction: (activity, id) => this._activityAction(activity, id),
             onShelf: (action, uri) => this._shelfAction(action, uri),
+            isShelfHelperWindow: window => !!this._shelfHelper?.isHelperWindow(window),
+            onShelfLayout: layout => (layout ? this._shelfHelper?.show(layout.box, layout.tiles) : this._shelfHelper?.hide()),
             onTimerPreset: minutes => this._ctx.timers?.startTimer({ seconds: minutes * 60, label: this._ctx.gettext('Timer') }),
             onToggleMic: () => this._widgets?.toggleMic(),
             onOpenWeather: () => {
@@ -147,6 +150,13 @@ export class NotchFeature {
         syncHover();
 
         this._shelf = new Shelf(cleanup, ks, () => this._sync());
+        // Dragging a tile out of the shelf: the helper (if installed) puts a window over the tiles
+        this._shelfHelper = new ShelfHelper(cleanup, {
+            onClick: uri => this._shelfAction(uri === this._selected ? 'open' : 'select', uri),
+            onHover: on => this._view.setHelperHover(on),
+            onDrag: on => this._view.setDragging(on),
+            onActive: on => this._view.setShelfDrag(on),
+        });
         this._widgets = watchWidgets(cleanup, () => this._sync());
         // Files dragged from apps onto the notch land on the shelf (drop.js explains how)
         watchDrops(cleanup, {
@@ -167,6 +177,7 @@ export class NotchFeature {
         cleanup.add(() => {
             this._widgets = null;
             this._shelf = null;
+            this._shelfHelper = null;
         });
 
         // Room in the centre of the bar so the clock and others keep clear of the pill
@@ -177,6 +188,8 @@ export class NotchFeature {
         // The active Focus mode's icon (features/focus) shows on the Widgets tab's Focus toggle
         this._ctx.events.on('focus-changed', () => this._sync(), cleanup);
         cleanup.connect(global.display, 'in-fullscreen-changed', () => this._syncExternal());
+        // The overview shows the helper's window among the real ones: close the dashboard (and so the helper) first
+        cleanup.connect(Main.overview, 'showing', () => this._dispatch({ type: 'collapse' }));
         this._syncExternal(true);
 
         // The clipboard feature can start or stop after the notch

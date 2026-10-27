@@ -22,14 +22,58 @@ export const CORNER_FRACTION = 0.12;
 export const MODIFIER_FRACTION = 0.25;
 
 /**
+ * The layout picker's zone: the top-centre of the screen, on the bar. It opens below the notch
+ * (which sits in the centre of the bar), and stays open while the pointer is over the picker.
+ */
+export const PICKER_MIN_HALF_PX = 160;
+export const PICKER_HALF_FRACTION = 0.12;
+/** How far outside the picker the pointer may stray before it closes (px). */
+export const PICKER_KEEP_PX = 24;
+
+/** Half the width of the top-centre zone of a monitor. */
+export function pickerHalfWidth(monitor) {
+    return Math.max(PICKER_MIN_HALF_PX, Math.round(PICKER_HALF_FRACTION * monitor.width));
+}
+
+/** Zones that wait for the pointer to rest before they show (edges, corners); the top ones do not. */
+export function needsDwell(zone) {
+    return zone !== 'fill' && zone !== PICKER_ZONE;
+}
+
+/** The zone name of the top-centre picker. It is not a tile: the picker decides. */
+export const PICKER_ZONE = 'picker';
+
+/**
  * The zone a finished drag tiles into. A grab that ends with the pointer button still down
- * was cancelled (Esc): the window goes back and nothing is tiled.
- * @param {?string} shown the zone the outline showed
- * @param {boolean} buttonDown the grab button is still held
+ * was cancelled (Esc): the window goes back and nothing is tiled. The zone is the one under
+ * the pointer when the button goes up: the top ones at once (a fast drag may release before
+ * any outline showed), the edges only after their outline showed (`shown`).
+ *
+ * @param {{live: ?string, shown: ?string, buttonDown: boolean}} s
  * @returns {?string}
  */
-export function dropZone(shown, buttonDown) {
-    return buttonDown ? null : shown;
+export function dropZone({ live, shown, buttonDown }) {
+    if (buttonDown || !live)
+        return null;
+    return needsDwell(live) ? (shown === live ? live : null) : live;
+}
+
+/**
+ * The picker glyph under the pointer.
+ * @param {{x: number, y: number}} p
+ * @param {{action: string, rect: {x, y, width, height}}[]} cells
+ * @returns {?string} the action of the cell, or null
+ */
+export function pickerHit(p, cells) {
+    const cell = cells.find(({ rect }) => p.x >= rect.x && p.x < rect.x + rect.width &&
+        p.y >= rect.y && p.y < rect.y + rect.height);
+    return cell?.action ?? null;
+}
+
+/** True when the pointer is within `pad` px of the rect. */
+export function nearRect(p, rect, pad = 0) {
+    return p.x >= rect.x - pad && p.x < rect.x + rect.width + pad &&
+        p.y >= rect.y - pad && p.y < rect.y + rect.height + pad;
 }
 
 /**
@@ -117,7 +161,8 @@ export function placeIn(zone, target, size, area) {
  * The drag zone under the pointer while a window is dragged, or null.
  * - Left/right screen edge: the half; near a corner along it: that quarter.
  * - Top or bottom edge near a corner: that quarter.
- * - Onto the menu bar (top edge elsewhere): Fill.
+ * - Onto the menu bar (top edge elsewhere): Fill; at the top-centre (`picker` on): the picker,
+ *   which stays while the pointer is within PICKER_KEEP_PX of its rect (`pickerRect`).
  * - With the modifier held (macOS Option): the outer quarters of the screen are the half
  *   zones, no edge needed; quarters and Fill still need the edge.
  *
@@ -129,9 +174,11 @@ export function placeIn(zone, target, size, area) {
  * @param {boolean} opts.edges "Drag windows to screen edges to tile"
  * @param {boolean} opts.menuBar "Drag windows to menu bar to fill screen"
  * @param {boolean} opts.modifier the modifier is held and its setting is on
- * @returns {?string} a key of ZONES
+ * @param {boolean} [opts.picker] "layout picker at the top centre" is on
+ * @param {?{x, y, width, height}} [opts.pickerRect] the open picker
+ * @returns {?string} a key of ZONES, or PICKER_ZONE
  */
-export function hitZone(p, monitor, { topEdge, edges = true, menuBar = true, modifier = false }) {
+export function hitZone(p, monitor, { topEdge, edges = true, menuBar = true, modifier = false, picker = false, pickerRect = null }) {
     const right = monitor.x + monitor.width - 1;
     const bottomY = monitor.y + monitor.height - 1;
     const corner = Math.max(CORNER_MIN_PX, Math.round(CORNER_FRACTION * Math.min(monitor.width, monitor.height)));
@@ -156,8 +203,12 @@ export function hitZone(p, monitor, { topEdge, edges = true, menuBar = true, mod
         if ((atTop || atBottom) && (nearLeft || nearRight))
             return `${atTop ? 'top' : 'bottom'}-${nearLeft ? 'left' : 'right'}`;
     }
-    if (menuBar && atTop)
-        return 'fill';
+    if (menuBar && picker && pickerRect && nearRect(p, pickerRect, PICKER_KEEP_PX))
+        return PICKER_ZONE;
+    if (menuBar && atTop) {
+        const centre = monitor.x + monitor.width / 2;
+        return picker && Math.abs(p.x - centre) <= pickerHalfWidth(monitor) ? PICKER_ZONE : 'fill';
+    }
     if (modifier) {
         if (p.x < monitor.x + monitor.width * MODIFIER_FRACTION)
             return 'left';

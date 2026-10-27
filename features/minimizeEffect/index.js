@@ -24,6 +24,7 @@
 // after), and Main.wm._minimizeWindow / _unminimizeWindow (private) run for the windows Kiwi
 // leaves to GNOME. Checked on GNOME 50.
 
+import Clutter from 'gi://Clutter';
 import GObject from 'gi://GObject';
 import Meta from 'gi://Meta';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
@@ -219,19 +220,28 @@ export class MinimizeEffect {
         }
         const rect = { x: actor.x, y: actor.y, width: actor.width, height: actor.height };
         const t = target.rect;
+        // The container the funnel is drawn in: the window and the target, in whole pixels
+        const x1 = Math.floor(Math.min(rect.x, t.x));
+        const y1 = Math.floor(Math.min(rect.y, t.y));
         const reach = {
-            x: Math.min(rect.x, t.x), y: Math.min(rect.y, t.y),
-            width: Math.max(rect.x + rect.width, t.x + t.width) - Math.min(rect.x, t.x),
-            height: Math.max(rect.y + rect.height, t.y + t.height) - Math.min(rect.y, t.y),
+            x: x1, y: y1,
+            width: Math.ceil(Math.max(rect.x + rect.width, t.x + t.width)) - x1,
+            height: Math.ceil(Math.max(rect.y + rect.height, t.y + t.height)) - y1,
         };
         const effect = new GenieEffect(genieFrame(target.edge, rect, t), reach);
-        actor.remove_effect_by_name(EFFECT_NAME);
-        actor.add_effect_with_name(EFFECT_NAME, effect);
+        const container = new Clutter.Actor({ x: reach.x, y: reach.y, width: reach.width, height: reach.height });
+        container.add_child(new Clutter.Clone({
+            source: actor, x: rect.x - reach.x, y: rect.y - reach.y, width: rect.width, height: rect.height,
+        }));
+        container.add_effect_with_name(EFFECT_NAME, effect);
+        // Above every window, as on macOS: the funnel passes over the windows between it and the dock
+        actor.get_parent().insert_child_above(container, null);
+        actor.opacity = 0;
         const stats = this.stats;
         const frame = p => {
             stats.frames++;
             effect.setProgress(p);
-            actor.opacity = genieOpacity(p);
+            container.opacity = genieOpacity(p);
         };
         if (restoring) {
             frame(1);
@@ -241,7 +251,7 @@ export class MinimizeEffect {
             done => motion.tween(actor, { duration: 'extraLong', curve: 'linear', reverse: restoring, onDone: done },
                 frame, this._cleanup),
             () => {
-                actor.remove_effect(effect);
+                container.destroy();
                 actor.opacity = 255;
             }, complete);
     }

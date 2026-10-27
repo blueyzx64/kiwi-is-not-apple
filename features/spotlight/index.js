@@ -181,8 +181,6 @@ export class SpotlightFeature {
             onPreview: item => this._preview(item),
         });
         const focus = this._view.build(frame);
-        // A second Super tap closes it (overlay-key is filtered in the modal's POPUP mode otherwise)
-        this._takeover?.allowInModal();
         this._settingsProvider.invalidate();
         this._quickLook.reset();
         this._files.retry();
@@ -195,7 +193,6 @@ export class SpotlightFeature {
     }
 
     _closed() {
-        this._takeover?.restoreModes();
         this._cancelSearch();
         this._view?.destroy();
         this._view = null;

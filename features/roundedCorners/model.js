@@ -74,7 +74,8 @@ export function isExcluded(ids, blacklist) {
  *
  * @param {{type: string, overrideRedirect: boolean, maximizedH: boolean, maximizedV: boolean,
  *   fullscreen: boolean, shellOwned: boolean, title: ?string, ids: string[]}} info
- * @param {{radius: number, blacklist: string[]}} config
+ * @param {{radius: number, blacklist: string[], roundMaximized?: boolean}} config roundMaximized: a
+ *   window maximized both ways keeps its top corners (the menu bar is transparent over them)
  * @returns {boolean}
  */
 export function qualifies(info, config) {
@@ -82,9 +83,14 @@ export function qualifies(info, config) {
         return false;
     if (!ROUNDED_TYPES.includes(info.type) || info.overrideRedirect || info.shellOwned)
         return false;
-    // Maximized, or tiled to a half (mutter tiles by maximizing one direction), or fullscreen
-    if (info.fullscreen || info.maximizedH || info.maximizedV)
+    // Fullscreen; maximized, unless the transparent menu bar shows its corners; or tiled to a half
+    // (mutter tiles by maximizing one direction)
+    if (info.fullscreen)
         return false;
+    if (info.maximizedH || info.maximizedV) {
+        if (!(config.roundMaximized && info.maximizedH && info.maximizedV))
+            return false;
+    }
     // Desktop-icons extensions draw the desktop as a normal window titled '@!x,y;...'
     if (typeof info.title === 'string' && info.title.startsWith('@!'))
         return false;

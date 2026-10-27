@@ -76,6 +76,10 @@ export const EVENTS = Object.freeze({
     'split-view-requested': { window: 'Meta.Window', side: "'left' | 'right'" },
     // A Split View pair formed (active) or ended (features/splitView)
     'split-view-changed': { windows: 'Meta.Window[]', active: 'boolean' },
+    // features/desktopIcons: the selected icons or where they are changed. A helper that must put
+    // a drag source window over them (a Shell actor cannot start a Wayland drag, see
+    // docs/features/desktop-icons.md) listens; `rects` are stage px, one per uri, same order.
+    'desktop-icons-selection': { uris: 'string[]', rects: 'object[] {x, y, width, height}' },
     // features/lowPower: Low Power Mode started or stopped applying, the power source changed,
     // or the daemon or the battery was found
     'low-power-changed': { active: 'boolean' },

@@ -11,6 +11,8 @@
 //   parkedInDock        reserved: the dock owns its minimize (phase 1)
 //   splitView           one of a full-screen Split View pair (features/splitView): it left
 //                       full screen on purpose and stays in that Space
+//   kiwiHelper          the window of a Kiwi helper process (the notch shelf's drag-out window):
+//                       not a user window, so it counts as skip-taskbar everywhere (skipsTaskbar)
 //   hidden              Hide / Hide Others (features/windows/hide.js) minimized it without
 //                       effect; the dock should not show it among minimized windows
 //
@@ -28,7 +30,7 @@
 // No gi imports: runs under `gjs -m` in tests. A window is any object; if it has
 // connect/disconnect, its flags are dropped on 'unmanaged' by track().
 
-export const FLAGS = Object.freeze(['staged', 'isolatedFullscreen', 'tiled', 'parkedInDock', 'splitView', 'hidden']);
+export const FLAGS = Object.freeze(['staged', 'isolatedFullscreen', 'tiled', 'parkedInDock', 'splitView', 'hidden', 'kiwiHelper']);
 
 export class WindowStateRegistry {
     constructor() {
@@ -217,3 +219,6 @@ export class WindowStateRegistry {
 }
 
 export const WindowState = new WindowStateRegistry();
+
+/** True for a window the taskbar, dock, switchers and Stage Manager must not list: Mutter's skip-taskbar, or a Kiwi helper's window. */
+export const skipsTaskbar = win => !!win && (!!win.skip_taskbar || WindowState.has(win, 'kiwiHelper'));

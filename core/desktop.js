@@ -22,6 +22,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { CleanupRegistry } from '../lib/disposables.js';
 import { isMaximized } from '../lib/compat.js';
 import { DesktopModel, appIdCandidates } from './desktopModel.js';
+import { WindowState, skipsTaskbar } from './windowState.js';
 
 const WINDOW_TYPES = new Map([
     [Meta.WindowType.NORMAL, 'normal'],
@@ -113,6 +114,11 @@ export class DesktopService {
             for (const { win } of this._windows.values())
                 this._sync(win, ['appId']);
         });
+        // A helper's window is flagged after it was created
+        WindowState.watch(cleanup, (win, flag) => {
+            if (flag === 'kiwiHelper')
+                this._sync(win, ['skipTaskbar']);
+        });
         const wm = global.workspace_manager;
         cleanup.connect(wm, 'notify::n-workspaces', () => this._syncWorkspaces());
         cleanup.connect(wm, 'active-workspace-changed', () => this._syncWorkspaces());
@@ -181,7 +187,7 @@ export class DesktopService {
         if (want('maximized'))
             out.maximized = isMaximized(win);
         if (want('skipTaskbar'))
-            out.skipTaskbar = !!win.skip_taskbar;
+            out.skipTaskbar = skipsTaskbar(win);
         if (want('above'))
             out.above = !!win.is_above();
         if (want('parent'))

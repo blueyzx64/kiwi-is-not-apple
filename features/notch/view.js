@@ -39,11 +39,14 @@ import { cardSize } from './dashboardModel.js';
 import { tabDirection, TABS } from './model.js';
 import { label, icon, themed, button, artwork, track, CenterLayout } from './ui.js';
 import { pill, tickMs } from './pills.js';
+import { OutsideClick } from './outsideClick.js';
+import { InputRing } from './inputRing.js';
 import { nowTab, trayTab, widgetsTab, DASH_SIZE } from './tabs.js';
 
 // Springs in SwiftUI terms (core/motionModel.js): grow with a slight overshoot, shrink without
 const GROW_SPRING = Object.freeze({ response: 0.42, damping: 0.8 });
 const SHRINK_SPRING = Object.freeze({ response: 0.32, damping: 1 });
+const TAB_SPRING = Object.freeze({ response: 0.34, damping: 1 });
 const CONTENT_DELAY_MS = 150;    // the shape is ~85 % there
 const LIVE_TICK_MS = 1000;       // clocks, countdowns and the scrubber while shown
 const BARS = 4;
@@ -61,7 +64,7 @@ export class NotchView {
      * @param {object} handlers {onClick, onDismiss, onHover(bool), onExpand, onAction(id, index),
      *   onMedia('previous'|'toggle'|'next'), onToggleDnd, onToggleMic, onCopy(entryId), onCollapse,
      *   onOpenNotification(notification), onOpenList, onSeek(fraction 0..1), onTab(tab),
-     *   onActivityAction(activity, id), onShelf(action, uri), onTimerPreset(minutes),
+     *   onActivityAction(activity, id), onShelf(action, uri), onShelfLayout(layout|null), isShelfHelperWindow(window), onTimerPreset(minutes),
      *   onOpenWeather, onOpenCalendar, getPosition(): Promise<number|null>}
      * @param {function(string): string} gettext
      * @param {import('../../core/motion.js').Motion} motion
@@ -86,10 +89,20 @@ export class NotchView {
         this._size = SIZES.idle;
         this._ears = null;
         this._pinned = false;        // a clicked (pinned) dashboard is open
-        this._captureId = 0;         // stage 'captured-event' while pinned
+        this._open = false;          // a dashboard (pinned or hover-opened) is open
+        this._captureId = 0;         // stage 'captured-event' (Escape) while pinned
         this._focusId = 0;           // display 'notify::focus-window' while pinned
+        this._outside = null;        // OutsideClick: the press anywhere outside the dashboard
         this._focusedWindow = null;  // the window that had the input focus when it opened
         this._pressOnSurface = false;
+        // Where the pointer is, by source: the island, its input plate (while the shelf helper's
+        // window is under the shelf the island gives up its own input) and that window
+        this._hoverSrc = { island: false, plate: false, helper: false };
+        this._hoverOn = false;
+        this._shelfDrag = false;     // the helper's window is under the shelf: tiles are its to take
+        this._plate = null;
+        this._dragging = false;      // a drag from the shelf is running
+        this._layout = null;         // shelfLayout() as last reported
         this._hoverIntent = { enabled: true, delayMs: 300 };
         this._hoverTimer = 0;
         this._anim = new CleanupRegistry();   // owner of running animations, disposed with the view
@@ -133,7 +146,7 @@ export class NotchView {
             this._stopTimers();
             this._cancelHoverIntent();
             this._interface = null;
-            this._unwatchOutside();
+            this._unwatchKeys();
             Main.layoutManager.removeChrome(this._island);
             this._island.destroy();
         });
@@ -143,7 +156,8 @@ export class NotchView {
 
         cleanup.connect(this._island, 'notify::hover', () => {
             const hover = this._island.hover;
-            this._h.onHover(hover);
+            this._hoverSrc.island = hover;
+            this._emitHover();
             if (hover)
                 this._startHoverIntent();
             else
@@ -156,22 +170,53 @@ export class NotchView {
             this._pressOnSurface = !this._onControl(this._eventActor(event));
             return this._pressOnSurface ? Clutter.EVENT_STOP : Clutter.EVENT_PROPAGATE;
         });
-        cleanup.connect(this._island, 'button-release-event', (_a, event) => {
-            const own = this._pressOnSurface && !this._onControl(this._eventActor(event));
-            this._pressOnSurface = false;
-            if (!own)
-                return Clutter.EVENT_PROPAGATE;
-            this._cancelHoverIntent();
-            if (event.get_button() === Clutter.BUTTON_SECONDARY)
-                this._h.onDismiss();
-            else
-                this._h.onClick();
-            return Clutter.EVENT_STOP;
-        });
+        cleanup.connect(this._island, 'button-release-event', (_a, event) =>
+            this._surfaceRelease(event, this._pressOnSurface && !this._onControl(this._eventActor(event))));
         cleanup.connect(Main.layoutManager, 'monitors-changed', () => this._place(this._size, false));
 
         this._addEars();
+        // The island and its ears stay above the catcher
+        this._outside = new OutsideClick(cleanup, [...this._ears, this._island], () => this._h.onCollapse?.());
+        this._plate = new InputRing(cleanup, 'kiwi-notch-plate', {
+            press: () => {
+                this._pressOnSurface = true;
+                return Clutter.EVENT_STOP;
+            },
+            release: event => this._surfaceRelease(event, this._pressOnSurface),
+            hover: on => {
+                this._hoverSrc.plate = on;
+                this._emitHover();
+            },
+        });
         this._place(SIZES.idle, false);
+    }
+
+    // A release that ends a press on the notch itself (not on a button): a click on the card
+    _surfaceRelease(event, own) {
+        this._pressOnSurface = false;
+        if (!own)
+            return Clutter.EVENT_PROPAGATE;
+        this._cancelHoverIntent();
+        if (event.get_button() === Clutter.BUTTON_SECONDARY)
+            this._h.onDismiss();
+        else
+            this._h.onClick();
+        return Clutter.EVENT_STOP;
+    }
+
+    // One hover value for the state machine, from every place the pointer can be on the notch
+    _emitHover() {
+        const on = Object.values(this._hoverSrc).some(Boolean);
+        if (on === this._hoverOn)
+            return;
+        this._hoverOn = on;
+        this._h.onHover(on);
+    }
+
+    /** The pointer is on the shelf helper's window, or a drag from it is running. */
+    setHelperHover(on) {
+        this._hoverSrc.helper = on;
+        this._emitHover();
     }
 
     /** @param {{enabled: boolean, delayMs: number}} intent hover-to-expand settings */
@@ -218,37 +263,42 @@ export class NotchView {
     }
 
     // ---- outside click and Escape ---------------------------------------------------------
-    // While a clicked dashboard is open the view watches the stage's captured events, with no
-    // grab: a press outside the island, on a window or the desktop, collapses it and goes on
-    // to whatever was pressed, so the click is not lost. Escape collapses it and stops there.
-    // The island takes the key focus, so the keyboard reaches the tabs and buttons.
+    // While a dashboard is open, opened by hover or pinned by a click, a press outside it
+    // collapses it and goes on to whatever was pressed (outsideClick.js says how). A pinned
+    // dashboard also takes the key focus, like a panel menu minus the grab, and watches the
+    // stage for Escape, which collapses it and stops there.
 
     _syncOutside() {
-        if (this._pinned && this._island.visible)
-            this._watchOutside();
+        const shown = this._open && this._island.visible;
+        // Not during a drag from the shelf: the windows must be under the pointer for the drop
+        if (shown && !this._dragging)
+            this._outside.start(this._shelfDrag ? this._dashboardRect() : null);
         else
-            this._unwatchOutside();
+            this._outside.stop();
+        if (shown && this._pinned)
+            this._watchKeys();
+        else
+            this._unwatchKeys();
     }
 
-    _watchOutside() {
+    _watchKeys() {
         if (this._captureId || this._destroyed)
             return;
         this._captureId = global.stage.connect('captured-event', (_s, event) => this._onCaptured(event));
-        // A press on a window never reaches the stage (the compositor hands it to the client),
-        // but the window takes the focus: that is the outside click
+        // A window taking the focus by the keyboard also closes it
         this._focusId = global.display.connect('notify::focus-window', () => {
-            if (global.display.focus_window)
+            const focused = global.display.focus_window;
+            if (focused && !this._h.isShelfHelperWindow?.(focused))
                 this._h.onCollapse?.();
         });
-        // The keyboard goes to the island (like a panel menu, minus the grab): the window gives
-        // up the input focus and gets it back when the dashboard closes, unless another one
-        // was focused meanwhile
+        // The keyboard goes to the island: the window gives up the input focus and gets it back
+        // when the dashboard closes, unless another one was focused meanwhile
         this._focusedWindow = global.display.focus_window;
         global.display.unset_input_focus(global.get_current_time());
         this._island.grab_key_focus();
     }
 
-    _unwatchOutside() {
+    _unwatchKeys() {
         if (!this._captureId)
             return;
         global.stage.disconnect(this._captureId);
@@ -257,27 +307,88 @@ export class NotchView {
         this._focusId = 0;
         const window = this._focusedWindow;
         this._focusedWindow = null;
-        if (window && !this._destroyed && !global.display.focus_window)
+        const focused = global.display.focus_window;
+        if (window && !this._destroyed && (!focused || this._h.isShelfHelperWindow?.(focused)))
             window.activate(global.get_current_time());
     }
 
-    _contains(x, y) {
-        const [ok, lx, ly] = this._island.transform_stage_point(x, y);
-        return ok && lx >= 0 && ly >= 0 && lx < this._island.width && ly < this._island.height;
-    }
-
     _onCaptured(event) {
-        const type = event.type();
-        if (type === Clutter.EventType.KEY_PRESS && event.get_key_symbol() === Clutter.KEY_Escape) {
+        if (event.type() === Clutter.EventType.KEY_PRESS && event.get_key_symbol() === Clutter.KEY_Escape) {
             this._h.onCollapse?.();
             return Clutter.EVENT_STOP;
         }
-        if (type === Clutter.EventType.BUTTON_PRESS || type === Clutter.EventType.TOUCH_BEGIN) {
-            const [x, y] = event.get_coords();
-            if (!this._contains(x, y))
-                this._h.onCollapse?.();
-        }
         return Clutter.EVENT_PROPAGATE;
+    }
+
+    // ---- shelf drag-out -------------------------------------------------------------------
+    // A Shell actor cannot start a Wayland drag, so index.js runs the shelf helper
+    // (shelfHelper.js), whose transparent window goes exactly over the shelf's tiles. Once
+    // that window is placed, setShelfDrag(true) lets presses on the tiles fall through to it:
+    // the island and the tiles stop taking input there, an input plate under the island takes
+    // over everywhere else on the dashboard (clicks and hover), and the outside-click layer
+    // leaves the dashboard alone.
+
+    _dashboardRect() {
+        const m = this._monitor();
+        return { x: m.x + Math.round((m.width - DASH_SIZE.w) / 2), y: m.y, w: DASH_SIZE.w, h: DASH_SIZE.h };
+    }
+
+    // Where the shelf's tiles are on screen (stage px) once the dashboard has settled on the
+    // Tray tab, else null. The helper's window is placed from this.
+    _shelfLayout() {
+        const dash = this._dash;
+        if (!this._open || !dash || dash.tab !== 'tray' || dash.sliding || this._springs.some(sp => sp.running))
+            return null;
+        const shelf = dash.current?.shelf;
+        if (!shelf?.tiles.length || !shelf.grid.mapped)
+            return null;
+        const at = a => {
+            const [x, y] = a.get_transformed_position();
+            const [w, h] = a.get_transformed_size();
+            return { x, y, w, h };
+        };
+        return { box: at(shelf.grid), tiles: shelf.tiles.map(t => ({ uri: t.uri, icon: t.icon, ...at(t.actor) })) };
+    }
+
+    _reportShelf() {
+        if (this._destroyed)
+            return;
+        this._layout = this._shelfLayout();
+        if (!this._layout)
+            this.setShelfDrag(false);
+        this._h.onShelfLayout?.(this._layout);
+    }
+
+    /** @param {boolean} on a drag from the shelf is running: nothing of the notch may sit on the windows */
+    setDragging(on) {
+        if (this._destroyed || on === this._dragging)
+            return;
+        this._dragging = on;
+        this._syncOutside();
+    }
+
+    /** @param {boolean} on the helper's window is placed over the tiles (or is gone) */
+    setShelfDrag(on) {
+        if (this._destroyed)
+            return;
+        on = on && !!this._layout;
+        if (on === this._shelfDrag)
+            return;
+        this._shelfDrag = on;
+        this._island.reactive = !on;
+        this._dash?.current?.shelf?.tiles.forEach(t => {
+            t.actor.reactive = !on;
+        });
+        if (on) {
+            this._plate.place(this._dashboardRect(), this._layout.box);
+            this._plate.restack([...this._ears, this._island]);
+            this._hoverSrc.island = false;
+        } else {
+            this._plate.hide();
+            this._hoverSrc.plate = false;
+        }
+        this._emitHover();
+        this._syncOutside();
     }
 
     // ---- ears -----------------------------------------------------------------------------
@@ -380,7 +491,8 @@ export class NotchView {
         const growing = size.w * size.h > island.width * island.height;
         const request = { spring: growing ? GROW_SPRING : SHRINK_SPRING };
         this._springs = [
-            this._motion.spring(island, 'width', size.w, request, this._anim),
+            this._motion.spring(island, 'width', size.w,
+                { ...request, onDone: finished => finished && this._reportShelf() }, this._anim),
             this._motion.spring(island, 'height', size.h, request, this._anim),
             this._motion.spring(island, 'x', x, request, this._anim),
         ];
@@ -411,9 +523,11 @@ export class NotchView {
 
         // The dashboard stays and only its body changes: a tab switch, or new data in a tab
         if (dashboard && this._dash && this._page === this._dash.page) {
+            this._open = true;
             this._pinned = !!vm.pinned;
             this._syncOutside();
             this._updateDashboard(vm, ctx);
+            this._reportShelf();
             return;
         }
 
@@ -428,6 +542,7 @@ export class NotchView {
         const growing = size.w * size.h > this._island.width * this._island.height;
 
         this._place(size, true);
+        this._open = dashboard;
         this._pinned = dashboard && !!vm.pinned;
         this._syncOutside();
 
@@ -458,6 +573,7 @@ export class NotchView {
             this._startLive(page, this._dash.live);
         else
             this._startLive(page, live, this._liveMs ?? LIVE_TICK_MS);
+        this._reportShelf();
         if (shapeChanged) {
             // The content arrives once the shape is nearly there; a slight drop from above
             // reads as coming out of the notch.
@@ -571,7 +687,7 @@ export class NotchView {
             x_expand: true, y_expand: true, clip_to_allocation: true,
         });
         page.add_child(holder);
-        this._dash = { page, buttons, holder, bodies: new Map(), current: null, tab: null, live: [], prebuild: 0 };
+        this._dash = { page, buttons, holder, bodies: new Map(), current: null, tab: null, live: [], prebuild: 0, sliding: false };
         this._fillDashboard(vm, ctx);
         return page;
     }
@@ -602,13 +718,18 @@ export class NotchView {
         dash.live = entry.live;
         this._prebuildTabs(vm, ctx);
         const switching = !!old && old.tab !== vm.tab;
+        dash.sliding = switching;
         if (!switching) {
             entry.actor.visible = true;
             return;
         }
         const dir = tabDirection(from, vm.tab);
-        const slide = (actor, to, onDone) => this._motion.ease(actor, to,
-            { duration: 'medium', curve: 'emphasized', onDone }, this._anim);
+        // One critically damped spring carries the body sideways while it fades; no overshoot,
+        // so the slide settles without a visible reversal
+        const slide = (actor, to, onDone) => {
+            this._motion.ease(actor, { opacity: to.opacity }, { duration: 'short', curve: 'standard' }, this._anim);
+            this._motion.spring(actor, 'translation_x', to.translation_x, { spring: TAB_SPRING, onDone }, this._anim);
+        };
         slide(old.actor, { opacity: 0, translation_x: -dir * TAB_SLIDE }, () => {
             if (!this._destroyed && dash.current !== old)
                 old.actor.visible = false;
@@ -616,7 +737,12 @@ export class NotchView {
         const actor = entry.actor;
         actor.remove_all_transitions();
         actor.set({ visible: true, opacity: 0, translation_x: dir * TAB_SLIDE });
-        slide(actor, { opacity: 255, translation_x: 0 });
+        slide(actor, { opacity: 255, translation_x: 0 }, finished => {
+            if (!finished || this._destroyed || this._dash !== dash)
+                return;
+            dash.sliding = false;
+            this._reportShelf();
+        });
     }
 
     // The tab's body: the built one while its data is unchanged, else a new one (and the old
@@ -646,7 +772,7 @@ export class NotchView {
         // an offscreen buffer first (a costly first frame); the children do not overlap
         actor.offscreen_redirect = 0;
         cached?.actor.destroy();
-        const entry = { tab, actor, sig, live };
+        const entry = { tab, actor, sig, live, shelf: env.shelf ?? null };
         dash.bodies.set(tab, entry);
         dash.holder.add_child(actor);
         return entry;

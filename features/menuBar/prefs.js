@@ -29,8 +29,11 @@ export function buildPrefs({ settings, extension }) {
         _('Show the menus apps export (GTK menu bars, and Qt, Electron or LibreOffice under Xwayland) in place of the generic File, Edit and View'),
         'menubar-native-menus'));
     bar.add(switchRow(settings, _('Transparent Menu Bar'),
-        _('No background over the wallpaper, with text that follows its brightness. Solid when a window touches the bar'),
+        _('No background over the wallpaper, with text that follows its brightness'),
         'menubar-transparent'));
+    bar.add(switchRow(settings, _('Solid When a Window Touches It'),
+        _('Off: the bar stays transparent over maximized windows. On: it turns solid while a window touches it'),
+        'menubar-solid-on-window'));
     bar.add(switchRow(settings, _('Always Show Menu Bar in Full Screen'),
         _('Off: the menu bar hides in full screen and slides in when the pointer touches the top edge'),
         'menubar-fullscreen-visible'));

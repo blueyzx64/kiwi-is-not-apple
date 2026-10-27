@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The transparent menu bar of macOS 26 (research ST F20, BM "Redesigned menu bar"): no
 // background over the wallpaper, with text and icons dark or light by the wallpaper's
-// brightness under the bar, and the solid bar back as soon as a window touches it or is
-// maximized.
+// brightness under the bar. Optionally (menubar-solid-on-window, off by default) the solid
+// bar comes back as soon as a window touches it or is maximized.
 //
 // Style classes on Main.panel (rules in style.css):
 //   kiwi-menubar-clear                 transparent (else the theme or glass fill shows; the
@@ -19,7 +19,7 @@
 // and placement, and sampled again only when the background settings, the style or the
 // monitors change.
 //
-// Windows: the bar is solid while a window on the active workspace of the primary monitor
+// Windows (with menubar-solid-on-window): the bar is solid while a window on the active workspace of the primary monitor
 // touches the top of the work area or is maximized. Windows are checked when they appear,
 // change state, finish a move or resize, or the workspace changes; never per frame (a move in
 // progress is checked when the grab ends).
@@ -45,8 +45,10 @@ const CLASSES = Object.freeze({
 const BG_KEYS = ['picture-uri', 'picture-uri-dark', 'picture-options', 'primary-color'];
 
 export class AdaptiveBar {
-    constructor(ctx, cleanup) {
+    /** @param {{solidOnWindow: boolean}} opts */
+    constructor(ctx, cleanup, { solidOnWindow }) {
         this._ctx = ctx;
+        this._solidOnWindow = solidOnWindow;
         this._cleanup = cleanup;
         this._look = null;
         this._text = null;           // {darkText, scrim, solid} of the current wallpaper band
@@ -196,6 +198,7 @@ export class AdaptiveBar {
         const panel = Main.panel;
         const look = barLook({
             transparent: true,
+            solidOnWindow: this._solidOnWindow,
             windowAtTop: this._windowAtTop,
             overview: Main.overview.visible,
             solidOnly: this._opaque || !!St.Settings.get().high_contrast,

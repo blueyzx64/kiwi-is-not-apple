@@ -33,7 +33,7 @@ export default {
         const empty = label(_('No batteries'), 'kiwi-widget-caption kiwi-widget-dim');
         root.add_child(empty);
 
-        const ringSize = Math.round((view.size === 'small' ? 50 : 56) * s);
+        const ringSize = Math.round({ small: 46, medium: 64, large: 40 }[view.size] * s);
         const slots = [];
         for (let i = 0; i < max; i++) {
             const state = { percent: 0, level: 'normal' };
@@ -42,7 +42,7 @@ export default {
             // The device glyph sits in the ring: a sibling over the drawing, not its child
             const gauge = new St.Widget({ layout_manager: new Clutter.BinLayout(), x_align: Clutter.ActorAlign.CENTER });
             gauge.add_child(ring);
-            const glyph = icon('battery-symbolic', Math.round(18 * s));
+            const glyph = icon('battery-symbolic', Math.round(ringSize * 0.4));
             glyph.x_align = glyph.y_align = Clutter.ActorAlign.CENTER;
             gauge.add_child(glyph);
             const pct = label('', 'kiwi-widget-caption kiwi-widget-strong', { x_align: rows ? Clutter.ActorAlign.END : Clutter.ActorAlign.CENTER });

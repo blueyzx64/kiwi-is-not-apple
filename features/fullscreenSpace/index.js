@@ -18,7 +18,7 @@ import Shell from 'gi://Shell';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
-import { WindowState } from '../../core/windowState.js';
+import { WindowState, skipsTaskbar } from '../../core/windowState.js';
 
 // Minimum number of workspaces to maintain (main + 1 empty)
 const MIN_WORKSPACES = 2;
@@ -331,7 +331,7 @@ class FullscreenWorkspaceManager {
         const wm = this._getWorkspaceManager();
         for (let i = wm.n_workspaces - 1; i >= 0; i--) {
             const windows = this._filterWorkspaceRelevantWindows(
-                wm.get_workspace_by_index(i).list_windows().filter(w => !w.skip_taskbar)
+                wm.get_workspace_by_index(i).list_windows().filter(w => !skipsTaskbar(w))
             );
             if (windows.length > 0) {
                 return i;
@@ -458,7 +458,7 @@ class FullscreenWorkspaceManager {
 
         const ws = wm.get_workspace_by_index(workspaceIndex);
         const windows = this._filterWorkspaceRelevantWindows(
-            ws.list_windows().filter(w => !w.skip_taskbar)
+            ws.list_windows().filter(w => !skipsTaskbar(w))
         );
         
         // Only remove if empty and not active
@@ -542,7 +542,7 @@ class FullscreenWorkspaceManager {
                 continue;
 
             const windows = this._filterWorkspaceRelevantWindows(
-                wm.get_workspace_by_index(i).list_windows().filter(w => !w.skip_taskbar)
+                wm.get_workspace_by_index(i).list_windows().filter(w => !skipsTaskbar(w))
             );
             if (windows.length === 0) {
                 emptyIndices.push(i);
@@ -563,7 +563,7 @@ class FullscreenWorkspaceManager {
 
             const ws = wm.get_workspace_by_index(idx);
             const windows = this._filterWorkspaceRelevantWindows(
-                ws.list_windows().filter(w => !w.skip_taskbar)
+                ws.list_windows().filter(w => !skipsTaskbar(w))
             );
             if (windows.length === 0 && !ws.active) {
                 this._fullscreenWorkspaces.delete(idx);
@@ -607,7 +607,7 @@ class FullscreenWorkspaceManager {
             return;
 
         // Skip windows that shouldn't be managed
-        if (window.skip_taskbar)
+        if (skipsTaskbar(window))
             return;
 
         const fullscreenId = window.connect('notify::fullscreen', () => {
@@ -741,7 +741,7 @@ class FullscreenWorkspaceManager {
         const currentWs = window.get_workspace();
         const currentIndex = currentWs?.index() ?? 0;
         const allWindows = this._filterWorkspaceRelevantWindows(
-            currentWs?.list_windows().filter(w => !w.skip_taskbar) || []
+            currentWs?.list_windows().filter(w => !skipsTaskbar(w)) || []
         );
         const otherWindowsOnCurrent = allWindows.filter(w => w !== window).length;
 
@@ -768,7 +768,7 @@ class FullscreenWorkspaceManager {
         if (desiredTargetIndex < wm.n_workspaces) {
             const existingWs = wm.get_workspace_by_index(desiredTargetIndex);
             const existingWindows = this._filterWorkspaceRelevantWindows(
-                existingWs.list_windows().filter(w => !w.skip_taskbar)
+                existingWs.list_windows().filter(w => !skipsTaskbar(w))
             );
             if (existingWindows.length === 0) {
                 // Workspace exists and is empty, use it
@@ -804,7 +804,7 @@ class FullscreenWorkspaceManager {
                 const newLastOccupiedIndex = this._findLastOccupiedWorkspaceIndex();
                 for (let i = newLastOccupiedIndex; i >= desiredTargetIndex; i--) {
                     const windowsToMove = this._filterWorkspaceRelevantWindows(
-                        wm.get_workspace_by_index(i).list_windows().filter(w => !w.skip_taskbar)
+                        wm.get_workspace_by_index(i).list_windows().filter(w => !skipsTaskbar(w))
                     );
                     if (windowsToMove.length === 0)
                         continue;
@@ -1074,7 +1074,7 @@ class FullscreenWorkspaceManager {
      * Redirect a window from a fullscreen workspace to main workspace
      */
     _redirectWindowFromFullscreenWorkspace(window) {
-        if (window.is_fullscreen() || window.skip_taskbar)
+        if (window.is_fullscreen() || skipsTaskbar(window))
             return;
 
         const currentWs = window.get_workspace();

@@ -33,6 +33,24 @@ export function offsetLabel(offsetSeconds, _ = s => s) {
     return m ? `${sign}${h}h ${m}m` : `${sign}${h}h`;
 }
 
+/** The city a time-zone identifier names: "Europe/Riga" is "Riga", "America/New_York" "New York". */
+export function cityFromTimezone(identifier) {
+    const last = String(identifier ?? '').split('/').pop().replace(/_/g, ' ');
+    return last && last !== 'UTC' ? last : '';
+}
+
+/**
+ * The line under a world clock: the day and the hours it is ahead of or behind local time,
+ * "Today, +3h", "Tomorrow, +13h", "Yesterday, −5h".
+ *
+ * @param {number} dayDelta calendar days the other zone is ahead (-1, 0 or 1)
+ * @param {number} offsetSeconds the other zone's UTC offset minus the local one
+ */
+export function worldLabel(dayDelta, offsetSeconds, _ = s => s) {
+    const day = dayDelta > 0 ? _('Tomorrow') : dayDelta < 0 ? _('Yesterday') : _('Today');
+    return `${day}, ${offsetLabel(offsetSeconds, _)}`;
+}
+
 // ---- calendar ----------------------------------------------------------------------------
 
 /**
@@ -99,6 +117,21 @@ export function monthGrid(year, month, today, weekStart = 1) {
         }
     }
     return weeks;
+}
+
+// ---- weather -----------------------------------------------------------------------------
+
+/**
+ * "H:21° L:12°" from the forecast's temperature texts ("21°C", "54 °F"), or '' with fewer than two
+ * numbers to compare.
+ *
+ * @param {Array<{temp: string}>} forecasts
+ */
+export function highLow(forecasts) {
+    const values = (forecasts ?? []).map(f => /-?\d+/.exec(f.temp ?? '')?.[0]).filter(Boolean).map(Number);
+    if (values.length < 2)
+        return '';
+    return `H:${Math.max(...values)}° L:${Math.min(...values)}°`;
 }
 
 // ---- batteries ---------------------------------------------------------------------------

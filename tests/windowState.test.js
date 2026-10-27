@@ -42,7 +42,7 @@ class FakeWin {
 }
 
 test('flags are the reasons a window is out of place', () =>
-    eq([...FLAGS], ['staged', 'isolatedFullscreen', 'tiled', 'parkedInDock', 'splitView', 'hidden']));
+    eq([...FLAGS], ['staged', 'isolatedFullscreen', 'tiled', 'parkedInDock', 'splitView', 'hidden', 'kiwiHelper']));
 test('set and has', () => {
     const r = new WindowStateRegistry();
     const w = {};

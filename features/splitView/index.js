@@ -29,7 +29,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import * as A11y from '../../lib/a11y.js';
-import { WindowState } from '../../core/windowState.js';
+import { WindowState, skipsTaskbar } from '../../core/windowState.js';
 import { MENU_CLOSE_ARGS, isMaximized, unmaximizeWindow } from '../../lib/compat.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { Glass } from '../../lib/glass.js';
@@ -81,7 +81,7 @@ export class SplitView {
     _candidates(except) {
         return global.display.get_tab_list(Meta.TabList.NORMAL_ALL, null).filter(w => isCandidate({
             type: isNormal(w) ? 'normal' : 'other',
-            skipTaskbar: w.is_skip_taskbar(),
+            skipTaskbar: skipsTaskbar(w),
             fullscreen: w.is_fullscreen(),
             inSplit: !!this.pairOf(w),
             isTiled: w === except,
