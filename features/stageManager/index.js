@@ -67,6 +67,7 @@ export class StageManager {
         this._press = null;          // a primary press on the wallpaper
         this._drag = null;           // a stage window dragged by its titlebar
         this._overview = false;
+        this._minimized = new Set(); // ids the user minimized into the strip, still there
     }
 
     enable() {
@@ -99,6 +100,13 @@ export class StageManager {
         this._claim = this._layout.claim(cleanup, {
             id: STRIP_CLAIM, edge: this._side, size: METRICS.stripWidth, reserve: 'none',
             actor: this._view.container,
+        });
+        // Runs after the hider gave every actor back: what the user minimized into the strip
+        // ends minimized, as it would have without Stage Manager
+        cleanup.add(() => {
+            for (const id of this._minimized)
+                this._desktop.metaWindow(id)?.minimize();
+            this._minimized.clear();
         });
         this._hider = new WindowHider(cleanup);
         this._flights = new Flights(cleanup, {
@@ -234,6 +242,7 @@ export class StageManager {
     }
 
     _removed(window) {
+        this._minimized.delete(window.id);
         if (this._pending.delete(window.id))
             return;
         const win = this._desktop.metaWindow(window.id);
@@ -274,6 +283,7 @@ export class StageManager {
         const id = win?.get_stable_sequence?.();
         if (id === undefined || this._machine.kindOf(id) !== 'managed')
             return false;
+        this._minimized.add(id);
         this._send({ type: 'minimize', id });
         return true;
     }
@@ -316,6 +326,8 @@ export class StageManager {
             if (!this._flights.fly(win, { from, to, toStage: false }))
                 this._view.setFlying(win, false);
         }
+        for (const win of froms.keys())
+            this._minimized.delete(win.get_stable_sequence());
         for (const [win, from] of froms) {
             const animate = show.animate && motion && this._onScreen(win);
             const opacity = this._hider.show(win, { keepTransparent: animate });
@@ -327,6 +339,7 @@ export class StageManager {
         for (const f of fx) {
             switch (f.type) {
             case 'unminimize':
+                this._minimized.add(f.id);
                 this._desktop.metaWindow(f.id)?.unminimize();
                 break;
             case 'focus':
@@ -571,15 +584,21 @@ export class StageManager {
         this._endDrag();
         if (!over)
             return;
-        const id = win.get_stable_sequence();
-        // It flies to the strip from where it was dropped, and comes back where it was picked up
-        win.move_frame(true, drag.frame.x, drag.frame.y);
-        if (target)
-            this._send({ type: 'move-to-entry', id, entry: target });
-        else if (this._machine.stageWindows().length > 1)
-            this._send({ type: 'remove-from-set', id });
-        else
-            this._send({ type: 'minimize', id });
+        // Once Mutter has ended the grab (focus changes are refused during it)
+        this._cleanup.idle(() => {
+            const id = win.get_stable_sequence();
+            if (!this._machine.stageWindows().includes(id))
+                return GLib.SOURCE_REMOVE;
+            // It comes back where it was picked up
+            win.move_frame(true, drag.frame.x, drag.frame.y);
+            if (target)
+                this._send({ type: 'move-to-entry', id, entry: target });
+            else if (this._machine.stageWindows().length > 1)
+                this._send({ type: 'remove-from-set', id });
+            else
+                this._send({ type: 'minimize', id });
+            return GLib.SOURCE_REMOVE;
+        }, { name: 'stage-manager-window-drop' });
     }
 
     _endDrag() {

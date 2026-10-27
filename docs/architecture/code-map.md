@@ -75,7 +75,7 @@ prefs.js metadata.json stylesheet.css schemas/ po/`). `make pack-check` verifies
 | File | Role | Main API |
 |---|---|---|
 | `events.js` | typed signal hub; events declared once in `EVENTS` | `on(name, fn, owner?)`, `once`, `emit(name, payload)`, `listenerCount`, `clear` |
-| `desktopModel.js` | pure desktop picture | `upsertWindow(id, fields)`, `removeWindow`, `window(id)`, `windows(filter)`, `apps(filter)`, `setFocus`, `focusedWindow`, `focusedApp`, `setWorkspaces`, `setMonitors`; `isHelperWindowInfo`, `isUserFacing`, `appIdCandidates` (web-app ids for window-backed apps) |
+| `desktopModel.js` | pure desktop picture | `upsertWindow(id, fields)`, `removeWindow`, `window(id)`, `windows(filter)`, `apps(filter)`, `setFocus`, `focusedWindow`, `focusedApp`, `setWorkspaces`, `setMonitors` (WindowInfo has `above` and `parent`, the transient-for id); `isHelperWindowInfo`, `isUserFacing`, `appIdCandidates` (web-app ids for window-backed apps) |
 | `desktop.js` | feeds the model from Mutter; one tracker, ref-counted | `acquire(owner)`, `model`, `metaWindow(id)`, `tracking`, `stop()` |
 | `layoutModel.js` | edge claims -> rects and work area | `claim(spec)`, `update(id, fields)`, `release(id)`, `compute(index, monitorRect, {base, primary, strutsApplied})` |
 | `layout.js` | claims the menu bar itself; Mutter's work area as the base; an `actor` claim is chrome (hidden over full screen), with struts while its reserve is `strut` (`update({reserve})` switches live) | `acquire(owner)`, `claim(owner, spec)` -> `{rect, update, release}`, `rect(id, monitor)`, `workArea(monitor)` |
@@ -124,7 +124,7 @@ window manager; the menu bar runs a fallback when nobody listens).
 | `notch/` | `notch` | banners, media, OSD, dashboard |
 | `spotlight/` | `spotlight` | Super tap, providers |
 | `clipboard/` | `clipboard-history` | history, popover, Quick Paste |
-| `stageManager/` | `stage-manager`, `stage-manager-shortcut` | strip, sets, flights (rebuilt in phase 4) |
+| `stageManager/` | `stage-manager`, `stage-manager-shortcut` | v3 (P4): `model.js` pure `StageMachine` (events in, effects out: stage, entries, strip order per workspace, desktop); `geometry.js` strip maths; `index.js` adapter on core/desktop, core/layout claim `stage-strip` (opposite a side dock), core/motion; `view.js` strip, drop target and flight layer in one container; `flights.js`; `windows.js` hide by opacity+pick. Public: `toggleDesktop()`, `isDesktopShown`, `openIntoStage(appId)` |
 | `showDesktop/` | `show-desktop` | top-bar button, Super+D; delegates to Stage Manager |
 | `roundedCorners/` | `rounded-corners` | shader effect per window |
 | `liquidGlass/` | `liquid-glass` | attaches `lib/glass.js` to the panel, Control Center and calendar menus; the glass prefs |

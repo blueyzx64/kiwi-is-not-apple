@@ -242,10 +242,12 @@ export class StripView {
     // ---- build -------------------------------------------------------------------------------
 
     _ease(actor, props, request) {
-        const anim = this._env.motion.ease(actor, props, {
+        let anim = null;
+        anim = this._env.motion.ease(actor, props, {
             ...request,
             onDone: finished => {
-                this._anims.delete(anim);
+                if (anim)
+                    this._anims.delete(anim);
                 request.onDone?.(finished);
             },
         });
