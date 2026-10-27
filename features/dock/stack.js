@@ -51,10 +51,21 @@ export function downloadsDir() {
     return Gio.File.new_for_path(path);
 }
 
-export class DownloadsItem extends DockItem {
-    constructor(host, spec) {
-        super(host, spec, host.gettext('Downloads'));
-        this.dir = downloadsDir();
+/**
+ * A folder kept in the dock as a stack (macOS Stacks): the Downloads stack, or a folder the
+ * user dropped on the right side of the dock.
+ */
+export class FolderStackItem extends DockItem {
+    /**
+     * @param {object} host the Dock
+     * @param {object} spec {kind: 'downloads'|'folder', id, path?}
+     * @param {Gio.File} dir
+     * @param {string} name accessible name and hover label
+     */
+    constructor(host, spec, dir, name) {
+        super(host, spec, name);
+        this.dir = dir;
+        this.isDownloads = spec.kind === 'downloads';
         this.files = [];             // [{entry, file, gicon}] newest first
         this._reading = false;
         this._dirty = false;
@@ -136,8 +147,8 @@ export class DownloadsItem extends DockItem {
         const byName = new Map(found.map(f => [f.entry.name, f]));
         const before = this.files.map(f => f.entry);
         this.files = order.map(e => byName.get(e.name));
-        if (downloadFinished(before, order))
-            this._host.bounce(this);
+        if (this.isDownloads && downloadFinished(before, order))
+            this._host.bounce(this, 'download');
         this._drawPile();
     }
 
@@ -149,7 +160,7 @@ export class DownloadsItem extends DockItem {
         const top = this.files.filter(f => !f.entry.partial).slice(0, PILE).reverse();
         if (!top.length) {
             this._pile.add_child(new St.Icon({
-                icon_name: 'folder-download', icon_size: m.icon,
+                icon_name: this.isDownloads ? 'folder-download' : 'folder', icon_size: m.icon,
                 x_align: Clutter.ActorAlign.CENTER, y_align: Clutter.ActorAlign.CENTER,
             }));
             return;
@@ -194,6 +205,13 @@ export class DownloadsItem extends DockItem {
 
     get popupOpen() {
         return this._popup !== null;
+    }
+}
+
+/** The Downloads stack (XDG Downloads folder). */
+export class DownloadsItem extends FolderStackItem {
+    constructor(host, spec) {
+        super(host, spec, downloadsDir(), host.gettext('Downloads'));
     }
 }
 
@@ -295,6 +313,8 @@ class StackPopup {
         if (!f.entry.partial) {
             button._delegate = {
                 kiwiFile: f.file,
+                // A folder dropped on the right side of the dock becomes a stack
+                kiwiFolder: f.contentType === 'inode/directory' ? f.file.get_path() : null,
                 getDragActor: () => new St.Icon({ gicon: f.gicon, icon_size: iconSize }),
                 getDragActorSource: () => icon,
             };
@@ -401,7 +421,7 @@ class StackPopup {
             });
         }
         if (!files.length)
-            body = new St.Label({ style_class: 'kiwi-dock-stack-empty', text: _('No downloads') });
+            body = new St.Label({ style_class: 'kiwi-dock-stack-empty', text: this._stack.isDownloads ? _('No downloads') : _('Empty folder') });
         // A ScrollView needs a scrollable child: a box around the grid, list or note
         const content = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL });
         content.add_child(body);

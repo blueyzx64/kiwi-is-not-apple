@@ -11,7 +11,8 @@
 //
 // Vocabulary
 //   window  a plain description (core/desktopModel.js WindowInfo): id, appId, type, parent,
-//           workspace (-1 = on all), monitor, fullscreen, above, skipTaskbar, title, minimized
+//           workspace (-1 = on all), monitor, fullscreen, above, skipTaskbar, title, minimized,
+//           flagged (another feature set it aside: WindowState 'hidden' or 'splitView')
 //   entry   {id, ws, windows: [id] (lead first), set, seq}: windows shown and hidden together.
 //           One app's windows (All at Once) or one window (One at a Time), or a set the user
 //           built from several apps.
@@ -22,8 +23,9 @@
 //   - a managed window is in exactly one entry, of its own workspace;
 //   - it is visible iff its entry is its space's stage;
 //   - an attached window (a dialog or other transient) is visible iff its root is;
-//   - an exempt window (sticky, always-on-top, skip-taskbar, picture-in-picture, an orphan
-//     dialog, on another monitor, or full screen when it appeared) is never hidden;
+//   - an exempt window (sticky, always-on-top, skip-taskbar, picture-in-picture, Quick Look,
+//     flagged by another feature, an orphan dialog, on another monitor, or full screen when it
+//     appeared) is never hidden;
 //   - every entry is either the stage or in the strip of its space, never both, and no entry
 //     is empty.
 //
@@ -52,6 +54,8 @@ export const DEFAULT_CONFIG = Object.freeze({
 });
 
 const PIP_TITLE = /picture[\s-]*in[\s-]*picture/i;
+// Apps whose windows float over the stage they were opened from: Quick Look (Sushi)
+const FLOATING_APPS = ['org.gnome.NautilusPreviewer'];
 const MAX_DEPTH = 16;
 
 /** Why a window is left alone, or null when Stage Manager manages it. */
@@ -62,6 +66,10 @@ export function exemptReason(w, primary) {
         return 'above';
     if (w.skipTaskbar)
         return 'skip-taskbar';
+    if (w.flagged)
+        return 'flagged';   // another feature set it aside (Hide, Split View)
+    if (w.appId && FLOATING_APPS.some(a => w.appId === a || w.appId === `${a}.desktop`))
+        return 'floating';
     if (w.title && PIP_TITLE.test(w.title))
         return 'pip';
     if (w.monitor !== primary)

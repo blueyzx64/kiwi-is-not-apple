@@ -19,7 +19,7 @@ import St from 'gi://St';
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { formatAccel } from '../../core/appMenus/model.js';
 import { ModalSurface } from '../../lib/modalSurface.js';
-import { forceQuitRows } from './model.js';
+import { confirmationHolds, fillPlaceholders, forceQuitRows } from './model.js';
 
 export class ForceQuit {
     /**
@@ -86,7 +86,11 @@ export class ForceQuit {
     /** Select an app by id (tests, keyboard). */
     select(id) {
         this._selected = id;
-        this._paint();
+        // The question names one app: another selection must ask again
+        if (this._confirming && !confirmationHolds(this._confirmedId, id))
+            this._setConfirm(false);
+        else
+            this._paint();
     }
 
     _build(frame) {
@@ -95,6 +99,7 @@ export class ForceQuit {
         this._watched = new Set();
         this._selected = null;
         this._confirming = false;
+        this._confirmedId = null;
 
         frame.add_child(new St.Label({ text: _('Force Quit Applications'), style_class: 'kiwi-force-quit-title' }));
         frame.add_child(this._wrap(new St.Label({
@@ -114,7 +119,7 @@ export class ForceQuit {
         const text = accel ? formatAccel(accel, this._keys()) : '';
         if (text) {
             frame.add_child(new St.Label({
-                text: _('You can open this window by pressing %s.').replace('%s', text),
+                text: fillPlaceholders(_('You can open this window by pressing %s.'), text),
                 style_class: 'kiwi-force-quit-footer',
             }));
         }
@@ -221,17 +226,18 @@ export class ForceQuit {
 
     // The macOS confirmation: "Do you want to force “X” to quit?"
     _setConfirm(on, relaunch = false) {
-        this._confirming = on;
-        this._relaunchAfter = relaunch;
         const row = this._rows?.find(r => r.id === this._selected);
-        this._question.visible = on && !!row;
-        if (on && row) {
-            this._question.text = this._('Do you want to force “%s” to quit? You will lose any unsaved changes.')
-                .replace('%s', row.info.name);
+        this._confirming = on && !!row;
+        this._confirmedId = this._confirming ? row.id : null;
+        this._relaunchAfter = relaunch;
+        this._question.visible = this._confirming;
+        if (this._confirming) {
+            this._question.text = fillPlaceholders(
+                this._('Do you want to force “%s” to quit? You will lose any unsaved changes.'), row.info.name);
         }
-        this._cancelButton.visible = on;
-        this._relaunchButton.visible = !on;
-        this._quitButton.label = on ? (relaunch ? this._('Relaunch') : this._('Force Quit')) : this._('Force Quit');
+        this._cancelButton.visible = this._confirming;
+        this._relaunchButton.visible = !this._confirming;
+        this._quitButton.label = this._confirming ? (relaunch ? this._('Relaunch') : this._('Force Quit')) : this._('Force Quit');
         this._paint();
     }
 
@@ -240,9 +246,11 @@ export class ForceQuit {
             this._setConfirm(true, relaunch);
             return;
         }
-        const row = this._rows?.find(r => r.id === this._selected);
-        if (!row)
+        const row = this._rows?.find(r => r.id === this._confirmedId);
+        if (!row || !confirmationHolds(this._confirmedId, this._selected)) {
+            this._setConfirm(false);
             return;
+        }
         this.kill(row.app, this._relaunchAfter);
         this._setConfirm(false);
     }

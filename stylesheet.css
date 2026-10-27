@@ -1467,6 +1467,38 @@
     box-shadow: 0 0 2px rgba(0, 0, 0, 0.55);
 }
 
+/* macOS 27: an app running only in the background has a light grey indicator */
+.kiwi-dock-dot.kiwi-dock-dot-background {
+    background-color: rgba(190, 190, 196, 0.55);
+    box-shadow: none;
+}
+
+/* LauncherEntry: the red count at the icon's top right, and a progress bar along its foot */
+.kiwi-dock-badge {
+    min-width: 12px;
+    padding: 1px 5px;
+    border-radius: 999px;
+    background-color: #ff3b30;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    color: #ffffff;
+    font-size: 8.5pt;
+    font-weight: 700;
+    text-align: center;
+}
+
+.kiwi-dock-progress {
+    height: 6px;
+    border-radius: 3px;
+    background-color: rgba(30, 30, 34, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.kiwi-dock-progress-fill {
+    border-radius: 3px;
+    background-color: -st-accent-color;
+}
+
 .kiwi-dock-separator {
     background-color: rgba(255, 255, 255, 0.32);
 }
@@ -1584,6 +1616,208 @@
 .kiwi-dock-stack-open:hover,
 .kiwi-dock-stack-open:focus {
     background-color: rgba(60, 60, 66, 0.92);
+}
+
+/* The optional Mission Control tile (missionControlItem.js) */
+.kiwi-dock-mission-control {
+    background-gradient-direction: vertical;
+    background-gradient-start: #4a4a52;
+    background-gradient-end: #1f1f24;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.kiwi-dock-mission-control-window {
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0, 0, 0, 0.25);
+}
+
+/* ==== features/launchpad/style.css ==== */
+
+/* feature: launchpad */
+/* macOS 11–15 Launchpad: the wallpaper stretched from a tiny copy (a faux blur) under a dim
+   layer, white labels with a soft shadow, a glass search pill and glass folders. Sizes are
+   inline from model.gridMetrics(); lib/glass.js gives the search field and the folder panel
+   their fill (this is their look with glass off). */
+.kiwi-launchpad {
+    background-color: transparent;
+}
+
+.kiwi-launchpad-dim {
+    background-color: rgba(18, 20, 28, 0.42);
+}
+
+.kiwi-launchpad-search {
+    min-height: 28px;
+    padding: 2px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.26);
+    background-color: rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.96);
+    caret-color: rgba(255, 255, 255, 0.96);
+    selection-background-color: -st-accent-color;
+    font-size: 10.5pt;
+}
+
+.kiwi-launchpad-search StLabel.hint-text {
+    color: rgba(255, 255, 255, 0.62);
+}
+
+.kiwi-launchpad-search-icon {
+    icon-size: 14px;
+    color: rgba(255, 255, 255, 0.72);
+    padding-right: 6px;
+}
+
+.kiwi-launchpad-tile {
+    padding: 0;
+    border: none;
+    border-radius: 18px;
+    background-color: transparent;
+}
+
+/* Keyboard selection (macOS draws a soft rounded highlight; no hover highlight) */
+.kiwi-launchpad-tile:selected {
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+/* An icon is held over this one: it will make (or join) a folder */
+.kiwi-launchpad-tile:drop .kiwi-launchpad-folder,
+.kiwi-launchpad-tile:drop {
+    background-color: rgba(255, 255, 255, 0.22);
+}
+
+.kiwi-launchpad-label {
+    color: rgba(255, 255, 255, 0.98);
+    font-size: 10pt;
+    font-weight: 500;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
+}
+
+.kiwi-launchpad-folder {
+    background-color: rgba(255, 255, 255, 0.24);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.kiwi-launchpad-folder-layer {
+    background-color: rgba(0, 0, 0, 0.18);
+}
+
+.kiwi-launchpad-folder-panel {
+    padding: 16px 16px 8px;
+    border-radius: 32px;
+    background-color: rgba(60, 62, 70, 0.62);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    spacing: 12px;
+}
+
+.kiwi-launchpad-folder-name {
+    min-width: 200px;
+    padding: 4px 12px;
+    border: none;
+    border-radius: 8px;
+    background-color: transparent;
+    color: rgba(255, 255, 255, 0.98);
+    caret-color: rgba(255, 255, 255, 0.98);
+    font-size: 17pt;
+    font-weight: 600;
+    text-align: center;
+}
+
+.kiwi-launchpad-folder-name:focus {
+    background-color: rgba(255, 255, 255, 0.14);
+}
+
+.kiwi-launchpad-dots {
+    spacing: 10px;
+    padding: 8px 12px;
+}
+
+.kiwi-launchpad-dot {
+    width: 8px;
+    height: 8px;
+    padding: 0;
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.38);
+}
+
+.kiwi-launchpad-dot:checked {
+    background-color: rgba(255, 255, 255, 0.95);
+}
+
+/* The ⓧ of jiggle mode (macOS: a small grey disc with a dark cross) */
+.kiwi-launchpad-delete {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border-radius: 11px;
+    background-color: rgba(232, 232, 236, 0.96);
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.kiwi-launchpad-delete-icon {
+    icon-size: 12px;
+    color: rgba(30, 30, 34, 0.92);
+}
+
+.kiwi-launchpad-delete:hover {
+    background-color: rgba(255, 255, 255, 1);
+}
+
+/* The delete alert (macOS: icon, bold title, small text, two equal buttons) */
+.kiwi-launchpad-alert-layer {
+    background-color: rgba(0, 0, 0, 0.22);
+}
+
+.kiwi-launchpad-alert {
+    padding: 20px 16px 16px;
+    spacing: 10px;
+    border-radius: 18px;
+    background-color: rgba(52, 54, 60, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.kiwi-launchpad-alert-title {
+    color: rgba(255, 255, 255, 0.98);
+    font-size: 11pt;
+    font-weight: 700;
+    text-align: center;
+}
+
+.kiwi-launchpad-alert-body {
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 9.5pt;
+    text-align: center;
+}
+
+.kiwi-launchpad-alert-buttons {
+    spacing: 8px;
+    padding-top: 6px;
+}
+
+.kiwi-launchpad-alert-button {
+    min-height: 28px;
+    border-radius: 8px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.96);
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+.kiwi-launchpad-alert-button:hover {
+    background-color: rgba(255, 255, 255, 0.24);
+}
+
+.kiwi-launchpad-alert-button.default {
+    background-color: -st-accent-color;
+}
+
+.kiwi-launchpad-alert-button.default:hover {
+    background-color: -st-accent-color;
+    box-shadow: inset 0 0 0 100px rgba(255, 255, 255, 0.12);
+}
+
+.kiwi-launchpad-alert-button:focus {
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.5);
 }
 
 /* ==== features/menuBar/style.css ==== */
@@ -1831,6 +2065,100 @@
   border-radius: 7px;
   padding: 5px 16px;
 }
+
+/* ==== features/missionControl/style.css ==== */
+
+/* feature: mission-control */
+
+/* The Spaces bar: GNOME's thumbnails, larger, with room for the labels under them */
+.kiwi-mission-control .kiwi-mc-spaces-box {
+    padding: 12px 0 30px;
+    spacing: 22px;
+}
+
+.kiwi-mission-control .kiwi-mc-spaces-box .workspace-thumbnail {
+    border-radius: 8px;
+}
+
+.kiwi-mission-control .kiwi-mc-spaces-box .workspace-thumbnail-indicator {
+    border: 3px solid rgba(255, 255, 255, 0.92);
+    border-radius: 11px;
+    padding: 0;
+}
+
+/* macOS spreads the windows with wider gaps than GNOME */
+.kiwi-mission-control .window-picker {
+    spacing: 36px;
+}
+
+.kiwi-mc-space-label {
+    color: #ffffff;
+    font-size: 9.5pt;
+    font-weight: 600;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+.kiwi-mc-space-close {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border-radius: 10px;
+    color: #ffffff;
+    background-color: rgba(58, 58, 60, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+
+.kiwi-mc-space-close:hover {
+    background-color: rgba(88, 88, 92, 0.96);
+}
+
+.kiwi-mc-space-add {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 10px;
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.kiwi-mc-space-add:hover,
+.kiwi-mc-space-add:focus {
+    background-color: rgba(255, 255, 255, 0.28);
+}
+
+/* App Exposé: the minimized windows along the bottom */
+.kiwi-mc-expose-strip {
+    padding: 12px 20px;
+    spacing: 20px;
+    border-radius: 20px;
+    background-color: rgba(28, 28, 30, 0.42);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.kiwi-mc-expose-card {
+    padding: 6px;
+    border-radius: 12px;
+}
+
+.kiwi-mc-expose-card:hover,
+.kiwi-mc-expose-card:focus {
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+.kiwi-mc-expose-preview {
+    border-radius: 6px;
+}
+
+.kiwi-mc-expose-title {
+    color: #ffffff;
+    font-size: 9pt;
+    margin-top: 6px;
+    max-width: 180px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
 
 /* ==== features/notch/style.css ==== */
 
@@ -2243,6 +2571,196 @@
     color: #ffffff;
 }
 
+/* ==== features/screenshots/style.css ==== */
+
+/* feature: screenshots */
+/* The Shift+Super+5 toolbar, its Options popover, the timer pill and the floating thumbnail.
+   lib/glass.js gives the bar, popover and pill their fill ('overlays' / 'menus'); these are
+   the shapes, and the solid look when glass is off. */
+.kiwi-screenshot-toolbar {
+    margin-bottom: 48px;
+    padding: 6px 8px;
+    spacing: 2px;
+    border-radius: 18px;
+    background-color: rgba(36, 36, 40, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #f5f5f7;
+}
+
+.kiwi-screenshot-separator {
+    width: 1px;
+    margin: 8px 6px;
+    background-color: rgba(255, 255, 255, 0.22);
+}
+
+.kiwi-screenshot-close {
+    width: 24px;
+    height: 24px;
+    margin: 0 4px;
+    border-radius: 12px;
+    background-color: rgba(255, 255, 255, 0.14);
+    color: inherit;
+}
+
+.kiwi-screenshot-close:hover {
+    background-color: rgba(255, 255, 255, 0.26);
+}
+
+.kiwi-screenshot-mode {
+    min-width: 72px;
+    padding: 6px 6px 4px;
+    border-radius: 10px;
+    color: inherit;
+    background-color: transparent;
+}
+
+.kiwi-screenshot-mode:hover {
+    background-color: rgba(255, 255, 255, 0.10);
+}
+
+.kiwi-screenshot-mode:checked {
+    background-color: rgba(255, 255, 255, 0.22);
+}
+
+.kiwi-screenshot-mode:focus,
+.kiwi-screenshot-options-row:focus,
+.kiwi-screenshot-capture:focus {
+    box-shadow: inset 0 0 0 2px -st-accent-color;
+}
+
+.kiwi-screenshot-mode-label {
+    margin-top: 3px;
+    font-size: 8.5pt;
+    text-align: center;
+}
+
+.kiwi-screenshot-record-dot {
+    color: #ff453a;
+}
+
+.kiwi-screenshot-options-button {
+    padding: 6px 10px;
+    border-radius: 10px;
+    spacing: 4px;
+    color: inherit;
+    font-size: 10pt;
+}
+
+.kiwi-screenshot-options-button:hover,
+.kiwi-screenshot-options-button:checked {
+    background-color: rgba(255, 255, 255, 0.14);
+}
+
+.kiwi-screenshot-capture {
+    margin-left: 6px;
+    padding: 6px 16px;
+    border-radius: 10px;
+    background-color: -st-accent-color;
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 10pt;
+}
+
+.kiwi-screenshot-capture:hover {
+    background-color: lighten(-st-accent-color, 6%);
+}
+
+/* Options popover, above the Options button */
+.kiwi-screenshot-options {
+    min-width: 230px;
+    padding: 6px;
+    border-radius: 12px;
+    background-color: rgba(36, 36, 40, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #f5f5f7;
+}
+
+.kiwi-screenshot-options-header {
+    padding: 6px 10px 2px;
+    font-size: 8.5pt;
+    font-weight: 600;
+    color: rgba(245, 245, 247, 0.6);
+}
+
+.kiwi-screenshot-options-row {
+    padding: 4px 10px 4px 6px;
+    border-radius: 6px;
+    color: inherit;
+    font-size: 10pt;
+}
+
+.kiwi-screenshot-options-row:hover {
+    background-color: -st-accent-color;
+    color: #ffffff;
+}
+
+.kiwi-screenshot-check {
+    margin-right: 6px;
+}
+
+.kiwi-screenshot-options-separator {
+    height: 1px;
+    margin: 4px 8px;
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+/* Timer countdown */
+.kiwi-screenshot-countdown {
+    min-width: 120px;
+    min-height: 120px;
+    border-radius: 28px;
+    background-color: rgba(36, 36, 40, 0.86);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #f5f5f7;
+}
+
+.kiwi-screenshot-countdown-number {
+    font-size: 48pt;
+    font-weight: 300;
+    text-align: center;
+}
+
+/* Floating thumbnail: the picture with a light rim and a soft shadow */
+.kiwi-screenshot-thumbnail {
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    background-color: rgba(0, 0, 0, 0.25);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.kiwi-screenshot-thumbnail-picture {
+    border-radius: 9px;
+}
+
+/* ==== features/splitView/style.css ==== */
+
+/* feature: split-view */
+/* Full screen Split View: the picker on the free half (the Space's other windows as live
+   thumbnails), dimmed like macOS's Mission Control-style spread. */
+.kiwi-split-picker {
+    background-color: rgba(20, 22, 30, 0.72);
+}
+
+.kiwi-split-thumb {
+    padding: 0;
+    border-radius: 12px;
+    background-color: transparent;
+    border: 2px solid transparent;
+}
+
+.kiwi-split-thumb:hover,
+.kiwi-split-thumb:focus {
+    border-color: -st-accent-color;
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.kiwi-split-thumb-label {
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 10pt;
+    text-align: center;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
 /* ==== features/spotlight/style.css ==== */
 
 /* feature: spotlight
@@ -2387,6 +2905,101 @@
   font-weight: 600;
 }
 
+/* Tahoe: the browse-view buttons right of the empty field, Super+1..4 */
+.kiwi-spotlight-views {
+  spacing: 4px;
+}
+
+.kiwi-spotlight-view-button {
+  border-radius: 999px;
+  padding: 7px;
+  color: rgba(255, 255, 255, 0.7);
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.kiwi-spotlight-view-button:hover {
+  background-color: rgba(255, 255, 255, 0.16);
+}
+
+.kiwi-spotlight-view-button:checked,
+.kiwi-spotlight-view-button:checked:hover {
+  background-color: -st-accent-color;
+  color: -st-accent-fg-color;
+}
+
+.kiwi-modal-light .kiwi-spotlight-view-button {
+  color: rgba(0, 0, 0, 0.62);
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+.kiwi-modal-light .kiwi-spotlight-view-button:hover {
+  background-color: rgba(0, 0, 0, 0.11);
+}
+
+.kiwi-modal-light .kiwi-spotlight-view-button:checked,
+.kiwi-modal-light .kiwi-spotlight-view-button:checked:hover {
+  background-color: -st-accent-color;
+  color: -st-accent-fg-color;
+}
+
+/* The active "/" filter, as a token chip */
+.kiwi-spotlight-chip {
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 3px 10px;
+  background-color: -st-accent-color;
+  color: -st-accent-fg-color;
+}
+
+/* A Quick Key next to its row */
+.kiwi-spotlight-key {
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 5px;
+  padding: 1px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.kiwi-modal-light .kiwi-spotlight-key {
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.kiwi-spotlight-row:selected .kiwi-spotlight-key {
+  border-color: -st-accent-fg-color;
+  color: -st-accent-fg-color;
+}
+
+/* Apps view: a grid of tiles (Tahoe's Applications) */
+.kiwi-spotlight-grid-row {
+  spacing: 4px;
+  padding: 0 2px;
+}
+
+.kiwi-spotlight-tile {
+  width: 100px;
+  padding: 10px 4px 8px 4px;
+  spacing: 6px;
+  border-radius: 14px;
+}
+
+.kiwi-spotlight-tile-title {
+  font-size: 12px;
+  text-align: center;
+}
+
+/* A message row (a view that is empty or turned off) */
+.kiwi-spotlight-note,
+.kiwi-spotlight-note:hover {
+  background-color: transparent;
+}
+
+.kiwi-spotlight-note .kiwi-spotlight-title {
+  font-weight: 600;
+}
+
 /* ==== features/stageManager/style.css ==== */
 
 /* feature: stage-manager */
@@ -2468,6 +3081,69 @@
     padding: 6px 14px;
 }
 
+/* ==== features/switcher/style.css ==== */
+
+/* feature: app-switcher
+   The Cmd-Tab panel (features/switcher/popup.js): lib/glass.js gives .kiwi-switcher its
+   faux-glass fill and rim; these rules set the shape. Tahoe: one row of big icons on a
+   rounded glass panel (radius 28), the selected app on a soft rounded square, its name under
+   it. Padding 16 + item padding 8 + spacing 8 = the ITEM_EXTRA of index.js. */
+.kiwi-switcher.switcher-list {
+  padding: 16px;
+  border-radius: 28px;
+  /* St draws an outer box-shadow as a square-cornered blur under software rendering; the
+     glass rim carries the edge instead */
+  box-shadow: none;
+}
+
+.kiwi-switcher .switcher-list-item-container {
+  spacing: 8px;
+}
+
+.kiwi-switcher .item-box,
+.kiwi-switcher .item-box:hover,
+.kiwi-switcher .item-box:focus {
+  padding: 8px;
+  border-radius: 18px;
+  border: none;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.kiwi-switcher .item-box:selected {
+  background-color: rgba(255, 255, 255, 0.16);
+}
+
+.kiwi-switcher.kiwi-glass-light .item-box:selected {
+  background-color: rgba(0, 0, 0, 0.10);
+}
+
+.kiwi-switcher-app {
+  spacing: 6px;
+}
+
+/* Only the selected app shows its name, as on macOS; the label keeps its height so the row
+   does not jump */
+.kiwi-switcher-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: transparent;
+  text-align: center;
+}
+
+.kiwi-switcher .item-box:selected .kiwi-switcher-label {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.kiwi-switcher.kiwi-glass-light .item-box:selected .kiwi-switcher-label {
+  color: rgba(0, 0, 0, 0.85);
+}
+
+/* The arrows the stock list draws under apps with several windows are not part of macOS */
+.kiwi-switcher .switcher-arrow {
+  color: transparent;
+}
+
 /* ==== features/windowControls/style.css ==== */
 
 /* feature: window-controls (traffic lights in the top bar) */
@@ -2527,4 +3203,166 @@
 
 .window-controls-box.system-mode .window-control-icon {
   icon-size: 16px;
+}
+
+/* Glass traffic lights (windows-traffic-style 'glass', macOS 27 Golden Gate): a bead with a
+ * vertical gradient, a darker rim, a white catchlight at the top and a soft glow at the
+ * bottom; the glyphs show while the cluster is hovered. Inactive (backdrop) beads are flat
+ * grey without highlights. 4px of padding on each button keeps the hit target >= 20px. */
+.window-controls-box.glass-mode {
+  spacing: 0;
+}
+
+.window-controls-box.glass-mode .window-control-button {
+  padding: 5px 4px;
+}
+
+.kiwi-tl-bead {
+  width: 13px;
+  height: 13px;
+  border-radius: 7px;
+  border-width: 1px;
+  border-style: solid;
+  background-gradient-direction: vertical;
+  box-shadow: inset 0 -1px 2px rgba(255, 255, 255, 0.35);
+}
+
+.window-controls-box.small-size .kiwi-tl-bead {
+  width: 12px;
+  height: 12px;
+  border-radius: 6px;
+}
+
+.kiwi-tl-bead.close {
+  background-gradient-start: #ff9b92;
+  background-gradient-end: #ec4c41;
+  border-color: rgba(150, 28, 22, 0.55);
+}
+
+.kiwi-tl-bead.minimize {
+  background-gradient-start: #ffdc7a;
+  background-gradient-end: #f2b31c;
+  border-color: rgba(160, 104, 0, 0.55);
+}
+
+.kiwi-tl-bead.maximize {
+  background-gradient-start: #8ce88c;
+  background-gradient-end: #2fbd46;
+  border-color: rgba(18, 112, 32, 0.55);
+}
+
+.window-control-button:active .kiwi-tl-bead.close {
+  background-gradient-start: #e8786e;
+  background-gradient-end: #c93a30;
+}
+
+.window-control-button:active .kiwi-tl-bead.minimize {
+  background-gradient-start: #e8c05a;
+  background-gradient-end: #cf950f;
+}
+
+.window-control-button:active .kiwi-tl-bead.maximize {
+  background-gradient-start: #6ccb6c;
+  background-gradient-end: #229a36;
+}
+
+.kiwi-tl-catchlight {
+  width: 7px;
+  height: 4px;
+  margin-top: 1px;
+  border-radius: 3px;
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+.window-controls-box.small-size .kiwi-tl-catchlight {
+  width: 6px;
+  height: 3px;
+}
+
+.kiwi-tl-glyph {
+  icon-size: 9px;
+}
+
+.kiwi-tl-bead.close .kiwi-tl-glyph { color: rgba(90, 8, 4, 0.8); }
+.kiwi-tl-bead.minimize .kiwi-tl-glyph { color: rgba(110, 62, 0, 0.8); }
+.kiwi-tl-bead.maximize .kiwi-tl-glyph { color: rgba(8, 80, 18, 0.8); }
+
+.kiwi-tl-bead.backdrop {
+  background-gradient-direction: none;
+  background-color: rgba(140, 140, 146, 0.55);
+  border-color: rgba(0, 0, 0, 0.14);
+  box-shadow: none;
+}
+
+.kiwi-tl-bead.backdrop .kiwi-tl-catchlight {
+  background-color: transparent;
+}
+
+/* The green-button menu (Fill & Arrange): section headers that name the hovered layout, and
+ * rows of layout glyphs. The window's pane is solid, the other windows' panes are ghosts. */
+.kiwi-green-menu .kiwi-green-menu-header {
+  font-size: 0.85em;
+  font-weight: 600;
+  color: rgba(128, 128, 128, 1);
+}
+
+.kiwi-green-menu .kiwi-green-menu-glyphs {
+  padding-top: 2px;
+  padding-bottom: 4px;
+}
+
+.kiwi-green-menu-glyph-row {
+  spacing: 6px;
+}
+
+.kiwi-tile-glyph-button {
+  padding: 3px;
+  border-radius: 6px;
+}
+
+.kiwi-tile-glyph-button:hover,
+.kiwi-tile-glyph-button:focus {
+  background-color: -st-accent-color;
+}
+
+.kiwi-tile-glyph {
+  border: 1px solid rgba(128, 128, 128, 0.9);
+  border-radius: 4px;
+}
+
+.kiwi-tile-pane {
+  border-radius: 2px;
+  background-color: rgba(128, 128, 128, 0.95);
+}
+
+.kiwi-tile-pane.ghost {
+  background-color: rgba(128, 128, 128, 0.4);
+}
+
+.kiwi-tile-glyph-button:hover .kiwi-tile-glyph,
+.kiwi-tile-glyph-button:focus .kiwi-tile-glyph {
+  border-color: -st-accent-fg-color;
+}
+
+.kiwi-tile-glyph-button:hover .kiwi-tile-pane,
+.kiwi-tile-glyph-button:focus .kiwi-tile-pane {
+  background-color: -st-accent-fg-color;
+}
+
+.kiwi-tile-glyph-button:hover .kiwi-tile-pane.ghost,
+.kiwi-tile-glyph-button:focus .kiwi-tile-pane.ghost {
+  background-color: rgba(255, 255, 255, 0.45);
+}
+
+/* ==== features/windows/style.css ==== */
+
+/* feature: window-tiling */
+
+/* The drag outline. lib/glass.js gives it Kiwi's faux glass (overlays surface); this is the
+ * plain translucent outline it keeps when glass is off. No box-shadow: St draws the blurred
+ * shadow of a resizing actor as a rectangle. It sits just below the dragged window. */
+.kiwi-tile-preview {
+  border-radius: 12px;
+  background-color: rgba(240, 240, 244, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.45);
 }

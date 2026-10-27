@@ -414,6 +414,22 @@ test('open in current stage on a running app: its window joins the set when it g
     eq(t.fxOf('cancel').map(f => f.key), ['join']);
 });
 
+test('Quick Look and windows other features set aside (Hide, Split View) stay out of the strip', () => {
+    const t = desk();
+    t.open('files');
+    t.open('sushi', { app: 'org.gnome.NautilusPreviewer.desktop' });
+    eq(t.sm.kindOf(t.id('sushi')), 'exempt');
+    eq(t.stage(), ['files']);
+    t.later(QUIET_MS);
+    t.open('editor');
+    t.send({ type: 'change', window: { id: t.id('files'), flagged: true } });
+    eq(t.sm.kindOf(t.id('files')), 'exempt');
+    eq(t.hidden(), []);
+    t.later(QUIET_MS);
+    t.send({ type: 'change', window: { id: t.id('files'), flagged: false } });
+    eq(t.stage(), ['files']);
+});
+
 if (failed) {
     print(`${failed} test(s) failed`);
     imports.system.exit(1);

@@ -219,14 +219,6 @@ export function workspaceDirection(from, to) {
     return to > from ? 1 : -1;
 }
 
-/** A press and release on the wallpaper are a click (not a drag, not a long press). */
-export function isClick(press, release, { slop = 6, maxMs = 600 } = {}) {
-    if (!press || !release)
-        return false;
-    const dt = release.time - press.time;
-    return Math.hypot(release.x - press.x, release.y - press.y) <= slop && dt >= 0 && dt <= maxMs;
-}
-
 /** Index of the slot under a point, or -1. */
 export function slotAt(slots, point) {
     return slots.findIndex(s => point.x >= s.x && point.x < s.x + s.width &&

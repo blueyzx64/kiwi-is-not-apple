@@ -139,3 +139,98 @@
   font-size: 22px;
   font-weight: 600;
 }
+
+/* Tahoe: the browse-view buttons right of the empty field, Super+1..4 */
+.kiwi-spotlight-views {
+  spacing: 4px;
+}
+
+.kiwi-spotlight-view-button {
+  border-radius: 999px;
+  padding: 7px;
+  color: rgba(255, 255, 255, 0.7);
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.kiwi-spotlight-view-button:hover {
+  background-color: rgba(255, 255, 255, 0.16);
+}
+
+.kiwi-spotlight-view-button:checked,
+.kiwi-spotlight-view-button:checked:hover {
+  background-color: -st-accent-color;
+  color: -st-accent-fg-color;
+}
+
+.kiwi-modal-light .kiwi-spotlight-view-button {
+  color: rgba(0, 0, 0, 0.62);
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+.kiwi-modal-light .kiwi-spotlight-view-button:hover {
+  background-color: rgba(0, 0, 0, 0.11);
+}
+
+.kiwi-modal-light .kiwi-spotlight-view-button:checked,
+.kiwi-modal-light .kiwi-spotlight-view-button:checked:hover {
+  background-color: -st-accent-color;
+  color: -st-accent-fg-color;
+}
+
+/* The active "/" filter, as a token chip */
+.kiwi-spotlight-chip {
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 3px 10px;
+  background-color: -st-accent-color;
+  color: -st-accent-fg-color;
+}
+
+/* A Quick Key next to its row */
+.kiwi-spotlight-key {
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 5px;
+  padding: 1px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.kiwi-modal-light .kiwi-spotlight-key {
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.kiwi-spotlight-row:selected .kiwi-spotlight-key {
+  border-color: -st-accent-fg-color;
+  color: -st-accent-fg-color;
+}
+
+/* Apps view: a grid of tiles (Tahoe's Applications) */
+.kiwi-spotlight-grid-row {
+  spacing: 4px;
+  padding: 0 2px;
+}
+
+.kiwi-spotlight-tile {
+  width: 100px;
+  padding: 10px 4px 8px 4px;
+  spacing: 6px;
+  border-radius: 14px;
+}
+
+.kiwi-spotlight-tile-title {
+  font-size: 12px;
+  text-align: center;
+}
+
+/* A message row (a view that is empty or turned off) */
+.kiwi-spotlight-note,
+.kiwi-spotlight-note:hover {
+  background-color: transparent;
+}
+
+.kiwi-spotlight-note .kiwi-spotlight-title {
+  font-weight: 600;
+}

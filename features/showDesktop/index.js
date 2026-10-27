@@ -38,7 +38,8 @@ import { watchReducedMotion } from '../../lib/compat.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { Keybindings } from '../../lib/keybindings.js';
 import { KiwiSettings } from '../../lib/settings.js';
-import { durationFor, focusEnds, isMovable, planReveal } from './model.js';
+import { isClick } from '../../lib/clickModel.js';
+import { durationFor, focusEnds, isMovable, planReveal, wallpaperClickToggles } from './model.js';
 
 const STOCK_ACTION = 'show-desktop';
 // Kiwi's own icon in icons/: a screen with two windows pushed to its edges
@@ -78,6 +79,7 @@ export class ShowDesktop {
         this._shown = false;
         this._prevFocus = null;
         this._reduced = false;
+        this._press = null;         // a primary press on the wallpaper, waiting for its release
     }
 
     enable() {
@@ -97,6 +99,11 @@ export class ShowDesktop {
 
         Main.wm.setCustomKeybindingHandler(STOCK_ACTION, Shell.ActionMode.NORMAL, () => this.toggle());
         cleanup.add(() => Meta.keybindings_set_custom_handler(STOCK_ACTION, null));
+
+        // Click wallpaper to reveal desktop (macOS Sonoma). Only a press and release that both
+        // reach the wallpaper itself (Meta.BackgroundActor) count: desktop icons (DING) draw in
+        // their own window over it, so a click on them, or between them, is theirs.
+        cleanup.connect(global.stage, 'captured-event', (_s, event) => this._wallpaperEvent(event));
 
         // Newest first: windows go back before anything else is torn down
         cleanup.add(() => this._snapBack());
@@ -127,6 +134,35 @@ export class ShowDesktop {
             this.restore();
         else
             this.reveal();
+    }
+
+    _wallpaperEvent(event) {
+        const type = event.type();
+        if (type !== Clutter.EventType.BUTTON_PRESS && type !== Clutter.EventType.BUTTON_RELEASE)
+            return Clutter.EVENT_PROPAGATE;
+        const onWallpaper = event.get_button() === Clutter.BUTTON_PRIMARY &&
+            global.stage.get_event_actor(event) instanceof Meta.BackgroundActor;
+        const [x, y] = event.get_coords();
+        const point = { x, y, time: event.get_time() };
+        if (type === Clutter.EventType.BUTTON_PRESS) {
+            this._press = onWallpaper ? point : null;
+            return Clutter.EVENT_PROPAGATE;
+        }
+        const press = this._press;
+        this._press = null;
+        if (!onWallpaper || !isClick(press, point))
+            return Clutter.EVENT_PROPAGATE;
+        const stage = this._ctx.features?.instance?.('stage-manager');
+        const toggles = wallpaperClickToggles({
+            mode: this._ks.string('click-wallpaper-reveals-desktop'),
+            stageActive: !!stage,
+            stageHandles: !!stage && this._ks.bool('stage-manager-wallpaper-click'),
+            blocked: Main.overview.visible || Main.modalCount > 0,
+        });
+        // After the release is delivered (the background menu and DND see a normal click)
+        if (toggles)
+            this._cleanup.idle(() => this.toggle(), { name: 'show-desktop-wallpaper' });
+        return Clutter.EVENT_PROPAGATE;
     }
 
     // ---- motion --------------------------------------------------------------

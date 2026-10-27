@@ -115,8 +115,8 @@ export class DesktopModel {
     // ---- windows --------------------------------------------------------------------------
 
     /**
-     * Add a window or update its fields. Unknown fields are ignored; missing ones keep their
-     * value (or the default for a new window).
+     * Add a window or update its fields. Unknown fields are ignored; missing or undefined ones
+     * keep their value (or the default for a new window).
      *
      * @param {number} id
      * @param {object} fields part of WindowInfo
@@ -127,7 +127,7 @@ export class DesktopModel {
         const next = { id };
         const changed = [];
         for (const f of WINDOW_FIELDS) {
-            const v = f in fields ? fields[f] : old ? old[f] : DEFAULTS[f];
+            const v = fields[f] !== undefined ? fields[f] : old ? old[f] : DEFAULTS[f];
             next[f] = v;
             if (!old || old[f] !== v)
                 changed.push(f);
@@ -172,8 +172,8 @@ export class DesktopModel {
      *
      * @param {{workspace?: number, monitor?: number, appId?: string, minimized?: boolean,
      *   userFacing?: boolean}} [filter] workspace matches windows on it and windows on all
-     *   (-1); minimized: false leaves minimized windows out; userFacing (default true) leaves
-     *   out skip-taskbar and non-normal/dialog windows
+     *   (-1); minimized: true returns only minimized windows, false only the others; userFacing
+     *   (default true) leaves out skip-taskbar and non-normal/dialog windows
      * @returns {WindowInfo[]}
      */
     windows(filter = {}) {
@@ -189,7 +189,7 @@ export class DesktopModel {
                 continue;
             if (appId !== undefined && w.appId !== appId)
                 continue;
-            if (minimized === false && w.minimized)
+            if (minimized !== undefined && !!w.minimized !== minimized)
                 continue;
             out.push(w);
         }

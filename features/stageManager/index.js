@@ -32,7 +32,8 @@ import { WindowState } from '../../core/windowState.js';
 import { Keybindings } from '../../lib/keybindings.js';
 import { KiwiSettings } from '../../lib/settings.js';
 import { Flights } from './flights.js';
-import { METRICS, isClick, overlaps, pointRect, scaleMs, stripSide, workspaceDirection } from './geometry.js';
+import { isClick } from '../../lib/clickModel.js';
+import { METRICS, overlaps, pointRect, scaleMs, stripSide, workspaceDirection } from './geometry.js';
 import { StageMachine } from './model.js';
 import { StripView } from './view.js';
 import { WindowHider } from './windows.js';
@@ -48,6 +49,8 @@ const SHORTCUTS = [
     ['stage-manager-previous-shortcut', sm => sm._send({ type: 'cycle', dir: -1 })],
     ...[1, 2, 3, 4, 5, 6].map(n => [`stage-manager-slot-${n}-shortcut`, sm => sm._send({ type: 'slot', n })]),
 ];
+// WindowState flags of other features whose windows Stage Manager leaves alone
+const SET_ASIDE = ['hidden', 'splitView'];
 // While a stage window is dragged, how often the pointer is checked against the strip
 const WINDOW_DRAG_SAMPLE_MS = 60;
 
@@ -140,6 +143,19 @@ export class StageManager {
         cleanup.connect(global.stage, 'captured-event', (_s, event) => this._capturedEvent(event));
         cleanup.connect(global.display, 'grab-op-begin', (_d, win, op) => this._dragBegin(win, op));
         cleanup.connect(global.display, 'grab-op-end', (_d, win) => this._dragEnd(win));
+        WindowState.watch(cleanup, (win, flag) => {
+            const info = win && SET_ASIDE.includes(flag) ? this._desktop.model.window(win.get_stable_sequence()) : null;
+            if (info)
+                this._changed(info);
+        });
+        // Genie / Scale minimize aims at the strip (minimize-effect, while both run)
+        const provide = () => ctx.features?.instance?.('minimize-effect')?.setTargetProvider?.(cleanup,
+            win => this._minimizeTarget(win));
+        provide();
+        events.on('feature-changed', ({ id, active }) => {
+            if (id === 'minimize-effect' && active)
+                provide();
+        }, cleanup);
 
         ks.watch(VIEW_KEYS, () => this._layoutChanged());
         ks.watch(['stage-manager-new-windows', 'stage-manager-recent-count'], () => this._send({
@@ -196,9 +212,14 @@ export class StageManager {
         this._apply(fx);
     }
 
+    // The model's view of a window. The transient parent is read live (a portal dialog gets
+    // it after it is created), and so are the flags of features that set windows aside.
     _info(window) {
-        const { id, appId, type, parent, workspace, monitor, fullscreen, above, skipTaskbar, title, minimized } = window;
-        return { id, appId, type, parent, workspace, monitor, fullscreen, above, skipTaskbar, title, minimized };
+        const { id, appId, type, workspace, monitor, fullscreen, above, skipTaskbar, title, minimized } = window;
+        const win = this._desktop.metaWindow(id);
+        const parent = win?.get_transient_for()?.get_stable_sequence() ?? window.parent ?? null;
+        const flagged = !!win && SET_ASIDE.some(f => WindowState.has(win, f));
+        return { id, appId, type, parent, workspace, monitor, fullscreen, above, skipTaskbar, title, minimized, flagged };
     }
 
     _init() {
@@ -277,6 +298,15 @@ export class StageManager {
         }
         this._send({ type: 'workspace', active });
         this._render(workspaceDirection(from, active));
+    }
+
+    // Where a window minimizes to: its strip slot, else the strip's edge
+    _minimizeTarget(win) {
+        const id = win?.get_stable_sequence?.();
+        if (!this._machine || id === undefined || this._machine.kindOf(id) !== 'managed')
+            return null;
+        const rect = this._view.thumbRect(win) ?? this._edgePoint(win);
+        return rect ? { rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height }, edge: this._side } : null;
     }
 
     _interceptMinimize(win) {
@@ -545,7 +575,8 @@ export class StageManager {
         this._press = null;
         const [x, y] = event.get_coords();
         if (press && onWallpaper && isClick(press, { x, y, time: event.get_time() }) &&
-            this._ks.bool('stage-manager-wallpaper-click')) {
+            this._ks.bool('stage-manager-wallpaper-click') &&
+            this._ks.string('click-wallpaper-reveals-desktop') !== 'never') {
             // After the click is delivered (the background menu may want it)
             this._cleanup.idle(() => {
                 this.toggleDesktop();

@@ -8,13 +8,18 @@
       <!-- Internal bookkeeping (never shown in prefs) -->
       <key name="migrations-done" type="as">
         <default>[]</default>
-        <summary>Settings migrations that already ran</summary>
+        <summary>Settings migrations that already ran (internal)</summary>
         <description>Internal. Ids of the one-time settings migrations (old key to new key) that Kiwi has already applied, so they never run again. Do not edit.</description>
       </key>
       <key name="saved-originals" type="s">
         <default>''</default>
         <summary>Saved originals of GNOME settings Kiwi changed (internal)</summary>
         <description>JSON written by core/originals.js: the user's own value of every GNOME setting Kiwi currently owns (for example the window button-layout), so it can be put back after a crash. Do not edit.</description>
+      </key>
+      <key name="saved-originals-backup" type="s">
+        <default>''</default>
+        <summary>Unreadable saved originals, kept (internal)</summary>
+        <description>Internal. The text of saved-originals when it could not be parsed, kept so a damaged store is never silently lost. Do not edit.</description>
       </key>
 
       <!-- Menu bar (features/menuBar, features/calendar) -->
@@ -60,9 +65,9 @@
         <description>Alt-clicking the clock turns Do Not Disturb on or off, like Option-click on macOS.</description>
       </key>
       <key name="menubar-focus-shortcut" type="as">
-        <default>['F10']</default>
+        <default>['&lt;Control&gt;F2']</default>
         <summary>Focus the menu bar</summary>
-        <description>Opens the app menu so the menus can be used with the keyboard (Left and Right move between menus). Empty means no shortcut.</description>
+        <description>Opens the app menu so the menus can be used with the keyboard (Left and Right move between menus), like Ctrl+F2 on macOS. F10 is the other common choice, but it takes F10 from apps. Empty means no shortcut.</description>
       </key>
       <key name="menubar-force-quit-shortcut" type="as">
         <default>['&lt;Super&gt;&lt;Alt&gt;Escape']</default>
@@ -148,6 +153,52 @@
         <summary>Minimize windows into application icon</summary>
         <description>Minimized windows go into their app's icon. Off: each minimized window gets its own tile next to the Downloads stack.</description>
       </key>
+      <key name="dock-minimize-effect" type="s">
+        <choices>
+          <choice value="genie"/>
+          <choice value="scale"/>
+          <choice value="gnome"/>
+        </choices>
+        <default>'genie'</default>
+        <summary>Minimize windows using</summary>
+        <description>The effect that takes a window into the Dock and back: genie (the magic lamp, the macOS default), scale (a plain shrink) or gnome (GNOME's own). Reduced motion turns both into a fade.</description>
+      </key>
+      <key name="dock-magnification" type="b">
+        <default>false</default>
+        <summary>Magnification</summary>
+        <description>Icons under the pointer grow, with a smooth falloff to their neighbours (off by default, as on macOS).</description>
+      </key>
+      <key name="dock-magnification-size" type="i">
+        <range min="24" max="160"/>
+        <default>96</default>
+        <summary>Magnified icon size</summary>
+        <description>Size in pixels of the icon right under the pointer while magnification is on (never smaller than the Dock's icons).</description>
+      </key>
+      <key name="dock-launch-animation" type="b">
+        <default>true</default>
+        <summary>Animate opening applications</summary>
+        <description>An app's icon bounces while the app starts.</description>
+      </key>
+      <key name="dock-attention-bounce" type="b">
+        <default>true</default>
+        <summary>Bounce when apps need attention</summary>
+        <description>An app's icon bounces when one of its windows asks for attention or the app marks itself urgent.</description>
+      </key>
+      <key name="dock-badges" type="b">
+        <default>true</default>
+        <summary>Show badges and progress on Dock icons</summary>
+        <description>Red counts and progress bars that apps publish through the LauncherEntry D-Bus API (com.canonical.Unity.LauncherEntry).</description>
+      </key>
+      <key name="dock-background-apps" type="b">
+        <default>true</default>
+        <summary>Show apps running in the background</summary>
+        <description>Apps with no window that run in the background (the Background portal list GNOME's Quick Settings show) appear in the Dock with a grey dot.</description>
+      </key>
+      <key name="dock-folders" type="as">
+        <default>[]</default>
+        <summary>Folder stacks</summary>
+        <description>Folders kept in the Dock as stacks, beside the Downloads stack (absolute paths). Drag a folder to the right side of the Dock to add one.</description>
+      </key>
       <key name="dock-downloads" type="b">
         <default>true</default>
         <summary>Downloads stack in the Dock</summary>
@@ -163,6 +214,12 @@
         <default>'automatic'</default>
         <summary>Downloads stack view</summary>
         <description>How the Downloads stack opens: automatic (a fan for a few files from a bottom dock, else a grid), fan, grid or list.</description>
+      </key>
+
+      <key name="dock-mission-control" type="b">
+        <default>false</default>
+        <summary>Mission Control in the dock</summary>
+        <description>Shows a Mission Control item in the dock, next to the apps. Off by default, as on macOS.</description>
       </key>
 
       <!-- Windows (features/windowControls, features/fullscreenSpace, features/roundedCorners) -->
@@ -262,6 +319,146 @@
         <default>[]</default>
         <summary>Apps without rounded corners</summary>
         <description>Windows whose WM_CLASS or app id (for example "org.gnome.Terminal" or "firefox") is listed keep square corners. Not case-sensitive.</description>
+      </key>
+
+      <!-- Window tiling, green-button menu, Hide (features/windows, features/windowControls) -->
+      <key name="windows-traffic-style" type="s">
+        <choices>
+          <choice value="glass"/>
+          <choice value="flat"/>
+        </choices>
+        <default>'glass'</default>
+        <summary>Traffic light style</summary>
+        <description>Look of Kiwi's top-bar window controls while macOS window buttons are on: 'glass' (macOS 27 Golden Gate glass beads, the default) or 'flat' (the classic flat traffic lights).</description>
+      </key>
+      <key name="windows-green-click" type="s">
+        <choices>
+          <choice value="fullscreen"/>
+          <choice value="zoom"/>
+        </choices>
+        <default>'fullscreen'</default>
+        <summary>Green button click</summary>
+        <description>What clicking the green (maximize) top-bar control does: 'fullscreen' (macOS default; the window goes full screen, in its own Space when that option is on) or 'zoom' (fill the screen without full screen). Alt-click does the other one.</description>
+      </key>
+      <key name="windows-green-menu" type="b">
+        <default>true</default>
+        <summary>Green button menu</summary>
+        <description>Hovering over the green top-bar control, or pressing and holding it, opens the macOS Fill &amp; Arrange menu: Move &amp; Resize, Fill &amp; Arrange, Center, Full Screen, Move to workspace or display, Return to Previous Size.</description>
+      </key>
+      <key name="windows-tiling" type="b">
+        <default>true</default>
+        <summary>Window tiling</summary>
+        <description>Kiwi tiles windows the way macOS 15 does: by dragging to the screen edges, corners and menu bar, from the green-button menu and with keyboard shortcuts. While it runs, GNOME's own edge tiling (org.gnome.mutter edge-tiling) is off; the user's value is saved and restored.</description>
+      </key>
+      <key name="windows-tile-drag-edges" type="b">
+        <default>true</default>
+        <summary>Drag windows to screen edges to tile</summary>
+        <description>Drag a window to the left or right edge for a half, or to a corner for a quarter. A translucent outline shows the tile; releasing tiles the window.</description>
+      </key>
+      <key name="windows-tile-drag-menubar" type="b">
+        <default>true</default>
+        <summary>Drag windows to menu bar to fill screen</summary>
+        <description>Drag a window onto the top bar to fill the screen (without full screen).</description>
+      </key>
+      <key name="windows-tile-drag-modifier" type="b">
+        <default>true</default>
+        <summary>Hold Alt while dragging windows to tile</summary>
+        <description>While Alt (the macOS Option key) is held during a drag, the half outlines show at once, without reaching the edge.</description>
+      </key>
+      <key name="windows-tile-margins" type="b">
+        <default>false</default>
+        <summary>Tiled windows have margins</summary>
+        <description>Leave a small margin around and between tiled windows. Off by default, as on macOS.</description>
+      </key>
+      <key name="windows-tile-left-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;Left']</default>
+        <summary>Tile left shortcut</summary>
+        <description>Move the focused window to the left half of the screen. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-tile-right-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;Right']</default>
+        <summary>Tile right shortcut</summary>
+        <description>Move the focused window to the right half of the screen. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-tile-top-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;Up']</default>
+        <summary>Tile top shortcut</summary>
+        <description>Move the focused window to the top half of the screen. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-tile-bottom-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;Down']</default>
+        <summary>Tile bottom shortcut</summary>
+        <description>Move the focused window to the bottom half of the screen. Left unbound while Stage Manager uses the same shortcut. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-fill-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;f']</default>
+        <summary>Fill shortcut</summary>
+        <description>Fill the screen with the focused window, without full screen. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-center-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;c']</default>
+        <summary>Center shortcut</summary>
+        <description>Centre the focused window on the screen. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-restore-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;r']</default>
+        <summary>Return to previous size shortcut</summary>
+        <description>Put the focused window back where it was before it was tiled. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-arrange-left-right-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;&lt;Shift&gt;Left']</default>
+        <summary>Arrange left and right shortcut</summary>
+        <description>The focused window on the left half, the previous window on the right half. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-arrange-right-left-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;&lt;Shift&gt;Right']</default>
+        <summary>Arrange right and left shortcut</summary>
+        <description>The focused window on the right half, the previous window on the left half. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-arrange-top-bottom-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;&lt;Shift&gt;Up']</default>
+        <summary>Arrange top and bottom shortcut</summary>
+        <description>The focused window on the top half, the previous window on the bottom half. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-arrange-bottom-top-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;&lt;Shift&gt;Down']</default>
+        <summary>Arrange bottom and top shortcut</summary>
+        <description>The focused window on the bottom half, the previous window on the top half. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-arrange-left-quarters-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;&lt;Alt&gt;&lt;Shift&gt;Left']</default>
+        <summary>Arrange left and quarters shortcut</summary>
+        <description>The focused window on the left half, the next two windows in the right quarters. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-arrange-right-quarters-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;&lt;Alt&gt;&lt;Shift&gt;Right']</default>
+        <summary>Arrange right and quarters shortcut</summary>
+        <description>The focused window on the right half, the next two windows in the left quarters. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-arrange-top-quarters-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;&lt;Alt&gt;&lt;Shift&gt;Up']</default>
+        <summary>Arrange top and quarters shortcut</summary>
+        <description>The focused window on the top half, the next two windows in the bottom quarters. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-arrange-bottom-quarters-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;&lt;Alt&gt;&lt;Shift&gt;Down']</default>
+        <summary>Arrange bottom and quarters shortcut</summary>
+        <description>The focused window on the bottom half, the next two windows in the top quarters. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-app-hide" type="b">
+        <default>true</default>
+        <summary>Hide and Hide Others</summary>
+        <description>Hide an app (Super+H, or Hide in the app menu): its windows are minimized without the minimize effect and come back together when the app is activated again. Hide Others hides every other app.</description>
+      </key>
+      <key name="windows-hide-shortcut" type="as">
+        <default>['&lt;Super&gt;h']</default>
+        <summary>Hide shortcut</summary>
+        <description>Hides the focused app. While it is GNOME's minimize shortcut (Super+H by default), Kiwi takes it from GNOME's minimize binding and gives it back on disable.</description>
+      </key>
+      <key name="windows-hide-others-shortcut" type="as">
+        <default>['&lt;Alt&gt;&lt;Super&gt;h']</default>
+        <summary>Hide Others shortcut</summary>
+        <description>Hides every app except the focused one.</description>
       </key>
 
       <!-- Shell behaviour (features/shellBehaviour) -->
@@ -508,6 +705,77 @@
         <description>Puts entry 6 of the strip (counted from the top) on the stage. Only active while Stage Manager is on.</description>
       </key>
 
+      <!-- Launchpad (features/launchpad) -->
+      <key name="launchpad" type="b">
+        <default>true</default>
+        <summary>Launchpad</summary>
+        <description>A full-screen grid of every app, with pages, search, folders and drag to reorder (macOS 11 to 15). Its folders and order are GNOME's own (org.gnome.desktop.app-folders and app-picker-layout), so the Activities app grid stays the same.</description>
+      </key>
+      <key name="launchpad-shortcut" type="as">
+        <default>['&lt;Super&gt;a', 'F4']</default>
+        <summary>Launchpad shortcut</summary>
+        <description>Opens and closes Launchpad. While Launchpad runs, GNOME's own "Show all apps" shortcut gives up these keys (Super+A by default) and gets them back when Launchpad stops. Empty means no shortcut.</description>
+      </key>
+      <key name="launchpad-delete-apps" type="b">
+        <default>true</default>
+        <summary>Delete apps in Launchpad</summary>
+        <description>In jiggle mode (hold Alt, or press and hold an icon), show a delete button on apps their owner can remove: Flatpak apps (through GNOME Software) and apps installed by the Installer. No other app gets one.</description>
+      </key>
+      <key name="dock-launchpad" type="b">
+        <default>true</default>
+        <summary>Launchpad in the Dock</summary>
+        <description>Show the Launchpad icon at the start of the Dock.</description>
+      </key>
+
+      <!-- Full screen Split View (features/splitView) -->
+      <key name="split-view" type="b">
+        <default>true</default>
+        <summary>Full screen Split View</summary>
+        <description>Hover the green button of a full-screen window to tile it to the left or right of the screen and pick the window for the other half (macOS Split View).</description>
+      </key>
+
+      <!-- Mission Control (features/missionControl) -->
+      <key name="mission-control" type="b">
+        <default>true</default>
+        <summary>Mission Control</summary>
+        <description>The overview becomes macOS Mission Control: a Spaces bar on top and the windows of the current Space spread out, with no search entry and no dash. App Exposé shows one app's windows.</description>
+      </key>
+      <key name="mission-control-shortcut" type="as">
+        <default>['F3', 'XF86LaunchA', '&lt;Control&gt;Up']</default>
+        <summary>Mission Control shortcut</summary>
+        <description>Opens or closes Mission Control. F3 (and XF86LaunchA, the Mission Control key of Apple keyboards) and Control+Up, as on macOS.</description>
+      </key>
+      <key name="app-expose-shortcut" type="as">
+        <default>['&lt;Control&gt;Down']</default>
+        <summary>App Exposé shortcut</summary>
+        <description>Shows all windows of the front app, with its minimized windows along the bottom.</description>
+      </key>
+      <key name="mc-static-spaces" type="b">
+        <default>true</default>
+        <summary>Keep Spaces until you remove them</summary>
+        <description>Spaces stay as you made them, also when empty, and the Spaces bar has + and × buttons (macOS). GNOME's dynamic workspaces are off while this is on and come back after.</description>
+      </key>
+      <key name="mc-rearrange-spaces" type="b">
+        <default>false</default>
+        <summary>Automatically rearrange Spaces based on most recent use</summary>
+        <description>Mission Control puts the Spaces you used last first.</description>
+      </key>
+      <key name="mc-group-by-app" type="b">
+        <default>false</default>
+        <summary>Group windows by application</summary>
+        <description>Mission Control places the windows of one app next to each other.</description>
+      </key>
+      <key name="mc-switch-to-app-space" type="b">
+        <default>true</default>
+        <summary>When switching to an application, switch to a Space with open windows for the application</summary>
+        <description>Off: the app switcher only lists the windows of the current Space (GNOME's app-switcher current-workspace-only, given back when Kiwi stops).</description>
+      </key>
+      <key name="mc-start-on-desktop" type="b">
+        <default>true</default>
+        <summary>Start on the desktop</summary>
+        <description>At login GNOME opens the overview; Kiwi shows the desktop instead, as macOS does.</description>
+      </key>
+
       <!-- Show Desktop (features/showDesktop) -->
       <key name="show-desktop-button" type="b">
         <default>true</default>
@@ -519,6 +787,16 @@
         <summary>Show Desktop shortcut</summary>
         <description>Shows the desktop or brings the windows back. Empty means no Kiwi shortcut; GNOME's own Show Desktop shortcut, if set, also plays this animation while Kiwi runs.</description>
       </key>
+      <key name="click-wallpaper-reveals-desktop" type="s">
+        <choices>
+          <choice value="always"/>
+          <choice value="stage-manager"/>
+          <choice value="never"/>
+        </choices>
+        <default>'always'</default>
+        <summary>Click wallpaper to reveal desktop</summary>
+        <description>Clicking empty wallpaper slides the windows aside to show the desktop (Stage Manager, while on, sends the stage to the strip instead): always (macOS), only while Stage Manager is on, or never. With desktop icons (DING) only clicks that reach the wallpaper count.</description>
+      </key>
       <key name="show-desktop-speed" type="s">
         <choices>
           <choice value="fast"/>
@@ -528,6 +806,240 @@
         <default>'normal'</default>
         <summary>Show Desktop animation speed</summary>
         <description>How fast the windows slide aside and back: fast, normal or slow.</description>
+      </key>
+
+      <!-- Screenshots (features/screenshots) -->
+      <key name="screenshots" type="b">
+        <default>true</default>
+        <summary>macOS screenshot shortcuts, toolbar and thumbnail</summary>
+        <description>Shift+Super+3 captures the screen, Shift+Super+4 an area or window, Shift+Super+5 opens the toolbar. They drive GNOME's own screenshot UI; Print and the other GNOME shortcuts stay as they are.</description>
+      </key>
+      <key name="screenshots-shortcut-screen" type="as">
+        <default>['&lt;Shift&gt;&lt;Super&gt;3']</default>
+        <summary>Capture Entire Screen shortcut</summary>
+        <description>Takes a screenshot of the whole screen at once. Empty means no shortcut.</description>
+      </key>
+      <key name="screenshots-shortcut-selection" type="as">
+        <default>['&lt;Shift&gt;&lt;Super&gt;4']</default>
+        <summary>Capture Selected Portion shortcut</summary>
+        <description>Drag an area to capture it; press Space to pick a window instead. Empty means no shortcut.</description>
+      </key>
+      <key name="screenshots-shortcut-toolbar" type="as">
+        <default>['&lt;Shift&gt;&lt;Super&gt;5']</default>
+        <summary>Screenshot toolbar shortcut</summary>
+        <description>Opens the toolbar with the capture and recording modes and Options. While a recording runs, it stops the recording. Empty means no shortcut.</description>
+      </key>
+      <key name="screenshots-save-to" type="s">
+        <choices>
+          <choice value="pictures"/>
+          <choice value="desktop"/>
+          <choice value="documents"/>
+          <choice value="clipboard"/>
+          <choice value="other"/>
+        </choices>
+        <default>'pictures'</default>
+        <summary>Save screenshots to</summary>
+        <description>Pictures/Screenshots (GNOME's own folder), the Desktop, Documents, only the clipboard, or another folder. macOS saves to the Desktop.</description>
+      </key>
+      <key name="screenshots-other-folder" type="s">
+        <default>''</default>
+        <summary>Other screenshot folder</summary>
+        <description>The folder used when Save to is Other Location.</description>
+      </key>
+      <key name="screenshots-timer" type="i">
+        <range min="0" max="10"/>
+        <default>0</default>
+        <summary>Screenshot timer in seconds</summary>
+        <description>Waits this long after you click Capture or Record in the toolbar. Kiwi uses 0 (none), 5 or 10.</description>
+      </key>
+      <key name="screenshots-thumbnail" type="b">
+        <default>true</default>
+        <summary>Show a floating thumbnail</summary>
+        <description>After a capture a small preview slides in at the bottom right. The file is saved to your chosen folder after 5 seconds, or at once when you swipe the preview to the right.</description>
+      </key>
+      <key name="screenshots-remember-selection" type="b">
+        <default>true</default>
+        <summary>Remember the last selection</summary>
+        <description>Starts the next area selection where the last one was.</description>
+      </key>
+      <key name="screenshots-show-pointer" type="b">
+        <default>false</default>
+        <summary>Show the mouse pointer in captures</summary>
+        <description>Includes the pointer in screenshots and recordings.</description>
+      </key>
+      <key name="screenshots-macos-names" type="b">
+        <default>true</default>
+        <summary>Name files like macOS</summary>
+        <description>Names screenshots "Screenshot 2026-03-09 at 08.05.07" instead of GNOME's "Screenshot From ...".</description>
+      </key>
+      <key name="screenshots-last-selection" type="ai">
+        <default>[]</default>
+        <summary>Last screenshot selection</summary>
+        <description>The x, y, width and height of the last selected area. Kiwi writes it.</description>
+      </key>
+
+      <!-- App switcher (features/switcher) -->
+      <key name="app-switcher" type="b">
+        <default>true</default>
+        <summary>macOS app switcher</summary>
+        <description>Super+Tab shows a panel of big app icons in most-recently-used order: Tab moves, Q quits, H hides, Down shows the app's windows, releasing Super switches. Replaces GNOME's app switcher while on; your shortcut is kept.</description>
+      </key>
+      <key name="switcher-cycle-windows" type="b">
+        <default>true</default>
+        <summary>Super+` cycles the windows of the front app</summary>
+        <description>Like Cmd-` on macOS: each press brings the next window of the current app forward, without a panel. Off gives Super+` back to GNOME's switcher.</description>
+      </key>
+      <key name="switcher-switch-to-space" type="b">
+        <default>true</default>
+        <summary>Switch to a Space with open windows for the application</summary>
+        <description>Choosing an app with no window on this workspace goes to a workspace that has one (macOS Mission Control setting). Off opens a new window here when the app can.</description>
+      </key>
+      <key name="switcher-restore-minimized" type="b">
+        <default>false</default>
+        <summary>Switching to an app restores its minimized windows</summary>
+        <description>macOS leaves minimized windows in the Dock unless Option (Alt) is held when Cmd (Super) is released. On restores the most recent one when the app has no other window to show.</description>
+      </key>
+
+      <!-- Trackpad gestures (features/gestures) -->
+      <key name="gestures" type="b">
+        <default>true</default>
+        <summary>Trackpad gestures</summary>
+        <description>macOS three- and four-finger touchpad gestures: App Exposé, Launchpad and Show Desktop, next to GNOME's own swipes for Mission Control and workspaces.</description>
+      </key>
+      <key name="gestures-mission-control" type="b">
+        <default>true</default>
+        <summary>Swipe up with three or four fingers for Mission Control</summary>
+        <description>GNOME's own overview swipe. Off: the swipe does nothing on the desktop.</description>
+      </key>
+      <key name="gestures-spaces" type="b">
+        <default>true</default>
+        <summary>Swipe left or right with three or four fingers to switch Spaces</summary>
+        <description>GNOME's own workspace swipe. Off: the swipe does nothing on the desktop.</description>
+      </key>
+      <key name="gestures-app-expose" type="b">
+        <default>true</default>
+        <summary>Swipe down with four fingers for App Exposé</summary>
+        <description>Shows every window of the front app.</description>
+      </key>
+      <key name="gestures-launchpad" type="b">
+        <default>true</default>
+        <summary>Pinch with thumb and three fingers for Launchpad</summary>
+        <description>Opens the Launchpad (the app grid).</description>
+      </key>
+      <key name="gestures-show-desktop" type="b">
+        <default>true</default>
+        <summary>Spread with thumb and three fingers to show the desktop</summary>
+        <description>Pushes the windows aside, like Show Desktop; pinch or click to bring them back.</description>
+      </key>
+
+      <!-- Hot corners (features/hotCorners) -->
+      <key name="hot-corner-top-left" type="s">
+        <choices>
+          <choice value="none"/>
+          <choice value="mission-control"/>
+          <choice value="app-expose"/>
+          <choice value="desktop"/>
+          <choice value="notification-center"/>
+          <choice value="launchpad"/>
+          <choice value="lock-screen"/>
+          <choice value="display-sleep"/>
+        </choices>
+        <default>'none'</default>
+        <summary>Hot corner action, top left</summary>
+        <description>What pushing the pointer into the top left corner does: none, mission-control, app-expose (Application Windows), desktop, notification-center, launchpad, lock-screen or display-sleep. macOS has every corner off.</description>
+      </key>
+      <key name="hot-corner-top-left-modifier" type="s">
+        <choices>
+          <choice value="none"/>
+          <choice value="shift"/>
+          <choice value="ctrl"/>
+          <choice value="alt"/>
+          <choice value="super"/>
+        </choices>
+        <default>'none'</default>
+        <summary>Modifier key the top left hot corner needs</summary>
+        <description>The corner fires only while this key is held (none, shift, ctrl, alt or super), which avoids accidental triggers.</description>
+      </key>
+      <key name="hot-corner-top-right" type="s">
+        <choices>
+          <choice value="none"/>
+          <choice value="mission-control"/>
+          <choice value="app-expose"/>
+          <choice value="desktop"/>
+          <choice value="notification-center"/>
+          <choice value="launchpad"/>
+          <choice value="lock-screen"/>
+          <choice value="display-sleep"/>
+        </choices>
+        <default>'none'</default>
+        <summary>Hot corner action, top right</summary>
+        <description>What pushing the pointer into the top right corner does: none, mission-control, app-expose (Application Windows), desktop, notification-center, launchpad, lock-screen or display-sleep. macOS has every corner off.</description>
+      </key>
+      <key name="hot-corner-top-right-modifier" type="s">
+        <choices>
+          <choice value="none"/>
+          <choice value="shift"/>
+          <choice value="ctrl"/>
+          <choice value="alt"/>
+          <choice value="super"/>
+        </choices>
+        <default>'none'</default>
+        <summary>Modifier key the top right hot corner needs</summary>
+        <description>The corner fires only while this key is held (none, shift, ctrl, alt or super), which avoids accidental triggers.</description>
+      </key>
+      <key name="hot-corner-bottom-left" type="s">
+        <choices>
+          <choice value="none"/>
+          <choice value="mission-control"/>
+          <choice value="app-expose"/>
+          <choice value="desktop"/>
+          <choice value="notification-center"/>
+          <choice value="launchpad"/>
+          <choice value="lock-screen"/>
+          <choice value="display-sleep"/>
+        </choices>
+        <default>'none'</default>
+        <summary>Hot corner action, bottom left</summary>
+        <description>What pushing the pointer into the bottom left corner does: none, mission-control, app-expose (Application Windows), desktop, notification-center, launchpad, lock-screen or display-sleep. macOS has every corner off.</description>
+      </key>
+      <key name="hot-corner-bottom-left-modifier" type="s">
+        <choices>
+          <choice value="none"/>
+          <choice value="shift"/>
+          <choice value="ctrl"/>
+          <choice value="alt"/>
+          <choice value="super"/>
+        </choices>
+        <default>'none'</default>
+        <summary>Modifier key the bottom left hot corner needs</summary>
+        <description>The corner fires only while this key is held (none, shift, ctrl, alt or super), which avoids accidental triggers.</description>
+      </key>
+      <key name="hot-corner-bottom-right" type="s">
+        <choices>
+          <choice value="none"/>
+          <choice value="mission-control"/>
+          <choice value="app-expose"/>
+          <choice value="desktop"/>
+          <choice value="notification-center"/>
+          <choice value="launchpad"/>
+          <choice value="lock-screen"/>
+          <choice value="display-sleep"/>
+        </choices>
+        <default>'none'</default>
+        <summary>Hot corner action, bottom right</summary>
+        <description>What pushing the pointer into the bottom right corner does: none, mission-control, app-expose (Application Windows), desktop, notification-center, launchpad, lock-screen or display-sleep. macOS has every corner off.</description>
+      </key>
+      <key name="hot-corner-bottom-right-modifier" type="s">
+        <choices>
+          <choice value="none"/>
+          <choice value="shift"/>
+          <choice value="ctrl"/>
+          <choice value="alt"/>
+          <choice value="super"/>
+        </choices>
+        <default>'none'</default>
+        <summary>Modifier key the bottom right hot corner needs</summary>
+        <description>The corner fires only while this key is held (none, shift, ctrl, alt or super), which avoids accidental triggers.</description>
       </key>
 
       <!-- Clipboard history (features/clipboard) -->
@@ -628,6 +1140,46 @@
         <default>'duckduckgo'</default>
         <summary>Spotlight: web search engine</summary>
         <description>One of duckduckgo, google, bing, brave, startpage, ecosia, or an https address that contains %s for the search words.</description>
+      </key>
+      <key name="spotlight-views" type="b">
+        <default>true</default>
+        <summary>Spotlight: browse views</summary>
+        <description>Show the Applications, Files, Actions and Clipboard buttons next to the empty search field, as on macOS Tahoe. Super+1 to Super+4 open them while Spotlight is open.</description>
+      </key>
+      <key name="spotlight-actions" type="b">
+        <default>true</default>
+        <summary>Spotlight: actions</summary>
+        <description>Search and run actions: Kiwi's own (Show Desktop, Lock Screen, a timer, Do Not Disturb, Dark Mode, Empty Trash, Take Screenshot) and the actions apps list in their .desktop files, such as New Private Window.</description>
+      </key>
+      <key name="spotlight-quick-keys" type="as">
+        <default>[]</default>
+        <summary>Spotlight: Quick Keys</summary>
+        <description>Short aliases typed in Spotlight, as "alias=target". The alias is 1 to 12 lowercase letters or digits; the target is action:ID (show-desktop, lock, timer, dnd, dark-mode, empty-trash, screenshot) or app:DESKTOP-ID. Words after the alias are the action's parameter, as in "tm 5" for a 5-minute timer.</description>
+      </key>
+      <key name="spotlight-history" type="b">
+        <default>true</default>
+        <summary>Spotlight: search history</summary>
+        <description>Remember recent searches and opened results, shown when the field is empty and recalled with the Up arrow, as on macOS. Turning it off clears them.</description>
+      </key>
+      <key name="spotlight-history-queries" type="as">
+        <default>[]</default>
+        <summary>Spotlight: recent searches (internal)</summary>
+        <description>The last searches that opened a result, newest first. Written by Spotlight; cleared by "Clear History".</description>
+      </key>
+      <key name="spotlight-recent-results" type="as">
+        <default>[]</default>
+        <summary>Spotlight: recent results (internal)</summary>
+        <description>The last opened results (apps, files, actions, settings) as small JSON records, newest first. Written by Spotlight; cleared by "Clear History".</description>
+      </key>
+      <key name="spotlight-quick-look" type="b">
+        <default>true</default>
+        <summary>Spotlight: Quick Look</summary>
+        <description>Space on a selected file previews it with GNOME's previewer (Sushi), when it is installed.</description>
+      </key>
+      <key name="spotlight-menu-items" type="b">
+        <default>true</default>
+        <summary>Spotlight: menu items</summary>
+        <description>Search the menu items of the focused app (from Kiwi's menu bar), and Tab scopes the search to them.</description>
       </key>
 
       <!-- Notch (features/notch) -->

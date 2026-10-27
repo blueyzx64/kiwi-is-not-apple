@@ -1,6 +1,6 @@
 // Run: gjs -m tests/stageManagerGeometry.test.js
 import {
-    METRICS, balancedFit, clonePose, edgeBarrier, fitCount, isClick, layerRect, overlaps, slotAt, stackLayers,
+    METRICS, balancedFit, clonePose, edgeBarrier, fitCount, layerRect, overlaps, slotAt, stackLayers,
     stripLayout, stripSide, stripVisible, scaleMs, tiltAngle, workspaceDirection,
 } from '../features/stageManager/geometry.js';
 
@@ -100,9 +100,6 @@ test('small helpers', () => {
     eq(scaleMs(400, NaN), 400);
     eq(workspaceDirection(0, 2), 1);
     eq(workspaceDirection(1, 1), 0);
-    eq(isClick({ x: 0, y: 0, time: 0 }, { x: 3, y: 3, time: 100 }), true);
-    eq(isClick({ x: 0, y: 0, time: 0 }, { x: 30, y: 3, time: 100 }), false);
-    eq(isClick({ x: 0, y: 0, time: 0 }, { x: 0, y: 0, time: 900 }), false);
     eq(slotAt([{ x: 0, y: 0, width: 10, height: 10 }], { x: 5, y: 5 }), 0);
     eq(slotAt([{ x: 0, y: 0, width: 10, height: 10 }], { x: 15, y: 5 }), -1);
 });

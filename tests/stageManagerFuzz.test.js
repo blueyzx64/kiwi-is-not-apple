@@ -91,7 +91,7 @@ function run(seed, steps) {
                 id: next++, appId: `${pick(apps)}.desktop`, type: parent && r() < 0.8 ? 'dialog' : 'normal',
                 parent, workspace: r() < 0.9 ? active : pick([0, 1, -1]), monitor: r() < 0.92 ? 0 : 1,
                 fullscreen: r() < 0.05, above: r() < 0.04, skipTaskbar: r() < 0.04,
-                title: r() < 0.03 ? 'Picture-in-Picture' : 'w', minimized: false,
+                title: r() < 0.03 ? 'Picture-in-Picture' : 'w', minimized: false, flagged: r() < 0.03,
             };
             windows.set(w.id, w);
             send({ type: 'add', window: { ...w } });
@@ -124,7 +124,7 @@ function run(seed, steps) {
             const id = any();
             change(id, { above: !windows.get(id).above });
         } else if (roll < 0.65) {
-            change(any(), { monitor: r() < 0.7 ? 0 : 1 });
+            change(any(), r() < 0.5 ? { monitor: r() < 0.7 ? 0 : 1 } : { flagged: r() < 0.5 });
         } else if (roll < 0.67) {
             const id = any();
             const others = [...windows.keys()].filter(x => x !== id);

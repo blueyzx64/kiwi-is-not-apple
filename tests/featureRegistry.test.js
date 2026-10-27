@@ -253,6 +253,60 @@ test('load(): a load that resolves after stop() starts nothing', () => {
     eq(log, []);
 });
 
+// ---- review R1 fixes (FX1) ----------------------------------------------------------------
+
+test('F5: a setting written inside enable() does not start the same feature twice', () => {
+    const log = [];
+    const reg = new FeatureRegistry(CleanupRegistry);
+    const vals = { a: true, b: true, other: 0 };
+    const ctx = { settings: { get_boolean: k => !!vals[k], set_int: (k, v) => { vals[k] = v; reg.refresh(k); } } };
+    // a feature that writes a Kiwi key while it starts (the nested refresh)
+    reg.register({ id: 'w', setting: 'b', cls: class {
+        enable() { log.push('+w'); ctx.settings.set_int('other', 1); }
+        disable() { log.push('-w'); }
+    } });
+    reg.start(ctx);
+    eq(log.filter(l => l === '+w').length, 1, 'enabled once, not recursed');
+    eq(reg.isActive('w'), true);
+    reg.stop();
+    eq(log.filter(l => l === '-w').length, 1, 'and so stopped once: no leaked instance');
+});
+test('F5: an endless write inside enable() cannot recurse', () => {
+    let n = 0;
+    const ctx = { settings: { get_boolean: () => true } };
+    const reg = new FeatureRegistry(CleanupRegistry);
+    reg.register({ id: 'w', cls: class {
+        enable() { if (++n < 50) reg.refresh('other'); }
+        disable() {}
+    } });
+    reg.start(ctx);
+    eq(n, 1);
+});
+test('F5: a write made by disable() during stop() starts nothing', () => {
+    const log = [];
+    const vals = { a: true };
+    const ctx = { settings: { get_boolean: k => !!vals[k] } };
+    const reg = new FeatureRegistry(CleanupRegistry);
+    reg.register({ id: 'a', setting: 'a', cls: class {
+        enable() { log.push('+a'); }
+        disable() { log.push('-a'); reg.refresh('a'); }
+    } });
+    reg.start(ctx);
+    reg.stop();
+    eq(log, ['+a', '-a']);
+});
+test('F15: refreshKeys is one pass: several restart keys restart a feature once', () => {
+    const log = [];
+    const { reg, ctx, flags } = setup([{ id: 'a', setting: 'a', restartOn: ['k1', 'k2'] }], { a: true }, {}, log);
+    reg.start(ctx);
+    log.length = 0;
+    reg.refreshKeys(['k1', 'k2', 'a']);
+    eq(log, ['-a', '+a']);
+    flags.a = false;
+    reg.refreshKeys(['a', 'k1']);
+    eq(log, ['-a', '+a', '-a']);
+});
+
 // ---- the real list ----------------------------------------------------------------------------
 
 test('features.js: ids unique, every entry lazy, conflicts and needs name real ids', () => {
