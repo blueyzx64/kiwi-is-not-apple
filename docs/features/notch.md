@@ -159,3 +159,11 @@ type, tabular figures for times and codes. Shape springs through `core/motion`
 (`{response 0.42, damping 0.8}` growing, critically damped shrinking); reduced motion and
 animations-off jump with a short crossfade. The waveform scales fixed-height bars (transforms,
 no relayout).
+
+**Measured (GNOME Shell 50.6 headless, software rendering, 1280x800).** Idle with nothing shown:
+no notch timers, timeouts or animations armed; the whole Shell used 30 ms of CPU in 10 s with the
+notch on and 20 ms with it off (noise level). A playing song (waveform): 330 ms per 5 s for the
+whole Shell, all of it repaint under software rendering. Expand with animations forced on: 28
+frames, 15.1 ms average and 29 ms worst stage frame (layout + paint of the whole stage), collapse 25
+frames at 13.0 ms; the spring sets only width and height (pages are fixed-size and clip, so no
+reflow). An event pill refreshes twice a minute, a countdown once a second, only while shown.
