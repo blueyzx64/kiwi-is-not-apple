@@ -99,7 +99,8 @@ Events (`EVENTS` in `core/events.js`): `window-added`, `window-changed`, `window
 | `settings.js` | `KiwiSettings` (typed access, per-key watchers), `runMigrations` |
 | `migrations.js` | every key migration, and the only module (with `lib/cleanup/`) that reads deprecated keys |
 | `compat.js` (+`compatModel.js`, `gioCompat.js`) | everything that differs between Shell 48-51; the reduced-motion source; shader effects; `isMaximized`, `maximizeWindow` |
-| `glass.js` (+`glassParams.js`) | Liquid Glass service: classes on surfaces (CSS in `styles/base.css`) |
+| `glass.js` (+`glassParams.js`) | faux Liquid Glass service: classes and a fill fragment on every Kiwi surface, shadow hosts, Clear↔Tinted, Reduce Transparency, Increase Contrast, Show Borders (CSS in `styles/base.css`); `attach`, `attachMenu`, `watch` |
+| `wallpaperTint.js` (+`wallpaperModel.js`) | the wallpaper's average colour for the glass tint (async 32×32 decode, cached per URI) |
 | `modalSurface.js` (+`modalLook.js`, `modalModel.js`) | one Kiwi modal at a time (Spotlight, Quick Paste, clipboard popover) |
 | `keybindings.js` (+`Model`) | registers Kiwi shortcuts, conflict list |
 | `mpris.js` (+`Model`) | MPRIS players |
@@ -122,10 +123,10 @@ Events (`EVENTS` in `core/events.js`): `window-added`, `window-changed`, `window
 | `stageManager/` | `stage-manager`, `stage-manager-shortcut` | strip, sets, flights (rebuilt in phase 4) |
 | `showDesktop/` | `show-desktop` | top-bar button, Super+D; delegates to Stage Manager |
 | `roundedCorners/` | `rounded-corners` | shader effect per window |
-| `liquidGlass/` | `liquid-glass` | turns `lib/glass.js` on for the panel and menus |
+| `liquidGlass/` | `liquid-glass` | attaches `lib/glass.js` to the panel, Control Center and calendar menus; the glass prefs |
 | `shellBehaviour/` | `shell-behaviour` | swipes stop at workspaces; no hot corner |
 | `fullscreenSpace/` | `move-window-to-new-workspace` | full screen in its own Space (kept as in 2.x) |
-| `appearance/` | `popup-menu-styling` | accent menus (Shell side; the GTK app fixes are in `gtk-theme`) |
+| `appearance/` | `appearance`, `popup-menu-styling` | Auto Light/Dark (owns `color-scheme` through core/originals), accent (`accent-color`) and highlight colours (`scheme.js`, `model.js`); accent menus (`index.js`; the GTK app fixes are in `gtk-theme`) |
 
 Shared-resource rules (defined once in `features.js`): `window-controls`/`app-buttons` are
 mirrors over `button-layout`; `control-center` beats `dnd-button`; `stage-manager` beats

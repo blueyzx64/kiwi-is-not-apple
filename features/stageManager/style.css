@@ -1,6 +1,7 @@
 /* feature: stage-manager */
-/* One floor under the whole strip: a plain translucent rounded panel with a rim and a soft
-   shadow. The windows lie on it, tilted toward the stage. No glass, no blur. */
+/* One floor under the whole strip: Kiwi glass (lib/glass.js) while Liquid Glass is on, else
+   this plain translucent rounded panel with a rim and a soft shadow. The windows lie on it,
+   tilted toward the stage. */
 .kiwi-stage-strip {
     border-radius: 20px;
     background-color: rgba(255, 255, 255, 0.09);
