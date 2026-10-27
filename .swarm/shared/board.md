@@ -250,3 +250,11 @@ No more installer work: no new pieces (Trash-drag uninstall, fly-to-dock, update
 - Orchestrator: the full-branch run after FX6 had 1 Kiwi error (dock magnify.resume on a destroyed frame during shutdown, an idle sync). FIXED (guard in `_sync` and `resume`); the re-run has 0 Kiwi errors and 8/8 (/tmp/x2/runs/20261027-172756-kiwi-is-not-apple-f44). Still in the log, for the next fixer: `-nan` translation-y at startup (source not found; FX6's fix didn't cover it); notch "no BlueZ" WARNING on every enable when BlueZ is absent (should be silent or debug).
 - Running: FX11 (a11y), R4 (final review).
 - Owner: FIX the AT-SPI ☰ menu. FX12 is working in kiwi-fx12-atspi / v3/fx12-atspi (open via Action, wait on events, read the popover and its submenus, close invisibly, activate via doAction; it decides the default from evidence).
+- R4 (final review): no S1. modalCount stays 0 and no Kiwi actor leak.
+  - Re-measures close the notch tab-switch item (40 ms isolated; the old 95 ms was input gaps), Spotlight typing (better than stock) and the MC re-sync (negligible).
+  - S2 → FX13:
+    - the colour filter still blacks the wallpaper after a Genie minimize/unminimize;
+    - colour-filter cogl viewport CRITICALs on 0x0 children;
+    - the Fedora logo falls back to the GNOME foot (no -symbolic icon in fedora-logos);
+    - the glass shadow tail hard edge (St blur truncation).
+  - S3 and tech debt → FX13: duplicate DBusMenu parser (menuBarItems is unbounded, can freeze), the isDark and clamp duplicates, magic timeouts (showDesktop:376, clipboard:483, stageManager/view.js:557), Split View `_settling` watchdog, `-nan` at start, the toolbar rect sized once, jagged SM thumbnails, the CC battery capsule, the notch BlueZ warning.
