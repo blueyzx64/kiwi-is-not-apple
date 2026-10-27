@@ -15,7 +15,7 @@
 | L9 | sonnet | P5 Notch v3: hover, tabs, live activities, file shelf, perf | kiwi-l9 / v3/l9-notch | | merged |
 | L10 | sonnet | P5 Notification Center column (clock click), Focus modes, time-sensitive | kiwi-l10 / v3/l10-nc | | started |
 | L11 | sonnet | P5 Widget model + desktop widget layer + gallery + built-in widgets | kiwi-l11 / v3/l11-widgets | | started |
-| L12 | sonnet | P6 App menu providers: GTK menubar, DBusMenu registrar, AT-SPI, Help search | kiwi-l12 / v3/l12 | P1-menubar | started |
+| L12 | sonnet | P6 App menu providers: GTK menubar, DBusMenu registrar, AT-SPI, Help search | kiwi-l12 / v3/l12 | P1-menubar | merged |
 | L13 | sonnet | P6 Spotlight Tahoe features | kiwi-l13 / v3/l13-spotlight | | merged |
 | L14 | sonnet | P6 Control Center customisation, pinned controls, status-item (SNI) host, menu bar item manager, Low Power/battery rows | kiwi-l14 / v3/l14 | P1-menubar | started |
 | L15 | sonnet | P7 Installer integration (Kiwi side) + onboarding | kiwi-l15 / v3/l15-installer | | started |
@@ -99,3 +99,5 @@ Groups (about 6 agents): (1) dock and minimize effects; (2) Stage Manager and wi
 - Next leads: L10, L12 (running with L9, L8 and H13); then L11, L14, L15.
 - L9 → merged (hover expand, tabs, live activities, file shelf via Mutter DnD, core/timers.js `ctx.timers`). The orchestrator dropped L9's own `notch-osd` part in favour of L2's core/osd routing. For verification: drop-onto-notch was not confirmed in the final full run (it was in a notch-only run); the expand animation's worst frame is 29 ms in software rendering; the source app shows a drop onto the notch as a cancelled drag.
 - ccr runs: after P1-windows and L3 (20261027-151727-…-f44), and after L2, L4, FX3 and L9 (20261027-153451-…-f44d): both 0 Kiwi errors, 8/8 PASS.
+- L12 → merged (GTK exported menus, DBusMenu registrar with Qt verified, R3 #1–3 and the `%s` fix; keys `menubar-native-menus` on, `menubar-atspi-*` off). OPEN, owner asked for all layers: the AT-SPI ☰ menu read does not work (it finds the button, not the popover's items, and may leave the menu open). Needs a focused follow-up (FX4) or an explicit deferral. Electron is untested. Qt/Electron need X11 (docs/features/app-menus.md).
+- H13 → done: /home/user/kiwi-swarm-tools/perf-lib.sh + classify.js (PERF and JITTER lines). Software-rendering baseline for the stock overview: mean 26.6 ms, p95 42 ms. Warm up first (the first frame is about 290 ms of shader setup). Spotlight open has jumps=1, to be checked in verification.
