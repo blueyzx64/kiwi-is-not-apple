@@ -16,7 +16,7 @@ const SUGGESTED = '<Control><Super>s';
 
 /** A combo row over a string key with fixed values. */
 function _choiceRow(settings, connect, key, title, subtitle, values, labels) {
-    const row = new Adw.ComboRow({ title, subtitle, model: Gtk.StringList.new(labels) });
+    const row = new Adw.ComboRow({ title, subtitle: subtitle ?? '', model: Gtk.StringList.new(labels) });
     const sync = () => {
         const i = values.indexOf(settings.get_string(key));
         row.selected = i < 0 ? 0 : i;
