@@ -326,14 +326,23 @@ export function searchMenus(menus, query, limit = 8) {
     const q = (query ?? '').trim().toLowerCase();
     if (!q)
         return [];
+    return menuEntries(menus).filter(e => e.item.label.toLowerCase().includes(q)).slice(0, limit);
+}
+
+/**
+ * Every enabled item that runs a command, with the path of menus it lives in (Spotlight's
+ * menu-item search ranks these itself).
+ *
+ * @param {object[]} menus
+ * @returns {{path: string, item: object}[]}
+ */
+export function menuEntries(menus) {
     const out = [];
     const walk = (items, path) => {
         for (const it of items) {
-            if (out.length >= limit)
-                return;
             if (it.kind === 'submenu')
                 walk(it.items, `${path} ▸ ${it.label}`);
-            else if (it.kind === 'item' && it.enabled && it.command && it.label.toLowerCase().includes(q))
+            else if (it.kind === 'item' && it.enabled && it.command)
                 out.push({ path, item: it });
         }
     };

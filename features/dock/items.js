@@ -14,6 +14,7 @@ import * as DND from 'resource:///org/gnome/shell/ui/dnd.js';
 
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { IconStyle } from '../../lib/iconStyle.js';
+import { badgeProgress, badgeText } from './model.js';
 
 /** Base of every clickable dock tile: a square St.Button with a centred content box. */
 export class DockItem {
@@ -71,6 +72,11 @@ export class DockItem {
         return this.content;
     }
 
+    /** Grows under the pointer (magnification). */
+    get magnifies() {
+        return true;
+    }
+
     /** @param {number} _button 1 primary, 2 middle */
     activate(_button) {}
 
@@ -108,6 +114,10 @@ export class SeparatorItem {
 
     get iconActor() {
         return this.actor;
+    }
+
+    get magnifies() {
+        return false;
     }
 
     update(spec) {
@@ -163,9 +173,94 @@ export class AppItem extends DockItem {
         return this._icon;
     }
 
+    /** The running dot (magnification keeps it at its size). */
+    get indicator() {
+        return this._dot;
+    }
+
     update(spec) {
         super.update(spec);
         this._dot.visible = spec.running && this._host.config.runningDots;
+        // macOS 27: an app that only runs in the background gets a grey indicator
+        if (spec.background)
+            this._dot.add_style_class_name('kiwi-dock-dot-background');
+        else
+            this._dot.remove_style_class_name('kiwi-dock-dot-background');
+    }
+
+    /**
+     * The red count and the progress bar an app publishes (LauncherEntry), or none.
+     *
+     * @param {?object} entry lib/launcherEntryModel.js entry
+     */
+    setBadge(entry) {
+        const text = badgeText(entry);
+        if (text && !this._badge) {
+            this._badge = new St.Label({
+                style_class: 'kiwi-dock-badge',
+                x_expand: true, y_expand: true,
+                x_align: Clutter.ActorAlign.END, y_align: Clutter.ActorAlign.START,
+            });
+            this.content.add_child(this._badge);
+        }
+        if (this._badge) {
+            this._badge.visible = !!text;
+            if (text)
+                this._badge.text = text;
+        }
+        const progress = badgeProgress(entry);
+        const m = this._host.metrics;
+        const length = Math.round(m.icon * 0.78);
+        if (progress !== null && !this._progress) {
+            this._progress = new St.Widget({
+                style_class: 'kiwi-dock-progress',
+                layout_manager: new Clutter.BinLayout(),
+                width: length,
+                x_expand: true, y_expand: true,
+                x_align: Clutter.ActorAlign.CENTER, y_align: Clutter.ActorAlign.END,
+            });
+            this._progressFill = new St.Widget({
+                style_class: 'kiwi-dock-progress-fill',
+                x_expand: true, y_expand: true, x_align: Clutter.ActorAlign.START, y_align: Clutter.ActorAlign.FILL,
+            });
+            this._progress.add_child(this._progressFill);
+            this._progress.set_style(`margin-bottom: ${Math.round(m.icon * 0.14)}px;`);
+            this.content.add_child(this._progress);
+        }
+        if (this._progress) {
+            this._progress.visible = progress !== null;
+            if (progress !== null)
+                this._progressFill.width = Math.round((length - 2) * progress);
+        }
+        this.badgeEntry = entry;
+    }
+
+    /**
+     * "Minimize windows into application icon": a small live thumbnail of the newest
+     * minimized window on the icon, or none.
+     *
+     * @param {?Meta.Window} metaWindow
+     */
+    setMinimizedThumb(metaWindow) {
+        if (metaWindow === (this._thumbWindow ?? null))
+            return;
+        this._thumbWindow = metaWindow;
+        this._thumb?.destroy();
+        this._thumb = null;
+        const source = metaWindow?.get_compositor_private();
+        if (!source)
+            return;
+        const m = this._host.metrics;
+        const frame = metaWindow.get_frame_rect();
+        const scale = (m.icon * 0.5) / Math.max(1, frame.width, frame.height);
+        this._thumb = new Clutter.Clone({
+            source,
+            width: Math.round(source.width * scale),
+            height: Math.round(source.height * scale),
+            x_expand: true, y_expand: true,
+            x_align: Clutter.ActorAlign.END, y_align: Clutter.ActorAlign.END,
+        });
+        this.content.add_child(this._thumb);
     }
 
     activate(button) {

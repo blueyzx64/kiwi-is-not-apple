@@ -9,10 +9,12 @@ import * as general from './general.js';
 import * as menuBar from './menuBar.js';
 import * as dock from './dock.js';
 import * as windows from './windows.js';
+import * as navigation from './navigation.js';
 import * as appearance from './appearance.js';
 import * as keyboard from './keyboard.js';
 import * as about from './about.js';
 import * as stageManagerPrefs from '../../features/stageManager/prefs.js';
+import * as missionControlPrefs from '../../features/missionControl/prefs.js';
 import * as notchPrefs from '../../features/notch/prefs.js';
 import * as spotlightPrefs from '../../features/spotlight/prefs.js';
 import * as controlCenterPrefs from '../../features/controlCenter/prefs.js';
@@ -36,7 +38,8 @@ function featurePage(id, title, icon, mod) {
 /** [{title, pages: [module with PAGE and build(args)]}] */
 export const SECTIONS = [
     { title: N_('General'), pages: [general] },
-    { title: N_('Desktop'), pages: [menuBar, dock, windows,
+    { title: N_('Desktop'), pages: [menuBar, dock, windows, navigation,
+        featurePage('mission-control', N_('Mission Control'), 'view-grid-symbolic', missionControlPrefs),
         featurePage('stage-manager', N_('Stage Manager'), 'view-app-grid-symbolic', stageManagerPrefs)] },
     { title: N_('Features'), pages: [
         featurePage('notch', N_('Notch'), 'preferences-system-notifications-symbolic', notchPrefs),

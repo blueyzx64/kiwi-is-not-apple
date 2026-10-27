@@ -41,6 +41,23 @@ export const EVENTS = Object.freeze({
     // policy listens; with no listener the app menu runs a plain fallback itself.
     'app-hide-requested': { appId: 'string|null', mode: "'hide' | 'others' | 'all'" },
     'window-tile-requested': { window: 'Meta.Window', mode: "'left' | 'right'" },
+    // Desktop actions (core/desktopActions.js: hot corners, gestures, the app switcher). App
+    // Exposé (Mission Control, P3) and the Launchpad listen; with no listener a stock fallback
+    // runs (the overview, the app grid). appId null means the focused app.
+    'app-expose-requested': { appId: 'string|null', source: "string ('corner'|'gesture'|'switcher')" },
+    // Launchpad (features/launchpad) also hears it from its dock tile (source 'dock')
+    'launchpad-requested': { source: "string ('corner'|'gesture'|'dock')" },
+    // Spotlight's "Start Timer" action (features/spotlight). The timers' owner (the notch's
+    // live activities, P5) listens; with no listener Spotlight runs a plain notification timer.
+    'timer-start-requested': { seconds: 'number', label: 'string', source: "string ('spotlight')" },
+    // The green button of the top-bar controls (features/windowControls) was hovered or left;
+    // Split View (features/splitView) offers its menu for a full-screen window
+    'green-button-hover': { window: 'Meta.Window|null', actor: 'Clutter.Actor', hovered: 'boolean' },
+    // Split View: tile a full-screen window to one half and pick its partner (the green menu
+    // emits it; features/splitView acts)
+    'split-view-requested': { window: 'Meta.Window', side: "'left' | 'right'" },
+    // A Split View pair formed (active) or ended (features/splitView)
+    'split-view-changed': { windows: 'Meta.Window[]', active: 'boolean' },
 });
 
 export class EventHub {

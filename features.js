@@ -17,6 +17,7 @@
 
 // ctx: see extension.js (settings, gettext, events, desktop, layout, motion, originals, ...)
 const bool = (ctx, key) => ctx.settings.get_boolean(key);
+const HOT_CORNERS = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
 
 // The date menu leaves the centre box when the user asked for it, and always while the notch
 // owns the centre. The message list moves to Quick Settings with it.
@@ -81,13 +82,26 @@ export const FEATURES = [
         load: async () => (await import('./features/clipboard/index.js')).ClipboardHistory,
     },
     {
-        // Top-bar button and Super+D slide the windows aside; hands off to Stage Manager's
-        // toggleDesktop() while that runs (looked up through ctx.features)
+        // Top-bar button, Super+D and a click on empty wallpaper slide the windows aside; hands
+        // off to Stage Manager's toggleDesktop() while that runs (looked up through ctx.features)
         id: 'show-desktop',
         when: ctx => bool(ctx, 'show-desktop-button') ||
-            ctx.settings.get_strv('show-desktop-shortcut').length > 0,
+            ctx.settings.get_strv('show-desktop-shortcut').length > 0 ||
+            ctx.settings.get_string('click-wallpaper-reveals-desktop') !== 'never',
+        keys: ['show-desktop-button', 'click-wallpaper-reveals-desktop'],
         restartOn: ['show-desktop-shortcut'],
         load: async () => (await import('./features/showDesktop/index.js')).ShowDesktop,
+    },
+    {
+        // Full-screen app grid with folders and jiggle delete; GNOME's folders and order are
+        // its data. Takes Super+A from GNOME's app grid while on (core/originals).
+        id: 'launchpad', setting: 'launchpad',
+        load: async () => (await import('./features/launchpad/index.js')).Launchpad,
+    },
+    {
+        // Full screen Split View on the green button; builds on full screen as its own Space
+        id: 'split-view', setting: 'split-view',
+        load: async () => (await import('./features/splitView/index.js')).SplitView,
     },
     {
         // Super tap / shortcut opens Spotlight; the clipboard rows come from clipboard-history
@@ -117,6 +131,14 @@ export const FEATURES = [
         load: async () => (await import('./features/shellBehaviour/index.js')).ShellBehaviour,
     },
     {
+        // The overview restyled as Mission Control, App Exposé, start on the desktop. It owns
+        // dynamic-workspaces (static Spaces) and app-switcher current-workspace-only through
+        // core/originals; the dock and the Stage Manager strip hide with the overview.
+        id: 'mission-control', setting: 'mission-control',
+        restartOn: ['mission-control-shortcut', 'app-expose-shortcut', 'mc-static-spaces'],
+        load: async () => (await import('./features/missionControl/index.js')).MissionControl,
+    },
+    {
         // macOS-style rounded corners: one shader effect per window actor
         id: 'rounded-corners', setting: 'rounded-corners',
         load: async () => (await import('./features/roundedCorners/index.js')).RoundedCorners,
@@ -133,6 +155,14 @@ export const FEATURES = [
         // Dash to Dock out of the enabled extensions while it runs and puts it back after.
         id: 'dock', setting: 'dock',
         load: async () => (await import('./features/dock/index.js')).Dock,
+    },
+    {
+        // Genie / Scale minimize into the dock (or any target a provider gives). 'gnome' keeps
+        // GNOME's own effect, so the feature does not run then.
+        id: 'minimize-effect',
+        when: ctx => ctx.settings.get_string('dock-minimize-effect') !== 'gnome',
+        keys: ['dock-minimize-effect'],
+        load: async () => (await import('./features/minimizeEffect/index.js')).MinimizeEffect,
     },
     {
         // Stage Manager wins over fullscreen-to-its-own-Space; its saved value is kept
@@ -162,5 +192,23 @@ export const FEATURES = [
         // and OSD (parts switch live on notch-notifications / notch-osd / notch-live-activities).
         id: 'notch', setting: 'notch',
         load: async () => (await import('./features/notch/index.js')).NotchFeature,
+    },
+    {
+        // Super+Tab and Super+`: Kiwi's handlers for switch-applications and switch-group while
+        // on, the Shell's own given back after (the user's shortcuts are never written)
+        id: 'app-switcher', setting: 'app-switcher',
+        restartOn: ['switcher-cycle-windows'],
+        load: async () => (await import('./features/switcher/index.js')).AppSwitcher,
+    },
+    {
+        // 3/4-finger touchpad gestures; GNOME's own swipes stay (the router only watches them)
+        id: 'gestures', setting: 'gestures',
+        load: async () => (await import('./features/gestures/index.js')).Gestures,
+    },
+    {
+        // Four hot corners; off (no barriers) while every corner is 'none', the macOS default
+        id: 'hot-corners',
+        when: ctx => HOT_CORNERS.some(c => ctx.settings.get_string(`hot-corner-${c}`) !== 'none'),
+        load: async () => (await import('./features/hotCorners/index.js')).HotCorners,
     },
 ];

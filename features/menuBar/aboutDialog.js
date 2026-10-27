@@ -11,7 +11,7 @@ import Shell from 'gi://Shell';
 import St from 'gi://St';
 
 import { ModalSurface } from '../../lib/modalSurface.js';
-import { chassisIcon, formatBytes } from './model.js';
+import { chassisIcon, fillPlaceholders, formatBytes } from './model.js';
 import { readSystemInfo } from './systemInfo.js';
 
 export class AboutThisPc {
@@ -101,7 +101,7 @@ export class AboutThisPc {
             set('memory', formatBytes(info.memory, { memory: true }));
             set('graphics', info.gpus.join('\n'));
             set('disk', info.disk
-                ? _('%s, %s available').replace('%s', formatBytes(info.disk.size)).replace('%s', formatBytes(info.disk.free))
+                ? fillPlaceholders(_('%s, %s available'), formatBytes(info.disk.size), formatBytes(info.disk.free))
                 : null);
             set('os', info.os.name);
             set('gnome', info.gnome);
