@@ -67,6 +67,7 @@ prefs.js metadata.json stylesheet.css schemas/ po/`). `make pack-check` verifies
 | `desktop` | `core/desktop.js` DesktopService (`acquire(cleanup)` starts tracking) |
 | `layout` | `core/layout.js` LayoutService (`acquire(cleanup)`, `claim()`, `workArea()`) |
 | `motion` | `core/motion.js` Motion (`ease`, `spring`, `env`) |
+| `appMenus` | `core/appMenus/service.js` AppMenuService (menus of the focused app) |
 | `originals` | `core/originals.js` OriginalsStore (give it to a `SettingOwner`) |
 
 ## 3. core/
@@ -85,10 +86,13 @@ prefs.js metadata.json stylesheet.css schemas/ po/`). `make pack-check` verifies
 | `windowState.js` | why a window is not in its normal place (`staged`, ...) | `WindowState.set/has/list/watch`, `interceptMinimize`, `setStageActive` |
 | `notificationRouter.js` | banners to the notch or stock, shared `{count, dnd}` | `setBannerSink`, `pinBanners`, `connect`, `state`, `setDnd` |
 | `mprisWatcher.js` | one MPRIS source for the extension | `MprisWatcher.acquire(cleanup, gettext)` |
+| `appMenus/` | the focused app's menus (ctx.appMenus): pure `model.js` (generic menus, well-known GTK actions, Help search, ⌘ shortcut labels), `gtkActions.js` (org.gtk.Actions provider), `commands.js` (generic commands), `service.js` (providers, cache, activation) | `acquire(owner)`, `targetFor(win)`, `peek/results(target)`, `build(target, results, opts)`, `activate(target, command)`, `registerProvider(owner, provider)` |
 
 Events (`EVENTS` in `core/events.js`): `window-added`, `window-changed`, `window-removed`,
 `window-focused`, `app-focused`, `workspaces-changed`, `monitors-changed`, `work-area-changed`,
-`motion-changed`, `feature-changed`, `minimize-requested`.
+`motion-changed`, `feature-changed`, `minimize-requested`, `notification-center-requested`
+(the clock), `app-hide-requested` and `window-tile-requested` (app-menu commands for the
+window manager; the menu bar runs a fallback when nobody listens).
 
 ## 4. lib/
 
@@ -114,7 +118,7 @@ Events (`EVENTS` in `core/events.js`): `window-added`, `window-changed`, `window
 | Folder | Registry ids (features.js) | Notes |
 |---|---|---|
 | `windowControls/` | `window-controls`, `app-buttons`, `gtk-theme` | traffic lights in the top bar (`index.js`), the apps' own buttons when off (`appButtons.js`), both owning `button-layout` through `buttonLayout.js` (a `SettingOwner`); GTK stylesheets in `gtk/` imported into the user's gtk.css by `gtkTheme.js` |
-| `menuBar/` | `menu-bar` | the Activities button policy now; the macOS menu bar in phase 1 |
+| `menuBar/` | `menu-bar` | the macOS menu bar: logo menu, app name and menus (core/appMenus), transparent adaptive bar, full-screen reveal, privacy dots, About This PC, Force Quit, clock hook, Activities policy |
 | `calendar/` | `calendar`, `quick-settings-notifications`, `dnd-button` | date menu on the right as a card; notification list in Quick Settings; Kiwi's Do Not Disturb (beaten by `control-center`) |
 | `controlCenter/` | `control-center` | Quick Settings restyled |
 | `notch/` | `notch` | banners, media, OSD, dashboard |

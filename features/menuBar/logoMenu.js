@@ -75,7 +75,8 @@ class KiwiLogoMenu extends PanelMenu.Button {
         this._recent = new PopupMenu.PopupSubMenuMenuItem(_('Recent Items'));
         this._recent.add_style_class_name('kiwi-menubar-menu-item');
         this.menu.addMenuItem(this._recent);
-        cleanup.connect(this._recent.menu, 'open-state-changed', (_m, open) => {
+        // Filled as the logo menu opens: a submenu with no items cannot open
+        cleanup.connect(this.menu, 'open-state-changed', (_m, open) => {
             if (open)
                 this._fillRecent();
         });
@@ -129,7 +130,7 @@ class KiwiLogoMenu extends PanelMenu.Button {
         const docsAt = sub.numMenuItems;
         const path = GLib.build_filenamev([GLib.get_user_data_dir(), 'recently-used.xbel']);
         readText(path, this._cancellable).then(text => {
-            if (this._cancellable.is_cancelled() || !sub.isOpen)
+            if (this._cancellable.is_cancelled() || !this.menu.isOpen)
                 return;
             const docs = parseRecentXbel(text ?? '', RECENT_DOCS);
             if (!docs.length && !apps.length) {

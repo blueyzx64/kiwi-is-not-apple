@@ -38,6 +38,7 @@ import { AppMenuBar } from './appMenuBar.js';
 import { ForceQuit } from './forceQuit.js';
 import { FullscreenReveal } from './fullscreenReveal.js';
 import { LogoMenu } from './logoMenu.js';
+import { MenuGlass } from './menuGlass.js';
 import { PrivacyDots } from './privacyDots.js';
 
 export const LOGO_ROLE = 'kiwi-menubar-logo';
@@ -115,6 +116,7 @@ export class MenuBar {
                 forceQuitAccel: () => ks.strv('menubar-force-quit-shortcut')[0] ?? null,
             });
             reg.add(() => logo.destroy());
+            new MenuGlass(reg).add(logo.menu);
             logo.setLogo(ks.string('menubar-logo'));
             Main.panel.addToStatusArea(LOGO_ROLE, logo, 0, 'left');
             PanelLayout.claim(reg, { id: LOGO_ROLE, actor: logo.container, box: 'left', anchor: { first: true } });

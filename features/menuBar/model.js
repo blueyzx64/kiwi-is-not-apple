@@ -102,14 +102,6 @@ export function bandLuminance(pixels, { rowstride, channels }, rect, grid = 24) 
     return { mean, spread: at(0.9) - at(0.1) };
 }
 
-/** Luminance of a '#rrggbb' colour (the background colour of 'none' or bars). */
-export function colorLuminance(hex) {
-    const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec(hex ?? '');
-    if (!m)
-        return 0;
-    return relativeLuminance(parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16));
-}
-
 /**
  * Dark or light text over the band, with hysteresis so a band near the flip point does not
  * flicker between wallpapers of similar brightness.
@@ -125,18 +117,6 @@ export function chooseText(stats, previousDark = null) {
     else if (previousDark === false && stats.mean < TEXT_FLIP_LUMINANCE + TEXT_FLIP_HYSTERESIS)
         darkText = false;
     return { darkText, scrim: stats.spread > MIXED_SPREAD };
-}
-
-/**
- * The first picture of a GNOME background XML (slideshow or day/night): its <file> (or the
- * <from> of a transition).
- *
- * @param {string} xml
- * @returns {?string} a path or URI
- */
-export function backgroundXmlPicture(xml) {
-    const m = /<(?:file|from)>\s*([^<\s][^<]*?)\s*<\/(?:file|from)>/.exec(xml ?? '');
-    return m ? m[1] : null;
 }
 
 /**

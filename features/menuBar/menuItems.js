@@ -43,3 +43,20 @@ export function menuHeading(text) {
     item.add_style_class_name('kiwi-menubar-menu-heading');
     return item;
 }
+
+/**
+ * A popup menu that is filled just before it opens: PopupMenu.open() refuses an empty menu,
+ * and the items are built only when needed (a closed menu bar holds no items).
+ */
+export class LazyMenu extends PopupMenu.PopupMenu {
+    constructor(source, fill) {
+        super(source, 0.0, St.Side.TOP);
+        this._fillMenu = fill;
+    }
+
+    open(animate) {
+        if (!this.isOpen)
+            this._fillMenu(this);
+        super.open(animate);
+    }
+}

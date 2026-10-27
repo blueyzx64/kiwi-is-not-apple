@@ -5,7 +5,8 @@
 // maximized.
 //
 // Style classes on Main.panel (rules in style.css):
-//   kiwi-menubar-clear                 transparent (else the theme or glass fill shows)
+//   kiwi-menubar-clear                 transparent (else the theme or glass fill shows; the
+//                                      glass fill is held off through a Glass handle)
 //   kiwi-menubar-on-light / -on-dark   which text the wallpaper band needs
 //   kiwi-menubar-scrim                 a soft gradient for a mixed band (legibility)
 //
@@ -31,9 +32,9 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import { WindowState } from '../../core/windowState.js';
 import { isUserFacing } from '../../core/desktopModel.js';
-import {
-    backgroundXmlPicture, bandLuminance, barLook, chooseText, colorLuminance, touchesBar, wallpaperBand,
-} from './model.js';
+import { Glass } from '../../lib/glass.js';
+import { isXmlBackground, parseHexColor, wallpaperSource, xmlFirstImage } from '../../lib/wallpaperModel.js';
+import { bandLuminance, barLook, chooseText, relativeLuminance, touchesBar, wallpaperBand } from './model.js';
 import { readText } from './systemInfo.js';
 
 Gio._promisify(Gio.File.prototype, 'read_async');
@@ -97,8 +98,17 @@ export class AdaptiveBar {
         cleanup.connect(Main.layoutManager, 'monitors-changed', resample);
         cleanup.connect(Main.layoutManager.panelBox, 'notify::height', resample);
 
-        const st = St.Settings.get();
-        cleanup.connect(st, 'notify::high-contrast', () => this._apply());
+        // The panel's glass fill (liquid-glass) must give way while the bar is clear: a fill
+        // shows only while every handle on it is visible. 'blur' draws nothing of its own, so
+        // with liquid-glass off this handle changes nothing.
+        this._glass = Glass.attach(panel, { surface: 'panel', layers: 'blur' });
+        cleanup.add(() => this._glass.destroy());
+        // Reduce Transparency, Increase Contrast or high contrast: always the solid bar
+        this._opaque = false;
+        Glass.watch(cleanup, ({ env }) => {
+            this._opaque = !!(env.opaque || env.highContrast);
+            this._apply();
+        });
         cleanup.connect(Main.overview, 'showing', () => this._apply());
         cleanup.connect(Main.overview, 'hidden', () => this._checkWindows());
 
@@ -190,7 +200,7 @@ export class AdaptiveBar {
             transparent: true,
             windowAtTop: this._windowAtTop,
             overview: Main.overview.visible,
-            solidOnly: !!St.Settings.get().high_contrast,
+            solidOnly: this._opaque || !!St.Settings.get().high_contrast,
         });
         this._look = look;
         const clear = look === 'clear' && !!this._text;
@@ -199,6 +209,7 @@ export class AdaptiveBar {
         set(CLASSES.light, clear && this._text.darkText);
         set(CLASSES.dark, clear && !this._text.darkText);
         set(CLASSES.scrim, clear && this._text.scrim);
+        this._glass?.setVisible(!clear);
     }
 
     // ---- wallpaper --------------------------------------------------------------------------
@@ -210,53 +221,67 @@ export class AdaptiveBar {
         const monitor = Main.layoutManager.primaryMonitor;
         if (!monitor)
             return;
-        const dark = this._iface.get_string('color-scheme') === 'prefer-dark';
-        const uri = (dark && this._bg.get_string('picture-uri-dark')) || this._bg.get_string('picture-uri');
+        // The same picture the Shell shows (and glass tints from): lib/wallpaperModel.js
         const option = this._bg.get_string('picture-options');
+        const source = wallpaperSource({
+            pictureUri: this._bg.get_string('picture-uri'),
+            pictureUriDark: this._bg.get_string('picture-uri-dark'),
+            options: option,
+            primaryColor: this._bg.get_string('primary-color'),
+            colorScheme: this._iface.get_string('color-scheme'),
+        });
         const band = Main.layoutManager.panelBox.height || Main.panel.height;
-        const key = `${uri}|${option}|${monitor.width}x${monitor.height}|${band}`;
+        const key = `${source.uri ?? source.kind}|${option}|${monitor.width}x${monitor.height}|${band}`;
         let stats = this._cache.get(key);
         if (!stats) {
             try {
-                stats = await this._measure(uri, option, monitor, band, cancellable);
+                stats = source.kind === 'file'
+                    ? await this._measure(source.uri, option, monitor, band, cancellable)
+                    : null;
             } catch (e) {
                 if (!e.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
-                    console.warn(`[Kiwi] menu bar: cannot read the wallpaper ${uri}: ${e.message}`);
-                if (cancellable.is_cancelled())
-                    return;
-                stats = { mean: colorLuminance(this._bg.get_string('primary-color')), spread: 0 };
+                    console.warn(`[Kiwi] menu bar: cannot read the wallpaper ${source.uri}: ${e.message}`);
+                stats = null;
             }
             if (cancellable.is_cancelled())
                 return;
+            stats ??= this._colorStats(source.color);
             this._cache.set(key, stats);
         }
         this._text = chooseText(stats, this._text?.darkText ?? null);
         this._apply();
     }
 
+    // The background colour (picture-options 'none', bars, or no readable picture)
+    _colorStats(color = null) {
+        const [r, g, b] = color ?? parseHexColor(this._bg.get_string('primary-color')) ?? [0, 0, 0];
+        return { mean: relativeLuminance(r, g, b), spread: 0 };
+    }
+
     async _measure(uri, option, monitor, band, cancellable) {
-        const solid = { mean: colorLuminance(this._bg.get_string('primary-color')), spread: 0 };
-        if (!uri || option === 'none')
-            return solid;
         let file = Gio.File.new_for_uri(uri);
-        if (file.get_path()?.endsWith('.xml')) {
-            const picture = backgroundXmlPicture(await readText(file.get_path(), cancellable));
-            if (!picture)
-                return solid;
-            file = picture.includes('://') ? Gio.File.new_for_uri(picture) : Gio.File.new_for_path(picture);
+        if (isXmlBackground(uri)) {
+            const path = xmlFirstImage(await readText(file.get_path(), cancellable));
+            if (!path)
+                return null;
+            file = GLib.path_is_absolute(path) ? Gio.File.new_for_path(path)
+                : file.get_parent().resolve_relative_path(path);
         }
         // Placements by ratio (zoom, stretched, scaled, spanned) read a small decode; centred
         // and tiled pictures are placed by their real pixels, so they are decoded full size
         const byRatio = option !== 'centered' && option !== 'wallpaper';
         const stream = await file.read_async(GLib.PRIORITY_LOW, cancellable);
-        const pixbuf = await GdkPixbuf.Pixbuf.new_from_stream_at_scale_async(stream,
-            byRatio ? SAMPLE_WIDTH : -1, -1, true, cancellable);
-        stream.close_async(GLib.PRIORITY_LOW, null, null);
-        const image = { width: pixbuf.get_width(), height: pixbuf.get_height() };
-        const rect = wallpaperBand(image, monitor, option, band);
-        if (!rect)
-            return solid;
-        return bandLuminance(pixbuf.get_pixels(),
-            { rowstride: pixbuf.get_rowstride(), channels: pixbuf.get_n_channels() }, rect);
+        try {
+            const pixbuf = await GdkPixbuf.Pixbuf.new_from_stream_at_scale_async(stream,
+                byRatio ? SAMPLE_WIDTH : -1, -1, true, cancellable);
+            const rect = wallpaperBand({ width: pixbuf.get_width(), height: pixbuf.get_height() },
+                monitor, option, band);
+            if (!rect)
+                return null;
+            return bandLuminance(pixbuf.read_pixel_bytes().toArray(),
+                { rowstride: pixbuf.get_rowstride(), channels: pixbuf.get_n_channels() }, rect);
+        } finally {
+            stream.close_async(GLib.PRIORITY_LOW, null, null);
+        }
     }
 }

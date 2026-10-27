@@ -23,16 +23,20 @@ import { getMixerControl } from 'resource:///org/gnome/shell/ui/status/volume.js
 
 import { PanelLayout } from '../../core/panelLayout.js';
 import { keepHidden } from '../../lib/keepHidden.js';
+import { whenQuickSettingsReady } from '../../lib/quickSettings.js';
 import { micApps, privacyDots } from './model.js';
-import { menuHeading, menuItem } from './menuItems.js';
+import { LazyMenu, menuHeading, menuItem } from './menuItems.js';
+import { MenuGlass } from './menuGlass.js';
 
 export const PRIVACY_ROLE = 'kiwi-menubar-privacy';
 const KINDS = ['screen', 'camera', 'mic'];
 
 const PrivacyButton = GObject.registerClass(
 class KiwiPrivacyButton extends PanelMenu.Button {
-    _init(name) {
-        super._init(0.5, name, false);
+    _init(name, fill) {
+        super._init(0.5, name, true);
+        // Filled as it opens (an empty PopupMenu refuses to open)
+        this.setMenu(new LazyMenu(this, fill));
         this.add_style_class_name('kiwi-menubar-privacy');
         const box = new St.BoxLayout({ style_class: 'kiwi-privacy-dots', y_align: Clutter.ActorAlign.CENTER });
         this.add_child(box);
@@ -65,45 +69,47 @@ export class PrivacyDots {
     start() {
         const _ = this._ctx.gettext;
         const cleanup = this._cleanup;
-        const button = new PrivacyButton(_('Privacy'));
+        const button = new PrivacyButton(_('Privacy'), () => this._fillMenu());
         this._button = button;
         cleanup.add(() => {
             button.destroy();
             this._button = null;
         });
         Main.panel.addToStatusArea(PRIVACY_ROLE, button, 0, 'right');
+        new MenuGlass(cleanup).add(button.menu);
         PanelLayout.claim(cleanup, {
             id: PRIVACY_ROLE, actor: button.container, box: 'right',
             anchor: { before: ['quickSettings'], fallback: 'last' },
         });
-        cleanup.connect(button.menu, 'open-state-changed', (_m, open) => {
-            if (open)
-                this._fillMenu();
-        });
 
-        const qs = Main.panel.statusArea.quickSettings;
-        const sharing = Main.panel.statusArea.screenSharing ?? null;
-        // GNOME's own privacy icons give way to the dots
-        for (const indicator of [qs?._camera, qs?._volumeInput, qs?._remoteAccess]) {
-            if (indicator)
-                cleanup.add(keepHidden(indicator));
-        }
-        if (sharing)
-            PanelLayout.hide(cleanup, 'screenSharing');
-
-        const sync = () => this._sync();
         // Microphone: the Shell's rule, on its own mixer control
+        const sync = () => this._sync();
         this._mixer = getMixerControl();
         for (const signal of ['stream-added', 'stream-removed', 'stream-changed', 'default-source-changed', 'state-changed'])
             cleanup.connect(this._mixer, signal, sync);
         this._source = null;
-        // Camera and screen: the stock indicators' own visibility
-        this._cameraIcon = qs?._camera?._indicator ?? null;
-        this._recordingIcon = qs?._remoteAccess?._indicator ?? null;
+        this._cameraIcon = this._recordingIcon = this._sharing = null;
+        // Camera and screen: the stock indicators' own visibility, once Quick Settings is built
+        whenQuickSettingsReady(cleanup, qs => this._adoptStock(qs), 'privacy dots');
+        this._sync();
+    }
+
+    // GNOME's own privacy icons give way to the dots; the dots follow their state
+    _adoptStock(qs) {
+        const cleanup = this._cleanup;
+        for (const indicator of [qs._camera, qs._volumeInput, qs._remoteAccess]) {
+            if (indicator)
+                cleanup.add(keepHidden(indicator));
+        }
+        const sharing = Main.panel.statusArea.screenSharing ?? null;
+        if (sharing)
+            PanelLayout.hide(cleanup, 'screenSharing');
+        this._cameraIcon = qs._camera?._indicator ?? null;
+        this._recordingIcon = qs._remoteAccess?._indicator ?? null;
         this._sharing = sharing;
         for (const actor of [this._cameraIcon, this._recordingIcon, this._sharing]) {
             if (actor)
-                cleanup.connect(actor, 'notify::visible', sync);
+                cleanup.connect(actor, 'notify::visible', () => this._sync());
         }
         this._sync();
     }
@@ -144,7 +150,8 @@ export class PrivacyDots {
         menu.removeAll();
         if (this._state.mic) {
             menu.addMenuItem(menuHeading(_('Microphone')));
-            for (const name of micApps(this._micOutputs()))
+            const names = micApps(this._micOutputs());
+            for (const name of names.length ? names : [_('An app is using the microphone')])
                 menu.addMenuItem(menuItem(name, { enabled: false }));
         }
         if (this._state.camera) {

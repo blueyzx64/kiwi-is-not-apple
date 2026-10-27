@@ -25,7 +25,8 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import { PanelLayout } from '../../core/panelLayout.js';
 import { searchMenus, WM_ACCEL_SLOTS } from '../../core/appMenus/model.js';
-import { menuItem } from './menuItems.js';
+import { LazyMenu, menuItem } from './menuItems.js';
+import { MenuGlass } from './menuGlass.js';
 
 export const APPS_CLAIM = 'kiwi-menubar-apps';
 const DESKTOP_APP = 'org.gnome.Nautilus.desktop';
@@ -89,23 +90,6 @@ class KiwiMenuOverflowLayout extends Clutter.LayoutManager {
         }
     }
 });
-
-/**
- * A popup menu that is filled just before it opens: PopupMenu.open() refuses an empty menu,
- * and the items are built only when needed (a closed menu bar holds no items).
- */
-class LazyMenu extends PopupMenu.PopupMenu {
-    constructor(source, fill) {
-        super(source, 0.0, St.Side.TOP);
-        this._fillMenu = fill;
-    }
-
-    open(animate) {
-        if (!this.isOpen)
-            this._fillMenu(this);
-        super.open(animate);
-    }
-}
 
 const TopMenu = GObject.registerClass(
 class KiwiTopMenu extends PanelMenu.Button {
@@ -179,6 +163,7 @@ export class AppMenuBar {
         this._wm = new Gio.Settings({ schema_id: 'org.gnome.desktop.wm.keybindings' });
         this._mutter = new Gio.Settings({ schema_id: 'org.gnome.mutter.keybindings' });
 
+        this._glass = new MenuGlass(cleanup);
         this._strip = new St.Widget({
             style_class: 'kiwi-menubar-apps', layout_manager: new OverflowLayout(),
             y_expand: true, clip_to_allocation: true,
@@ -308,6 +293,7 @@ export class AppMenuBar {
         while (this._buttons.length < menus.length) {
             const b = new TopMenu('', button => this._onOpen(button));
             Main.panel.menuManager.addMenu(b.menu);
+            this._glass.add(b.menu);
             this._cleanup.connect(b.menu, 'open-state-changed', (_m, open) => {
                 // Connected after the menu manager's handler, so it runs once the grab took
                 // the key focus: macOS puts the cursor in Help's search field
@@ -374,6 +360,8 @@ export class AppMenuBar {
 
     _addItems(menu, items, button) {
         const target = this._target;
+        // A menu with a checkmark reserves the check column for every item (macOS alignment)
+        const checks = items.some(i => i.checked === true || i.checked === false);
         for (const it of items) {
             switch (it.kind) {
             case 'separator':
@@ -382,6 +370,8 @@ export class AppMenuBar {
             case 'submenu': {
                 const sub = new PopupMenu.PopupSubMenuMenuItem(it.label);
                 sub.add_style_class_name('kiwi-menubar-menu-item');
+                if (checks)
+                    sub.setOrnament(PopupMenu.Ornament.NONE);
                 this._addItems(sub.menu, it.items, button);
                 menu.addMenuItem(sub);
                 break;
@@ -391,7 +381,8 @@ export class AppMenuBar {
                 break;
             default:
                 menu.addMenuItem(menuItem(it.label, {
-                    accel: it.accel, keys: this._keys(), enabled: it.enabled, checked: it.checked,
+                    accel: it.accel, keys: this._keys(), enabled: it.enabled,
+                    checked: checks ? !!it.checked : null,
                     onActivate: () => this._service.activate(target, it.command),
                 }));
             }

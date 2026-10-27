@@ -1,7 +1,6 @@
 // Run: gjs -m tests/menuBarModel.test.js
 import {
-    relativeLuminance, wallpaperBand, bandLuminance, colorLuminance, chooseText,
-    backgroundXmlPicture, touchesBar, barLook, parseOsRelease, parseCpuInfo, parseMemTotal,
+    relativeLuminance, wallpaperBand, bandLuminance, chooseText, touchesBar, barLook, parseOsRelease, parseCpuInfo, parseMemTotal,
     formatBytes, deviceModel, chassisIcon, gpuNames, parseRecentXbel, forceQuitRows,
     privacyDots, micApps,
 } from '../features/menuBar/model.js';
@@ -29,8 +28,6 @@ test('luminance of black, white and grey', () => {
     eq(relativeLuminance(0, 0, 0), 0);
     near(relativeLuminance(255, 255, 255), 1);
     near(relativeLuminance(128, 128, 128), 0.216);
-    near(colorLuminance('#ffffff'), 1);
-    eq(colorLuminance('bogus'), 0);
 });
 
 const mon = { width: 1280, height: 800 };
@@ -80,12 +77,6 @@ test('text flips with hysteresis and a scrim on mixed bands', () => {
     eq(chooseText({ mean: 0.10, spread: 0 }, true).darkText, false);  // flips
     eq(chooseText({ mean: 0.20, spread: 0 }, false).darkText, false); // stays light
     eq(chooseText({ mean: 0.5, spread: 0.6 }).scrim, true);
-});
-
-test('background XML: first file', () => {
-    eq(backgroundXmlPicture('<background><static><file>/usr/share/a.jxl</file></static></background>'), '/usr/share/a.jxl');
-    eq(backgroundXmlPicture('<transition><from> /x/day.png </from><to>/x/n.png</to></transition>'), '/x/day.png');
-    eq(backgroundXmlPicture('<background/>'), null);
 });
 
 test('a window touches the bar at the top of the work area', () => {
