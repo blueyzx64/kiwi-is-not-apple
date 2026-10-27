@@ -70,7 +70,12 @@
       <key name="menubar-transparent" type="b">
         <default>true</default>
         <summary>Transparent menu bar</summary>
-        <description>The menu bar is transparent over the wallpaper, and its text turns dark or light by the wallpaper's brightness under it. It turns solid when a window touches it or is maximized. Off shows the menu bar background all the time.</description>
+        <description>The menu bar is transparent over the wallpaper, and its text turns dark or light by the wallpaper's brightness under it. Off shows the menu bar background all the time.</description>
+      </key>
+      <key name="menubar-solid-on-window" type="b">
+        <default>false</default>
+        <summary>Solid menu bar when a window touches it</summary>
+        <description>Off (the default, as on macOS): the transparent menu bar stays transparent over maximized windows. On: it turns solid while a window touches it or is maximized.</description>
       </key>
       <key name="menubar-fullscreen-visible" type="b">
         <default>false</default>

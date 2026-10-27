@@ -13,12 +13,13 @@
 //            and the stock behaviour stays; Spotlight is then reachable by its optional shortcut.
 //   stop():  disconnect ours, unblock exactly the id we blocked.
 //
-// Closing with Super while Spotlight is open: the modal runs in Shell.ActionMode.POPUP, and the
-// Shell allows 'overlay-key' only in NORMAL | OVERVIEW (js/ui/main.js _sessionUpdated). mutter
-// still swallows the bare Super release then (process_special_modifier_key in keybindings.c
-// returns STOP), but its filter-keybinding check drops the signal, so neither the stage nor
-// our handler would see the tap. allowInModal() adds POPUP for as long as Spotlight is open, and
-// restoreModes() puts back exactly the modes it found. Super+<key> combos are untouched: mutter
+// Super while a menu or Kiwi surface is open: panel menus and Kiwi's modals run in
+// Shell.ActionMode.POPUP, and the Shell allows 'overlay-key' only in NORMAL | OVERVIEW
+// (js/ui/main.js _sessionUpdated). mutter still swallows the bare Super release then
+// (process_special_modifier_key in keybindings.c returns STOP), but its filter-keybinding check
+// drops the signal, so neither the stage nor our handler would see the tap. start() adds POPUP
+// for as long as the takeover runs, and stop() puts back exactly the modes it found; the tap
+// then closes whatever is open and opens Spotlight (or closes Spotlight itself). Super+<key> combos are untouched: mutter
 // clears its "Super only" state on the other key and emits nothing.
 //
 // Other extensions' overlay-key handlers are not touched. The overview itself is untouched:
@@ -28,6 +29,7 @@
 import Gio from 'gi://Gio';
 import GObject from 'gi://GObject';
 
+import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
@@ -41,7 +43,7 @@ export class OverlayKeyTakeover {
         this._handlerId = 0;
         this._blockedId = 0;
         this._a11y = null;
-        this._savedModes = null;   // overlay-key action modes before allowInModal(), or null
+        this._savedModes = null;   // overlay-key action modes before _allowInPopup(), or null
     }
 
     get active() {
@@ -79,10 +81,10 @@ export class OverlayKeyTakeover {
         this._a11y = a11y;
         this._blockedId = blocked;
         this._handlerId = ours;
+        this._allowInPopup();
     }
 
-    /** While the Spotlight modal (POPUP mode) is up, let mutter deliver the Super tap to us. */
-    allowInModal() {
+    _allowInPopup() {
         if (!this.active || this._savedModes !== null || typeof Main.wm?.allowKeybinding !== 'function')
             return;
         const current = Main.wm._allowedKeybindings?.['overlay-key'];
@@ -91,7 +93,7 @@ export class OverlayKeyTakeover {
         Main.wm.allowKeybinding('overlay-key', before | Shell.ActionMode.POPUP);
     }
 
-    restoreModes() {
+    _restoreModes() {
         if (this._savedModes === null)
             return;
         Main.wm.allowKeybinding('overlay-key', this._savedModes);
@@ -99,7 +101,7 @@ export class OverlayKeyTakeover {
     }
 
     stop() {
-        this.restoreModes();
+        this._restoreModes();
         if (!this.active)
             return;
         const display = global.display;
@@ -123,8 +125,10 @@ export class OverlayKeyTakeover {
         }
         if (Main.sessionMode.isLocked || Main.sessionMode.isGreeter)
             return;
-        // A window move or resize (or another grab) is in progress: do not pop up over it
-        if (global.display.is_grabbed?.())
+        // A window move or resize is in progress: do not pop up over it. The compositor grab of
+        // an open menu or modal is no reason to wait: the tap closes it
+        const op = global.display.get_grab_op?.() ?? Meta.GrabOp.NONE;
+        if (op !== Meta.GrabOp.NONE && op !== Meta.GrabOp.COMPOSITOR)
             return;
         this._onTap();
     }

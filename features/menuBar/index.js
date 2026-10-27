@@ -142,10 +142,10 @@ export class MenuBar {
             return apps;
         }, ['menubar-app-menu', 'menubar-native-menus', 'menubar-atspi-menus', 'menubar-atspi-popovers']);
         part('look', () => ks.bool('menubar-transparent'), reg => {
-            const look = new AdaptiveBar(this._ctx, reg);
+            const look = new AdaptiveBar(this._ctx, reg, { solidOnWindow: ks.bool('menubar-solid-on-window') });
             look.start();
             return look;
-        }, ['menubar-transparent']);
+        }, ['menubar-transparent', 'menubar-solid-on-window']);
         part('fullscreen', () => true, reg => {
             const fs = new FullscreenReveal(this._ctx, reg, { always: ks.bool('menubar-fullscreen-visible') });
             fs.start();

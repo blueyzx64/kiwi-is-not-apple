@@ -70,14 +70,15 @@ export function touchesBar(frame, area) {
  * @param {object} s
  * @param {boolean} s.transparent the "transparent menu bar" setting
  * @param {boolean} s.windowAtTop a window touches the bar or is maximized
+ * @param {boolean} s.solidOnWindow the "solid when a window touches the bar" setting
  * @param {boolean} s.overview Mission Control / the overview is showing
  * @param {boolean} s.solidOnly high contrast or reduced transparency
  * @returns {'clear'|'solid'|'overview'}
  */
-export function barLook({ transparent, windowAtTop, overview, solidOnly }) {
+export function barLook({ transparent, windowAtTop, solidOnWindow, overview, solidOnly }) {
     if (overview)
         return 'overview';
-    if (!transparent || solidOnly || windowAtTop)
+    if (!transparent || solidOnly || (solidOnWindow && windowAtTop))
         return 'solid';
     return 'clear';
 }
@@ -342,14 +343,12 @@ export function micApps(outputs) {
 }
 
 /**
- * Where the bar's system logo comes from. Fedora's own packages ship no symbolic logo, only a
- * full-colour one that ignores the bar's text colour, so Fedora-family logos use Kiwi's bundled
- * symbolic mark; any other distro uses its theme's `<LOGO>-symbolic`.
+ * Icon names to try for the system logo, symbolic first (it follows the bar's text colour by
+ * itself); the plain one is recoloured by logoTint.js.
+ *
  * @param {string} logo os-release LOGO
- * @returns {{file: string}|{names: string[]}}
+ * @returns {string[]}
  */
-export function systemLogoSource(logo) {
-    if (/^fedora/.test(logo))
-        return { file: 'icons/fedora-logo-symbolic.svg' };
-    return { names: [`${logo}-symbolic`, logo.replace(/-icon$/, '-symbolic'), 'start-here-symbolic'] };
+export function systemLogoNames(logo) {
+    return logo.endsWith('-symbolic') ? [logo] : [`${logo}-symbolic`, logo];
 }
