@@ -33,7 +33,8 @@ import * as Workspace from 'resource:///org/gnome/shell/ui/workspace.js';
 import { SearchController } from 'resource:///org/gnome/shell/ui/searchController.js';
 
 import { KiwiSettings } from '../../lib/settings.js';
-import { Keybindings } from '../../lib/keybindings.js';
+import { Keybindings, MODAL_MODES } from '../../lib/keybindings.js';
+import { ModalSurface } from '../../lib/modalSurface.js';
 import { SettingOwner } from '../../core/originals.js';
 import { SpacesBar } from './spaces.js';
 import { ExposeStrip, STRIP_HEIGHT } from './expose.js';
@@ -107,8 +108,9 @@ export class MissionControl {
         // Super+` down, the four-finger swipe down and hot corners (core/desktopActions.js)
         this._ctx.events.on('app-expose-requested', ({ appId }) => this.toggleAppExpose(appId), c);
 
-        Keybindings.add(c, KEYS.shortcut, this._ctx.settings, () => this.toggle());
-        Keybindings.add(c, KEYS.expose, this._ctx.settings, () => this.toggleAppExpose());
+        // Also while a Kiwi modal (Launchpad) is open: opening closes it, as on macOS
+        Keybindings.add(c, KEYS.shortcut, this._ctx.settings, () => this.toggle(), { modes: MODAL_MODES });
+        Keybindings.add(c, KEYS.expose, this._ctx.settings, () => this.toggleAppExpose(), { modes: MODAL_MODES });
     }
 
     disable() {
@@ -184,6 +186,7 @@ export class MissionControl {
             Main.overview.hide();
             return;
         }
+        ModalSurface.closeAll();
         this._setView(view);
         Main.overview.show(ControlsState.WINDOW_PICKER);
     }

@@ -6,6 +6,7 @@ import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import St from 'gi://St';
 
+import { IconStyle } from '../../lib/iconStyle.js';
 import { DockItem } from './items.js';
 
 // Kiwi's own icon in icons/: a rounded square with a 3x3 grid of coloured app dots
@@ -22,6 +23,8 @@ export class LaunchpadItem extends DockItem {
             x_align: Clutter.ActorAlign.CENTER, y_align: Clutter.ActorAlign.CENTER,
         });
         this.content.add_child(this._icon);
+        const style = IconStyle.apply(this._icon);
+        this.cleanup.add(() => style.destroy());
     }
 
     get iconActor() {

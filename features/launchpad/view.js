@@ -44,9 +44,10 @@ let backdropCache = { key: null, pixbuf: null };
 const FOLDER_COLUMNS = 5;
 // A drag held at a page edge turns the page after this long (macOS feels about the same)
 const EDGE_FLIP_MS = 550;
+// Share of the side margin that counts as the edge
 const EDGE_ZONE = 0.5;
 // The pointer rests this long on a slot before the icons make room there
-const REFLOW_MS = 200;   // share of the side margin that counts as the edge
+const REFLOW_MS = 200;
 
 const KEYS = new Map([
     [Clutter.KEY_Left, 'left'], [Clutter.KEY_Right, 'right'], [Clutter.KEY_Up, 'up'],
@@ -301,6 +302,7 @@ export class LaunchpadView {
         this.alert = null;
         this._flip = 0;
         this._reflow = 0;
+        this._building = 0;
         this._press = 0;
         this._scrollLock = false;
         this._grab = null;
@@ -372,11 +374,26 @@ export class LaunchpadView {
                 tile.setItem(item);
             }
         }
-        for (const item of this.items)
-            this._tile(item);
+        this._buildTiles(this.metrics.perPage * (this.page + 1));
         this._setQuery(this.query, true);
         if (this.jiggling)
             this._applyJiggle(true);
+    }
+
+    // Opening must not wait for every icon: the pages up to `upTo` icons are built now, the
+    // others one page at a time while the Shell is idle
+    _buildTiles(upTo) {
+        const missing = this.items.filter(item => !this.tiles.has(item.id));
+        missing.slice(0, upTo).forEach(item => this._tile(item));
+        if (missing.length > upTo && !this._building) {
+            this._building = this.cleanup.idle(() => {
+                this._building = 0;
+                this._buildTiles(this.metrics.perPage);
+                this._layout(false);
+                if (this.jiggling)
+                    this._applyJiggle(true);
+            }, { name: 'launchpad-build-pages' });
+        }
     }
 
     _isSearchHit(id) {
@@ -1043,11 +1060,11 @@ export class LaunchpadView {
             return DND.DragMotionResult.MOVE_DROP;
         }
         this._setTarget(null);
-        // Icons make room only once the pointer rests on a slot (macOS): passing over an icon on
-        // the way to its centre must not shift it away
+        // Icons make room only once the pointer rests on a slot (macOS): every move re-arms the
+        // wait, so a slow drag over an icon on the way to its centre (folder) never shifts it away
         if (act.index === drag.dropIndex) {
             this._cancelReflow();
-        } else if (act.index !== drag.pendingIndex) {
+        } else {
             this._cancelReflow();
             drag.pendingIndex = act.index;
             this._reflow = this.cleanup.timeout(REFLOW_MS, () => {

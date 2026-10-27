@@ -275,12 +275,14 @@ export class Dock {
             launchpad: this.config.launchpad,
             missionControl: this.config.missionControl,
         });
-        this._view.setItems(items, spec => this._createItem(spec));
         const key = items.map(i => i.id).join('\n');
-        if (key !== this._itemKey) {
-            this._itemKey = key;
+        const changed = key !== this._itemKey;
+        this._itemKey = key;
+        if (changed)
             this._magnifier.invalidate();
-        }
+        this._view.setItems(items, spec => this._createItem(spec));
+        if (changed)
+            this._magnifier.resume();
         this._syncAppDecorations();
         this._queueGeometry();
     }

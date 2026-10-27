@@ -19,6 +19,7 @@ import * as DND from 'resource:///org/gnome/shell/ui/dnd.js';
 
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { Glass } from '../../lib/glass.js';
+import { IconStyle } from '../../lib/iconStyle.js';
 import { ModalSurface } from '../../lib/modalSurface.js';
 import { DockItem } from './items.js';
 import { FAN_MAX, STACK_PAGE, downloadEntry, downloadFinished, fanLayout, isHorizontal, isPartialWrite, sortDownloads, stackView } from './model.js';
@@ -162,6 +163,12 @@ export class FolderStackItem extends DockItem {
         this._drawPile();
     }
 
+    // The icon style (Appearance) ends with the icon: it untracks itself when destroyed
+    _addPileIcon(icon) {
+        IconStyle.apply(icon);
+        this._pile.add_child(icon);
+    }
+
     // The tile: the newest files on top of each other, each turned a little; the folder icon
     // when there are none
     _drawPile() {
@@ -169,7 +176,7 @@ export class FolderStackItem extends DockItem {
         this._pile.destroy_all_children();
         const top = this.files.filter(f => !f.entry.partial).slice(0, PILE).reverse();
         if (!top.length) {
-            this._pile.add_child(new St.Icon({
+            this._addPileIcon(new St.Icon({
                 icon_name: this.isDownloads ? 'folder-download' : 'folder', icon_size: m.icon,
                 x_align: Clutter.ActorAlign.CENTER, y_align: Clutter.ActorAlign.CENTER,
             }));
@@ -178,7 +185,7 @@ export class FolderStackItem extends DockItem {
         const size = Math.round(m.icon * 0.86);
         top.forEach((f, i) => {
             const depth = top.length - 1 - i;
-            this._pile.add_child(new St.Icon({
+            this._addPileIcon(new St.Icon({
                 gicon: f.gicon, icon_size: size,
                 x_align: Clutter.ActorAlign.CENTER, y_align: Clutter.ActorAlign.CENTER,
                 translation_y: -depth * Math.round(m.icon * 0.05),
@@ -262,15 +269,17 @@ class StackPopup {
         const anchor = this._host.rectOf(this._stack);
         if (!anchor)
             return false;
-        if (view === 'fan')
-            this._buildFan(files, anchor);
-        else
-            this._buildPanel(files, anchor, view);
+        // The grab and the focus settle before the files are built, so the first frame of the
+        // reveal is not also paying for them
         this._grab = Main.pushModal(this.actor, { actionMode: Shell.ActionMode.POPUP });
         if (!this._grab)
             return false;
         this._cleanup.add(() => this._popModal());
         this.actor.grab_key_focus();
+        if (view === 'fan')
+            this._buildFan(files, anchor);
+        else
+            this._buildPanel(files, anchor, view);
         return true;
     }
 
@@ -283,7 +292,7 @@ class StackPopup {
 
     // ---- rows ----
 
-    _fileButton(f, { iconSize, vertical, label = true }) {
+    _fileButton(f, { iconSize, vertical, label = true, badgeAfterName = false }) {
         const _ = this._host.gettext;
         const button = new St.Button({
             style_class: `kiwi-dock-stack-file${f.entry.partial ? ' kiwi-dock-stack-partial' : ''}`,
@@ -298,18 +307,22 @@ class StackPopup {
         const iconBin = new St.Widget({ layout_manager: new Clutter.BinLayout() });
         const icon = new St.Icon({ gicon: f.gicon, icon_size: iconSize });
         iconBin.add_child(icon);
-        if (f.entry.badge) {
-            iconBin.add_child(new St.Label({
-                style_class: 'kiwi-dock-stack-badge', text: BADGES[f.entry.badge],
-                x_expand: true, y_expand: true,
-                x_align: Clutter.ActorAlign.CENTER, y_align: Clutter.ActorAlign.END,
-            }));
-        }
+        // On the icon's lower edge, or (a list row, where the pill is wider than the icon) after the name
+        const badge = f.entry.badge ? new St.Label({
+            style_class: 'kiwi-dock-stack-badge', text: BADGES[f.entry.badge],
+            x_expand: !badgeAfterName, y_expand: true,
+            x_align: badgeAfterName ? Clutter.ActorAlign.START : Clutter.ActorAlign.CENTER,
+            y_align: badgeAfterName ? Clutter.ActorAlign.CENTER : Clutter.ActorAlign.END,
+        }) : null;
         if (label) {
             const text = new St.Label({ style_class: 'kiwi-dock-stack-name', text: f.entry.label, y_align: Clutter.ActorAlign.CENTER });
             text.clutter_text.ellipsize = Pango.EllipsizeMode.END;
             box.add_child(text);
         }
+        if (badge && badgeAfterName)
+            box.add_child(badge);
+        else if (badge)
+            iconBin.add_child(badge);
         box.add_child(iconBin);
         button.set_child(box);
         if (f.entry.partial)
@@ -422,7 +435,7 @@ class StackPopup {
         } else {
             body = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, style_class: 'kiwi-dock-stack-list' });
             fill = (from, to) => files.slice(from, to).forEach(f => {
-                const button = this._fileButton(f, { iconSize, vertical: false });
+                const button = this._fileButton(f, { iconSize, vertical: false, badgeAfterName: true });
                 const box = button.get_child();
                 box.set_child_at_index(box.get_last_child(), 0);
                 button.x_expand = true;
