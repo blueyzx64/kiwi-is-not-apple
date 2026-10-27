@@ -1,0 +1,62 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Popup menu rows the logo menu and the app menus share: a label, a shortcut on the right
+// (⌘ glyphs or words, see core/appMenus/model.js formatAccel) and a checkmark ornament.
+// No icons, as in macOS 27 menus (research F28).
+
+import Clutter from 'gi://Clutter';
+import St from 'gi://St';
+import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
+
+import { formatAccel } from '../../core/appMenus/model.js';
+
+/**
+ * @param {string} label
+ * @param {object} [opts]
+ * @param {?string} [opts.accel] GTK accelerator to show on the right
+ * @param {{glyphs: boolean, ctrlIsCommand: boolean}} [opts.keys] how to write it
+ * @param {boolean} [opts.enabled]
+ * @param {?boolean} [opts.checked] true/false shows a check column; null none
+ * @param {Function} [opts.onActivate]
+ * @returns {PopupMenu.PopupMenuItem}
+ */
+export function menuItem(label, { accel = null, keys = {}, enabled = true, checked = null, onActivate = null } = {}) {
+    const item = new PopupMenu.PopupMenuItem(label);
+    item.add_style_class_name('kiwi-menubar-menu-item');
+    const text = accel ? formatAccel(accel, keys) : '';
+    if (text) {
+        item.add_child(new St.Label({
+            text, style_class: 'kiwi-menubar-accel',
+            x_expand: true, x_align: Clutter.ActorAlign.END, y_align: Clutter.ActorAlign.CENTER,
+        }));
+    }
+    if (checked !== null)
+        item.setOrnament(checked ? PopupMenu.Ornament.CHECK : PopupMenu.Ornament.NONE);
+    item.setSensitive(enabled);
+    if (onActivate)
+        item.connect('activate', () => onActivate());
+    return item;
+}
+
+/** A small grey heading inside a menu ("Applications", "Documents"). */
+export function menuHeading(text) {
+    const item = new PopupMenu.PopupMenuItem(text, { reactive: false, can_focus: false });
+    item.add_style_class_name('kiwi-menubar-menu-heading');
+    return item;
+}
+
+/**
+ * A popup menu that is filled just before it opens: PopupMenu.open() refuses an empty menu,
+ * and the items are built only when needed (a closed menu bar holds no items).
+ */
+export class LazyMenu extends PopupMenu.PopupMenu {
+    constructor(source, fill) {
+        super(source, 0.0, St.Side.TOP);
+        this._fillMenu = fill;
+    }
+
+    open(animate) {
+        if (!this.isOpen)
+            this._fillMenu(this);
+        super.open(animate);
+    }
+}

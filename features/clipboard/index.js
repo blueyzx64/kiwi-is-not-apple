@@ -593,7 +593,8 @@ export class ClipboardHistory {
         Main.panel.addToStatusArea('kiwi-clipboard', button, 0, 'right');
         PanelLayout.claim(reg, {
             id: 'clipboard', actor: button.container, box: 'right',
-            anchor: { before: ['quickSettings'], fallback: 'last' },
+            // The menu bar's privacy dots stay next to the Control Center, as on macOS
+            anchor: { before: ['kiwi-menubar-privacy', 'quickSettings'], fallback: 'last' },
         });
         new ClipboardPopover(button.menu, this, reg, this._);
         this._iconCleanup = reg;

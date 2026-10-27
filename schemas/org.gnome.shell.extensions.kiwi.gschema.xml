@@ -21,7 +21,53 @@
       <key name="menubar-show-activities" type="b">
         <default>false</default>
         <summary>Show the Activities button</summary>
-        <description>Show GNOME's Activities button (the workspace pill) at the left of the menu bar. Off, as on macOS: the menu bar starts with the window controls and, later, the logo menu.</description>
+        <description>Show GNOME's Activities button (the workspace pill) at the left of the menu bar. Off, as on macOS: the menu bar starts with the logo menu.</description>
+      </key>
+      <key name="menubar-logo" type="s">
+        <choices><choice value="fedora"/><choice value="kiwi"/><choice value="none"/></choices>
+        <default>'fedora'</default>
+        <summary>Logo menu</summary>
+        <description>The logo at the left end of the menu bar, which opens the logo menu (About This PC, System Settings, Force Quit, Sleep, Restart, Shut Down, Lock Screen, Log Out). "fedora" shows the system's logo, "kiwi" Kiwi's, "none" removes the logo menu.</description>
+      </key>
+      <key name="menubar-app-menu" type="b">
+        <default>true</default>
+        <summary>App menus</summary>
+        <description>Show the focused app's name in bold and its menus (App, File, Edit, View, Window, Help) after the logo, as on macOS.</description>
+      </key>
+      <key name="menubar-transparent" type="b">
+        <default>true</default>
+        <summary>Transparent menu bar</summary>
+        <description>The menu bar is transparent over the wallpaper, and its text turns dark or light by the wallpaper's brightness under it. It turns solid when a window touches it or is maximized. Off shows the menu bar background all the time.</description>
+      </key>
+      <key name="menubar-fullscreen-visible" type="b">
+        <default>false</default>
+        <summary>Always show the menu bar in full screen</summary>
+        <description>Off, as on macOS: the menu bar hides over full-screen windows and slides in when the pointer touches the top edge. On keeps it shown.</description>
+      </key>
+      <key name="menubar-privacy-dots" type="b">
+        <default>true</default>
+        <summary>Privacy dots</summary>
+        <description>Show an orange dot while an app uses the microphone, a green one for the camera and a purple one while the screen is shared or recorded, in place of GNOME's privacy icons. Click a dot to see which app.</description>
+      </key>
+      <key name="menubar-command-glyphs" type="b">
+        <default>true</default>
+        <summary>Shortcut glyphs</summary>
+        <description>Write shortcuts in menus with macOS symbols (⌘ for Super, ⌃ Control, ⌥ Alt, ⇧ Shift). Off writes them in words (Super+H).</description>
+      </key>
+      <key name="menubar-clock-option-dnd" type="b">
+        <default>true</default>
+        <summary>Alt-click the clock for Do Not Disturb</summary>
+        <description>Alt-clicking the clock turns Do Not Disturb on or off, like Option-click on macOS.</description>
+      </key>
+      <key name="menubar-focus-shortcut" type="as">
+        <default>['F10']</default>
+        <summary>Focus the menu bar</summary>
+        <description>Opens the app menu so the menus can be used with the keyboard (Left and Right move between menus). Empty means no shortcut.</description>
+      </key>
+      <key name="menubar-force-quit-shortcut" type="as">
+        <default>['&lt;Super&gt;&lt;Alt&gt;Escape']</default>
+        <summary>Force Quit shortcut</summary>
+        <description>Opens the Force Quit Applications window. Empty means no shortcut.</description>
       </key>
       <key name="move-calendar-right" type="b">
         <default>true</default>
