@@ -40,6 +40,7 @@ import * as DND from 'resource:///org/gnome/shell/ui/dnd.js';
 import * as Layout from 'resource:///org/gnome/shell/ui/layout.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
+import { Glass } from '../../lib/glass.js';
 import {
     DEFAULTS, balancedFit, cardTilt, clonePose, edgeBarrier, fitCount, overlaps, scaleMs, stackLayers, stripLayout,
     stripShown,
@@ -99,6 +100,9 @@ export class StageStrip {
             style_class: 'kiwi-stage-strip', reactive: true, visible: false,
         });
         this._chrome.add_child(this._root);
+        // The floor is Kiwi glass (lib/glass.js), with its own soft shadow
+        const glass = Glass.attach(this._root, { surface: 'overlays', role: 'bar' });
+        cleanup.add(() => glass.destroy());
         // The Shell can destroy chrome from C (shutdown, a session mode change) before our cleanup
         // runs; from then on every call is a no-op instead of touching disposed actors
         this._dead = false;

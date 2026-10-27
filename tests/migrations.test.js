@@ -71,6 +71,23 @@ test('glass: panel-blur off, dock-blur on -> surfaces from both, written once', 
     eq(surfaces.includes('panel'), false);
 });
 
+test('glass: the old style and tint become the Clear <-> Tinted slider', () => {
+    const clear = fresh();
+    clear.set_string('liquid-glass-style', 'clear');
+    runAllMigrations(clear);
+    eq(clear.get_int('glass-tint'), 0);
+    eq(userSet(clear, 'glass-tint'), true);
+
+    const tinted = fresh();
+    tinted.set_int('liquid-glass-tint', 80);
+    eq(runAllMigrations(tinted).filter(k => k === 'glass-tint').length, 1);
+    eq(tinted.get_int('glass-tint'), 80);
+
+    const untouched = fresh();
+    runAllMigrations(untouched);
+    eq(userSet(untouched, 'glass-tint'), false);
+});
+
 test('window controls and control center keys migrate', () => {
     const gs = fresh();
     gs.set_boolean('show-window-controls-fullscreen-only', true);

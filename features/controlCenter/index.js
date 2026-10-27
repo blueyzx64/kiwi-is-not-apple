@@ -11,8 +11,8 @@
 //
 // Disable puts the order, spans and column count back from a snapshot of the actors, so a
 // grid rebuilt in between never receives stale {parent, index} pairs.
-// Glass: the menu bubble's blur layer belongs to features/liquidGlass (surface 'menus'); this
-// feature only reacts to Glass.watch with style classes, so there is no second layer.
+// Glass: the menu bubble is Kiwi glass, attached by features/liquidGlass (surface 'menus');
+// this feature only adds .kiwi-cc-glass for the glass platters of its modules (style.css).
 
 import Gio from 'gi://Gio';
 import St from 'gi://St';

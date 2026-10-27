@@ -300,53 +300,105 @@
         <description>No hot corner opens the overview while Kiwi runs. The GNOME setting enable-hot-corners is left as it is and applies again when this is off.</description>
       </key>
 
-      <!-- Appearance (features/liquidGlass, features/appearance, lib/glass.js) -->
+      <!-- Appearance (features/liquidGlass, features/appearance, lib/glass.js); glass-* and appearance-* are v3 -->
       <key name="liquid-glass" type="b">
         <default>true</default>
         <summary>Liquid Glass</summary>
-        <description>Frosted, translucent shell surfaces. Off keeps solid surfaces; the old Panel Blur and Dock Blur switches then apply again.</description>
-      </key>
-      <key name="liquid-glass-style" type="s">
-        <default>'tinted'</default>
-        <summary>Liquid Glass style</summary>
-        <description>"tinted" is easier to read. "clear" is more transparent.</description>
-      </key>
-      <key name="liquid-glass-blur" type="i">
-        <default>30</default>
-        <range min="0" max="100"/>
-        <summary>Liquid Glass blur</summary>
-        <description>Blur radius behind glass surfaces.</description>
-      </key>
-      <key name="liquid-glass-tint" type="i">
-        <default>55</default>
-        <range min="0" max="100"/>
-        <summary>Liquid Glass tint</summary>
-        <description>How strongly glass surfaces are tinted. The default keeps text readable over any wallpaper.</description>
-      </key>
-      <key name="liquid-glass-highlight" type="b">
-        <default>true</default>
-        <summary>Liquid Glass highlight</summary>
-        <description>Draw a thin light edge along the top of glass surfaces.</description>
-      </key>
-      <key name="liquid-glass-refraction" type="b">
-        <default>false</default>
-        <summary>Liquid Glass edge refraction (experimental)</summary>
-        <description>Bend the picture at the edges of glass surfaces. Experimental; uses a still copy of the wallpaper instead of the live screen.</description>
+        <description>Faux Liquid Glass on every Kiwi surface: a translucent tint with a sheen, a rim and a soft shadow; no blur. Off keeps the theme's solid surfaces.</description>
       </key>
       <key name="liquid-glass-surfaces" type="as">
         <default>['panel', 'menus', 'dock', 'overlays']</default>
         <summary>Liquid Glass surfaces</summary>
         <description>Which surfaces use glass: panel, menus, dock, overlays.</description>
       </key>
-      <key name="liquid-glass-performance" type="b">
-        <default>false</default>
-        <summary>Liquid Glass performance mode</summary>
-        <description>Blur a still copy of the wallpaper instead of the live screen.</description>
+      <key name="glass-tint" type="i">
+        <default>0</default>
+        <range min="0" max="100"/>
+        <summary>Glass: Clear to Tinted</summary>
+        <description>0 is Clear, the macOS default: the most see-through glass that keeps text readable. 100 is Tinted: more opaque glass. Has no effect while Reduce Transparency or Increase Contrast is on.</description>
       </key>
-      <key name="liquid-glass-off-in-powersave" type="b">
+      <key name="glass-wallpaper-tint" type="b">
         <default>true</default>
-        <summary>Performance mode in Power Saver</summary>
-        <description>Switch to performance mode automatically while the Power Saver profile is active.</description>
+        <summary>Wallpaper tinting</summary>
+        <description>Mix a little of the wallpaper's average colour into the glass, like macOS. The wallpaper is sampled once each time it changes.</description>
+      </key>
+      <key name="glass-noise" type="b">
+        <default>false</default>
+        <summary>Frosted grain</summary>
+        <description>Add a faint grain to the glass, so it reads as frosted. Replaces the top-to-bottom sheen (St draws one or the other).</description>
+      </key>
+      <key name="glass-reduce-transparency" type="b">
+        <default>false</default>
+        <summary>Reduce Transparency</summary>
+        <description>Make every Kiwi glass surface opaque, without the wallpaper tint. The rim stays.</description>
+      </key>
+      <key name="glass-increase-contrast" type="b">
+        <default>false</default>
+        <summary>Increase Contrast</summary>
+        <description>Opaque, flat surfaces with strong borders. Implies Reduce Transparency. GNOME's High Contrast does the same.</description>
+      </key>
+      <key name="glass-show-borders" type="b">
+        <default>false</default>
+        <summary>Show Borders</summary>
+        <description>Draw a clearly visible border around every Kiwi glass surface, so overlapping surfaces stay apart.</description>
+      </key>
+      <key name="appearance-auto" type="b">
+        <default>false</default>
+        <summary>Auto Light and Dark</summary>
+        <description>Switch between Light by day and Dark by night (GNOME's color-scheme). Kiwi switches only while you are idle, and puts your own choice back when this is off. Choosing a style yourself turns Auto off.</description>
+      </key>
+      <key name="appearance-auto-schedule" type="s">
+        <choices>
+          <choice value="sun"/>
+          <choice value="custom"/>
+        </choices>
+        <default>'sun'</default>
+        <summary>Auto schedule</summary>
+        <description>"sun": Dark from sunset to sunrise (from the location GNOME's Night Light last saw, else your time zone). "custom": the two times below.</description>
+      </key>
+      <key name="appearance-auto-light-minute" type="i">
+        <default>420</default>
+        <range min="0" max="1439"/>
+        <summary>Light from (minutes after midnight)</summary>
+        <description>Custom schedule: when Light begins, in minutes after midnight (420 = 07:00).</description>
+      </key>
+      <key name="appearance-auto-dark-minute" type="i">
+        <default>1140</default>
+        <range min="0" max="1439"/>
+        <summary>Dark from (minutes after midnight)</summary>
+        <description>Custom schedule: when Dark begins, in minutes after midnight (1140 = 19:00).</description>
+      </key>
+      <key name="appearance-accent" type="s">
+        <choices>
+          <choice value="multicolor"/>
+          <choice value="blue"/>
+          <choice value="purple"/>
+          <choice value="pink"/>
+          <choice value="red"/>
+          <choice value="orange"/>
+          <choice value="yellow"/>
+          <choice value="green"/>
+          <choice value="graphite"/>
+        </choices>
+        <default>'multicolor'</default>
+        <summary>Accent colour</summary>
+        <description>"multicolor" (the macOS default) follows the GNOME accent colour and leaves it alone. Any other value sets GNOME's accent-color while Kiwi runs (graphite is GNOME's slate) and gives yours back when Kiwi stops.</description>
+      </key>
+      <key name="appearance-highlight" type="s">
+        <choices>
+          <choice value="accent"/>
+          <choice value="blue"/>
+          <choice value="purple"/>
+          <choice value="pink"/>
+          <choice value="red"/>
+          <choice value="orange"/>
+          <choice value="yellow"/>
+          <choice value="green"/>
+          <choice value="graphite"/>
+        </choices>
+        <default>'accent'</default>
+        <summary>Highlight colour</summary>
+        <description>The text selection colour in Kiwi's search fields (Spotlight, clipboard). "accent" follows the accent colour, the macOS default.</description>
       </key>
       <key name="popup-menu-styling" type="b">
         <default>true</default>
@@ -813,6 +865,44 @@
         <default>false</default>
         <summary>(Deprecated, unused) Keep the top bar on an empty desktop</summary>
         <description>Deprecated: the auto-hide top bar was removed (the top bar houses the notch). Kept so existing dconf settings stay valid; nothing reads it. Do not hide the top bar while no window is showing on the primary monitor.</description>
+      </key>
+
+      <key name="liquid-glass-style" type="s">
+        <default>'tinted'</default>
+        <summary>(Deprecated, unused) Liquid Glass style</summary>
+        <description>"tinted" is easier to read. "clear" is more transparent.</description>
+      </key>
+      <key name="liquid-glass-blur" type="i">
+        <default>30</default>
+        <range min="0" max="100"/>
+        <summary>(Deprecated, unused) Liquid Glass blur</summary>
+        <description>Blur radius behind glass surfaces.</description>
+      </key>
+      <key name="liquid-glass-tint" type="i">
+        <default>55</default>
+        <range min="0" max="100"/>
+        <summary>(Deprecated, unused) Liquid Glass tint</summary>
+        <description>How strongly glass surfaces are tinted. The default keeps text readable over any wallpaper.</description>
+      </key>
+      <key name="liquid-glass-highlight" type="b">
+        <default>true</default>
+        <summary>(Deprecated, unused) Liquid Glass highlight</summary>
+        <description>Draw a thin light edge along the top of glass surfaces.</description>
+      </key>
+      <key name="liquid-glass-refraction" type="b">
+        <default>false</default>
+        <summary>(Deprecated, unused) Liquid Glass edge refraction (experimental)</summary>
+        <description>Bend the picture at the edges of glass surfaces. Experimental; uses a still copy of the wallpaper instead of the live screen.</description>
+      </key>
+      <key name="liquid-glass-performance" type="b">
+        <default>false</default>
+        <summary>(Deprecated, unused) Liquid Glass performance mode</summary>
+        <description>Blur a still copy of the wallpaper instead of the live screen.</description>
+      </key>
+      <key name="liquid-glass-off-in-powersave" type="b">
+        <default>true</default>
+        <summary>(Deprecated, unused) Performance mode in Power Saver</summary>
+        <description>Switch to performance mode automatically while the Power Saver profile is active.</description>
       </key>
 
       <key name="show-window-controls-fullscreen-only" type="b">

@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Liquid Glass preferences. Adw/Gtk/Gio only (runs in the prefs process, no Shell libs).
-// buildPrefs() returns the Adw.PreferencesGroup[]; prefs/pages/ places them on a page.
+// Liquid Glass preferences (Adw/Gtk/Gio only: the prefs process). buildPrefs() returns the
+// groups; prefs/pages/appearance.js places them. Order and wording follow macOS: System
+// Settings > Appearance (Liquid Glass Clear/Tinted, wallpaper tinting) and Accessibility >
+// Display (Reduce Transparency, Increase Contrast, Show Borders).
 
 import Adw from 'gi://Adw';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Gtk from 'gi://Gtk';
 
-import { MIN_TINT_PERCENT } from '../../lib/glassParams.js';
-import { switchRow } from '../../prefs/widgets.js';
+import { switchRow, watchKey } from '../../prefs/widgets.js';
 
 const N_ = s => s;
 
-
 const SURFACES = [
-    ['panel', N_('Top bar')],
-    ['menus', N_('Menus and Control Center')],
+    ['panel', N_('Menu bar')],
+    ['menus', N_('Menus, Control Center and calendar')],
     ['dock', N_('Dock')],
-    ['overlays', N_('Spotlight, Quick Paste and the Stage Manager strip')],
+    ['overlays', N_('Spotlight, clipboard and the Stage Manager floor')],
 ];
 
 const BMS_DIRS = [
@@ -25,43 +25,25 @@ const BMS_DIRS = [
     '/usr/share/gnome-shell/extensions/blur-my-shell@aunetx',
 ];
 
-
-function _scaleRow(settings, title, subtitle, key) {
-    const row = new Adw.ActionRow({ title, subtitle });
+/** The Clear <-> Tinted slider, with the two ends named under it like macOS. */
+function _tintRow(settings, _) {
+    const row = new Adw.ActionRow({
+        title: _('Liquid Glass'),
+        subtitle: _('Clear is more see-through. Tinted is more opaque and easier to read.'),
+    });
     const scale = new Gtk.Scale({
         orientation: Gtk.Orientation.HORIZONTAL,
         adjustment: new Gtk.Adjustment({ lower: 0, upper: 100, step_increment: 1, page_increment: 10 }),
-        draw_value: true,
-        value_pos: Gtk.PositionType.RIGHT,
-        digits: 0,
+        draw_value: false,
         hexpand: true,
         valign: Gtk.Align.CENTER,
         width_request: 220,
     });
-    settings.bind(key, scale.get_adjustment(), 'value', Gio.SettingsBindFlags.DEFAULT);
+    scale.add_mark(0, Gtk.PositionType.BOTTOM, _('Clear'));
+    scale.add_mark(100, Gtk.PositionType.BOTTOM, _('Tinted'));
+    scale.update_property([Gtk.AccessibleProperty.LABEL], [_('Liquid Glass: Clear to Tinted')]);
+    settings.bind('glass-tint', scale.get_adjustment(), 'value', Gio.SettingsBindFlags.DEFAULT);
     row.add_suffix(scale);
-    return row;
-}
-
-function _styleRow(settings, _) {
-    const row = new Adw.ComboRow({
-        title: _('Style'),
-        subtitle: _('Tinted is easier to read. Clear is more transparent.'),
-        model: Gtk.StringList.new([_('Tinted'), _('Clear')]),
-    });
-    const values = ['tinted', 'clear'];
-    const sync = () => {
-        const i = values.indexOf(settings.get_string('liquid-glass-style'));
-        row.selected = i < 0 ? 0 : i;
-    };
-    sync();
-    row.connect('notify::selected', () => {
-        const v = values[row.selected];
-        if (v && settings.get_string('liquid-glass-style') !== v)
-            settings.set_string('liquid-glass-style', v);
-    });
-    const id = settings.connect('changed::liquid-glass-style', sync);
-    row.connect('destroy', () => settings.disconnect(id));
     return row;
 }
 
@@ -83,8 +65,7 @@ function _surfaceRow(settings, surface, title) {
         if (ordered.join() !== settings.get_strv(key).join())
             settings.set_strv(key, ordered);
     });
-    const id = settings.connect(`changed::${key}`, sync);
-    row.connect('destroy', () => settings.disconnect(id));
+    watchKey(settings, key, row, sync);
     return row;
 }
 
@@ -92,54 +73,60 @@ function _surfaceRow(settings, surface, title) {
  * @param {{settings: Gio.Settings, window: Adw.PreferencesWindow, extension: object}} args
  * @returns {Adw.PreferencesGroup[]}
  */
-export function buildPrefs({ settings, window, extension }) {
+export function buildPrefs({ settings, extension }) {
     const _ = s => extension?.gettext?.(s) ?? s;
-    const groups = [];
 
-    const main = new Adw.PreferencesGroup({
+    const look = new Adw.PreferencesGroup({
         title: _('Liquid Glass'),
-        description: _('Translucent shell surfaces with the same rounded shape as the surface itself. No blur, so it is light on the GPU. App windows stay opaque. Turning this off restores solid surfaces.'),
+        description: _('One glass look for every Kiwi surface: a tint with a soft sheen, a thin rim and a shadow. No blur, so it costs almost nothing. App windows keep their own look.'),
     });
-    const master = switchRow(settings, _('Liquid Glass'), _('Shell-wide glass style'), 'liquid-glass');
-    main.add(master);
-
+    look.add(switchRow(settings, _('Glass'), _('Off gives every surface its solid theme colour'), 'liquid-glass'));
+    const tint = _tintRow(settings, _);
+    look.add(tint);
+    const wallpaper = switchRow(settings, _('Allow Wallpaper Tinting'),
+        _('A little of the wallpaper\'s colour shows through the glass'), 'glass-wallpaper-tint');
+    look.add(wallpaper);
+    const grain = switchRow(settings, _('Frosted Grain'),
+        _('A faint grain instead of the top-to-bottom sheen'), 'glass-noise');
+    look.add(grain);
     if (BMS_DIRS.some(dir => GLib.file_test(dir, GLib.FileTest.IS_DIR))) {
         const notice = new Adw.ActionRow({
             title: _('Blur my Shell is installed'),
-            subtitle: _('Its blur and its own Liquid Glass effect overlap with this page. Use one of them for each surface. Kiwi never changes Blur my Shell.'),
+            subtitle: _('Its blur and its own Liquid Glass effect overlap with Kiwi\'s glass. Use one of them for each surface. Kiwi never changes Blur my Shell.'),
         });
         notice.add_prefix(new Gtk.Image({ icon_name: 'dialog-information-symbolic' }));
-        main.add(notice);
+        look.add(notice);
     }
-    groups.push(main);
 
-    const look = new Adw.PreferencesGroup({ title: _('Look') });
-    look.add(_styleRow(settings, _));
-    look.add(_scaleRow(settings, _('Frost'), _('Higher makes the glass a little more opaque'), 'liquid-glass-blur'));
-    look.add(_scaleRow(settings, _('Tint'), _('Higher keeps text readable over any wallpaper. In Tinted style, values below %d are treated as %d to keep text readable.').replaceAll('%d', String(MIN_TINT_PERCENT)), 'liquid-glass-tint'));
-    look.add(switchRow(settings, _('Edge highlight'), _('A thin light edge along the top'), 'liquid-glass-highlight'));
-    groups.push(look);
+    const access = new Adw.PreferencesGroup({
+        title: _('Accessibility'),
+        description: _('Like macOS Accessibility > Display. GNOME\'s High Contrast also makes Kiwi\'s surfaces solid with strong borders.'),
+    });
+    access.add(switchRow(settings, _('Reduce Transparency'),
+        _('Opaque surfaces, without the wallpaper tint'), 'glass-reduce-transparency'));
+    access.add(switchRow(settings, _('Increase Contrast'),
+        _('Opaque, flat surfaces with strong borders'), 'glass-increase-contrast'));
+    access.add(switchRow(settings, _('Show Borders'),
+        _('A clear border around every surface and Control Center module'), 'glass-show-borders'));
 
-    const where = new Adw.PreferencesGroup({ title: _('Surfaces') });
+    const where = new Adw.PreferencesGroup({ title: _('Glass Surfaces') });
     for (const [surface, title] of SURFACES)
         where.add(_surfaceRow(settings, surface, _(title)));
-    groups.push(where);
 
-    // liquid-glass-performance, -off-in-powersave and -refraction stay in the schema but have
-    // nothing left to switch: there is no blur or shader to make cheaper.
-
-    // Dim the controls while the master switch is off
+    // macOS greys the Liquid Glass choice out while Reduce Transparency or Increase Contrast
+    // is on; everything here depends on the Glass switch
     const sync = () => {
         const on = settings.get_boolean('liquid-glass');
-        for (const g of groups.slice(1))
-            g.sensitive = on;
+        const opaque = settings.get_boolean('glass-reduce-transparency') ||
+            settings.get_boolean('glass-increase-contrast');
+        for (const row of [tint, wallpaper, grain])
+            row.sensitive = on && !opaque;
+        access.sensitive = on;
+        where.sensitive = on;
     };
     sync();
-    const id = settings.connect('changed::liquid-glass', sync);
-    window?.connect('close-request', () => {
-        settings.disconnect(id);
-        return false;
-    });
+    for (const key of ['liquid-glass', 'glass-reduce-transparency', 'glass-increase-contrast'])
+        watchKey(settings, key, look, sync);
 
-    return groups;
+    return [look, access, where];
 }

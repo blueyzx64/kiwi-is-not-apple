@@ -151,8 +151,11 @@ export class SettingOwner {
      *   (default: a fixed opts.value)
      * @param {*} [opts.value] the value Kiwi sets when there is no transform
      * @param {() => void} [opts.onOriginalChanged] the user changed the key while Kiwi owned it
+     * @param {boolean} [opts.yieldToUser] on such a change, let the user's value stand and stop
+     *   owning (Auto Light/Dark: picking a style yourself turns Auto off), instead of storing it
+     *   as the new original and writing Kiwi's value again
      */
-    constructor(store, settings, key, { type, transform, value, onOriginalChanged = () => {} }) {
+    constructor(store, settings, key, { type, transform, value, onOriginalChanged = () => {}, yieldToUser = false }) {
         if (!GETTERS[type])
             throw new Error(`SettingOwner: unsupported type '${type}'`);
         this._store = store;
@@ -161,6 +164,7 @@ export class SettingOwner {
         this._type = type;
         this._transform = transform ?? (() => value);
         this._onOriginalChanged = onOriginalChanged;
+        this._yield = yieldToUser;
         this._id = originalId(settings.schema_id, key);
         this._owning = false;
         this._forced = undefined;
@@ -188,6 +192,13 @@ export class SettingOwner {
                 return saved.value;
         }
         return this._live();
+    }
+
+    _disconnect() {
+        if (this._changedId) {
+            this._gs.disconnect(this._changedId);
+            this._changedId = 0;
+        }
     }
 
     /** Take (true) or give back (false) the key. */
@@ -221,11 +232,20 @@ export class SettingOwner {
     }
 
     // Someone else (Tweaks, gsettings) wrote the key while Kiwi owns it: that is the user's
-    // new choice. Store it as the original and keep Kiwi's value applied.
+    // new choice. Store it as the original and keep Kiwi's value applied, or (yieldToUser)
+    // keep theirs and let go.
     _onChanged() {
         const live = this._live();
         if (!this._owning || same(live, this._forced))
             return;
+        if (this._yield) {
+            this._disconnect();
+            this._owning = false;
+            this._forced = undefined;
+            this._store.forget(this._id);
+            this._onOriginalChanged();
+            return;
+        }
         this._store.set(this._id, this._type, live);
         this._forced = this._transform(live);
         this._set(this._forced);
@@ -234,10 +254,7 @@ export class SettingOwner {
 
     /** Put the user's value back exactly and forget it. Safe to call when not owning. */
     release() {
-        if (this._changedId) {
-            this._gs.disconnect(this._changedId);
-            this._changedId = 0;
-        }
+        this._disconnect();
         if (!this._owning)
             return;
         this._owning = false;
