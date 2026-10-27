@@ -21,7 +21,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { Glass } from '../../lib/glass.js';
-import { EDGE_PX, hitZone } from './model.js';
+import { EDGE_PX, dropZone, hitZone } from './model.js';
 
 // How long the pointer rests against an edge before the outline shows (no modifier)
 const DWELL_MS = 150;
@@ -58,7 +58,11 @@ export class TileDrag {
             style_class: 'kiwi-tile-preview', visible: false, reactive: false, opacity: 0,
         }));
         // Kiwi's faux glass (overlays surface); style.css keeps a plain outline when glass is off
-        const glass = Glass.attach(this._preview, { surface: 'overlays', radius: 12 });
+        // The outline follows the colour scheme (its own text colour says nothing: it has none)
+        const st = St.Settings.get();
+        const glass = Glass.attach(this._preview, {
+            surface: 'overlays', radius: 12, isDark: () => st.color_scheme !== St.SystemColorScheme.PREFER_LIGHT,
+        });
         cleanup.add(() => glass.destroy());
         cleanup.connect(global.display, 'grab-op-begin', (_d, win, op) => this._begin(win, op));
         cleanup.connect(global.display, 'grab-op-end', (_d, win) => this._end(win));
@@ -88,8 +92,10 @@ export class TileDrag {
     _end(win) {
         if (!this._win || win !== this._win)
             return;
-        const zone = this._shown;
         const monitor = this._monitor;
+        // Esc cancels the grab with the button still down: the window goes back, nothing tiles
+        const [, , mods] = global.get_pointer();
+        const zone = dropZone(this._shown, (mods & Clutter.ModifierType.BUTTON1_MASK) !== 0);
         this._stop();
         if (zone)
             this._engine.tile(win, zone, monitor);

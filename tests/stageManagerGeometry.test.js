@@ -30,6 +30,8 @@ test('layout: slots centred in the band, inside the work area, floor around them
     eq(l.floor.y < l.slots[0].y && l.floor.y + l.floor.height > l.slots[2].y + l.slots[2].height, true);
     const r = stripLayout({ workArea: wa, side: 'right', count: 1 });
     eq(r.band.x, wa.width - METRICS.stripWidth);
+    eq(l.floor.x, wa.x);   // the floor reaches the screen edge: a pointer resting there is on it
+    eq(r.floor.x + r.floor.width, wa.x + wa.width);
     eq(stripLayout({ workArea: wa, side: 'left', count: 0 }).floor, null);
 });
 

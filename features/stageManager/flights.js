@@ -87,23 +87,30 @@ export class Flights {
         clone.opacity = reduced && toStage ? 0 : 255;
         this._layer.add_child(clone);
 
-        const flight = { clone, frame, buffer, actor, toStage, opacity, anim: null };
+        const flight = { clone, frame, buffer, actor, toStage, opacity, anim: null, painted: 0 };
         this._active.set(win, flight);
         if (toStage) {
             actor.remove_transition('opacity');
             actor.opacity = 0;
         }
-        flight.anim = this._motion.ease(clone, {
-            x: b.x, y: b.y, scale_x: b.scale, scale_y: b.scale, scale_z: b.scale,
-            rotation_angle_y: reduced ? 0 : end.angle ?? 0,
-            opacity: reduced && !toStage ? 0 : 255,
-        }, {
-            duration: this._ms(FLIGHT_MS), curve: 'emphasized',
-            onDone: () => {
-                if (this._active.get(win) === flight)
-                    this._end(win, flight, true);
-            },
+        // The clone's first paint (texture, shader, layout) is the costly frame: let it draw at
+        // the start pose first, so the tween's clock starts after it instead of skipping ahead
+        flight.painted = global.stage.connect('after-paint', () => {
+            global.stage.disconnect(flight.painted);
+            flight.painted = 0;
+            flight.anim = this._motion.ease(clone, {
+                x: b.x, y: b.y, scale_x: b.scale, scale_y: b.scale, scale_z: b.scale,
+                rotation_angle_y: reduced ? 0 : end.angle ?? 0,
+                opacity: reduced && !toStage ? 0 : 255,
+            }, {
+                duration: this._ms(FLIGHT_MS), curve: 'emphasized',
+                onDone: () => {
+                    if (this._active.get(win) === flight)
+                        this._end(win, flight, true);
+                },
+            });
         });
+        clone.queue_redraw();
         return true;
     }
 
@@ -140,6 +147,9 @@ export class Flights {
 
     _end(win, f, notify) {
         this._active.delete(win);
+        if (f.painted)
+            global.stage.disconnect(f.painted);
+        f.painted = 0;
         f.anim?.cancel();
         f.clone.destroy();
         if (f.toStage && f.actor.get_stage?.() !== null)

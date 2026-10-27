@@ -12,7 +12,7 @@ export const METRICS = Object.freeze({
     padTop: 24,
     padBottom: 24,
     minScale: 0.55,       // entries shrink to this at most; then fewer are listed
-    floorPad: 14,         // the glass floor around the entries
+    floorPad: 14,         // the strip's hover area above and below the entries
     cardPad: 14,          // between an entry's box and the window inside it (scaled)
     badge: 34,            // app icon badge at scale 1
     stackMax: 3,          // windows drawn per entry
@@ -75,7 +75,8 @@ export function stripLayout({ workArea, side, count }, m = METRICS) {
     for (let i = 0; i < n; i++)
         slots.push({ x, y: top + i * (h + gap), width: w, height: h });
     const pad = m.floorPad;
-    const floor = { x: x - pad / 2, y: top - pad, width: w + pad, height: total + 2 * pad };
+    // The whole band, so the area reaches the screen edge
+    const floor = { x: x0, y: top - pad, width: m.stripWidth, height: total + 2 * pad };
     return { band, slots, floor, scale };
 }
 

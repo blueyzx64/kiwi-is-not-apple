@@ -22,6 +22,17 @@ export const CORNER_FRACTION = 0.12;
 export const MODIFIER_FRACTION = 0.25;
 
 /**
+ * The zone a finished drag tiles into. A grab that ends with the pointer button still down
+ * was cancelled (Esc): the window goes back and nothing is tiled.
+ * @param {?string} shown the zone the outline showed
+ * @param {boolean} buttonDown the grab button is still held
+ * @returns {?string}
+ */
+export function dropZone(shown, buttonDown) {
+    return buttonDown ? null : shown;
+}
+
+/**
  * The rect of a zone in a work area. With a margin, every outer edge is inset by the margin
  * and every inner edge by half of it, so neighbouring tiles keep one margin between them.
  * Edges are rounded before widths are taken, so neighbours share their edge exactly.
