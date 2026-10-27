@@ -351,15 +351,5 @@ The owner's rule: wherever Kiwi had overridden a default, use the **macOS defaul
 
 Other macOS defaults that apply: dock magnification **off**, dock at the bottom, "minimize windows into application icon" **off**, Genie as the minimize effect, menu bar shown in full screen **off**, Stage Manager **off** by default (macOS ships it off; toggle in Control Center), Focus off.
 
-## 13. AI features (after P8): owner decisions 2026-10-27
-- **Local only.** No cloud providers and no API keys. Nothing leaves the machine.
-- **No voice for now.** No whisper or Piper. Text, OCR and summaries only.
-- **Architecture.** A separate helper, "Kiwi Intelligence" (a D-Bus service), shipped by the owner's installer, never inside the extension zip (EGO). The extension hides every AI entry point when the helper is missing.
-- **Runtime:** llama.cpp (or an existing Ollama install) for text, Tesseract for OCR. The model size comes from a hardware tier the helper detects.
-- **Scope:**
-  - Writing Tools: copy the selection → rewrite → paste back with Quick Paste's virtual Ctrl+V.
-  - Notification summaries in the notch and the Notification Center.
-  - Spotlight "Search or Ask", which reuses Spotlight actions and app-menu commands.
-  - Live Text on screenshots, Quick Look and clipboard images.
-- **Skipped:** image generation, Genmoji, in-app smart replies.
-- **Settings:** an "Intelligence" page with a switch per feature, the model choice, and a plain statement that all processing is local.
+## 13. AI features: skipped (owner, 2026-10-27)
+The owner dropped AI features entirely: no Writing Tools, summaries, "Search or Ask", Live Text, voice or image generation. Focus on making every other feature complete and working. (The earlier local-only design is in git history if it's ever revisited.)
