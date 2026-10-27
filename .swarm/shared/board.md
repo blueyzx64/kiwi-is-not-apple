@@ -79,3 +79,4 @@ Deploy conservatively, sized to the scope and type of work. Resume in waves of a
 - FX3 started (R2 fixes): worktree kiwi-fix-glass, branch v3/fix-glass.
 - L5 → merged (Mission Control on the overview: Spaces bar with +/×/reorder, App Exposé with minimized strip, F3/Ctrl+Up/Ctrl+Down, start on desktop, static Spaces via originals; API `ctx.features.instance('mission-control')`). The conflicts with L1/L7 in dock, schema, tests and code-map were combined by the orchestrator. Limits: no per-display Spaces; you reorder by dragging the label.
 - Resumed L4 (cap 5: P1-windows, L2, L3, FX3, L4).
+- ccr after the L7 merge: run-f44.sh 20 gave 0 Kiwi errors, 8/8 PASS (/tmp/x2/runs/20261027-150951-kiwi-is-not-apple-f44).
