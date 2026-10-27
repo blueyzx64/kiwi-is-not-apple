@@ -16,7 +16,7 @@
 | L10 | sonnet | P5 Notification Center column (clock click), Focus modes, time-sensitive | kiwi-l10 / v3/l10-nc | | started |
 | L11 | sonnet | P5 Widget model + desktop widget layer + gallery + built-in widgets | kiwi-l11 / v3/l11-widgets | | started |
 | L12 | sonnet | P6 App menu providers: GTK menubar, DBusMenu registrar, AT-SPI, Help search | kiwi-l12 / v3/l12 | P1-menubar | started |
-| L13 | sonnet | P6 Spotlight Tahoe features | kiwi-l13 / v3/l13-spotlight | | started |
+| L13 | sonnet | P6 Spotlight Tahoe features | kiwi-l13 / v3/l13-spotlight | | merged |
 | L14 | sonnet | P6 Control Center customisation, pinned controls, status-item (SNI) host, menu bar item manager, Low Power/battery rows | kiwi-l14 / v3/l14 | P1-menubar | started |
 | L15 | sonnet | P7 Installer integration (Kiwi side) + onboarding | kiwi-l15 / v3/l15-installer | | started |
 | R1–R5 | sonnet | Adversarial review of merged work | read-only | merges | R1, R2, R3 done; R4 once after wave 3 |
@@ -72,3 +72,5 @@ Deploy conservatively, sized to the scope and type of work. Resume in waves of a
 - S3 F7 (autostart through a dangling symlink), F8 (trash.js:89 after destroy), F10 (web-app minimize target), F11 (click on a focused app unminimizes). F9 is fixed by FX1. F12 is unconfirmed, so skip it.
 - ccr@a175d6a after the L6 and FX1 merges: run-f44.sh 20 gave 0 Kiwi errors and 8/8 probes PASS (/tmp/x2/runs/20261027-150204-kiwi-is-not-apple-f44d).
 - L1 → merged (Genie/Scale `minimize-effect`, magnification, bounce, LauncherEntry badges, background-app dots, folder Stacks; core `ctx.motion.tween`). Note for L8: Stage Manager flags windows, so they get GNOME's own minimize effect. L8 must call minimizeEffect `setTargetProvider(owner, fn(win)->{rect,edge})` so Genie targets the strip. Perf note: magnification costs 15.8 ms/frame in software rendering because the dock re-lays out and redraws its glass on every pointer move (R4 to check on hardware).
+- L13 → merged (Spotlight views, LocalSearch files, actions, Quick Keys, "/" filters, history, Quick Look via Sushi, menu items; core event `timer-start-requested {seconds,label,source}` for L9). Open: Stage Manager puts the Sushi preview into the strip instead of on stage (→ L8). The dock view.js destroyed-widget error is still seen with KIWI_ONLY=spotlight (→ FX3). The EmptyTrash D-Bus signature is untested live.
+- Resumed L2 (cap: 5 running).
