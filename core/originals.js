@@ -86,6 +86,12 @@ export class OriginalsStore {
     constructor(kiwiSettings) {
         this._gs = kiwiSettings;
         this._holders = new Map();   // id -> number of owners holding it
+        /**
+         * While true, owners leave their keys and entries as they are when they release (the
+         * Shell disables every extension on a screen lock and enables them at unlock: nothing
+         * should flip meanwhile). The next take finds the entry and goes on from it.
+         */
+        this.keepStored = false;
     }
 
     _read() {
@@ -395,7 +401,7 @@ export class SettingOwner {
             return;
         this._owning = false;
         this._forced = undefined;
-        if (this._store.unhold(this._id))
+        if (this._store.unhold(this._id) || this._store.keepStored)
             return;
         putBack(this._gs, this._type, this._key, this._orig.value, this._orig.user);
         this._store.forget(this._id);
@@ -517,7 +523,7 @@ export class ListMembersOwner {
             return;
         this._owning = false;
         const remaining = this._store.unhold(this._id);
-        if (keepStored || remaining)
+        if (keepStored || remaining || this._store.keepStored)
             return;
         const held = this.held;
         this._mem = [];

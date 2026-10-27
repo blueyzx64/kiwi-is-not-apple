@@ -17,6 +17,7 @@
  */
 
 import Gio from 'gi://Gio';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import { CleanupRegistry } from './lib/disposables.js';
@@ -49,6 +50,12 @@ const openSettings = schemaId =>
  *   events (core/events.js), desktop (core/desktop.js), layout (core/layout.js),
  *   motion (core/motion.js), originals (core/originals.js), appMenus (core/appMenus/service.js)
  */
+// The Shell disables every extension while the screen is locked and enables it again at unlock
+// (Kiwi has no 'unlock-dialog' session mode: its UI has no place on the lock screen). The GNOME
+// keys it owns and the extensions it holds off stay as they are meanwhile, so an unlock changes
+// nothing and nothing flashes; set by disable(), read by the enable() that follows.
+let _heldAcrossLock = false;
+
 export default class KiwiExtension extends Extension {
     enable() {
         this._cleanup = new CleanupRegistry();
@@ -69,11 +76,14 @@ export default class KiwiExtension extends Extension {
         // disable() at logout, so the entry is there at every login, and giving the member back
         // now would make the Shell enable it just for the dock to remove it again. The dock
         // adopts the entry; whatever nobody adopted is given back once the features have started.
-        try {
-            restoreStale(this._originals, openSettings, { members: 'leave' });
-        } catch (err) {
-            console.error('[Kiwi] could not restore saved GNOME settings:', err);
+        if (!_heldAcrossLock) {
+            try {
+                restoreStale(this._originals, openSettings, { members: 'leave' });
+            } catch (err) {
+                console.error('[Kiwi] could not restore saved GNOME settings:', err);
+            }
         }
+        _heldAcrossLock = false;
         const generation = this._generation = (this._generation ?? 0) + 1;
 
         this._events = new EventHub();
@@ -133,6 +143,9 @@ export default class KiwiExtension extends Extension {
     }
 
     disable() {
+        _heldAcrossLock = Main.sessionMode.isLocked;
+        if (this._originals)
+            this._originals.keepStored = _heldAcrossLock;
         this._generation++;
         this._cancellable?.cancel();
         this._cancellable = null;

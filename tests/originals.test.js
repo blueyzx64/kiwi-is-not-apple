@@ -48,6 +48,27 @@ test('take saves the original first, release writes it back and forgets it', () 
     eq(k.values[STORE_KEY], '', 'an empty store is an empty key');
     eq(mutter.nHandlers, 0);
 });
+test('a lock (keepStored) leaves the key and the entry; the next owner continues from them', () => {
+    const k = kiwi();
+    const mutter = fake('org.gnome.mutter', { 'edge-tiling': true });
+    const list = fake('org.gnome.shell', { 'enabled-extensions': ['kiwi@kemma', 'dtd@x'] });
+    const a = new OriginalsStore(k);
+    const owner = new SettingOwner(a, mutter, 'edge-tiling', { type: 'b', value: false });
+    const members = new ListMembersOwner(a, list, 'enabled-extensions', ['dtd@x']);
+    owner.sync(true);
+    members.sync(true);
+    a.keepStored = true;
+    owner.release();
+    members.release();
+    eq(mutter.values['edge-tiling'], false, 'not given back');
+    eq(list.values['enabled-extensions'], ['kiwi@kemma'], 'Dash to Dock stays off');
+    const b = new OriginalsStore(k);
+    const again = new SettingOwner(b, mutter, 'edge-tiling', { type: 'b', value: false });
+    again.sync(true);
+    eq(again.original, true, 'the user value, not the forced one');
+    again.release();
+    eq(mutter.values['edge-tiling'], true);
+});
 test('a user change while owned becomes the new original', () => {
     const store = new OriginalsStore(kiwi());
     const wm = fake('org.gnome.desktop.wm.preferences', { 'num-workspaces': 4 });
