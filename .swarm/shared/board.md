@@ -108,3 +108,4 @@ Groups (about 6 agents): (1) dock and minimize effects; (2) Stage Manager and wi
 - L14 → merged (Edit Controls, pinned controls, SNI host, item manager, Low Power). Open: the pinned Wi-Fi menu misses network rows under the NM mock; two DBusMenu parsers (core/appMenus and menuBarItems) should be unified; AppIndicator and other-watcher modes untested. PERF cc: mean 24 ms, p95 49 ms, jitter 0.
 - L10 → merged (Notification Center column, Focus modes with schedules and app triggers, DND sync). The orchestrator ported the Focus icon onto L9's Widgets-tab toggle (L10 had edited the pre-L9 dashboard). Open: an expanded notch banner swallows the first outside click.
 - Remaining: L15 running. Then the verification phase.
+- ccr after L8, L10, L11, L14 and the cover-pane fix: run-f44.sh 20 gave 0 Kiwi errors, 8/8 PASS (/tmp/x2/runs/20261027-160247-kiwi-is-not-apple-f44b).
