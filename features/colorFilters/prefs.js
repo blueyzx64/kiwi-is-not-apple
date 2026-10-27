@@ -8,7 +8,7 @@ import Gtk from 'gi://Gtk';
 import { comboRow, watchKey } from '../../prefs/widgets.js';
 
 function scaleRow(settings, { title, subtitle, key, upper, label }) {
-    const row = new Adw.ActionRow({ title, subtitle });
+    const row = new Adw.ActionRow({ title, subtitle: subtitle ?? '' });
     const scale = new Gtk.Scale({
         orientation: Gtk.Orientation.HORIZONTAL,
         adjustment: new Gtk.Adjustment({ lower: 0, upper, step_increment: 1, page_increment: 10 }),

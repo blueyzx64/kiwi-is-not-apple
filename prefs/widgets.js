@@ -19,7 +19,7 @@ export function watchKey(settings, key, widget, fn) {
 
 /** A switch bound to a boolean key. */
 export function switchRow(settings, title, subtitle, key) {
-    const row = new Adw.SwitchRow({ title, subtitle });
+    const row = new Adw.SwitchRow({ title, subtitle: subtitle ?? '' });
     settings.bind(key, row, 'active', Gio.SettingsBindFlags.DEFAULT);
     return row;
 }
