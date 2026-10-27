@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Kiwi Shelf Helper
+Comment=Lets files be dragged out of the Kiwi notch shelf
+Exec=kiwi-shelf-helper
+Icon=folder-download-symbolic
+NoDisplay=true
+StartupNotify=false
+Categories=Utility;

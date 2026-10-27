@@ -7,9 +7,11 @@
 //   - "Add from Clipboard": files copied in Files (x-special/gnome-copied-files or
 //     text/uri-list) or a copied path;
 //   - finished downloads (notch-shelf-downloads) and new screenshots (notch-shelf-screenshots).
-// Dragging out of the Shell into an app is not possible (a Shell actor cannot start a Wayland
-// drag), so items give themselves back with Open, Show in Files, Copy (a text/uri-list on the
-// clipboard, which Files and GTK apps paste as the file) and Remove.
+// Dragging out of the Shell into an app is not possible for a Shell actor (it cannot start a
+// Wayland drag). With the separate kiwi-shelf-helper package installed, shelfHelper.js puts the
+// helper's window over the tiles and the drag starts there. Either way items also give
+// themselves back with Open, Show in Files, Copy (a text/uri-list on the clipboard, which Files
+// and GTK apps paste as the file) and Remove.
 
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';

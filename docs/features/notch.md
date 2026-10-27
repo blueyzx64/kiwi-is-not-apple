@@ -151,7 +151,25 @@ copied in Files: `x-special/gnome-copied-files`, `text/uri-list`, or a copied pa
 downloads (`notch-shelf-downloads`) and screenshots (`notch-shelf-screenshots`). **Out:** a Shell
 actor cannot start a Wayland drag (Mutter exposes no compositor-side data source to GJS), so items
 offer Open, Show in Files (FileManager1), Copy (`text/uri-list`, pastes as the file in Files) and
-Remove. Only links are stored (`notch-shelf`); files are never copied, moved or deleted.
+Remove. With the separate `kiwi-shelf-helper` package (`helpers/kiwi-shelf-helper`, `make
+helper-rpm`; not in the extension zip) a tile can also be dragged out for real: while the Tray is
+open and settled, `shelfHelper.js` runs the helper (Gio.Subprocess, JSON lines on stdin/stdout)
+and moves its one transparent window exactly over the tiles (`move_resize_frame`, kept above,
+actor opacity 0). The island stops taking input there (`reactive = false`), an input plate under it
+(`inputRing.js`) takes the rest of the dashboard, and the outside-click layer leaves a hole, so the
+press lands on the helper's window and its GtkDragSource starts a drag carrying `text/uri-list`.
+A plain click on a tile comes back as a `click` event (select / open). The helper window holds the
+dashboard open (hover) and the outside-click layer is off while the drag runs; the focus a press
+gives the helper's window goes straight back. The helper stops when the Tray closes (stdin
+closes, so it never outlives Kiwi). Not installed: nothing changes. The helper's window must not
+be fully transparent (GTK never maps one), so it keeps a 1 % tint that the actor hides. Only links are stored (`notch-shelf`); files are never copied, moved or deleted.
+
+**Click outside.** While the dashboard is open (hover or pinned), `outsideClick.js` puts a
+transparent reactive layer over the stage right under the island. A press on it collapses the
+notch; on the release the layer steps aside and replays the click through a virtual pointer, so
+it still reaches the window, wallpaper, top bar or dock. (A Wayland client window never gives the
+stage a press, and a press on the already focused window changes no focus, so stage events and
+`notify::focus-window` alone miss cases; a grab would swallow the click.)
 
 **Look and motion.** Pure black, no glass layer, the ears kept; Apple's dark system colours for
 tints (orange timers, red recording/low battery, green charging, blue downloads); 12 px minimum
