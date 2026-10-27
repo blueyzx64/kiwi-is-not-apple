@@ -17,6 +17,7 @@
 
 // ctx: see extension.js (settings, gettext, events, desktop, layout, motion, originals, ...)
 const bool = (ctx, key) => ctx.settings.get_boolean(key);
+const HOT_CORNERS = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
 
 // The date menu leaves the centre box when the user asked for it, and always while the notch
 // owns the centre. The message list moves to Quick Settings with it.
@@ -165,5 +166,23 @@ export const FEATURES = [
         // and OSD (parts switch live on notch-notifications / notch-osd / notch-live-activities).
         id: 'notch', setting: 'notch',
         load: async () => (await import('./features/notch/index.js')).NotchFeature,
+    },
+    {
+        // Super+Tab and Super+`: Kiwi's handlers for switch-applications and switch-group while
+        // on, the Shell's own given back after (the user's shortcuts are never written)
+        id: 'app-switcher', setting: 'app-switcher',
+        restartOn: ['switcher-cycle-windows'],
+        load: async () => (await import('./features/switcher/index.js')).AppSwitcher,
+    },
+    {
+        // 3/4-finger touchpad gestures; GNOME's own swipes stay (the router only watches them)
+        id: 'gestures', setting: 'gestures',
+        load: async () => (await import('./features/gestures/index.js')).Gestures,
+    },
+    {
+        // Four hot corners; off (no barriers) while every corner is 'none', the macOS default
+        id: 'hot-corners',
+        when: ctx => HOT_CORNERS.some(c => ctx.settings.get_string(`hot-corner-${c}`) !== 'none'),
+        load: async () => (await import('./features/hotCorners/index.js')).HotCorners,
     },
 ];

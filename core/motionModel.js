@@ -122,6 +122,7 @@ export function springKeyframes(spring, count = 24) {
  *   transforms false: move and scale properties must jump to their end value
  */
 export function resolve(request = {}, env = { reducedMotion: false, animations: true }) {
+    // A missing `animations` field means animations are on (only an explicit false turns them off).
     const named = typeof request.duration === 'string' ? DURATIONS[request.duration] : request.duration;
     if (named === undefined && request.duration !== undefined)
         throw new Error(`motion: unknown duration '${request.duration}'`);
@@ -136,7 +137,7 @@ export function resolve(request = {}, env = { reducedMotion: false, animations: 
     }
     const duration = spring ? springDuration(spring) : Math.max(0, named ?? DURATIONS.medium);
 
-    if (!env.animations)
+    if (env.animations === false)
         return { duration: 0, mode: CURVES.linear, spring: null, transforms: false };
     if (env.reducedMotion)
         return { duration: Math.min(duration, REDUCED_MAX_MS), mode: CURVES.enter, spring: null, transforms: false };

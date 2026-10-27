@@ -48,6 +48,16 @@ function deprecatedKeys() {
     return keys;
 }
 
+test('Reset Everything: bookkeeping and caches are marked (internal), user toggles are not', () => {
+    const xml = Gio.File.new_for_path(GLib.build_filenamev([root, 'schemas', 'org.gnome.shell.extensions.kiwi.gschema.xml'])).load_contents(null)[1];
+    const text = new TextDecoder().decode(xml);
+    const summary = k => text.match(new RegExp(`<key name="${k}"[\\s\\S]*?<summary>([^<]*)</summary>`))[1];
+    for (const k of ['migrations-done', 'saved-originals', 'saved-originals-backup', 'dock-recent-apps'])
+        if (!summary(k).endsWith('(internal)'))
+            throw new Error(`${k} must be marked (internal)`);
+    if (summary('clipboard-recording').endsWith('(internal)'))
+        throw new Error('clipboard-recording is a user toggle');
+});
 test('the schema marks the dropped keys deprecated', () => {
     const keys = deprecatedKeys();
     for (const k of ['panel-transparency', 'dock-blur', 'enable-firefox-styling', 'show-window-title',
