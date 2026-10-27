@@ -41,6 +41,11 @@ export const EVENTS = Object.freeze({
     // policy listens; with no listener the app menu runs a plain fallback itself.
     'app-hide-requested': { appId: 'string|null', mode: "'hide' | 'others' | 'all'" },
     'window-tile-requested': { window: 'Meta.Window', mode: "'left' | 'right'" },
+    // Desktop actions (core/desktopActions.js: hot corners, gestures, the app switcher). App
+    // Exposé (Mission Control, P3) and the Launchpad listen; with no listener a stock fallback
+    // runs (the overview, the app grid). appId null means the focused app.
+    'app-expose-requested': { appId: 'string|null', source: "string ('corner'|'gesture'|'switcher')" },
+    'launchpad-requested': { source: "string ('corner'|'gesture')" },
 });
 
 export class EventHub {

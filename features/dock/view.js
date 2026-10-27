@@ -125,6 +125,7 @@ export class DockView {
 
     /** Place the band on the claimed rect. */
     setRect(rect) {
+        // The Shell destroys its chrome on shutdown before any work-area event stops
         if (!rect || !this.alive)
             return;
         this.band.set_position(rect.x, rect.y);

@@ -42,6 +42,18 @@ export class GenericCommands {
         this._hidden.clear();
     }
 
+    /** True for a window this object's Hide fallback minimized (and has not shown again). */
+    isHidden(win) {
+        return this._hidden.has(win);
+    }
+
+    /** Show one window the Hide fallback minimized (the app switcher activates a hidden app). */
+    unhide(win) {
+        this._hidden.delete(win);
+        if (win.get_compositor_private())
+            win.unminimize();
+    }
+
     /**
      * @param {string} name a generic command name (core/appMenus/model.js)
      * @param {{appId: ?string, windowId: ?number}} target

@@ -6,8 +6,8 @@
 //     out (the stock window picker; titles on hover are the stock ones), no search entry, no
 //     dash and no find-as-you-type. The app grid is not part of it: Launchpad and Super+A.
 //   - App Exposé: only one app's windows, spread, with its minimized windows in a strip at
-//     the bottom (expose.js). Ctrl+Down, the dock's "Show All Windows", and
-//     showAppExpose() for the four-finger swipe down.
+//     the bottom (expose.js). Ctrl+Down, the dock's "Show All Windows", and the event
+//     'app-expose-requested' (Super+` down, four-finger swipe down, hot corners).
 //   - Entry points: F3 and Ctrl+Up (mission-control-shortcut), GNOME's three/four-finger swipe
 //     up (shell-behaviour stops it at the window picker), the optional dock item. The Super
 //     tap stays with Spotlight.
@@ -99,6 +99,9 @@ export class MissionControl {
             this._view = ALL;
             this._pending = null;
         });
+
+        // Super+` down, the four-finger swipe down and hot corners (core/desktopActions.js)
+        this._ctx.events.on('app-expose-requested', ({ appId }) => this.toggleAppExpose(appId), c);
 
         Keybindings.add(c, KEYS.shortcut, this._ctx.settings, () => this.toggle());
         Keybindings.add(c, KEYS.expose, this._ctx.settings, () => this.toggleAppExpose());

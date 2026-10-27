@@ -8,13 +8,18 @@
       <!-- Internal bookkeeping (never shown in prefs) -->
       <key name="migrations-done" type="as">
         <default>[]</default>
-        <summary>Settings migrations that already ran</summary>
+        <summary>Settings migrations that already ran (internal)</summary>
         <description>Internal. Ids of the one-time settings migrations (old key to new key) that Kiwi has already applied, so they never run again. Do not edit.</description>
       </key>
       <key name="saved-originals" type="s">
         <default>''</default>
         <summary>Saved originals of GNOME settings Kiwi changed (internal)</summary>
         <description>JSON written by core/originals.js: the user's own value of every GNOME setting Kiwi currently owns (for example the window button-layout), so it can be put back after a crash. Do not edit.</description>
+      </key>
+      <key name="saved-originals-backup" type="s">
+        <default>''</default>
+        <summary>Unreadable saved originals, kept (internal)</summary>
+        <description>Internal. The text of saved-originals when it could not be parsed, kept so a damaged store is never silently lost. Do not edit.</description>
       </key>
 
       <!-- Menu bar (features/menuBar, features/calendar) -->
@@ -531,6 +536,170 @@
         <default>'normal'</default>
         <summary>Show Desktop animation speed</summary>
         <description>How fast the windows slide aside and back: fast, normal or slow.</description>
+      </key>
+
+      <!-- App switcher (features/switcher) -->
+      <key name="app-switcher" type="b">
+        <default>true</default>
+        <summary>macOS app switcher</summary>
+        <description>Super+Tab shows a panel of big app icons in most-recently-used order: Tab moves, Q quits, H hides, Down shows the app's windows, releasing Super switches. Replaces GNOME's app switcher while on; your shortcut is kept.</description>
+      </key>
+      <key name="switcher-cycle-windows" type="b">
+        <default>true</default>
+        <summary>Super+` cycles the windows of the front app</summary>
+        <description>Like Cmd-` on macOS: each press brings the next window of the current app forward, without a panel. Off gives Super+` back to GNOME's switcher.</description>
+      </key>
+      <key name="switcher-switch-to-space" type="b">
+        <default>true</default>
+        <summary>Switch to a Space with open windows for the application</summary>
+        <description>Choosing an app with no window on this workspace goes to a workspace that has one (macOS Mission Control setting). Off opens a new window here when the app can.</description>
+      </key>
+      <key name="switcher-restore-minimized" type="b">
+        <default>false</default>
+        <summary>Switching to an app restores its minimized windows</summary>
+        <description>macOS leaves minimized windows in the Dock unless Option (Alt) is held when Cmd (Super) is released. On restores the most recent one when the app has no other window to show.</description>
+      </key>
+
+      <!-- Trackpad gestures (features/gestures) -->
+      <key name="gestures" type="b">
+        <default>true</default>
+        <summary>Trackpad gestures</summary>
+        <description>macOS three- and four-finger touchpad gestures: App Exposé, Launchpad and Show Desktop, next to GNOME's own swipes for Mission Control and workspaces.</description>
+      </key>
+      <key name="gestures-mission-control" type="b">
+        <default>true</default>
+        <summary>Swipe up with three or four fingers for Mission Control</summary>
+        <description>GNOME's own overview swipe. Off: the swipe does nothing on the desktop.</description>
+      </key>
+      <key name="gestures-spaces" type="b">
+        <default>true</default>
+        <summary>Swipe left or right with three or four fingers to switch Spaces</summary>
+        <description>GNOME's own workspace swipe. Off: the swipe does nothing on the desktop.</description>
+      </key>
+      <key name="gestures-app-expose" type="b">
+        <default>true</default>
+        <summary>Swipe down with four fingers for App Exposé</summary>
+        <description>Shows every window of the front app.</description>
+      </key>
+      <key name="gestures-launchpad" type="b">
+        <default>true</default>
+        <summary>Pinch with thumb and three fingers for Launchpad</summary>
+        <description>Opens the Launchpad (the app grid).</description>
+      </key>
+      <key name="gestures-show-desktop" type="b">
+        <default>true</default>
+        <summary>Spread with thumb and three fingers to show the desktop</summary>
+        <description>Pushes the windows aside, like Show Desktop; pinch or click to bring them back.</description>
+      </key>
+
+      <!-- Hot corners (features/hotCorners) -->
+      <key name="hot-corner-top-left" type="s">
+        <choices>
+          <choice value="none"/>
+          <choice value="mission-control"/>
+          <choice value="app-expose"/>
+          <choice value="desktop"/>
+          <choice value="notification-center"/>
+          <choice value="launchpad"/>
+          <choice value="lock-screen"/>
+          <choice value="display-sleep"/>
+        </choices>
+        <default>'none'</default>
+        <summary>Hot corner action, top left</summary>
+        <description>What pushing the pointer into the top left corner does: none, mission-control, app-expose (Application Windows), desktop, notification-center, launchpad, lock-screen or display-sleep. macOS has every corner off.</description>
+      </key>
+      <key name="hot-corner-top-left-modifier" type="s">
+        <choices>
+          <choice value="none"/>
+          <choice value="shift"/>
+          <choice value="ctrl"/>
+          <choice value="alt"/>
+          <choice value="super"/>
+        </choices>
+        <default>'none'</default>
+        <summary>Modifier key the top left hot corner needs</summary>
+        <description>The corner fires only while this key is held (none, shift, ctrl, alt or super), which avoids accidental triggers.</description>
+      </key>
+      <key name="hot-corner-top-right" type="s">
+        <choices>
+          <choice value="none"/>
+          <choice value="mission-control"/>
+          <choice value="app-expose"/>
+          <choice value="desktop"/>
+          <choice value="notification-center"/>
+          <choice value="launchpad"/>
+          <choice value="lock-screen"/>
+          <choice value="display-sleep"/>
+        </choices>
+        <default>'none'</default>
+        <summary>Hot corner action, top right</summary>
+        <description>What pushing the pointer into the top right corner does: none, mission-control, app-expose (Application Windows), desktop, notification-center, launchpad, lock-screen or display-sleep. macOS has every corner off.</description>
+      </key>
+      <key name="hot-corner-top-right-modifier" type="s">
+        <choices>
+          <choice value="none"/>
+          <choice value="shift"/>
+          <choice value="ctrl"/>
+          <choice value="alt"/>
+          <choice value="super"/>
+        </choices>
+        <default>'none'</default>
+        <summary>Modifier key the top right hot corner needs</summary>
+        <description>The corner fires only while this key is held (none, shift, ctrl, alt or super), which avoids accidental triggers.</description>
+      </key>
+      <key name="hot-corner-bottom-left" type="s">
+        <choices>
+          <choice value="none"/>
+          <choice value="mission-control"/>
+          <choice value="app-expose"/>
+          <choice value="desktop"/>
+          <choice value="notification-center"/>
+          <choice value="launchpad"/>
+          <choice value="lock-screen"/>
+          <choice value="display-sleep"/>
+        </choices>
+        <default>'none'</default>
+        <summary>Hot corner action, bottom left</summary>
+        <description>What pushing the pointer into the bottom left corner does: none, mission-control, app-expose (Application Windows), desktop, notification-center, launchpad, lock-screen or display-sleep. macOS has every corner off.</description>
+      </key>
+      <key name="hot-corner-bottom-left-modifier" type="s">
+        <choices>
+          <choice value="none"/>
+          <choice value="shift"/>
+          <choice value="ctrl"/>
+          <choice value="alt"/>
+          <choice value="super"/>
+        </choices>
+        <default>'none'</default>
+        <summary>Modifier key the bottom left hot corner needs</summary>
+        <description>The corner fires only while this key is held (none, shift, ctrl, alt or super), which avoids accidental triggers.</description>
+      </key>
+      <key name="hot-corner-bottom-right" type="s">
+        <choices>
+          <choice value="none"/>
+          <choice value="mission-control"/>
+          <choice value="app-expose"/>
+          <choice value="desktop"/>
+          <choice value="notification-center"/>
+          <choice value="launchpad"/>
+          <choice value="lock-screen"/>
+          <choice value="display-sleep"/>
+        </choices>
+        <default>'none'</default>
+        <summary>Hot corner action, bottom right</summary>
+        <description>What pushing the pointer into the bottom right corner does: none, mission-control, app-expose (Application Windows), desktop, notification-center, launchpad, lock-screen or display-sleep. macOS has every corner off.</description>
+      </key>
+      <key name="hot-corner-bottom-right-modifier" type="s">
+        <choices>
+          <choice value="none"/>
+          <choice value="shift"/>
+          <choice value="ctrl"/>
+          <choice value="alt"/>
+          <choice value="super"/>
+        </choices>
+        <default>'none'</default>
+        <summary>Modifier key the bottom right hot corner needs</summary>
+        <description>The corner fires only while this key is held (none, shift, ctrl, alt or super), which avoids accidental triggers.</description>
       </key>
 
       <!-- Clipboard history (features/clipboard) -->
