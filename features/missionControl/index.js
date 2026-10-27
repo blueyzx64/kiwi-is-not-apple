@@ -55,6 +55,10 @@ export const KEYS = Object.freeze({
     startOnDesktop: 'mc-start-on-desktop',
 });
 
+// Module state lives as long as the Shell process (an extension's modules load once), so this
+// tells the first start after login from a later disable/enable (lock, prefs)
+let firstStart = true;
+
 const appOf = win => Shell.WindowTracker.get_default().get_window_app(win);
 
 export class MissionControl {
@@ -370,17 +374,20 @@ export class MissionControl {
     _skipStartup() {
         const c = this._cleanup;
         const lm = Main.layoutManager;
-        this.startupState = { startingUp: !!lm._startingUp, overview: Main.overview.visible };
-        if (!skipStartupOverview({ wanted: this._ks.bool(KEYS.startOnDesktop), startingUp: !!lm._startingUp }))
+        const first = firstStart;
+        firstStart = false;
+        this.startupState = { startingUp: !!lm._startingUp, first, overview: Main.overview.visible };
+        if (!skipStartupOverview({ wanted: this._ks.bool(KEYS.startOnDesktop), startingUp: !!lm._startingUp, firstStart: first }))
             return;
-        // Kiwi came up while the startup animation already runs: hide the overview now (the
-        // Shell handles "Overview got hidden during startup animation")
+        // Kiwi came up while the startup animation runs, or after it with the login overview
+        // still open: hide it now (the Shell handles "Overview got hidden during startup
+        // animation")
         if (Main.overview.visible) {
             this.startupSkipped = true;
             Main.overview.hide();
             return;
         }
-        if (typeof Main.overview.runStartupAnimation !== 'function')
+        if (!lm._startingUp || typeof Main.overview.runStartupAnimation !== 'function')
             return;
         const ui = lm.uiGroup;
         c.add(() => {

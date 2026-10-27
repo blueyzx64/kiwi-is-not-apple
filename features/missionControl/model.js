@@ -129,13 +129,15 @@ export function touchRecent(recent, id, limit = 64) {
 }
 
 /**
- * Whether to skip the overview the Shell opens at login (macOS starts on the desktop).
+ * Whether to skip the overview the Shell opens at login (macOS starts on the desktop): while
+ * the Shell is starting up, or at the first start of Mission Control in this Shell process
+ * (extensions may load after the startup animation has ended, with the overview still open).
  *
- * @param {{wanted: boolean, startingUp: boolean}} s
+ * @param {{wanted: boolean, startingUp: boolean, firstStart: boolean}} s
  * @returns {boolean}
  */
-export function skipStartupOverview({ wanted, startingUp }) {
-    return wanted && startingUp;
+export function skipStartupOverview({ wanted, startingUp, firstStart }) {
+    return wanted && (startingUp || firstStart);
 }
 
 /**

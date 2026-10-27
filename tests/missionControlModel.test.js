@@ -83,10 +83,11 @@ test('touchRecent: moves to the front, no duplicates, bounded', () => {
     eq(touchRecent(['a', 'b', 'c'], 'd', 2), ['d', 'a']);
 });
 
-test('skipStartupOverview: only at startup and when wanted', () => {
-    eq(skipStartupOverview({ wanted: true, startingUp: true }), true);
-    eq(skipStartupOverview({ wanted: true, startingUp: false }), false);
-    eq(skipStartupOverview({ wanted: false, startingUp: true }), false);
+test('skipStartupOverview: at startup or the first start, and when wanted', () => {
+    eq(skipStartupOverview({ wanted: true, startingUp: true, firstStart: false }), true);
+    eq(skipStartupOverview({ wanted: true, startingUp: false, firstStart: true }), true);
+    eq(skipStartupOverview({ wanted: true, startingUp: false, firstStart: false }), false);
+    eq(skipStartupOverview({ wanted: false, startingUp: true, firstStart: true }), false);
 });
 
 test('stripCardSize: keeps the aspect within the box', () => {
