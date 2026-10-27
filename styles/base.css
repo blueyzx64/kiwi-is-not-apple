@@ -43,11 +43,11 @@ StWidget.kiwi-glass.kiwi-glass-light {
 }
 
 .kiwi-glass-shadow.kiwi-glass-dark {
-  box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 12px 28px -12px rgba(0, 0, 0, 0.40);
 }
 
 .kiwi-glass-shadow.kiwi-glass-light {
-  box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 12px 28px -12px rgba(0, 0, 0, 0.20);
 }
 
 /* The menu bar runs edge to edge: no ring, no shadow; Show Borders draws a bottom line */

@@ -47,7 +47,7 @@ J 'await kkey(["Escape"]); await sl(600); return 1' >/dev/null
 assert "menus closed, no modal grab" "Main.modalCount===0"
 
 echo "-- S2 Ctrl+F2 over a full-screen window"
-J 'kwin("org.x2.MenuApp").make_fullscreen(); await sl(2500); return 1' >/dev/null
+J 'await kmove(640,400); kwin("org.x2.MenuApp").make_fullscreen(); await sl(2500); return 1' >/dev/null
 J 'await kkey(["Control_L","F2"]); await sl(2500); return 1' >/dev/null
 assert "Ctrl+F2 over full screen opens an app menu" "inst('menu-bar').part('apps')._buttons.some(b=>b.menu.isOpen)"
 shot g4-ctrlf2-fullscreen
