@@ -30,8 +30,8 @@ sleep 2
 
 echo "-- S1 green menu: hover, Esc, wiggle, three times"
 for round in 1 2 3; do
-  J 'const [cx,cy]=ctr(greenBtn()); await kmove(cx,cy); const t=Date.now(); while(!gmenu().isOpen && Date.now()-t<4000) await sl(100); const was=gmenu().isOpen; await kkey(["Escape"]); await sl(500); for(let i=0;i<8;i++){ await kmove(cx,cy); await sl(60); await kmove(cx-60,cy+80); await sl(60);} await sl(800); return was' >/dev/null
-  assert "green menu: no modal grab left after Esc + wiggle (round $round)" "Main.modalCount===0"
+  J 'const [cx,cy]=ctr(greenBtn()); await kmove(cx,cy); const t=Date.now(); while(!gmenu().isOpen && Date.now()-t<4000) await sl(100); const was=gmenu().isOpen; await kkey(["Escape"]); await sl(500); for(let i=0;i<8;i++){ await kmove(cx,cy); await sl(60); await kmove(cx-60,cy+80); await sl(60);} await sl(800); await kkey(["Escape"]); await sl(800); return was' >/dev/null
+  assert "green menu: no modal grab left after Esc + wiggle (round $round)" "Main.modalCount===0 && !inst('window-controls')._greenMenu.isOpen"
 done
 shot s1-after-wiggle
 
