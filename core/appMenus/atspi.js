@@ -29,8 +29,7 @@ import Gio from 'gi://Gio';
 import Meta from 'gi://Meta';
 
 import {
-    MAX_REPLY_BYTES, ROLE, STATE, atspiPopoverItems, atspiToMenus, findPrimaryMenuButton, findRole, hasState,
-    nodesFromCache,
+    ROLE, STATE, atspiPopoverItems, atspiToMenus, findPrimaryMenuButton, findRole, hasState,
 } from './nativeModel.js';
 
 const ACCESSIBLE = 'org.a11y.atspi.Accessible';
@@ -43,11 +42,11 @@ const MAX_DEPTH = 24;
 const POPUP_WAIT_MS = 1500; // fail-safe only: the read waits for the popup's first frame
 const POPUP_TYPES = new Set([Meta.WindowType.DROPDOWN_MENU, Meta.WindowType.POPUP_MENU, Meta.WindowType.MENU]);
 
-function call(conn, dest, path, iface, method, params, replyType, cancellable) {
+function call(conn, dest, path, iface, method, params, replyType, cancellable, flags = Gio.DBusCallFlags.NO_AUTO_START) {
     return new Promise((resolve, reject) => {
         conn.call(dest, path, iface, method, params,
             replyType ? new GLib.VariantType(replyType) : null,
-            Gio.DBusCallFlags.NO_AUTO_START, TIMEOUT_MS, cancellable, (c, res) => {
+            flags, TIMEOUT_MS, cancellable, (c, res) => {
                 try {
                     resolve(c.call_finish(res));
                 } catch (e) {
@@ -142,8 +141,10 @@ export class AtspiProvider {
     _connection() {
         if (!this._bus) {
             this._bus = (async () => {
+                // The accessibility bus is D-Bus activated: GNOME has it running already, and
+                // asking for its address starts it elsewhere
                 const reply = await call(Gio.DBus.session, 'org.a11y.Bus', '/org/a11y/bus', 'org.a11y.Bus',
-                    'GetAddress', null, '(s)', this._cancellable);
+                    'GetAddress', null, '(s)', this._cancellable, Gio.DBusCallFlags.NONE);
                 const [address] = reply.deepUnpack();
                 return new Promise((resolve, reject) => {
                     Gio.DBusConnection.new_for_address(address,
@@ -166,7 +167,8 @@ export class AtspiProvider {
 
     // The registered application whose bus name belongs to the window's process
     async _appFor(conn, pid, cancellable) {
-        const reply = await call(conn, REGISTRY, ROOT, ACCESSIBLE, 'GetChildren', null, '(a(so))', cancellable);
+        const reply = await call(conn, REGISTRY, ROOT, ACCESSIBLE, 'GetChildren', null, '(a(so))', cancellable,
+            Gio.DBusCallFlags.NONE);
         const [apps] = reply.deepUnpack();
         const pids = await Promise.all(apps.map(([name]) =>
             call(conn, 'org.freedesktop.DBus', '/org/freedesktop/DBus', 'org.freedesktop.DBus',
@@ -176,39 +178,22 @@ export class AtspiProvider {
         return i >= 0 ? { name: apps[i][0], path: apps[i][1] } : null;
     }
 
-    // The window's frame: the app's top-level whose name is the window title, else the active one
+    // The window's frame: the app's top-level whose name is the window title, else the active
+    // one; then the whole frame, walked within the node budget
     async _frame(conn, app, title, cancellable) {
-        const tree = await this._tree(conn, app, cancellable);
-        const frames = (tree?.children ?? []).filter(n => n.role === ROLE.FRAME || n.role === ROLE.WINDOW);
-        return frames.find(f => f.name === title) ??
+        const top = await this._walk(conn, app.name, app.path, cancellable, 1);
+        const frames = (top?.children ?? []).filter(n => n.role === ROLE.FRAME || n.role === ROLE.WINDOW);
+        const frame = frames.find(f => f.name === title) ??
             frames.find(f => hasState(f.states, STATE.ACTIVE)) ?? frames[0] ?? null;
-    }
-
-    // The app's tree: from the toolkit's cache in one call when it has one, else walked
-    async _tree(conn, app, cancellable) {
-        try {
-            const reply = await call(conn, app.name, '/org/a11y/atspi/cache', 'org.a11y.atspi.Cache',
-                'GetItems', null, '(a((so)(so)(so)iiassusau))', cancellable);
-            if (reply.get_size() > MAX_REPLY_BYTES)
-                throw new Error('accessibility cache too large');
-            const nodes = nodesFromCache(reply.recursiveUnpack()[0]);
-            const root = nodes.get(app.path);
-            if (root?.children.length)
-                return root;
-        } catch (e) {
-            if (e.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
-                throw e;
-            // no cache, or too large: walk it within the node budget
-        }
-        return this._walk(conn, app.name, app.path, cancellable);
+        return frame ? this._walk(conn, app.name, frame.ref, cancellable) : null;
     }
 
     // Walk from a node: role, name, states and children of every node, in parallel per level,
     // within a node budget
-    async _walk(conn, name, path, cancellable) {
+    async _walk(conn, name, path, cancellable, maxDepth = MAX_DEPTH) {
         let budget = NODE_BUDGET;
         const visit = async (p, depth) => {
-            if (budget-- <= 0 || depth > MAX_DEPTH)
+            if (budget-- <= 0 || depth > maxDepth)
                 return null;
             const ask = (method, type) => call(conn, name, p, ACCESSIBLE, method, null, type, cancellable)
                 .then(r => r.deepUnpack()[0], () => null);
@@ -248,7 +233,8 @@ export class AtspiProvider {
                 const sub = await this._walk(conn, app.name, button.ref, this._cancellable);
                 let menu = findRole(sub, ROLE.MENU) ?? findRole(sub, ROLE.POPUP_MENU);
                 if (!menu) {
-                    const all = await this._tree(conn, app, this._cancellable);
+                    // Some toolkits parent the popover to the window, not to its button
+                    const all = await this._frame(conn, app, target.title, this._cancellable);
                     menu = findShowingMenu(all);
                 }
                 const result = menu ? await read(menu) : null;

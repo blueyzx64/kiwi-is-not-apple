@@ -166,7 +166,8 @@ export class AppMenuRegistrar {
     }
 
     GetMenus() {
-        return [[...this._windows].map(([xid, { service, path }]) => [xid, service, path])];
+        // One out argument: the value itself
+        return [...this._windows].map(([xid, { service, path }]) => [xid, service, path]);
     }
 
     // ---- internals ----------------------------------------------------------------------

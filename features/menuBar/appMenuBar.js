@@ -177,7 +177,7 @@ export class AppMenuBar {
         }
         if (atspi)
             this._service.registerProvider(cleanup, new AtspiProvider({ popovers }));
-        this._service.onChanged(cleanup, windowId => this._onProviderChanged(windowId));
+        this._service.onChanged(cleanup, (windowId, how) => this._onProviderChanged(windowId, how));
         this._wm = new Gio.Settings({ schema_id: 'org.gnome.desktop.wm.keybindings' });
         this._mutter = new Gio.Settings({ schema_id: 'org.gnome.mutter.keybindings' });
 
