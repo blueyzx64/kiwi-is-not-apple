@@ -140,3 +140,17 @@ No more installer work: no new pieces (Trash-drag uninstall, fly-to-dock, update
     - NC (v5-nc-open-after-banner.png) looks right.
     - The expanded notch (v5-notch-now.png) covers the menu bar's "Window" menu and status icons; acceptable on macOS for the island, but the Now tab is mostly empty (S3).
     - Real drop onto the notch passed.
+- V1 (dock, minimize): no S1; 42 functional probes pass.
+  - S2: magnify.js:167 `_reset` touches a destroyed button. dock/index.js:284 calls `invalidate()` after `setItems()`; invalidate first.
+  - view.js:130 root cause found (Shell shutdown → panelBox notify → layout work-area-changed → setRect on a destroyed band). It is already fixed by FX3's `alive` guard: 0 errors in 3 runs. Optional hardening: guard `_syncOverview`/`_syncGeometry`, or have EventHub skip disposed owners.
+  - S3:
+    - stack grid/list open has one 120 ms frame (prebuild);
+    - auto-hide reveal has a 178 ms first frame;
+    - the magnification pill wobbles 1 px;
+    - minimizeEffect/index.js:61 unblocks by signal id, giving "handler not blocked" and mutter "minimize accounting" errors with SM on (block exact handler ids);
+    - icon styles skip the Launchpad, Downloads and Trash tiles;
+    - list badges overlap;
+    - 4 `insert_child_below` assertions on enable (candidates notch/view.js:298, menuBar/appMenuBar.js:378);
+    - `-nan` translation-y (menuBar/fullscreenReveal.js:126).
+  - Perf: Genie p95 27 ms with 0 jitter, Scale p95 32 ms, bounce p95 17 ms.
+  - Orchestrator review: the stack grid (stack-grid.png) looks right. The Stage Manager strip sits on an opaque dark panel, where macOS Sequoia floats thumbnails on the wallpaper (S3, for V2/L8). genie-mid is inconclusive (a small funnel near the dock).
