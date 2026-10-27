@@ -5,7 +5,7 @@ import {
     autostartState, autostartText, badgeProgress, badgeText, bounceAgain, bounceSteps, clickAction,
     dockItems, dockMetrics, downloadEntry, downloadFinished, dropIndex, fanLayout, folderDropAccepted,
     magnify, magnifyScale, menuEntries, nextWindow, packageKind, pinPosition, pushRecent, readConfig,
-    removeFolder, sortDownloads, stableOrder, stackView,
+    isPartialWrite, removeFolder, sortDownloads, stableOrder, stackView,
 } from '../features/dock/model.js';
 
 let failed = 0;
@@ -87,6 +87,17 @@ test('click: the focused app with several windows cycles through all of them', (
     eq(clickAction({ windows: wins, focused: true, focusedWindow: 1, button: 1 }), { type: 'activate', windowId: 3 });
     eq(nextWindow([w(3), w(1), w(2)], 3), 2);
     eq(nextWindow([], 1), null);
+});
+test('click: a focused app with one visible and one minimized window does nothing; cycling skips minimized', () => {
+    eq(clickAction({ windows: [w(1), w(2, true)], focused: true, focusedWindow: 1, button: 1 }).type, 'none');
+    eq(clickAction({ windows: [w(1), w(2, true), w(3)], focused: true, focusedWindow: 1, button: 1 }),
+        { type: 'activate', windowId: 3 });
+});
+test('a write to a partial download is not worth a re-read; its creation or removal is', () => {
+    eq(isPartialWrite('big.iso.part', true), true);
+    eq(isPartialWrite('a.crdownload', true), true);
+    eq(isPartialWrite('big.iso.part', false), false);
+    eq(isPartialWrite('notes.txt', true), false);
 });
 test('click: a minimized-only app is brought back; middle click opens a new window', () => {
     eq(clickAction({ windows: [w(5, true)], focused: false, button: 1 }), { type: 'activate', windowId: 5 });

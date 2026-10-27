@@ -196,8 +196,9 @@ export function nextWindow(windows, focusedId) {
  *   - Not running: launch it.
  *   - Middle click: a new window (when the app can open one).
  *   - Running, not in front: bring its most recent window (un-minimizing it).
- *   - In front with one window: nothing, as on macOS.
- *   - In front with several windows: the next one (cycle).
+ *   - In front with one visible window: nothing, as on macOS (a minimized one stays in the
+ *     Dock; the user takes it out from there).
+ *   - In front with several visible windows: the next visible one (cycle).
  *
  * @param {object} p
  * @param {{id: number, minimized: boolean}[]} p.windows the app's windows, most recent first
@@ -215,9 +216,9 @@ export function clickAction({ windows, focused, focusedWindow, button, canNewWin
     if (!focused)
         return { type: 'activate', windowId: windows[0].id };
     const visible = windows.filter(w => !w.minimized);
-    if (visible.length <= 1 && windows.length <= 1)
+    if (visible.length === 1)
         return { type: 'none' };
-    return { type: 'activate', windowId: nextWindow(windows, focusedWindow) };
+    return { type: 'activate', windowId: nextWindow(visible.length ? visible : windows, focusedWindow) };
 }
 
 /** Drop separators at the ends and repeated ones. */
@@ -329,6 +330,18 @@ export function packageKind(name) {
         return 'appimage';
     return null;
 }
+
+/**
+ * A write to a partial download (.part, .crdownload ...) says nothing about the folder: the
+ * browser appends to it many times a second. Only its creation, rename or deletion matters.
+ *
+ * @param {string} name file name from the monitor
+ * @param {boolean} contentWrite true for a plain 'changed' event (data written)
+ */
+export const isPartialWrite = (name, contentWrite) => contentWrite && PARTIAL.test(name ?? '');
+
+/** Rows a Grid or List builds at a time; more are built as the list scrolls near its end. */
+export const STACK_PAGE = 60;
 
 /**
  * One file of the Downloads folder as the stack sees it.

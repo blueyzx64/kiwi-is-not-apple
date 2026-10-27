@@ -185,8 +185,9 @@ export class Dock {
     /** @returns {?{x,y,width,height}} where `win` (a Meta.Window) minimizes to */
     minimizeTarget(win) {
         if (this.config.minimizeToApp) {
-            const app = this._tracker.get_window_app(win);
-            return app ? this.iconRect(app.get_id()) : null;
+            // The model's app id: a web app's window maps to its installed app (core/desktop)
+            const appId = this._desktop.model.window(win.get_stable_sequence())?.appId;
+            return appId ? this.iconRect(appId) : null;
         }
         // The minimized-window tiles start right after the separator before the stack
         const sep = this._view.rectOf(this._view.item('separator-system'));

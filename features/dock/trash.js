@@ -86,6 +86,9 @@ export class TrashItem extends DockItem {
                 return;
             this.count = 0;
         }
+        // The query can finish just as the tile is destroyed (the dock toggled): its actors are gone
+        if (this._cancellable.is_cancelled())
+            return;
         this._icon.icon_name = this.count > 0 ? 'user-trash-full' : 'user-trash';
         this.setName(this.count > 0
             ? this._host.ngettext('Trash, %d item', 'Trash, %d items', this.count).format(this.count)

@@ -29,7 +29,7 @@ import * as DND from 'resource:///org/gnome/shell/ui/dnd.js';
 
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { Glass } from '../../lib/glass.js';
-import { decodeWallpaper } from '../../lib/wallpaperTint.js';
+import { decodeWallpaper, resolveWallpaper } from '../../lib/wallpaperDecode.js';
 import { parseHexColor, wallpaperSource } from '../../lib/wallpaperModel.js';
 import {
     cleanFolderName, dropAction, gridMetrics, jiggleParams, moveId, navigate, pageCount, pageOf,
@@ -412,11 +412,12 @@ export class LaunchpadView {
             if (source.kind !== 'file')
                 return;
             const h = Math.max(1, Math.round(BACKDROP_WIDTH * this.monitor.height / this.monitor.width));
-            const key = `${source.uri} ${h}`;
+            const slide = await resolveWallpaper(source.uri, cancellable);
+            const key = `${slide.uri} ${h}`;
             let pixbuf = backdropCache.key === key ? backdropCache.pixbuf : null;
             if (!pixbuf) {
-                pixbuf = await decodeWallpaper(source.uri, BACKDROP_WIDTH, h, false, cancellable);
-                if (!pixbuf || cancellable.is_cancelled())
+                pixbuf = await decodeWallpaper(slide.uri, BACKDROP_WIDTH, h, false, cancellable);
+                if (cancellable.is_cancelled())
                     return;
                 backdropCache = { key, pixbuf };
             }
