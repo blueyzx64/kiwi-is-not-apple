@@ -71,7 +71,7 @@ export class Magnifier {
         }, this._cleanup);
     }
 
-    /** The items changed: the rest layout must be read again once the dock settles. */
+    /** The items are about to change: restore the icons while they are alive. */
     invalidate() {
         if (!this.active)
             return;
@@ -79,6 +79,10 @@ export class Magnifier {
         this._amount = 0;
         this._target = 0;
         this._tween?.cancel();
+    }
+
+    /** The items changed: read the rest layout again if the pointer is still over the dock. */
+    resume() {
         if (this._view.frame.hover)
             this.setHovered(true);
     }
@@ -139,8 +143,10 @@ export class Magnifier {
         }, this._out);
         // The spacers grow the slab; it is centred on the edge, so the row moves by half the
         // growth; the translation puts each icon back where magnify() wants it
+        // The total is rounded once: rounding both ends would move the slab by 1 px while the
+        // pointer glides and the total stays the same
         const before = Math.round(out.before);
-        const after = Math.round(out.after);
+        const after = Math.round(out.before + out.after) - before;
         this._view.setGrowth(before, after);
         const drift = before - (before + after) / 2;
         const prop = this._host.horizontal ? 'translation_x' : 'translation_y';

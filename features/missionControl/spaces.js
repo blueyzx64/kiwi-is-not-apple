@@ -19,6 +19,7 @@ import GObject from 'gi://GObject';
 import Meta from 'gi://Meta';
 import Pango from 'gi://Pango';
 import St from 'gi://St';
+import * as Background from 'resource:///org/gnome/shell/ui/background.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as DND from 'resource:///org/gnome/shell/ui/dnd.js';
 import { ThumbnailsBox, ThumbnailState } from 'resource:///org/gnome/shell/ui/workspaceThumbnail.js';
@@ -136,7 +137,11 @@ export class SpacesBar {
         this.queueSync();
     }
 
-    /** Re-place the chrome after the next allocation (one later per frame at most). */
+    /**
+     * Re-place the chrome before the next frame (one pass per frame at most), when the
+     * thumbnails' sizes and positions are those of the last layout. A change laid out in the
+     * frame that asked leaves no frame behind to run it, so one is requested.
+     */
     queueSync() {
         if (this._laterId)
             return;
@@ -146,6 +151,7 @@ export class SpacesBar {
             this._sync();
             return false;
         });
+        global.stage.queue_redraw();
     }
 
     _cancelLater() {
@@ -175,13 +181,22 @@ export class SpacesBar {
         const labels = spaceLabels(this._host.spaces(thumbs.map(t => t.metaWorkspace)),
             n => this._host._('Desktop %d').format(n));
         const removable = canRemoveSpace(thumbs.length) && this._host.staticSpaces();
-        let right = 0, top = 0, bottom = 0;
+        let right = 0, top = Infinity, bottom = 0, laidOut = true;
         thumbs.forEach((t, i) => {
+            // A new Space has no size until the box allocates it (its natural size is the
+            // whole screen): it is placed on a later frame
+            if (!t.has_allocation()) {
+                laidOut = false;
+                return;
+            }
             const d = this._decor.get(t) ?? this._decorate(t);
             const [x, y] = t.get_transformed_position();
             const [w, h] = t.get_transformed_size();
             d.label.text = labels[i].label;
             d.label.accessible_name = labels[i].label;
+            // Measured at its natural width: a width set earlier would be read back as that
+            // width, and a label narrowed while its Space slid would stay narrow
+            d.label.set_width(-1);
             const [, lw] = d.label.get_preferred_width(-1);
             // A label may be wider than its Space, up to the gap to the next one
             const width = Math.min(lw, w + LABEL_SPILL);
@@ -190,9 +205,15 @@ export class SpacesBar {
             d.close.set_position(Math.round(x - CLOSE_INSET), Math.round(y - CLOSE_INSET));
             d.removable = removable;
             right = Math.max(right, x + w);
-            top = i === 0 ? y : Math.min(top, y);
+            top = Math.min(top, y);
             bottom = Math.max(bottom, y + h);
         });
+        // The overview's own slide and zoom move the bar without reallocating a thumbnail, so
+        // the chrome follows every frame until it is still
+        if (!laidOut || Main.overview.animationInProgress)
+            this.queueSync();
+        if (top === Infinity)
+            return;
         this._syncClose();
         const [, pw] = this._plus.get_preferred_width(-1);
         const [, ph] = this._plus.get_preferred_height(-1);
@@ -218,12 +239,20 @@ export class SpacesBar {
         }));
         this._layer.add_child(label);
         this._layer.add_child(close);
+        // The wallpaper behind the windows, as in macOS (the stock thumbnail is a grey plate)
+        const wallpaper = new Background.BackgroundManager({
+            container: t._contents, monitorIndex: t.monitorIndex, vignette: false,
+        });
+        wallpaper.backgroundActor.content.brightness = 1;
+        cleanup.add(() => wallpaper.destroy());
         const d = { label, close, cleanup, removable: false };
         cleanup.connect(close, 'clicked', () => this._removeSpace(t.metaWorkspace));
         cleanup.connect(close, 'notify::hover', () => this._syncClose());
         cleanup.connect(label, 'notify::hover', () => this._setHovered(label.hover ? t : this._hovered));
-        // Watch this thumbnail's allocation (it slides and collapses when Spaces come and go)
+        // Watch this thumbnail (it slides and collapses when Spaces come and go)
         cleanup.connect(t, 'notify::allocation', () => this.queueSync());
+        // The slide-in and slide-out scale the thumbnail without reallocating it
+        cleanup.connect(t, 'notify::slide-position', () => this.queueSync());
         cleanup.connect(t, 'destroy', () => this._undecorate(t));
 
         // Drag the label along the bar to reorder

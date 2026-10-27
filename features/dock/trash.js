@@ -16,6 +16,7 @@ import * as Dialog from 'resource:///org/gnome/shell/ui/dialog.js';
 import * as DND from 'resource:///org/gnome/shell/ui/dnd.js';
 import * as ModalDialog from 'resource:///org/gnome/shell/ui/modalDialog.js';
 
+import { IconStyle } from '../../lib/iconStyle.js';
 import { DockItem } from './items.js';
 
 Gio._promisify(Gio.File.prototype, 'query_info_async', 'query_info_finish');
@@ -38,6 +39,8 @@ export class TrashItem extends DockItem {
             x_align: Clutter.ActorAlign.CENTER, y_align: Clutter.ActorAlign.CENTER,
         });
         this.content.add_child(this._icon);
+        const style = IconStyle.apply(this._icon);
+        this.cleanup.add(() => style.destroy());
         this.count = 0;
         this._counting = false;
         this._dirty = false;
