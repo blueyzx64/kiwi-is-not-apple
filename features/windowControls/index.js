@@ -215,11 +215,16 @@ class WindowControlsIndicator extends PanelMenu.Button {
         const viaHold = ms === GREEN_HOLD_MS;
         this._greenTimer = this._cleanup.timeout(ms, () => {
             this._greenTimer = 0;
+            // Crossing events can be missed while the top bar hides and comes back (full
+            // screen): open only if the pointer is still on the button, or still pressing it
+            const button = this._buttons.maximize;
+            if (!button || !(viaHold ? button.pressed : button.hover))
+                return GLib.SOURCE_REMOVE;
             if (viaHold)
                 this._skipClick = true;
             // The menu's grab takes the rest of this press: end it on the button, or the
             // button would wait for a release that never comes and miss the next click
-            this._buttons.maximize?.fake_release();
+            button.fake_release();
             this._onGreenMenu();
             return GLib.SOURCE_REMOVE;
         }, { name: 'kiwi green menu' });

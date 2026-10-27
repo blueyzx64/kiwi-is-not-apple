@@ -12,6 +12,8 @@
 // Hovering a glyph puts its name in the section header, as macOS does. The tiling sections
 // are left out while window tiling is off.
 //
+// Faux glass from lib/glass.js (Glass.attachMenu), like every Kiwi menu.
+//
 // Shell API: PopupMenu.PopupMenu / PopupBaseMenuItem / PopupSubMenuMenuItem, Main.uiGroup,
 // Main.panel.menuManager (keyboard navigation and the grab).
 
@@ -22,6 +24,7 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import { ARRANGEMENTS, ZONES } from '../../core/tileActions.js';
 import { MENU_CLOSE_ARGS } from '../../lib/compat.js';
+import { Glass } from '../../lib/glass.js';
 
 const GLYPH_W = 26;
 const GLYPH_H = 18;
@@ -89,8 +92,10 @@ export class GreenMenu {
         Main.uiGroup.add_child(this._menu.actor);
         this._menu.actor.hide();
         Main.panel.menuManager.addMenu(this._menu);
+        const glass = Glass.attachMenu(this._menu);
         // destroy() closes the menu first, so the manager drops its grab, then forgets it
         cleanup.add(() => {
+            glass.destroy();
             this._menu.destroy();
             this._menu = null;
         });

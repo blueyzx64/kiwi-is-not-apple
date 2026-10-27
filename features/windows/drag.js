@@ -20,6 +20,7 @@ import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import { CleanupRegistry } from '../../lib/disposables.js';
+import { Glass } from '../../lib/glass.js';
 import { EDGE_PX, hitZone } from './model.js';
 
 // How long the pointer rests against an edge before the outline shows (no modifier)
@@ -56,6 +57,9 @@ export class TileDrag {
         this._preview = cleanup.actor(new St.Widget({
             style_class: 'kiwi-tile-preview', visible: false, reactive: false, opacity: 0,
         }));
+        // Kiwi's faux glass (overlays surface); style.css keeps a plain outline when glass is off
+        const glass = Glass.attach(this._preview, { surface: 'overlays', radius: 12 });
+        cleanup.add(() => glass.destroy());
         cleanup.connect(global.display, 'grab-op-begin', (_d, win, op) => this._begin(win, op));
         cleanup.connect(global.display, 'grab-op-end', (_d, win) => this._end(win));
         cleanup.add(() => this._stop());
