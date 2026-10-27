@@ -11,6 +11,10 @@
 //   Downloads stack            downloadEntry, sortDownloads, packageKind, stackView, fanLayout
 //   Open at Login              autostartState, autostartText (Kiwi-marked files only)
 //   dropIndex / pinPosition    drag-reorder targets
+//   magnify                    magnification: scales and offsets for a pointer position
+//   bounceSteps                the launch and attention bounce
+//   badgeText                  the red count on an icon
+//   folderStack / addFolder    folder stacks kept in the dock
 //
 // macOS references: docs/research/macos/native-apps-and-system-ui.md (Dock) and
 // installer-and-app-lifecycle.md (Downloads stack).
@@ -25,6 +29,9 @@ export const RECENT_MAX = 3;
 export const ICON_SIZE_MIN = 24;
 export const ICON_SIZE_MAX = 128;
 
+/** Largest magnified icon (macOS's slider ends at about two and a half times the default). */
+export const MAGNIFIED_SIZE_MAX = 160;
+
 /** A fan stays readable up to this many files; more open as a grid (macOS "Automatic"). */
 export const FAN_MAX = 10;
 
@@ -32,6 +39,7 @@ export const FAN_MAX = 10;
 export const AUTOSTART_MARK = 'X-Kiwi-Autostart';
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const isAbsolutePath = p => typeof p === 'string' && p.startsWith('/') && p.length > 1;
 
 /**
  * The dock's config from its settings.
@@ -52,6 +60,13 @@ export function readConfig(get) {
         minimizeToApp: get.bool('dock-minimize-to-app'),
         downloads: get.bool('dock-downloads'),
         stackView: STACK_VIEWS.includes(view) ? view : 'automatic',
+        magnification: get.bool('dock-magnification'),
+        magnifiedSize: clamp(get.int('dock-magnification-size'), ICON_SIZE_MIN, MAGNIFIED_SIZE_MAX),
+        launchBounce: get.bool('dock-launch-animation'),
+        attentionBounce: get.bool('dock-attention-bounce'),
+        badges: get.bool('dock-badges'),
+        backgroundApps: get.bool('dock-background-apps'),
+        folders: get.strv('dock-folders').filter(isAbsolutePath),
     });
 }
 
@@ -110,22 +125,29 @@ export function pushRecent(recents, appId, max = RECENT_MAX) {
  * @param {boolean} p.showRecents
  * @param {number[]} [p.minimized] window ids that get their own tile
  * @param {boolean} [p.downloads] show the Downloads stack
- * @returns {object[]} {kind: 'app'|'separator'|'window'|'downloads'|'trash', id, ...}
+ * @param {string[]} [p.background] apps running in the background with no window (grey dot)
+ * @param {string[]} [p.folders] folder stacks (absolute paths), after Downloads
+ * @returns {object[]} {kind: 'app'|'separator'|'window'|'downloads'|'folder'|'trash', id, ...}
+ *   app items carry `background: true` when only a background process runs
  */
-export function dockItems({ pinned, running, recents, showRecents, minimized = [], downloads = true }) {
+export function dockItems({ pinned, running, recents, showRecents, minimized = [], downloads = true, background = [], folders = [] }) {
     const items = [];
+    const windowed = new Set(running);
+    // A background app counts as running (macOS keeps its icon, with a grey indicator)
+    running = [...running, ...background.filter(id => !windowed.has(id))];
     const live = new Set(running);
     const pinnedSet = new Set(pinned);
+    const bg = id => live.has(id) && !windowed.has(id);
     for (const id of pinned)
-        items.push({ kind: 'app', id, section: 'pinned', running: live.has(id) });
+        items.push({ kind: 'app', id, section: 'pinned', running: live.has(id), background: bg(id) });
     const unpinned = running.filter(id => !pinnedSet.has(id));
-    let second = unpinned.map(id => ({ kind: 'app', id, section: 'running', running: true }));
+    let second = unpinned.map(id => ({ kind: 'app', id, section: 'running', running: true, background: bg(id) }));
     if (showRecents) {
         const closed = recents.filter(id => !live.has(id) && !pinnedSet.has(id))
             .slice(0, Math.max(0, RECENT_MAX - unpinned.length));
         second = [
-            ...unpinned.map(id => ({ kind: 'app', id, section: 'recent', running: true })),
-            ...closed.map(id => ({ kind: 'app', id, section: 'recent', running: false })),
+            ...unpinned.map(id => ({ kind: 'app', id, section: 'recent', running: true, background: bg(id) })),
+            ...closed.map(id => ({ kind: 'app', id, section: 'recent', running: false, background: false })),
         ];
         if (second.length && items.length)
             items.push({ kind: 'separator', id: 'separator-recent' });
@@ -136,6 +158,8 @@ export function dockItems({ pinned, running, recents, showRecents, minimized = [
         items.push({ kind: 'window', id: `window-${windowId}`, windowId });
     if (downloads)
         items.push({ kind: 'downloads', id: 'downloads' });
+    for (const path of new Set(folders))
+        items.push({ kind: 'folder', id: `folder:${path}`, path });
     items.push({ kind: 'trash', id: 'trash' });
     return items;
 }
@@ -213,9 +237,10 @@ function tidy(entries) {
  * @param {boolean} p.hasDesktopFile false for window-backed apps (no file to pin or autostart)
  * @param {{enabled: boolean, editable: boolean}} p.autostart
  * @param {boolean} p.alt Alt (Option) held: Quit becomes Force Quit
+ * @param {boolean} [p.background] the app runs only in the background (no window)
  * @returns {object[]} entries {type, ...}
  */
-export function menuEntries({ windows, focusedWindow, actions, canNewWindow, pinned, hasDesktopFile, autostart, alt }) {
+export function menuEntries({ windows, focusedWindow, actions, canNewWindow, pinned, hasDesktopFile, autostart, alt, background = false }) {
     const running = windows.length > 0;
     const entries = windows.map(w => ({
         type: 'window', id: w.id, title: w.title || '', focused: w.id === focusedWindow, minimized: !!w.minimized,
@@ -241,6 +266,10 @@ export function menuEntries({ windows, focusedWindow, actions, canNewWindow, pin
     if (running) {
         entries.push({ type: 'separator' });
         entries.push({ type: alt ? 'force-quit' : 'quit' });
+    } else if (background) {
+        // macOS 27: an app left running in the background can be stopped from its icon
+        entries.push({ type: 'separator' });
+        entries.push({ type: 'stop-background' });
     }
     return tidy(entries);
 }
@@ -499,4 +528,145 @@ export class Reveal {
             this._shown = false;
         return this.visible;
     }
+}
+
+// ---- magnification ---------------------------------------------------------------------------
+
+/** How far the magnification reaches, in tiles from the pointer (macOS: about two icons). */
+export const MAGNIFY_REACH = 2.5;
+
+/**
+ * Magnification for one pointer position. Each icon grows by a raised-cosine falloff of its
+ * rest distance to the pointer (1 + (max - 1) * (1 + cos(pi * d / reach)) / 2, nothing past
+ * `reach`); icons stay edge to edge, and the point under the pointer stays where it is.
+ * Everything is computed from the rest layout, so the result never feeds back into the input
+ * (no jitter). Writes into `out` (preallocated arrays) and allocates nothing.
+ *
+ * @param {object} p
+ * @param {ArrayLike<number>} p.centres rest centres along the dock (px)
+ * @param {ArrayLike<number>} p.sizes rest extents along the dock (px)
+ * @param {ArrayLike<number>} p.weights 1 for icons, 0 for what does not grow (separators)
+ * @param {number} p.count items used from the arrays
+ * @param {number} p.pointer the pointer along the dock, same coordinates
+ * @param {number} p.tile rest tile size (px)
+ * @param {number} p.maxScale scale right under the pointer
+ * @param {number} p.amount 0..1, eases the whole effect in and out
+ * @param {{scales: number[], offsets: number[], before: number, after: number}} out
+ *   offsets: where each centre moves (px, along the dock); before/after: what the row grew
+ *   on each side
+ * @returns {object} out
+ */
+export function magnify({ centres, sizes, weights, count, pointer, tile, maxScale, amount }, out) {
+    const reach = MAGNIFY_REACH * tile;
+    const gain = Math.max(0, maxScale - 1) * clamp(amount, 0, 1);
+    let total = 0;
+    let shift = 0;
+    for (let i = 0; i < count; i++) {
+        const d = Math.abs(centres[i] - pointer);
+        const s = d < reach ? 1 + gain * weights[i] * (1 + Math.cos(Math.PI * d / reach)) / 2 : 1;
+        out.scales[i] = s;
+        const extra = (s - 1) * sizes[i];
+        // The part of the growth that lies before the pointer pushes the row back
+        const start = centres[i] - sizes[i] / 2;
+        shift += extra * clamp((pointer - start) / Math.max(1, sizes[i]), 0, 1);
+        out.offsets[i] = total + extra / 2;
+        total += extra;
+    }
+    for (let i = 0; i < count; i++)
+        out.offsets[i] -= shift;
+    out.before = shift;
+    out.after = total - shift;
+    return out;
+}
+
+/** Scale under the pointer for a magnified size (never below 1). */
+export const magnifyScale = (iconSize, magnifiedSize) => Math.max(1, magnifiedSize / Math.max(1, iconSize));
+
+// ---- bounce ------------------------------------------------------------------------------------
+
+/** macOS bounces a launching app until it is up, at most this many times. */
+export const LAUNCH_BOUNCES_MAX = 10;
+/** An app asking for attention bounces this many times, or until it is focused. */
+export const ATTENTION_BOUNCES = 3;
+
+/**
+ * One bounce of an icon: up with an ease-out, down with an ease-in (a ball's arc).
+ *
+ * @param {number} tile px
+ * @returns {{height: number, up: number, down: number}} px and ms
+ */
+export function bounceSteps(tile) {
+    return { height: Math.round(tile * 0.5), up: 230, down: 260 };
+}
+
+/**
+ * Whether to bounce again after one bounce ended.
+ *
+ * @param {'launch'|'attention'} reason
+ * @param {number} done bounces finished
+ * @param {boolean} pending the app still starts (launch) / still wants attention
+ * @returns {boolean}
+ */
+export function bounceAgain(reason, done, pending) {
+    if (!pending)
+        return false;
+    return done < (reason === 'launch' ? LAUNCH_BOUNCES_MAX : ATTENTION_BOUNCES);
+}
+
+// ---- badges ------------------------------------------------------------------------------------
+
+/**
+ * The text of a count badge, or null for none (macOS shows big counts in full; Kiwi caps
+ * them so the badge stays a badge).
+ *
+ * @param {{count: number, countVisible: boolean}} entry
+ * @returns {?string}
+ */
+export function badgeText(entry) {
+    if (!entry?.countVisible)
+        return null;
+    const n = Math.trunc(entry.count);
+    if (!(n > 0))
+        return null;
+    return n > 9999 ? '9999+' : String(n);
+}
+
+/** Progress (0..1) to draw, or null for no bar. */
+export function badgeProgress(entry) {
+    if (!entry?.progressVisible || !Number.isFinite(entry.progress))
+        return null;
+    return clamp(entry.progress, 0, 1);
+}
+
+// ---- folder stacks -----------------------------------------------------------------------------
+
+/**
+ * The folder list with `path` added (once, at the end). Downloads already has its own stack.
+ *
+ * @param {string[]} folders
+ * @param {string} path absolute
+ * @param {?string} downloadsPath
+ * @returns {string[]} the same array when nothing changes
+ */
+export function addFolder(folders, path, downloadsPath = null) {
+    if (!isAbsolutePath(path) || folders.includes(path) || path === downloadsPath)
+        return folders;
+    return [...folders, path];
+}
+
+/** The folder list without `path`. */
+export function removeFolder(folders, path) {
+    return folders.includes(path) ? folders.filter(f => f !== path) : folders;
+}
+
+/**
+ * Where a drop along the dock lands: a folder dropped past the system separator makes a
+ * stack; elsewhere it is not taken (macOS keeps documents and folders on that side).
+ *
+ * @param {number} coord drop position along the dock
+ * @param {?number} separatorEnd where the system separator ends, same coordinates
+ * @returns {boolean}
+ */
+export function folderDropAccepted(coord, separatorEnd) {
+    return separatorEnd !== null && coord >= separatorEnd;
 }

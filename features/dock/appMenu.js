@@ -102,6 +102,9 @@ export function fillAppMenu(menu, entries, on, _) {
             menu.addMenuItem(sub);
             break;
         }
+        case 'stop-background':
+            add(_('Stop Running in Background'), () => on.stopBackground());
+            break;
         case 'quit':
         case 'force-quit':
             force = e.type === 'force-quit';
