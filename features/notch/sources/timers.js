@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Kiwi timers (core/timers.js) as live activities: one per running or paused timer, and a
 // "Timer done" alert with the system's completion sound when one rings. The ringing timer is
-// dismissed from the service once the notch has shown it.
+// dismissed from the service once the notch has shown it. Spotlight's 'timer-start-requested'
+// starts one here while this source runs.
 
 /**
  * @param {CleanupRegistry} cleanup
@@ -28,6 +29,11 @@ export function watchTimers(cleanup, ctx, sink, _) {
         shown = next;
     };
     ctx.events.on('timers-changed', ({ timers }) => sync(timers), cleanup);
+    // Spotlight's "Start Timer" (with nobody listening it runs its own fallback)
+    ctx.events.on('timer-start-requested', ({ seconds, label }) => {
+        if (Number.isFinite(seconds) && seconds > 0)
+            ctx.timers.startTimer({ seconds, label });
+    }, cleanup);
     ctx.events.on('timer-finished', ({ timer }) => {
         sink.activity(`timer-done:${timer.id}`, 'timer-done', { id: timer.id, label: timer.label || _('Timer') }, { fresh: true });
         try {

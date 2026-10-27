@@ -1,0 +1,10 @@
+/* feature: window-tiling */
+
+/* The drag outline. lib/glass.js gives it Kiwi's faux glass (overlays surface); this is the
+ * plain translucent outline it keeps when glass is off. No box-shadow: St draws the blurred
+ * shadow of a resizing actor as a rectangle. It sits just below the dragged window. */
+.kiwi-tile-preview {
+  border-radius: 12px;
+  background-color: rgba(240, 240, 244, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+}

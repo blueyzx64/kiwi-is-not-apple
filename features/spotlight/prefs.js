@@ -7,10 +7,11 @@ import Gio from 'gi://Gio';
 import Gtk from 'gi://Gtk';
 
 import { ENGINES } from './model.js';
-import { shortcutRow, switchRow } from '../../prefs/widgets.js';
+import { KIWI_ACTIONS, actionChoices } from './actionsModel.js';
+import { addQuickKey, parseQuickKeys, removeQuickKey, validAlias } from './queryModel.js';
+import { shortcutRow, switchRow, watchKey } from '../../prefs/widgets.js';
 
 const N_ = s => s;
-
 
 const ENGINE_LABELS = {
     duckduckgo: N_('DuckDuckGo'),
@@ -20,9 +21,6 @@ const ENGINE_LABELS = {
     startpage: N_('Startpage'),
     ecosia: N_('Ecosia'),
 };
-
-
-
 
 function engineRows(settings, _) {
     const key = 'spotlight-engine';
@@ -68,6 +66,100 @@ function engineRows(settings, _) {
     return [combo, custom];
 }
 
+
+/** The Quick Keys targets: Kiwi's actions, then the installed apps A to Z. */
+function quickKeyTargets(_) {
+    const actions = actionChoices(KIWI_ACTIONS).map(a => ({ target: `action:${a.id}`, label: _(a.title) }));
+    const apps = Gio.AppInfo.get_all()
+        .filter(a => a.should_show() && a.get_id())
+        .map(a => ({ target: `app:${a.get_id()}`, label: a.get_display_name() }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+    return [...actions, ...apps];
+}
+
+/**
+ * The Quick Keys editor: one row per alias, an alias field and a target list to add one, and
+ * Reset (as macOS's "Reset quick keys").
+ */
+function quickKeysGroup(settings, _) {
+    const key = 'spotlight-quick-keys';
+    const group = new Adw.PreferencesGroup({
+        title: _('Quick Keys'),
+        description: _('Type a short alias in Spotlight to run an action or open an app. Words after it are the action’s value, as in “tm 5” for a 5-minute timer.'),
+    });
+    const targets = quickKeyTargets(_);
+    const labelOf = t => targets.find(x => x.target === t)?.label ?? t;
+
+    const alias = new Adw.EntryRow({ title: _('Alias (1–12 lowercase letters or digits)') });
+    const target = new Adw.ComboRow({ title: _('Runs'), model: Gtk.StringList.new(targets.map(t => t.label)) });
+    const add = new Gtk.Button({ label: _('Add'), valign: Gtk.Align.CENTER, css_classes: ['suggested-action'], sensitive: false });
+    target.add_suffix(add);
+    alias.connect('changed', () => {
+        const ok = validAlias(alias.text);
+        add.sensitive = ok;
+        if (ok || !alias.text)
+            alias.remove_css_class('error');
+        else
+            alias.add_css_class('error');
+    });
+    add.connect('clicked', () => {
+        const t = targets[target.selected];
+        if (!t || !validAlias(alias.text))
+            return;
+        settings.set_strv(key, addQuickKey(settings.get_strv(key), alias.text, t.target));
+        alias.text = '';
+    });
+    group.add(alias);
+    group.add(target);
+
+    let rows = [];
+    const sync = () => {
+        for (const r of rows)
+            group.remove(r);
+        rows = parseQuickKeys(settings.get_strv(key)).map(q => {
+            const row = new Adw.ActionRow({ title: q.alias, subtitle: labelOf(q.target) });
+            const remove = new Gtk.Button({
+                icon_name: 'user-trash-symbolic', valign: Gtk.Align.CENTER, css_classes: ['flat'],
+                tooltip_text: _('Remove'),
+            });
+            remove.update_property([Gtk.AccessibleProperty.LABEL], [`${_('Remove')} ${q.alias}`]);
+            remove.connect('clicked', () => settings.set_strv(key, removeQuickKey(settings.get_strv(key), q.alias, q.target)));
+            row.add_suffix(remove);
+            group.add(row);
+            return row;
+        });
+    };
+    sync();
+    watchKey(settings, key, group, sync);
+
+    const reset = new Gtk.Button({ label: _('Reset Quick Keys'), valign: Gtk.Align.CENTER, css_classes: ['flat'] });
+    reset.connect('clicked', () => settings.set_strv(key, []));
+    group.set_header_suffix(reset);
+    return group;
+}
+
+/** Search history: on like macOS, with Clear History. */
+function historyGroup(settings, _) {
+    const group = new Adw.PreferencesGroup({ title: _('History') });
+    group.add(switchRow(settings, _('Search history'),
+        _('Recent searches and opened results show in the empty field; Up recalls past searches. Turning it off clears them'),
+        'spotlight-history'));
+    const clear = new Adw.ButtonRow({ title: _('Clear History') });
+    const syncClear = () => {
+        clear.sensitive = settings.get_strv('spotlight-history-queries').length > 0 ||
+            settings.get_strv('spotlight-recent-results').length > 0;
+    };
+    syncClear();
+    watchKey(settings, 'spotlight-history-queries', clear, syncClear);
+    watchKey(settings, 'spotlight-recent-results', clear, syncClear);
+    clear.connect('activated', () => {
+        settings.set_strv('spotlight-history-queries', []);
+        settings.set_strv('spotlight-recent-results', []);
+    });
+    group.add(clear);
+    return group;
+}
+
 /**
  * @param {{settings: Gio.Settings, window: Adw.PreferencesWindow, extension: object}} args
  * @returns {Adw.PreferencesGroup[]}
@@ -98,10 +190,23 @@ export function buildPrefs({ settings, extension }) {
     settings.bind('spotlight-clipboard', recentClips, 'sensitive', Gio.SettingsBindFlags.GET);
     what.add(recentClips);
 
+    what.add(switchRow(settings, _('Actions'),
+        _('Show Desktop, Lock Screen, timers, Do Not Disturb, Dark Mode, Empty Trash, screenshots and the actions apps offer'),
+        'spotlight-actions'));
+    what.add(switchRow(settings, _('Menu items of the focused app'),
+        _('From Kiwi’s menu bar. Tab scopes the search to them'), 'spotlight-menu-items'));
+
+    const tahoe = new Adw.PreferencesGroup({ title: _('Browse and Preview') });
+    tahoe.add(switchRow(settings, _('Browse views'),
+        _('Applications, Files, Actions and Clipboard buttons next to the empty field; Super+1 to Super+4 open them'),
+        'spotlight-views'));
+    tahoe.add(switchRow(settings, _('Quick Look'),
+        _('Space previews the selected file with GNOME’s previewer (install Sushi)'), 'spotlight-quick-look'));
+
     const web = new Adw.PreferencesGroup({ title: _('Web') });
     web.add(switchRow(settings, _('Web search'), _('Adds a row that opens your search engine. Nothing is sent until you press Return'), 'spotlight-web'));
     for (const row of engineRows(settings, _))
         web.add(row);
 
-    return [main, what, web];
+    return [main, what, tahoe, quickKeysGroup(settings, _), historyGroup(settings, _), web];
 }

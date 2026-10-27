@@ -5,7 +5,7 @@
 import Adw from 'gi://Adw';
 import Gio from 'gi://Gio';
 
-import { comboRow } from '../../prefs/widgets.js';
+import { comboRow, switchRow } from '../../prefs/widgets.js';
 
 /**
  * @param {{settings: Gio.Settings, window: Adw.PreferencesWindow, extension: object}} args
@@ -35,6 +35,24 @@ export function buildPrefs({ settings, extension }) {
         labels: [_('System'), _('Left'), _('Right')],
     });
     group.add(position);
+
+    group.add(comboRow(settings, {
+        title: _('Traffic light style'),
+        subtitle: _('Glass beads as in macOS 27, or the classic flat buttons (with macOS window buttons on)'),
+        key: 'windows-traffic-style',
+        values: ['glass', 'flat'],
+        labels: [_('Glass'), _('Flat')],
+    }));
+    group.add(comboRow(settings, {
+        title: _('Clicking the green button'),
+        subtitle: _('Alt-click does the other one'),
+        key: 'windows-green-click',
+        values: ['fullscreen', 'zoom'],
+        labels: [_('Enters full screen'), _('Zooms (fills the screen)')],
+    }));
+    group.add(switchRow(settings, _('Green button menu'),
+        _('Hover over the green button, or press and hold it, for Move & Resize, Fill & Arrange and full screen'),
+        'windows-green-menu'));
 
     const remove = new Adw.SwitchRow({
         title: _('Remove titlebar buttons from windows'),

@@ -14,7 +14,6 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Meta from 'gi://Meta';
-import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import { addToShelf, removeFromShelf, CLIPBOARD_FILE_TYPES, displayName } from './model.js';
@@ -102,21 +101,35 @@ export class Shelf {
         this._ks.setStrv(KEY, []);
     }
 
-    /** Read files from the clipboard in the best format offered; resolves to how many were added */
+    /**
+     * Read files from the clipboard in the best format offered. Meta.Selection, not
+     * St.Clipboard.get_content (which crashed Shell 50 in the harness).
+     * @returns {Promise<number>} how many were added
+     */
     addFromClipboard() {
-        const clipboard = St.Clipboard.get_default();
-        const offered = clipboard.get_mimetypes(St.ClipboardType.CLIPBOARD) ?? [];
+        const selection = global.display.get_selection();
+        const type = Meta.SelectionType.SELECTION_CLIPBOARD;
+        const offered = selection.get_mimetypes(type) ?? [];
         const pick = CLIPBOARD_FILE_TYPES.find(([mime]) => offered.includes(mime));
         if (!pick)
             return Promise.resolve(0);
         const [mime, parse] = pick;
-        return new Promise(resolve => {
-            clipboard.get_content(St.ClipboardType.CLIPBOARD, mime, (_c, bytes) => {
-                const data = bytes?.get_data?.() ?? bytes?.toArray?.() ?? null;
-                const uris = data ? parse(new TextDecoder().decode(data)) : [];
-                if (this._alive && uris.length)
-                    this.add(uris);
-                resolve(uris.length);
+        const out = Gio.MemoryOutputStream.new_resizable();
+        return new Promise((resolve, reject) => {
+            selection.transfer_async(type, mime, -1, out, this._cancellable, (sel, res) => {
+                try {
+                    sel.transfer_finish(res);
+                    out.close(null);
+                    const uris = parse(new TextDecoder().decode(out.steal_as_bytes().toArray()));
+                    if (this._alive && uris.length)
+                        this.add(uris);
+                    resolve(uris.length);
+                } catch (e) {
+                    if (e.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
+                        resolve(0);
+                    else
+                        reject(e);
+                }
             });
         });
     }
@@ -147,8 +160,9 @@ export class Shelf {
 
     /** Put the file on the clipboard, so it pastes into Files or a GTK app */
     copy(uri) {
-        St.Clipboard.get_default().set_content(St.ClipboardType.CLIPBOARD, 'text/uri-list',
+        const source = Meta.SelectionSourceMemory.new('text/uri-list',
             new GLib.Bytes(new TextEncoder().encode(`${uri}\r\n`)));
+        global.display.get_selection().set_owner(Meta.SelectionType.SELECTION_CLIPBOARD, source);
     }
 
     _changed() {
@@ -161,7 +175,7 @@ export class Shelf {
     }
 
     _syncClipboardOffer() {
-        const offered = St.Clipboard.get_default().get_mimetypes(St.ClipboardType.CLIPBOARD) ?? [];
+        const offered = global.display.get_selection().get_mimetypes(Meta.SelectionType.SELECTION_CLIPBOARD) ?? [];
         const has = CLIPBOARD_FILE_TYPES.slice(0, 2).some(([mime]) => offered.includes(mime));
         if (has !== this._clipboardHasFiles) {
             this._clipboardHasFiles = has;

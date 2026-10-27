@@ -124,3 +124,22 @@ export function planReveal(windows, peek = PEEK) {
 export function focusEnds(w) {
     return !!w && MOVABLE_TYPES.includes(w.type) && !w.skipTaskbar;
 }
+
+export const WALLPAPER_MODES = Object.freeze(['always', 'stage-manager', 'never']);
+
+/**
+ * Does a click on empty wallpaper show the desktop (macOS Sonoma "Click wallpaper to reveal
+ * desktop": Always, or Only in Stage Manager)? Stage Manager answers its own clicks while it runs
+ * with its wallpaper option on (it sends the stage to the strip); Show Desktop takes the rest.
+ *
+ * @param {{mode: string, stageActive: boolean, stageHandles: boolean, blocked: boolean}} s
+ *   blocked: the overview or a modal is open
+ * @returns {boolean} true when Show Desktop should toggle
+ */
+export function wallpaperClickToggles({ mode, stageActive, stageHandles, blocked }) {
+    if (blocked || mode === 'never' || !WALLPAPER_MODES.includes(mode))
+        return false;
+    if (stageActive)
+        return !stageHandles;
+    return mode === 'always';
+}

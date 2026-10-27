@@ -41,7 +41,7 @@ import { dropZone } from './model.js';
 import { watchPower } from './sources/power.js';
 import { watchBluetooth } from './sources/bluetooth.js';
 import { watchTimers } from './sources/timers.js';
-import { bridgeShellRecording, watchRecording, stopRecording } from './sources/recording.js';
+import { watchRecording, stopRecording } from './sources/recording.js';
 import { watchCalendar } from './sources/calendar.js';
 import { watchDownloads } from './sources/downloads.js';
 import { watchCodes } from './sources/codes.js';
@@ -661,11 +661,7 @@ export class NotchFeature {
         case 'battery': watchPower(reg, sink); break;
         case 'bluetooth': watchBluetooth(reg, sink); break;
         case 'timers': watchTimers(reg, { events, timers }, sink, gettext); break;
-        case 'recording':
-            // The core events come from the Shell until a recording owner emits them
-            bridgeShellRecording(reg, events);
-            watchRecording(reg, events, sink);
-            break;
+        case 'recording': watchRecording(reg, events, sink); break;
         case 'calendar': watchCalendar(reg, sink); break;
         case 'downloads':
             watchDownloads(reg, sink, uri => {

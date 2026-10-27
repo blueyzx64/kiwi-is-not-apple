@@ -100,6 +100,11 @@ export class DockView {
         shadow.add_constraint(new Clutter.BindConstraint({ source: this.pill, coordinate: Clutter.BindCoordinate.ALL }));
         this.frame.add_child(shadow);
         this.frame.add_child(this.pill);
+        // Magnification grows the slab at its ends (magnify.js); zero-sized at rest
+        this._growBefore = new St.Widget({ width: 0, height: 0 });
+        this._growAfter = new St.Widget({ width: 0, height: 0 });
+        this.pill.add_child(this._growBefore);
+        this.pill.add_child(this._growAfter);
         this.band.add_child(this.frame);
         this.band.add_child(this.edge);
         const glass = Glass.attach(this.pill, { surface: 'dock', role: 'bar', shadow });
@@ -123,9 +128,15 @@ export class DockView {
         this.frame.translation_x = this.frame.translation_y = 0;
     }
 
+    /** The registry of the current build (frame, pill and what hangs on them). */
+    get buildCleanup() {
+        return this._buildCleanup;
+    }
+
     /** Place the band on the claimed rect. */
     setRect(rect) {
-        if (!rect)
+        // The Shell destroys its chrome on shutdown before any work-area event stops
+        if (!rect || !this.alive)
             return;
         this.band.set_position(rect.x, rect.y);
         this.band.set_size(rect.width, rect.height);
@@ -159,7 +170,8 @@ export class DockView {
                 item.destroy();
         }
         this._items = next;
-        let index = 0;
+        // Items sit between the two growth spacers
+        let index = 1;
         for (const item of next.values()) {
             if (item.actor.get_parent() !== this.pill)
                 this.pill.insert_child_at_index(item.actor, index);
@@ -192,6 +204,16 @@ export class DockView {
             x: Math.round(x - this.frame.translation_x), y: Math.round(y - this.frame.translation_y),
             width: Math.round(width), height: Math.round(height),
         };
+    }
+
+    /** Extra length at the start and end of the slab (magnification), px. */
+    setGrowth(before, after) {
+        const horizontal = isHorizontal(this._host.config.position);
+        const prop = horizontal ? 'width' : 'height';
+        if (this._growBefore[prop] !== before)
+            this._growBefore[prop] = before;
+        if (this._growAfter[prop] !== after)
+            this._growAfter[prop] = after;
     }
 
     // ---- auto-hide -----------------------------------------------------------------------
@@ -281,11 +303,12 @@ export class DockView {
             this._placeholder = new St.Widget({ style_class: 'kiwi-dock-placeholder', width: m.tile, height: m.tile });
             this.pill.add_child(this._placeholder);
         }
-        const children = this.pill.get_children().filter(c => c !== this._placeholder);
+        const children = this.pill.get_children()
+            .filter(c => c !== this._placeholder && c !== this._growBefore && c !== this._growAfter);
         let index = beforeItem ? children.indexOf(beforeItem.actor) : children.indexOf(afterItem?.actor) + 1;
         if (index < 0)
             index = 0;
-        this.pill.set_child_at_index(this._placeholder, index);
+        this.pill.set_child_at_index(this._placeholder, index + 1);
     }
 
     hidePlaceholder() {
