@@ -273,3 +273,4 @@ No more installer work: no new pieces (Trash-drag uninstall, fly-to-dock, update
 - R2F notch (kiwi-r2-notch): click outside always collapses; smoother transitions; shelf drag-out helper (helpers/, RPM spec).
 - Queued R2G: macOS-style desktop widgets restyle plus desktop icons aligned right (#16).
 - R2B → merged: transparent bar (solid-on-window toggle off), rounded maximized corners, real Fedora logo tinted, NC→menu hover switching, Spotlight over open menus, Alt+Tab → Kiwi switcher. Not reproduced: menu autoclose (needs a hardware trace). Item 4 cause: windows-green-click default 'fullscreen', so the green button goes to real full screen (owner decision pending).
+- Owner: green button = full screen (option A, as on macOS); keep the windows-green-click default 'fullscreen'. Item 13 is resolved as expected behaviour; R2A still checks the bar staying shown after a far-left reveal.

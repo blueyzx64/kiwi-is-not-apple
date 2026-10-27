@@ -33,3 +33,4 @@ The owner tested 3.0.0 on real hardware (Fedora 44, GNOME 50) and reported the b
    - GTK only knows "tiled" states when Mutter tiles the window, so investigate whether Kiwi's tiling can set Mutter's tiled state on GNOME 50 so apps hide their own buttons via their CSS state.
    - If that's impossible, find the best per-window alternative and report the limits.
 3. **Optional setting "Hide title bars of maximized windows", OFF by default.** It acts only where it's safe: server-side and X11 frames (via _MOTIF_WM_HINTS on Xwayland windows) and plain GTK3 title bars (CSS). It never hides GTK4/libadwaita header bars.
+- Green button click stays FULL SCREEN (owner, option A). Zoom stays on Alt-click and the green menu.
