@@ -234,3 +234,16 @@ No more installer work: no new pieces (Trash-drag uninstall, fly-to-dock, update
   - icon styles on the system tiles; badges;
   - MC labels, the new-Space layout, F3 from Launchpad, wallpaper in Space thumbnails.
   For R4: MC now re-syncs the Spaces bar every frame while the overview animates (check its cost); the magnification sweep still reverses 32 times on x/w; auto-hide's "first frame" is the 500 ms autohideDelay (by design).
+- FX6 → merged:
+  - Green-menu stuck grab FIXED (the panel's dummy menu shared the source actor; regression scenario tools/scenarios/menus-regress.sh).
+  - Square corner gone (the theme box-shadow; rim set inline).
+  - Ctrl+F2 in full screen fixed.
+  - Also fixed: -nan, StLabel -10x0, wallpaperProbe 0x0, symbolic logo, light dialogs, CC avatar hidden.
+  - STILL OPEN:
+    - the glass shadow tail ends in a faint box edge (~13 levels), also the QS cut;
+    - Wi-Fi glyph (likely the mock).
+  - Orchestrator review of g3-cc-open.png:
+    - the square rect is gone, but a faint grey strip shows at the window's right edge beside the CC (the shadow tail);
+    - a dark empty circle is still left of the screenshot button;
+    - the logo is now a generic GNOME foot instead of the distro logo (check intended);
+    - CC rows are missing in this run (mocks not loaded?).
