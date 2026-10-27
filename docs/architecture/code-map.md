@@ -68,6 +68,7 @@ prefs.js metadata.json stylesheet.css schemas/ po/`). `make pack-check` verifies
 | `layout` | `core/layout.js` LayoutService (`acquire(cleanup)`, `claim()`, `workArea()`) |
 | `motion` | `core/motion.js` Motion (`ease`, `spring`, `env`) |
 | `appMenus` | `core/appMenus/service.js` AppMenuService (menus of the focused app) |
+| `osd` | `core/osd.js` OsdRouter (`setSink(cleanup, 'notch'\|'pill', fn)`) |
 | `originals` | `core/originals.js` OriginalsStore (give it to a `SettingOwner`) |
 
 ## 3. core/
@@ -86,6 +87,7 @@ prefs.js metadata.json stylesheet.css schemas/ po/`). `make pack-check` verifies
 | `windowState.js` | why a window is not in its normal place (`staged`, ...) | `WindowState.set/has/list/watch`, `interceptMinimize`, `setStageActive` |
 | `notificationRouter.js` | banners to the notch or stock, shared `{count, dnd}` | `setBannerSink`, `pinBanners`, `connect`, `state`, `setDnd` |
 | `mprisWatcher.js` | one MPRIS source for the extension | `MprisWatcher.acquire(cleanup, gettext)` |
+| `osdModel.js` / `osd.js` | the one interception of the Shell OSD (`_showOsdWindow`): classifies volume / brightness / keyboard backlight and routes each change to ONE sink from `osd-location` (notch while it runs, else the menu-bar pill; 'system' = stock); other OSDs and other monitors stay stock | `classifyOsd`, `route`; `OsdRouter.start(cleanup)`, `setSink(owner, name, fn)` |
 | `appMenus/` | the focused app's menus (ctx.appMenus): pure `model.js` (generic menus, well-known GTK actions, Help search, ⌘ shortcut labels), `gtkActions.js` (org.gtk.Actions provider), `commands.js` (generic commands), `service.js` (providers, cache, activation) | `acquire(owner)`, `targetFor(win)`, `peek/results(target)`, `build(target, results, opts)`, `activate(target, command)`, `registerProvider(owner, provider)` |
 
 Events (`EVENTS` in `core/events.js`): `window-added`, `window-changed`, `window-removed`,
@@ -132,6 +134,9 @@ window manager; the menu bar runs a fallback when nobody listens).
 | `fullscreenSpace/` | `move-window-to-new-workspace` | full screen in its own Space (kept as in 2.x) |
 | `dock/` | `dock` | Kiwi's own dock: favourites, running and recent apps, minimized windows, Downloads stack (`stack.js`), Trash (`trash.js`), menus (`appMenu.js`), Open at Login (`autostart.js`); an edge claim in core/layout; keeps Dash to Dock off (`dashToDock.js`); `iconRect(appId)` / `minimizeTarget(win)` for Genie |
 | `appearance/` | `appearance`, `popup-menu-styling` | Auto Light/Dark (owns `color-scheme` through core/originals), accent (`accent-color`) and highlight colours (`scheme.js`, `model.js`); accent menus (`index.js`; the GTK app fixes are in `gtk-theme`) |
+| `osd/` | `osd` | the Tahoe volume / brightness / keyboard backlight pill under the Control Center button (glass, core/motion), a `ctx.osd` sink; output name and mute from the Shell's Gvc mixer |
+| `dialogs/` | `dialogs` | the Shell's modal dialogs (auth, end session, Run, others) as glass alerts: icon on top, natural-width buttons at the right, accent default; `ModalDialog.prototype.open` injection, undone on close and disable |
+| `colorFilters/` | `color-filters` | greyscale, protanopia / deuteranopia / tritanopia corrections and colour tint: one shader effect (a colour matrix as uniforms) on `global.stage` |
 
 Shared-resource rules (defined once in `features.js`): `window-controls`/`app-buttons` are
 mirrors over `button-layout`; `control-center` beats `dnd-button`; `stage-manager` beats

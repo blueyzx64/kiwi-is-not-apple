@@ -19,15 +19,15 @@ const EFFECT_NAME = 'kiwi-color-filter';
 const KEYS = ['color-filter-kind', 'color-filter-intensity', 'color-filter-hue'];
 const UNIFORMS = ['m00', 'm01', 'm02', 'm10', 'm11', 'm12', 'm20', 'm21', 'm22'].map(n => `kiwi_${n}`);
 
-// Premultiplied colour in, premultiplied colour out: the matrix is linear, so it commutes
-// with alpha; clamping to alpha keeps the result a valid premultiplied colour.
+// The stage is the final, opaque picture, but its texture holds alpha 0 where the background
+// was drawn without alpha: the output is written opaque so those pixels keep their colour.
 const DECLARATIONS = UNIFORMS.map(u => `uniform float ${u};`).join('\n');
 const EFFECT_FN = `
 vec4 kiwi_effect(vec2 uv, vec4 color) {
     mat3 m = mat3(kiwi_m00, kiwi_m10, kiwi_m20,
                   kiwi_m01, kiwi_m11, kiwi_m21,
                   kiwi_m02, kiwi_m12, kiwi_m22);
-    return vec4(clamp(m * color.rgb, 0.0, color.a), color.a);
+    return vec4(clamp(m * color.rgb, 0.0, 1.0), 1.0);
 }`;
 
 function floatValue(v) {

@@ -46,8 +46,10 @@ export class OsdPill {
         const sink = getMixerControl()?.get_default_sink?.() ?? null;
         if (!sink)
             return { device: null, deviceMuted: false };
+        // get_port() asserts on a stream without ports (a virtual or null sink)
+        const port = sink.get_ports?.()?.length ? sink.get_port() : null;
         return {
-            device: deviceLabel(sink.description, sink.get_port?.()?.human_port),
+            device: deviceLabel(sink.description, port?.human_port),
             deviceMuted: !!sink.is_muted,
         };
     }
