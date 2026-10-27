@@ -154,3 +154,4 @@ No more installer work: no new pieces (Trash-drag uninstall, fly-to-dock, update
     - `-nan` translation-y (menuBar/fullscreenReveal.js:126).
   - Perf: Genie p95 27 ms with 0 jitter, Scale p95 32 ms, bounce p95 17 ms.
   - Orchestrator review: the stack grid (stack-grid.png) looks right. The Stage Manager strip sits on an opaque dark panel, where macOS Sequoia floats thumbnails on the wallpaper (S3, for V2/L8). genie-mid is inconclusive (a small funnel near the dock).
+- Owner: REMOVE the installer code too. FX5 is removing it in kiwi-rm-installer / v3/remove-installer: core/installer*, the contract doc, the mock, the dock's "Open with Installer", and Launchpad's installer delete path. Kept: Flatpak delete via GNOME Software, package badges, Setup Assistant, Login Items.
