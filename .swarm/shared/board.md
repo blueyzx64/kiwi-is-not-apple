@@ -5,7 +5,7 @@
 | P1-menubar | (earlier agent) | Menu bar, logo menu, app menu P1 | kiwi-v3-menubar / v3/p1-menubar | | merged |
 | P1-windows | (earlier agent) | Tiling, green menu, Hide | kiwi-v3-windows / v3/p1-windows | | merged |
 | L1 | sonnet | P2 Dock motion & extras: Genie/Scale minimize, bounce, magnification, LauncherEntry badges, grey background-app dots, folder Stacks | kiwi-l1 / v3/l1 | dock merged | merged |
-| L2 | sonnet | P2 System surfaces: Tahoe volume/brightness OSD under the menu bar, centred dialogs, colour filters | kiwi-l2 / v3/l2-surfaces | | started |
+| L2 | sonnet | P2 System surfaces: Tahoe volume/brightness OSD under the menu bar, centred dialogs, colour filters | kiwi-l2 / v3/l2-surfaces | | merged |
 | L3 | sonnet | P2 Screenshot toolbar (Shift+Super+3/4/5) + floating thumbnail | kiwi-l3 / v3/l3-screenshot | | merged |
 | L4 | sonnet | P2 Input: Caps Lock / input-source badge, emoji popover, icon styles (dark/tinted) | kiwi-l4 / v3/l4-input | | merged |
 | L5 | sonnet | P3 Mission Control + App Exposé + start-on-desktop | kiwi-l5 / v3/l5-mission | | merged |
@@ -89,3 +89,11 @@ Deploy conservatively, sized to the scope and type of work. Resume in waves of a
 - FX3 → merged (R2 F1–F8, F10, F11): one off-process wallpaper decode (lib/wallpaperProbe.js + wallpaperDecode.js, 64 MP cap); deferred DtD strip; glass rim selector outranks the theme shadow; originals kept across a lock (no session-modes); lazy stack rows plus debounce; tint floor for 4.5:1. Not shown visually: the F3 shadow fix. Not measured: F5 on 3000 files. Harness note: inner-real.sh's ALL list lacks the v3 keys, so KIWI_ONLY doesn't isolate them.
 - L2 done (v3/l2@becd643, OSD routing core/osd.js, glass dialogs, colour filters). HELD, not merged: waiting on the owner's decision about a pre-merge review gate. Open: black wallpaper under a colour filter in the roots (no wallpaper file there).
 - L8 done (v3/l8@7b306b8, StageMachine model plus fuzz). HELD, not merged. Open: the panel minimize on a window in a set failed after the merge (it passed before); the new Page Up/Down cycle keys are untested in the Shell; two sF failures were not re-run; a 400 ms wait after the last stage window closes (a magic timeout, for the reviewer to judge). Waiting on the owner's review-gate decision.
+- L2 → merged.
+
+## Verification phase (owner, 2026-10-27): after all features are complete
+Deploy test agents per feature group (read-only on code, findings go to fixers). Each one checks: works as specified (vs the macOS research); displays as expected (the orchestrator also reviews key screenshots); no jitter, lag or hiccups. Use H13's frame-time and jitter probes: frames over 16.7 ms, main-loop stalls over 50 ms, frame-by-frame position deltas (no jumps, reversals or flicker). Note the limit: software rendering, so a real-hardware checklist goes to the owner at the end.
+Groups (about 6 agents): (1) dock and minimize effects; (2) Stage Manager and window tiling/Split View; (3) Mission Control, Launchpad, switcher, gestures and hot corners; (4) menu bar, app menu, Control Center and OSD/dialogs; (5) notch, Notification Center and widgets; (6) Spotlight, screenshots, input/emoji, appearance/glass and installer/onboarding.
+- H13 (now): build the frame-time and jitter probes into the harness library so the leads' final runs and the verifiers can use them.
+- L8: resumed to fix its 3 open failures before it merges.
+- Next leads: L10, L12 (running with L9, L8 and H13); then L11, L14, L15.
