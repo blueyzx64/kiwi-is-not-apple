@@ -615,3 +615,427 @@ general-purpose Rosetta 2. That has no desktop-feature impact for Kiwi.
 - **Recommendation:** **Port (P1 core), effort S**: name Kiwi's prefs pages like Tahoe's (Appearance, Menu Bar,
   Control Center, Desktop & Dock, Spotlight).
 
+---
+
+## 3. macOS 26 Tahoe: Liquid Glass in depth
+
+Apple's own definition (newsroom, June 2025; HIG Materials):
+- Liquid Glass is "a translucent material that reflects and refracts its surroundings". It uses real-time
+  rendering and specular highlights that react to movement.
+- Its colour is "informed by surrounding content" and it adapts between light and dark.
+- It forms **a distinct functional layer for controls and navigation that floats above the content layer**. It is
+  never used in the content layer itself, except for transient states such as a slider thumb while you drag it.
+- There are two variants. **Regular** blurs and adjusts luminosity; it is used by most system components and
+  anything with text. **Clear** is highly translucent, for controls over rich media; the HIG advises a **35 % dark
+  dimming layer** under it when the content is bright.
+- On the Mac, Apple tuned it down compared with iOS (Ars, 2025):
+  - Menus, notifications, Spotlight and most menu bar dropdowns use the less translucent look.
+  - Control Center uses the "glassier" one.
+  - App toolbars come in two styles: a "soft" scroll-edge style that lets content show through (Photos), and a
+    "hard-style" divider where text labels need clarity (Finder lists).
+
+### F18. Liquid Glass material: the core look
+- **Introduced / changed:**
+  - Tahoe 26.0.
+  - 26.1 added Clear/Tinted (F31).
+  - Golden Gate: darker edges, brighter speculars, better diffusion of complex content, and a transparency slider
+    (F57, F31).
+- **What it is:** the shared material for the Dock, menu bar dropdowns, Control Center, notifications, Spotlight,
+  sidebars, toolbars, buttons, sliders, switches, popovers and widgets. Its traits:
+  1. **Translucency with blur:** the backdrop is blurred and its luminosity adjusted.
+  2. **Lensing and refraction at the edges:** the backdrop bends near the rim, like the edge of a lens.
+  3. **Specular highlights:** a bright rim that catches "light". On iOS it moves with the device; on the Mac it is
+     mostly static.
+  4. **Adaptive tint:** the colour is taken from the content behind; it flips light or dark with the backdrop.
+  5. **Adaptive shadows:** they get stronger over busy content.
+  6. **Concentric shapes:** controls are capsules and rounded rects whose radii are concentric with the window and
+     hardware corners.
+  7. **Grouping:** related toolbar buttons share one glass capsule. In Tahoe the groupings are always visible, not
+     only on hover (MacStories).
+- **Caveats (on macOS):**
+  - Legibility suffers when fine text or detailed images scroll under other text (Ars, MacStories): Settings'
+    search field, the top of Photos, Music's floating bottom controls.
+  - Apple adds automatic shadows and opacity changes to compensate, and they are inconsistent across apps.
+  - "Hacksaw, not scalpel": the only global escape is Reduce Transparency (F30).
+  - It costs GPU time, and Tahoe was criticised for stutter.
+- **Port to GNOME 50 (faux, no blur):** St CSS on Kiwi's own surfaces through `lib/glass.js` (`Glass.attach`,
+  `kiwi-glass-*` fill classes).
+  - **Translucency + blur →** a fill of rgba tint at 55–80 % alpha (light: white-ish, dark: graphite), higher than
+    real glass would need, because there is no blur to hide what is behind. Optionally a subtle 2–3 % noise PNG as
+    `background-image` (St supports background images) to fake frosting.
+  - **Lensing →** an inset ring: `box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18)` plus a second inner gradient
+    band (via a child actor, since St draws one `box-shadow` per actor). This gives the "thick edge" look without
+    sampling the backdrop.
+  - **Specular →** a 1 px top rim highlight (lighter top border, or an inner child with
+    `background-gradient-direction: vertical` from rgba(255,255,255,0.35) to transparent over the top 30 %).
+    Optionally a radial-gradient corner glint (St supports `background-gradient-direction: radial`).
+  - **Adaptive tint →** sample the wallpaper's average colour once per change (Kiwi can read the
+    `org.gnome.desktop.background picture-uri` file asynchronously with `GdkPixbuf.Pixbuf.new_from_stream_at_scale_async`
+    at 32×32 in the Shell process) and mix 5–10 % of it into the tint, as macOS does with "wallpaper tinting".
+  - **Adaptive shadows →** a soft drop shadow (`box-shadow: 0 8px 24px rgba(0,0,0,0.25)`) on the outer wrapper;
+    stronger in dark mode.
+  - **Concentricity →** tokens from the `apple-design` skill: inner radius = outer radius − padding.
+  - **Grouping →** button groups in a shared capsule actor.
+- **Blockers / risks:**
+  - No blur by owner decision; GNOME 51's `set_background_blur_params()` could add real blur later for Shell
+    surfaces only.
+  - App windows (GTK/libadwaita) can't be glassed from the Shell at all.
+  - St has no backdrop sampling, so true refraction is impossible without a shader (experimental, and removed
+    APIs on 51).
+- **Linux equivalents today:**
+  - Blur my Shell (now ships its own "Liquid Glass" effect on master);
+  - Rounded Window Corners Reborn;
+  - libadwaita 1.8+ has no glass.
+- **Kiwi status:** partial (faux transparency fills exist; the rim and shadow structure is specified in
+  `docs/features/liquid-glass.md`).
+- **Recommendation:** **Port (P1 core), effort M.** The whole Kiwi look depends on it. See §6 for the cookbook.
+
+### F19. "Liquid" motion: morphing, bouncing controls
+- **Introduced / changed:** Tahoe. Golden Gate makes buttons animate "like iOS" and gives Control Center a
+  consistent closing animation (Wikipedia, 27).
+- **What it is:**
+  - **Morphing:** controls fluidly change shape and size as options appear (a button grows into a menu).
+  - **Press feedback:** pressed elements slightly enlarge and glow.
+  - **Sliders and toggles:** their knobs turn into glass lenses while you drag them.
+  - **Bounce:** Control Center and notifications spring in.
+  - Ars: "a little playfulness never hurt anyone"; the animations don't add waiting.
+- **Caveats (on macOS):** Reduce Motion replaces springs with fades; some find the bounce childish.
+- **Port to GNOME 50:** Shell extension, in Kiwi's planned `core/motion.js` (shared springs, overhaul plan §4.2).
+  - Clutter's `ease()` with `Clutter.AnimationMode.EASE_OUT_BACK` approximates a spring overshoot. A small
+    custom spring (critically damped, with a `Clutter.Timeline` `new-frame` callback) gives true springs.
+  - Popovers open from their source button: scale from 0.92 to 1 with pivot at the button
+    (`set_pivot_point`) plus opacity.
+  - **Press:** scale 1.04 plus a brighter rim class while held.
+  - **Slider knob:** on drag start, widen the knob and switch it to the "clear glass" class (a lighter fill, white
+    rim).
+  - **Reduced motion:** honour it through `lib/compat.js` `reducedMotion` (GNOME's `enable-animations`), using a
+    150 ms fade instead.
+- **Blockers / risks:** per-frame JS callbacks must stay cheap; animate transforms and opacity only, never
+  relayout (same rule as the notch performance pass).
+- **Linux equivalents today:** GNOME's own ease animations; Burn My Windows for effects; nothing spring-based
+  system-wide.
+- **Kiwi status:** partial (springs are planned in P2 "Motion").
+- **Recommendation:** **Port (P2), effort M.** It is what separates "Liquid Glass" from a translucent theme.
+
+### F20. The transparent menu bar
+- **Introduced / changed:**
+  - Tahoe 26.0: fully transparent by default, with a "Show menu bar background" toggle in the new Menu Bar
+    settings pane.
+  - Golden Gate: menu icons reduced, and the Spotlight menu bar icon removed for Siri AI users (beta 3).
+- **What it is:**
+  - The menu bar has no background. Text and icons float on the wallpaper and switch between black and white by
+    the wallpaper's brightness.
+  - On mixed wallpapers macOS draws an almost invisible gradient or shadow under the bar for legibility (Ars:
+    "break-glass-in-case-of-legibility-emergency").
+  - **Show menu bar background** restores a Sequoia-like translucent bar. It is dark-only: there is no light
+    variant on dark wallpapers anymore.
+  - **Reduce Transparency** gives a fully solid bar.
+  - **Behind windows:** when a window is maximized (or overlaps the bar), the bar reads against the window, not the
+    wallpaper, and the bar background comes back for legibility.
+  - It still hides in Full Screen and under the "Automatically hide and show the menu bar" options.
+- **Caveats (on macOS):** busy wallpapers hurt legibility; there's no separation line between the menus and
+  the desktop.
+- **Port to GNOME 50:** Shell extension, part of Kiwi's menu bar (overhaul plan §5.1).
+  - **Transparency:** `Main.panel` style class `kiwi-menubar-clear` with `background-color: transparent`.
+  - **Legibility gradient:** a top-down gradient child (rgba(0,0,0,0.18) → 0) only when the wallpaper luminance
+    test says the top band is mixed.
+  - **Text colour:** sample the top 24 px band of the wallpaper (same async GdkPixbuf sampling as F18, per
+    monitor) and pick dark or light text by relative luminance (WCAG). Re-run on `changed::picture-uri`,
+    `picture-uri-dark`, and `color-scheme`.
+  - **Over windows:** when any window touches the top edge (`window-added`, `position-changed`, maximize
+    signals), switch to the solid glass bar. GNOME's own "transparent top bar" extensions use exactly this
+    window-proximity check.
+  - **Settings:** "Show menu bar background" (bool) and "Reduce transparency" (Kiwi's own, F30).
+- **Blockers / risks:**
+  - Wallpaper sampling must be async (EGO-X-002).
+  - Animated or slideshow wallpapers need re-sampling on change.
+  - In the overview (Mission Control), the panel sits over the dimmed overview background, so force light text
+    there.
+- **Linux equivalents today:** Transparent Top Bar (Adjustable transparency), Dynamic Panel, Blur my Shell's
+  panel mode.
+- **Kiwi status:** partial (the dropped panel-transparency did a static version; the menu bar is planned in P1).
+- **Recommendation:** **Port (P1 core), effort M.** It is the most visible Tahoe trait on the desktop.
+
+### F21. Glass Dock and app switcher
+- **Introduced / changed:** Tahoe (the Dock crafted "from multiple layers of Liquid Glass"; the Cmd-Tab switcher
+  in glass). Golden Gate: background-process dots (F63), and the Dock optimised for touch (reported).
+- **What it is:**
+  - The Dock is a highly transparent glass slab with a bright rim and opaque icons. MacStories finds maximum
+    transparency works here because the icons are large and opaque.
+  - The Cmd-Tab switcher uses the same glass.
+  - Running-app dots and the minimise and magnification behaviours are unchanged.
+- **Caveats (on macOS):** low contrast of the running dots on light wallpapers.
+- **Port to GNOME 50:** Kiwi's own dock (overhaul plan §5.2) and app switcher (§5.7) use the **clear** glass
+  variant:
+  - a lower fill alpha (35–45 %);
+  - a white 1 px rim at 30 %;
+  - a top highlight band;
+  - a soft shadow.
+  - Running dots get a small dark halo for contrast.
+- **Blockers / risks:** none beyond the dock itself.
+- **Linux equivalents today:** Dash to Dock (translucent, no rim); Dash2Dock Animated.
+- **Kiwi status:** partial (the dock and switcher are planned in P1 and P3).
+- **Recommendation:** **Port (P1 core), effort S** (styling only, on top of the dock work).
+
+### F22. Glass sidebars, toolbars and scroll-edge effects in apps
+- **Introduced / changed:**
+  - Tahoe: floating, inset glass sidebars that refract the content and reflect the wallpaper; toolbars as glass
+    capsules; scroll-edge effects.
+  - Golden Gate: sidebars are **edge-to-edge** again with coloured icons, and toolbars are uniform.
+- **What it is:**
+  - Sidebars float over the window content with their own corner radius and shadow.
+  - Toolbars hold grouped glass capsules.
+  - Content scrolls under both, with a soft or hard scroll-edge fade.
+- **Caveats (on macOS):**
+  - Floating sidebars waste space and look detached; Golden Gate reverted them.
+  - Inconsistent between apps (Finder list vs icon view; Music vs Safari).
+- **Port to GNOME 50:**
+  - App chrome is drawn by GTK/libadwaita in the app process, so the Shell can't change it.
+  - Kiwi dropped GTK theming (overhaul plan §2), so the only Kiwi use is **Kiwi's own Shell surfaces**:
+    - Spotlight result lists, Control Center pages and the clipboard popover should use **scroll-edge fades**.
+      `St.ScrollView` supports `-st-vfade-offset` in CSS, which is exactly a soft scroll-edge effect.
+    - The prefs window (Adw) can use libadwaita's own sidebars.
+- **Blockers / risks:** Wayland process separation; no supported way to theme libadwaita apps (and theming them
+  was dropped).
+- **Linux equivalents today:** libadwaita's `AdwNavigationSplitView` sidebars; no glass.
+- **Kiwi status:** none.
+- **Recommendation:**
+  - Scroll-edge fades on Kiwi surfaces: **Port (P1 core), effort S.**
+  - App sidebars and toolbars: **Skip.**
+
+### F23. Redesigned controls: sliders, switches, buttons, segmented controls, tabs
+- **Introduced / changed:** Tahoe (Liquid Glass controls; capsule buttons; rounded "sunken pill" tabs in Safari).
+  Golden Gate: iOS-like button animations.
+- **What it is:**
+  - Buttons are taller capsules. Sliders have a glass knob that magnifies while dragging. Switches are glass
+    toggles.
+  - Segmented controls and tabs are pills sunk into a slot (Safari, MacStories).
+  - Menu titles and selected items are separately rounded pills (criticised: they look "disconnected", MacRumors
+    forum, 2026).
+- **Caveats (on macOS):** extra height costs density; disconnected menus.
+- **Port to GNOME 50:** St CSS for Kiwi's controls:
+  - `.kiwi-slider` (a taller 6 px track, a 22 px knob that grows to 28 px while dragging);
+  - `.kiwi-switch`;
+  - `.kiwi-pill-button`;
+  - segmented pills for Spotlight's browse tabs (F33) and the Control Center pages.
+  - GNOME's Quick Settings sliders (`Slider` from `ui/slider.js`) can be restyled with CSS
+    (`-slider-height`, `-slider-handle-radius`). The knob growth needs a style-class toggle on drag begin and end.
+- **Blockers / risks:** `ui/slider.js` draws with Cairo from CSS properties: only those properties can be
+  changed, not the shape.
+- **Linux equivalents today:** GNOME Quick Settings' own pill toggles (already capsule-like).
+- **Kiwi status:** partial (the Control Center restyles tiles and sliders).
+- **Recommendation:** **Port (P1 core), effort S.**
+
+### F24. Window corner radius: Tahoe's oversized and inconsistent corners
+- **Introduced / changed:**
+  - Tahoe 26.0: much larger radii that **vary by window type**; windows with toolbars get bigger corners than
+    plain ones.
+  - TinkerTool can change the radius on 26.4+.
+  - Golden Gate beta 6: **one radius for all windows**, less rounded.
+- **What it is:**
+  - Tahoe made windows concentric with "the rounded corners of modern hardware", so radii grew, and grew more on
+    windows with tall toolbars.
+  - Resize problem (Norbert Heger, January 2026): the resize hot zone is a 19×19 px square at the corner. With
+    the big radius about **75 % of it lies outside the visible window**, so grabbing the corner often misses.
+    Scroll bars also clip against the round corner as if it were square (Gruber).
+- **Caveats (on macOS):** described as "children's toys"; failing resize grabs; mixed radii look sloppy side by
+  side; reverted in 27.
+- **Port to GNOME 50:**
+  - Kiwi's **rounded corners** feature (`apps/roundedCorners`) already rounds windows from the Shell.
+  - The lesson for Kiwi:
+    - **Use one moderate radius for every window** (Golden Gate's choice, roughly 10–12 px on a 1× display,
+      scaled by the monitor's scale factor). Never vary it by window type.
+    - Keep it concentric with Kiwi's own radii: menu bar dropdowns, Control Center (22), tiles.
+    - Corners must not change the resize zone. Mutter's resize zone for SSD and Xwayland windows is its own;
+      GTK CSD apps resize via their own invisible borders, so rounding in the Shell doesn't break them. Test that
+      the corner is grabbable.
+  - Tiled windows (F1) with margins keep their rounding; macOS keeps rounded corners when tiled.
+- **Blockers / risks:**
+  - Rounding is a per-window effect; it costs GPU on many windows.
+  - Fullscreen and maximized windows should drop rounding.
+- **Linux equivalents today:** Rounded Window Corners Reborn; libadwaita's own 12-ish px window radius on CSD apps.
+- **Kiwi status:** have.
+- **Recommendation:** **Port (P1 core), effort S**: tune to one consistent radius, add a "radius" setting and the
+  rule that maximized, tiled-without-margins and fullscreen windows are square.
+
+### F25. Liquid Glass app icons and squircle enforcement ("icon jail")
+- **Introduced / changed:**
+  - Tahoe: all icons must be squircles. A non-conforming icon is shrunk onto a grey squircle plate, and
+    already-square icons get a glass border.
+  - New layered `.icon` format and the Icon Composer app.
+  - Golden Gate: more glass layers in icons and sharper detail; squircles still required.
+- **What it is:**
+  - Icons are built from a background layer and foreground layers. The system adds specular highlights,
+    refraction and translucency.
+  - Legacy icons are auto-processed. Even flat icons gain a glassy interior (Slack).
+- **Caveats (on macOS):**
+  - Loss of personality; abstract, hard-to-recognise icons (Kafasis, "Tahoe's terrible icons", Nov 2025).
+  - A slight delay before Finder icons appear after a style change (the icon cache).
+- **Port to GNOME 50:** applies only where Kiwi draws icons: dock, Launchpad/Apps view, app switcher, Spotlight.
+  - **Optional "uniform icon plates":** draw each app icon on a squircle plate actor (a rounded rect with
+    `border-radius` about 22.5 % of its size, glass fill), with the theme icon at about 80 % size on top. Apply it
+    only to icons that are not already square-ish. Detecting that needs alpha analysis of the icon (costly), so
+    make it a manual "plate all icons" toggle instead.
+  - **Specular on icons:** a top-left highlight overlay actor, cheap.
+- **Blockers / risks:**
+  - GNOME's icon themes (Adwaita style) use varied shapes on purpose; plating everything fights the platform.
+  - Users disliked icon jail.
+- **Linux equivalents today:** icon themes with squircle shapes (WhiteSur, Colloid's macOS-like variants).
+- **Kiwi status:** none.
+- **Recommendation:** **Later (P3), effort M**, off by default. Not a macOS feature people liked.
+
+### F26. Icon and widget styles: Default, Dark, Clear, Tinted
+- **Introduced / changed:**
+  - Tahoe (from iOS 18's dark and tinted icons, plus the new **clear** look; light and dark variants of clear
+    and tinted).
+  - Golden Gate improves the sharpness of every variant.
+- **What it is:**
+  - In System Settings › Appearance › "Icon & widget style":
+    - **Default**;
+    - **Dark** (dark backgrounds, coloured glyphs);
+    - **Clear** (decolourised glass icons);
+    - **Tinted** (monochrome in a colour chosen from a pop-up, which also drives folder colour).
+  - Widgets follow the same style.
+  - Each has light and dark sub-variants.
+- **Caveats (on macOS):** Clear and Tinted make many icons unreadable and indistinguishable, especially in
+  System Settings' sidebar (Eclectic Light). Colour-blind users suffer.
+- **Port to GNOME 50:** feasible **on Kiwi-drawn icons** with stock Clutter effects (no shaders):
+  - **Dark:** `Clutter.BrightnessContrastEffect` (brightness −0.25) on the icon plus a dark plate (F25), or
+    nothing on symbolic icons.
+  - **Clear:** `Clutter.DesaturateEffect` (factor 1.0) plus `opacity` 200 on a clear-glass plate.
+  - **Tinted:** `Clutter.DesaturateEffect` then `Clutter.ColorizeEffect` with the tint colour (GNOME's
+    `org.gnome.desktop.interface accent-color` by default).
+  - Apply these in the dock, Launchpad and app switcher through one helper (`lib/iconStyle.js`).
+- **Blockers / risks:**
+  - Effects per icon add offscreen redirects. Fine for about 30 dock icons; for a large app grid apply them once
+    to a cached texture, or skip the grid.
+  - Not system-wide (Files and app windows unaffected).
+- **Linux equivalents today:** none as a runtime option; static icon themes only.
+- **Kiwi status:** none.
+- **Recommendation:** **Port (P2), effort M.** It is a distinctly Tahoe personalisation and cheap on Kiwi's own
+  surfaces. Ship Dark and Tinted; Clear is optional.
+
+### F27. Folder colours, emoji and symbols; theme and highlight colours
+- **Introduced / changed:** Tahoe.
+- **What it is:**
+  - **Folder colour** follows the theme (accent) colour by default.
+  - **Customize Folder:** right-click a folder › Customize Folder… to pick a colour, an **emoji**, or an
+    **SF Symbol** stamped on it. Tags can also colour folders.
+  - Folders animate when files drop in, and show a "paper sticking out" when non-empty.
+  - **Colours:** nine theme colours, nine highlight colours and eight folder colours, plus custom colours. All
+    are independent (MacStories).
+- **Caveats (on macOS):**
+  - Third-party custom folder icons (Dropbox) don't follow until updated.
+  - Easy to create clashing combinations.
+- **Port to GNOME 50:** not a Shell feature; Files (Nautilus) draws folders. Options:
+  1. **Per-folder icons through gvfs metadata.** `Gio.File.set_attributes_async` with `metadata::custom-icon`
+     pointing at a Kiwi-generated SVG (folder tinted, with an emoji or symbolic glyph composited in). Files
+     honours `metadata::custom-icon` (verify on Files 50). This changes metadata, not the user's file: Kiwi must
+     keep a list of the folders it changed and clear them on reset.
+  2. **Global folder colour** would need an icon theme (writing `~/.local/share/icons`) or the accent-aware
+     folders of a theme. Out of scope for an extension.
+  3. **The UI:** a Spotlight action ("Customize folder…") or a Files context menu via a Nautilus extension.
+     Nautilus extensions are separate (Python/C). Skip that.
+  - GNOME 47+ already has accent colours (`accent-color`); Kiwi's highlight and theme colours should follow it.
+- **Blockers / risks:**
+  - Files' support for custom icons in GTK4 views needs checking.
+  - Writing metadata for user folders is borderline for the "never touch user files" rule; it must be
+    reversible and opt-in.
+  - The SVG generation needs librsvg/Cairo (available in the Shell).
+- **Linux equivalents today:** Folder Color (a Nautilus extension); `gio set <dir> metadata::custom-icon`; Files'
+  Properties › custom icon (where available).
+- **Kiwi status:** none.
+- **Recommendation:**
+  - Folder customisation: **Later (P3), effort M** (an opt-in Spotlight action).
+  - Follow GNOME's accent colour everywhere: **Port (P1 core), effort S.**
+
+### F28. Icons in menus (Tahoe) and the Golden Gate rollback
+- **Introduced / changed:** Tahoe added SF Symbol icons next to most menu items, including standard items
+  (Open, Paste, Window items) in non-updated apps. Golden Gate removes most of them (Wikipedia: "no icons by
+  default"; MacRumors: kept only for some common actions).
+- **What it is:** automatic glyphs beside menu commands.
+- **Caveats (on macOS):** visual clutter, misaligned text; widely criticised, then reverted.
+- **Port to GNOME 50:** Kiwi's app menus (overhaul plan §5.1) build their own `PopupMenu` items, so they can show
+  icons or not. Follow Golden Gate: **no icons by default**, an optional icon only for a short list (New, Open,
+  Copy, Paste, Share, Delete) using GNOME symbolic icons.
+- **Blockers / risks:** none.
+- **Linux equivalents today:** GNOME's menus are mostly icon-less; GTK3 apps can show menu icons.
+- **Kiwi status:** none.
+- **Recommendation:** **Port (P1 core), effort S**: a design decision for the app menu, not a feature.
+
+### F29. Left-aligned system dialogs and pop-up power dialogs
+- **Introduced / changed:** Tahoe (system alerts left-aligned; Restart and Shut Down shown as a pop-up rather than
+  a window). Low-battery and AirPods alerts became menu-item popovers (F51).
+- **What it is:**
+  - Alerts switch from centred to left-aligned text, with the icon at the top left and buttons at the bottom
+    right.
+  - The power dialogs float as glass pop-ups.
+- **Caveats (on macOS):** Ars found the asymmetric whitespace disorienting.
+- **Port to GNOME 50:** St CSS on `ModalDialog` (`.modal-dialog`, `.end-session-dialog`) plus Kiwi's logo-menu
+  power items (overhaul plan §5.1):
+  - restyle the GNOME end-session dialog with faux glass, left-aligned headline, capsule buttons;
+  - optionally make the logo menu's Restart… and Shut Down… open a compact glass popover with a 60 s countdown
+    (macOS-like).
+- **Blockers / risks:** the end-session dialog's logic is GNOME's; Kiwi only restyles it (`Main.wm` and
+  `endSessionDialog` internals are private).
+- **Linux equivalents today:** none specific.
+- **Kiwi status:** none.
+- **Recommendation:** **Port (P2), effort S.**
+
+### F30. Reduce Transparency, Increase Contrast and the accessibility criticism
+- **Introduced / changed:**
+  - Long-standing settings, with new Tahoe behaviour.
+  - 26.1 makes the Liquid Glass setting unavailable while they are on.
+  - Golden Gate adds **Show Borders** (F65).
+- **What it is:**
+  - **Reduce Transparency** makes menus, Spotlight, Control Center and notifications opaque. Windows stop
+    picking up a wallpaper tint, and the menu bar gets a solid background.
+  - Finder, Photos and Messages regain a clearly delineated title-bar area.
+  - Glassy outlines remain on some elements (Control Center, menus, Spotlight) but not notifications (Ars).
+  - **Increase Contrast** (which implies Reduce Transparency) outlines controls, darkens system colours and the
+    traffic lights.
+  - **The criticism** (Ars, Eclectic Light, accessibility advocates): the defaults fail contrast over busy
+    content, and pushing everyone to Accessibility settings is "an admission of failure in design". It is all or
+    nothing.
+- **Caveats (on macOS):** an all-or-nothing hacksaw (Ars); it loses the look entirely.
+- **Port to GNOME 50:** Kiwi's glass variants (overhaul plan §5.8, "high contrast (solid) and reduced
+  transparency"):
+  - **Reduce transparency (Kiwi setting):** every `kiwi-glass-*` class switches to an opaque fill
+    (`alpha 1.0`), the rim stays as a 1 px border, and the menu bar shows its background. It should also follow
+    a system signal if one appears; GNOME 50 has no "reduce transparency" key, so it is Kiwi-only.
+  - **High contrast:** follow `org.gnome.desktop.a11y.interface high-contrast`: solid fills, 1 px 60 %-contrast
+    borders on every control, a stronger focus ring, and no gradients.
+  - **Per-surface escape** (better than Apple's): `liquid-glass-surfaces` already lists surfaces, so the user can
+    keep glass on the dock but not on menus.
+  - Contrast check: the acceptance target of ≥ 4.5:1 text contrast over the worst wallpaper
+    (`liquid-glass.md`) is exactly the bar Apple missed.
+- **Blockers / risks:** none technical. It must be applied in one place (`lib/glass.js`) so no surface forgets it.
+- **Linux equivalents today:** GNOME high contrast; reduced motion (`enable-animations`).
+- **Kiwi status:** partial (the high-contrast rule is in the spec; the reduced-transparency variant is planned).
+- **Recommendation:** **Port (P1 core), effort S.** Required, and Kiwi can beat Apple with per-surface control.
+
+### F31. The Liquid Glass Clear/Tinted setting (26.1) and transparency slider (27)
+- **Introduced / changed:**
+  - Tahoe 26.1: System Settings › Appearance › Liquid Glass: **Clear** (default, "more transparent, revealing the
+    content beneath") or **Tinted** ("increases opacity of the material in apps and notifications on the Lock
+    Screen").
+  - Golden Gate: a **continuous slider** from clear to tinted (MacRumors: "from ultra-clear to fully tinted").
+    Even its clearest end is less clear than the WWDC 2025 demo.
+- **What it is:**
+  - User control over glass opacity.
+  - In 26.1 the difference is subtle in light mode (Eclectic Light saw none in Finder) and clearer in dark mode
+    (darker widgets, a white back/forward capsule).
+  - It is disabled when Reduce Transparency or Increase Contrast is on.
+- **Caveats (on macOS):** subtle; confusing overlap with Accessibility; "Tinted" collides in name with the
+  icon "Tinted" style.
+- **Port to GNOME 50:**
+  - Kiwi already has the pieces: `liquid-glass-style` (tinted/clear) and a tint slider (`liquid-glass-tint`);
+    `glassParams.js` maps them to 5 %-alpha buckets.
+  - Present them as **one slider "Glass: Clear ↔ Tinted"** in the Appearance page, mapped to fill alpha (about
+    35 % to 85 %) and rim strength.
+  - Grey it out with a note when Reduce Transparency or High Contrast is on, like macOS.
+- **Blockers / risks:** none.
+- **Linux equivalents today:** Blur my Shell's sigma and brightness sliders.
+- **Kiwi status:** partial (keys exist).
+- **Recommendation:** **Port (P1 core), effort S.**
+
