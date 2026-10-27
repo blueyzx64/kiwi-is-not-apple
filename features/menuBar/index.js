@@ -166,11 +166,18 @@ export class MenuBar {
 
     /** Keyboard access (Ctrl+F2): the app menu, or the logo menu when app menus are off. */
     focus() {
-        // Over a full-screen window the bar is hidden: slide it in first, and away when done
+        // Over a full-screen window the bar is hidden: slide it in first, open the menu once it
+        // has landed (a menu opened on a bar still sliding in loses its source), and slide the
+        // bar away again when the menu closes
         const fullscreen = this.part('fullscreen');
-        fullscreen?.reveal();
-        this._focusMenu();
-        fullscreen?.concealWhenIdle();
+        const open = () => {
+            this._focusMenu();
+            fullscreen?.concealWhenIdle();
+        };
+        if (fullscreen)
+            fullscreen.reveal(open);
+        else
+            open();
     }
 
     _focusMenu() {

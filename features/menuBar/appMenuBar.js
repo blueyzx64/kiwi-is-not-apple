@@ -44,7 +44,7 @@ const HELP_RESULTS = 8;
 
 /**
  * Lays its children out in a row (mirrored in right-to-left text) and, when they do not fit,
- * leaves the menus that do not (allocated empty) and shows the "»" button instead, so a long
+ * leaves the menus that do not (past the strip's edge, clipped) and shows the "»" button instead, so a long
  * menu list never runs into the notch or the clock. The first child is the app name (always
  * shown) and `more` the "»" button; their widths come from model.js fitMenus.
  *
@@ -100,17 +100,21 @@ class KiwiMenuOverflowLayout extends Clutter.LayoutManager {
         const place = (child, x, w) => {
             const childBox = new Clutter.ActorBox();
             childBox.set_origin(x, 0);
-            childBox.set_size(w, w ? height : 0);
+            childBox.set_size(w, height);
             child.allocate(childBox);
         };
+        // A button without room keeps its own width but sits just past the strip's edge, where
+        // the strip's clip hides it: squeezed to nothing, its padding would leave the label a
+        // negative width ("StLabel tried to allocate -10x0")
+        const away = w => (rtl ? -w : width);
         menus.forEach((child, i) => {
             if (i < fit.shown)
                 place(child, fit.xs[i], widths[i]);
             else
-                place(child, 0, 0);
+                place(child, away(widths[i]), widths[i]);
         });
         if (this.more)
-            place(this.more, fit.moreX, fit.more ? moreWidth : 0);
+            place(this.more, fit.more ? fit.moreX : away(moreWidth), moreWidth);
         const key = `${fit.shown}/${menus.length}`;
         if (key !== this._fit) {
             this._fit = key;
@@ -374,8 +378,8 @@ export class AppMenuBar {
     _setMenus(menus) {
         while (this._buttons.length < menus.length) {
             const b = this._newButton('');
-            // Before the "»" button, which stays last
-            this._strip.insert_child_below(b.container, this._more.container);
+            // _newButton put it at the end: move it before the "»" button, which stays last
+            this._strip.set_child_below_sibling(b.container, this._more.container);
             this._buttons.push(b);
         }
         this._buttons.forEach((b, i) => {

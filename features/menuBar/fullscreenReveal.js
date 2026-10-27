@@ -114,18 +114,30 @@ export class FullscreenReveal {
         this._edge.visible = full && !this._revealed;
     }
 
-    /** Slide the bar in over the full-screen window. */
-    reveal() {
-        if (this._revealed || !this._edge || !this._inFullscreen())
+    /**
+     * Slide the bar in over the full-screen window.
+     *
+     * @param {() => void} [onShown] runs once the bar is in place, at once when it needs no
+     *   sliding (not in full screen, or already out); not when the slide is interrupted
+     */
+    reveal(onShown) {
+        if (!this._edge || !this._inFullscreen() || this._revealed) {
+            onShown?.();
             return;
+        }
         const panelBox = Main.layoutManager.panelBox;
         this._revealed = true;
         this._edge.visible = false;
         this._anim?.cancel();
         panelBox.show();
-        panelBox.translation_y = -panelBox.height;
+        panelBox.translation_y = -this._barHeight();
         this._anim = this._ctx.motion.ease(panelBox, { translation_y: 0 },
-            { duration: 'short', curve: 'enter' }, this._cleanup);
+            { duration: 'short', curve: 'enter', onDone: finished => finished && onShown?.() }, this._cleanup);
+    }
+
+    // The panel box has no height yet while it is hidden: the panel's own preferred one then
+    _barHeight() {
+        return Main.layoutManager.panelBox.height || Main.panel.get_preferred_height(-1)[1];
     }
 
     /** Slide the bar away again once no menu is open and the pointer is off it. */
@@ -177,7 +189,7 @@ export class FullscreenReveal {
             done();
             return;
         }
-        this._anim = this._ctx.motion.ease(panelBox, { translation_y: -panelBox.height },
+        this._anim = this._ctx.motion.ease(panelBox, { translation_y: -this._barHeight() },
             { duration: 'short', curve: 'exit', onDone: done }, this._cleanup);
     }
 }
