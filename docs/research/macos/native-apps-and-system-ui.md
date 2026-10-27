@@ -649,3 +649,561 @@ Short history used below: Mojave 10.14 (2018), Catalina 10.15 (2019), Big Sur 11
 - **Kiwi status:** partial (reduced-motion helper; glass variants planned).
 - **Recommendation:** Port (P1 core, as a rule for every feature), **S**. Accessibility parity is a correctness requirement, not a feature.
 
+---
+
+## Part B: Bundled apps
+
+### Finder (sidebar, tags, views, Gallery, Quick Actions, path bar, spring-loading, Get Info)
+- **Introduced / changed:**
+  - **Mojave:** **Gallery View** (replacing Cover Flow), a full-metadata **Preview pane**, **Quick Actions** (rotate, markup, create PDF, custom Automator actions), **Desktop Stacks** (group desktop files by kind, date or tag).
+  - Catalina: iOS device sync moved into Finder (iTunes was split).
+  - Big Sur: redesign.
+  - Monterey: Quick Actions from Shortcuts.
+  - Ventura/Sonoma: minor; "Remove Background" Quick Action (Sonoma).
+  - **Tahoe:** Liquid Glass toolbar (button groups always visible); **folder customisation** (a colour per folder, SF Symbol or emoji glyph via right-click ▸ Customize Folder…; a system-wide default folder colour in Appearance); folder icons show whether they are empty, with a fill animation; a new Finder icon.
+  - **27:** **column auto-size and reset** (right-click the bottom of a column), cleaner windows, Apple Intelligence **suggested file and folder names**, faster SMB/NAS browsing.
+- **What it is:**
+  - **Views:** Icon ⌘1, List ⌘2 (disclosure triangles, sortable columns), **Column ⌘3** (Miller columns, the Mac signature for deep trees), Gallery ⌘4 (large preview, a filmstrip, metadata, Quick Actions).
+  - **Sidebar:**
+    - Favorites (Recents, Applications, Desktop, Documents, Downloads, AirDrop, Home);
+    - iCloud (Drive, Shared);
+    - Locations (this Mac, disks, network, servers);
+    - **Tags** (7 colour tags plus named tags).
+  - **Toolbar:** back/forward, view switcher, Group By, Share, **Tags**, Action menu, search (Spotlight scoped to "This Mac" or the current folder; saving it makes a **Smart Folder**).
+  - **Path bar** (⌥⌘P) at the bottom, with drag targets; the status bar (⌘/) shows the item count and free space; tabs (⌘T); ⌘-click the title shows the path menu.
+  - **Spring-loaded folders:** drag an item over a folder and it opens after a delay. Press Space to open it now; this also works in the sidebar and Dock stacks. Set the delay in Accessibility ▸ Pointer Control.
+  - **Tags:** Ctrl-1…7 toggle the favourite tags and Ctrl-0 clears them. They work in Save dialogs and are searchable, sortable and groupable. They are stored as `com.apple.metadata:_kMDItemUserTags` xattrs and sync via iCloud.
+  - **Get Info (⌘I):** General (kind, size, where, created/modified, Stationery pad, Locked), More Info (metadata), Name & Extension, Comments, **Open with ▸ Change All…**, Preview, **Sharing & Permissions**. Paste an image onto the icon to set a custom icon. ⌥⌘I gives a live **Inspector** for the selection.
+  - **Also:** Go to Folder ⇧⌘G (path completion), Connect to Server ⌘K, ⌥⌘V to move (cut-and-paste), ⌘Delete to Trash, show hidden files ⇧⌘., batch rename, Compress, Quick Look Space, "Put Back" from the Trash, iCloud Optimize Storage.
+- **Caveats (on macOS):**
+  - There is no real "cut".
+  - Column widths got auto-size only in 27.
+  - Folder colours do not show in the sidebar, Dock, aliases or Spotlight.
+  - The Tahoe glass toolbar is more transparent in icon view without tabs (MacStories).
+- **Port to GNOME 50:** configure an existing app (**Nautilus / GNOME Files 50**) plus a **Nautilus extension** shipped by the installer.
+  - **What Files 50 has:** grid and list views, sidebar (bookmarks, Starred, Recent, Network, Trash, Other Locations), an always-on editable path bar (case-insensitive completion in 50), tabs, built-in compress and extract, the **reworked batch rename** (50), **pop-out Properties windows** (50), grid-view captions (up to 3 extra info rows, 50), multiple type filters in search (50), Sushi (Space), and drag-hover opening in the path bar.
+  - **What is missing:**
+    - **Column view** (there are only unofficial Miller-column patches for 49/50);
+    - Gallery view, and a Preview pane with metadata;
+    - **tags** (GNOME has "Starred" only; tag work in Nautilus stalled years ago);
+    - folder colours;
+    - Get Info's Open-with "Change All" (Properties has an "Open With" page, which is close);
+    - a Quick Actions menu.
+  - **What Kiwi can do:**
+    - Set GSettings (`org.gnome.nautilus.preferences`: default view, sort, `show-create-link`, list-view columns), restoring them on uninstall.
+    - Ship a **nautilus-python extension** (MenuProvider, InfoProvider for emblems, ColumnProvider, `Nautilus.PropertiesModelProvider` for a Get-Info-style page) that adds:
+      - **colour tags**, stored in the freedesktop `user.xdg.tags` xattr, shown as coloured emblems with a Tags column and a right-click colour row;
+      - **folder colours** through the `metadata::custom-icon` GIO metadata attribute, which Nautilus honours, pointing at Kiwi-generated tinted folder icons;
+      - **Quick Actions:** Rotate, Convert Image (via glycin or `gdk-pixbuf`), Create PDF (via `img2pdf` or Papers), Remove Background (only if a local tool exists);
+      - "Open with ▸ Change All" (`Gio.AppInfo.set_as_default_for_type`).
+    - **Tag search** in Kiwi Spotlight needs localsearch to index `user.xdg.tags`; that is unverified, so a Kiwi-side xattr scan of a recent-files list is the fallback.
+  - **Column view:** do not fork Nautilus. Either wait upstream, or recommend a different file manager.
+- **Blockers / risks:**
+  - Nautilus extensions run **in the Nautilus process** (Python). They need the `nautilus-python` package, cannot add views or sidebar sections, and Nautilus can break them between releases.
+  - EGO forbids the Shell extension from installing them, so they go through the installer.
+  - xattrs are lost on some file systems (FAT/exFAT, some cloud folders).
+  - Kiwi must never write into user folders without consent: tags are user-initiated, which is fine.
+- **Linux equivalents today:** Nautilus (Files), Nemo, Dolphin (has a Miller-like column mode, tags via Baloo, Information panel), Thunar, the Miller-columns patches, nautilus-python extensions (Folder Color, nautilus-admin, Actions for Nautilus).
+- **Kiwi status:** none (the Spotlight file search exists).
+- **Recommendation:** Theme or configure the existing app plus a companion Nautilus extension (P3), **L**. Tags, folder colours and Quick Actions are the Finder features users notice. Column and Gallery views are Skip unless upstream adds them.
+
+### Preview
+- **Introduced / changed:**
+  - Mojave: Markup in Quick Look, shared with Preview.
+  - Catalina–Sequoia: steady additions (Live Text, Copy Subject, form filling, signatures from iPhone).
+  - **Tahoe:** Liquid Glass, menu icons, **"Use Dark Appearance for PDF"**; Preview also arrived on iPhone and iPad (iOS 26).
+  - 27: minor.
+- **What it is:**
+  - Image and PDF viewer-editor.
+  - **PDF:** thumbnails sidebar (drag to **reorder, delete or insert pages**, **merge PDFs** by dragging thumbnails between documents), annotations (highlight, notes, shapes, text, **signatures** from the trackpad, camera or iPhone), form filling, password protection, export, OCR text selection.
+  - **Images:** crop, rotate, **Adjust Size**, **Adjust Color**, **Instant Alpha** background removal, Export As (format conversion, HEIC→JPEG), batch export of multiple images.
+- **Caveats (on macOS):** in-place saving surprises people (Versions instead of Save As); it is slow with huge PDFs.
+- **Port to GNOME 50:** configure existing apps.
+  - **Papers** (the default Document Viewer since GNOME 49): GNOME 50 overhauled annotations (text notes, lines, highlights, colours, eraser); signatures are in progress (an Outreachy project).
+  - **Loupe** (Image Viewer): viewing, zoom, rotate; GNOME 49 sandboxed image loading through glycin.
+  - Gaps are filled by other apps: **PDF Arranger** for page reorder and merge, **Gradia** or Satty for image markup, **Switcheroo** or Converter for format conversion, **Pinta** for adjust size and colour.
+  - Kiwi makes Papers and Loupe the defaults (`xdg-mime`, saved and restored) and links "Open in…" from Quick Look and Quick Actions.
+- **Blockers / risks:** no single app matches Preview; it is several apps.
+- **Linux equivalents today:** Papers, Loupe, PDF Arranger, Xournal++, Okular (KDE, closest single app to Preview), Gradia, Pinta.
+- **Kiwi status:** none.
+- **Recommendation:** Theme or configure existing apps (P3), **S**. Recommend the set; do not build a Preview clone.
+
+### Activity Monitor
+- **Introduced / changed:** stable. The tabs are CPU / Memory (pressure graph) / Energy (Energy Impact, App Nap) / Disk / Network, plus a GPU History window. Apple silicon added GPU, ANE and "% GPU" columns; Tahoe brought glass.
+- **What it is:**
+  - A process list with hierarchical view.
+  - Inspect a process: open files, ports, sample, spindump.
+  - Quit or Force Quit; Dock-icon live graphs; a menu-bar CPU history.
+  - **Force Quit Applications** (⌥⌘Esc) is a separate, simpler window listing GUI apps.
+- **Caveats (on macOS):** the Energy Impact numbers are opaque.
+- **Port to GNOME 50:**
+  - **Configure an existing app.** **Mission Center** (GTK4/libadwaita, Rust, Flathub) is the closest Activity Monitor. It shows apps grouped with their processes, services, and CPU/RAM/disk/network/GPU/fan pages. Resources (GNOME Circle) and the stock GNOME System Monitor also work.
+  - **Shell part:** build **Force Quit…** in the Shell (logo menu and ⌥Super-Esc). List `Shell.AppSystem.get_running()`, quit with `Shell.App.request_quit()`, and force with `Meta.Window.kill()` on the app's windows. Flag "not responding" apps from Mutter's `Meta.Window` unresponsive state (the Shell's close-dialog path).
+- **Blockers / risks:** Mission Center is not on the Fedora default install (Flathub); killing non-window processes from the Shell needs `Gio.Subprocess` `kill`, so keep to windows.
+- **Linux equivalents today:** Mission Center, Resources, GNOME System Monitor, btop.
+- **Kiwi status:** none (Force Quit is in the planned logo menu).
+- **Recommendation:**
+  - Force Quit dialog: Port (P1, part of the menu bar), **S**.
+  - Activity Monitor itself: recommend Mission Center (P3), **S**.
+
+### Disk Utility
+- **Introduced / changed:** the El Capitan redesign; APFS volumes and snapshots (High Sierra+); minor since; glass in Tahoe.
+- **What it is:** disks and volumes, First Aid, Erase (APFS/HFS+/ExFAT/FAT), Partition, Restore, disk images (create, encrypted DMG), RAID set assistant, Mount/Unmount, Info.
+- **Caveats (on macOS):** destructive operations are easy to trigger; the APFS container model confuses people.
+- **Port to GNOME 50:** configure an existing app. **GNOME Disks** covers format, partition, image create and restore, SMART, benchmark, and mount options.
+- **Blockers / risks:** none for Kiwi.
+- **Linux equivalents today:** GNOME Disks, GParted, KDE Partition Manager.
+- **Kiwi status:** none.
+- **Recommendation:** Skip (use GNOME Disks), **–**.
+
+### Font Book
+- **Introduced / changed:** Ventura redesign (gallery grid, info panel); Tahoe glass.
+- **What it is:** install, validate and disable fonts; collections; preview sizes and custom text; character repertoire; download system fonts on demand.
+- **Caveats (on macOS):** font cache issues are rare now.
+- **Port to GNOME 50:** configure an existing app. **GNOME Fonts** (gnome-font-viewer) previews and installs fonts. **Font Downloader** gets Google Fonts. Characters shows a font's glyphs.
+- **Blockers / risks:** no disable/collection management (fontconfig can do it; there is no GUI).
+- **Linux equivalents today:** GNOME Fonts, Font Manager (collections, disable), Font Downloader.
+- **Kiwi status:** none.
+- **Recommendation:** Skip (point to Font Manager), **–**.
+
+### Terminal
+- **Introduced / changed:** almost untouched for 20 years until **Tahoe**: a new settings window, **new themes**, **24-bit colour**, **Powerline glyphs**, and Liquid Glass.
+- **What it is:** a tabbed zsh terminal with profiles (Basic, Pro, Homebrew …), split pane (horizontal only), window groups, Secure Keyboard Entry, and Marks/bookmarks.
+- **Caveats (on macOS):** power users prefer iTerm2, Ghostty or Warp.
+- **Port to GNOME 50:** configure an existing app. **Ptyxis** (Fedora's default since 41) already has profiles, tabs, container integration and transparency. GNOME Console is the minimal alternative. Kiwi could ship a "Kiwi" palette as an **optional** Ptyxis profile via the installer (`org.gnome.Ptyxis` dconf), not from the extension.
+- **Blockers / risks:** a terminal paste chord (Ctrl+Shift+V) breaks ⌘-style expectations (see Keyboard).
+- **Linux equivalents today:** Ptyxis, Console, Ghostty, Kitty, WezTerm.
+- **Kiwi status:** none.
+- **Recommendation:** Skip (Ptyxis is fine), **–**.
+
+### TextEdit
+- **Introduced / changed:** stable; glass in Tahoe; 27 adds Apple Intelligence name suggestions.
+- **What it is:** an RTF/plain-text editor with rich formatting, tables and lists, opening .docx/.odt, autosave and Versions.
+- **Caveats (on macOS):** rich text by default trips people up.
+- **Port to GNOME 50:** configure an existing app: **GNOME Text Editor** (plain text, autosave, sessions). There is no rich-text equivalent in core; LibreOffice Writer covers it.
+- **Blockers / risks:** none.
+- **Linux equivalents today:** Text Editor, Apostrophe (Markdown), LibreOffice.
+- **Kiwi status:** none.
+- **Recommendation:** Skip, **–**.
+
+### Calculator
+- **Introduced / changed:** **Sequoia redesigned it**: a resizable window, **History**, **unit conversions** across 20+ categories, **Math Notes** integration, and Basic / Scientific / Programmer modes. Tahoe brought glass.
+- **What it is:** a calculator with a tape/history, conversions and Programmer mode, plus Spotlight's inline calculator.
+- **Caveats (on macOS):** Math Notes needs Apple Intelligence-free iCloud Notes.
+- **Port to GNOME 50:** configure an existing app.
+  - **GNOME Calculator** has Basic/Advanced/Financial/Programmer modes, history, currency and unit conversion, and a search provider.
+  - Kiwi Spotlight already calculates; add unit and currency conversion through the Calculator search provider (`gnome-calculator --search-provider`).
+- **Blockers / risks:** none.
+- **Linux equivalents today:** GNOME Calculator, Qalculate!.
+- **Kiwi status:** partial (the Spotlight calculator).
+- **Recommendation:** Skip the app; Spotlight conversions are P2 (**S**).
+
+### Notes
+- **Introduced / changed:**
+  - Catalina: gallery view and shared folders.
+  - Big Sur: pinned and smart search.
+  - **Monterey:** **Quick Note** (Fn-Q / the bottom-right hot corner, a floating note linked to the app or webpage you are in), tags, mentions.
+  - Ventura: Smart Folders.
+  - Sequoia: Math Notes, audio transcription, collapsible headings.
+  - **Tahoe:** **Markdown import/export**, call recordings and transcripts saved into Notes.
+  - **27:** a native **drawing tool** (8 brushes).
+- **What it is:** an iCloud-synced rich notes app with checklists, tables, scans, attachments, links and locked notes.
+- **Caveats (on macOS):** iCloud-only sync (or IMAP); the export story was poor before Tahoe's Markdown.
+- **Port to GNOME 50:** configure an existing app.
+  - GNOME has no core notes app. Good options: **Iotas** (GNOME Circle, Markdown, Nextcloud Notes sync) and **Folio**.
+  - Kiwi's **Quick Note** hot corner and Spotlight action can open the user's chosen notes app with a new note.
+  - A notch "quick note" field that appends to a Markdown file is a later idea.
+- **Blockers / risks:** no shared notes API across apps.
+- **Linux equivalents today:** Iotas, Folio, Notes (Joplin, Obsidian, Standard Notes).
+- **Kiwi status:** none.
+- **Recommendation:**
+  - The app: Skip (recommend Iotas).
+  - Quick Note hot corner and shortcut: Port (P2), **S**.
+
+### Reminders
+- **Introduced / changed:**
+  - **Catalina redesign:** smart lists (Today, Scheduled, Flagged, All), subtasks, attachments.
+  - Monterey: tags and custom smart lists.
+  - Ventura: pinned lists and templates.
+  - Sonoma: grocery auto-categories, Kanban columns, and reminders shown in Calendar.
+  - Tahoe: Apple Intelligence **auto-categorise** any list.
+  - 27: natural-language entry.
+- **What it is:** a to-do app with location and time alerts, syncing via iCloud/CalDAV.
+- **Caveats (on macOS):** iCloud lock-in for the newest features.
+- **Port to GNOME 50:** configure existing apps: **Errands** (GTK4, CalDAV/Nextcloud) or **Endeavour** (formerly GNOME To Do, with GOA). The notch "Now" tab could show the next due task through Evolution Data Server (EDS) task lists, the same backend the Shell calendar uses.
+- **Blockers / risks:** EDS task access from the Shell is possible (the Shell already uses EDS for events); keep it read-only.
+- **Linux equivalents today:** Errands, Endeavour, Planify.
+- **Kiwi status:** none.
+- **Recommendation:** Skip the app; due tasks in the notch or Notification Center are Later (P3), **S**.
+
+### Calendar
+- **Introduced / changed:** Big Sur glass; Ventura; Sonoma (reminders in Calendar); Tahoe glass; 27 natural-language events and swipe to refresh.
+- **What it is:** day/week/month/year views, multiple accounts (iCloud, Google, Exchange, CalDAV), invitations, travel time, a menu-bar date in Notification Center widgets.
+- **Caveats (on macOS):** Exchange support is weak.
+- **Port to GNOME 50:** configure an existing app: **GNOME Calendar** (GNOME 50 added an attendee list, a redesigned quick add, ICS export, a month-view polish and first day of week) with **GNOME Online Accounts**. Kiwi's calendar card and notch "next event" read the same EDS data.
+- **Blockers / risks:** none.
+- **Linux equivalents today:** GNOME Calendar, Evolution, Thunderbird.
+- **Kiwi status:** partial (calendar card).
+- **Recommendation:** Skip the app; keep the Kiwi calendar card (P1, exists).
+
+### Contacts
+- **Introduced / changed:** stable; Tahoe glass and contact posters.
+- **What it is:** an address book synced by iCloud/CardDAV/Exchange, groups, Me card, vCard import/export.
+- **Caveats (on macOS):** none of note.
+- **Port to GNOME 50:** configure an existing app: **GNOME Contacts** with GOA and EDS. The Contacts search provider already feeds Spotlight.
+- **Blockers / risks:** none.
+- **Linux equivalents today:** GNOME Contacts, Evolution.
+- **Kiwi status:** none (the Spotlight provider covers search).
+- **Recommendation:** Skip, **–**.
+
+### Mail
+- **Introduced / changed:**
+  - Monterey: Mail Privacy Protection, Hide My Email.
+  - **Ventura:** scheduled send, undo send, remind me, follow-up.
+  - Sequoia: categories (on iOS first), Apple Intelligence summaries and Smart Reply.
+  - Tahoe: glass.
+  - 27: relevance-ranked search, smart replies in your own style, Write with Siri.
+- **What it is:** a multi-account IMAP/Exchange client with smart mailboxes, rules, VIP, Markup in attachments, and badge counts in the Dock.
+- **Caveats (on macOS):** Exchange quirks; AI features are region-limited.
+- **Port to GNOME 50:** configure existing apps: **Geary** (simple, GOA), **Evolution** (full, Exchange via EWS) or **Thunderbird** (Flathub/rpm). The dock should show their unread badges via LauncherEntry (Thunderbird supports it).
+- **Blockers / risks:** none for Kiwi.
+- **Linux equivalents today:** Geary, Evolution, Thunderbird.
+- **Kiwi status:** none.
+- **Recommendation:** Skip, **–**.
+
+### Photos
+- **Introduced / changed:**
+  - Catalina: Days/Months/Years.
+  - Ventura: Shared Library.
+  - **Sequoia:** a single-scroll redesign.
+  - Tahoe: Library and Collections tabs come back; glass with very transparent controls (criticised).
+  - **27:** Reframe, Extend (generative), better Clean Up, **keywords and star ratings**, full-resolution Shared Albums, video-frame-to-still.
+- **What it is:** an iCloud photo library manager with faces, places, memories and non-destructive edits.
+- **Caveats (on macOS):** iCloud ties; heavy AI features with usage limits.
+- **Port to GNOME 50:** configure an existing app: **Shotwell** (library, import, tags, basic edits) or **digiKam**. **Loupe** is for viewing. GNOME Photos is no longer a core app.
+- **Blockers / risks:** none for Kiwi.
+- **Linux equivalents today:** Shotwell, digiKam, darktable, Immich (self-hosted cloud).
+- **Kiwi status:** none.
+- **Recommendation:** Skip, **–**.
+
+### Music
+- **Introduced / changed:**
+  - **Catalina split iTunes** into Music, TV and Podcasts (with device sync moving to Finder).
+  - Big Sur: Listen Now.
+  - Tahoe: Liquid Glass with the **playback controls moved to a transparent bottom pill** (criticised on Mac), AutoMix (26.1 over AirPlay).
+- **What it is:** a library plus Apple Music streaming, playlists, lyrics, a mini player, and Now Playing in Control Center and the menu bar.
+- **Caveats (on macOS):** Apple Music subscription push.
+- **Port to GNOME 50:** configure existing apps: **GNOME Music**, **Rhythmbox**, **Amberol** (simple), **Decibels** (GNOME's audio player since 48). Kiwi's part is **MPRIS** integration (the notch "Now", the Control Center Now Playing, and the lock screen, which GNOME 49 already shows).
+- **Blockers / risks:** none.
+- **Linux equivalents today:** the above, plus Spotify and Cider (Apple Music client).
+- **Kiwi status:** have (MPRIS in the Control Center and notch).
+- **Recommendation:** Skip the app; MPRIS is done.
+
+### Clock
+- **Introduced / changed:** **Ventura added a Clock app to the Mac** (World Clock, Alarms, Stopwatch, Timers); Sonoma added multiple timers; Tahoe added a custom snooze (1–15 min) and timers in Control Center.
+- **What it is:** an iOS-style clock app whose alarms and timers appear as notifications and, in Tahoe, as menu-bar controls.
+- **Caveats (on macOS):** alarms do not wake a sleeping Mac.
+- **Port to GNOME 50:** configure an existing app: **GNOME Clocks** has the same four tabs. The notch's **timer live activity** (plan §5.6) can mirror Clocks timers (if Clocks exposes them; otherwise run Kiwi's own timers), and Spotlight can offer "Set timer 10 min".
+- **Blockers / risks:** GNOME Clocks has no public D-Bus API for running timers (it would need verifying), so Kiwi-owned timers may be needed.
+- **Linux equivalents today:** GNOME Clocks, Sessions (pomodoro, Circle in 50).
+- **Kiwi status:** partial (the notch timers are planned).
+- **Recommendation:** Skip the app; timers in the notch and Spotlight are P2 (**S**).
+
+### Weather
+- **Introduced / changed:** **Ventura added Weather to the Mac**; Sonoma widgets; 27 refreshed forecast views (conditions, precipitation, wind toggles, Highlights).
+- **What it is:** a full-window forecast with maps, hourly and 10-day forecasts, plus widgets.
+- **Caveats (on macOS):** some data is US-only.
+- **Port to GNOME 50:** configure an existing app: **GNOME Weather**. The Shell already reads its locations and **libgweather** for the date-menu weather, so a Kiwi weather widget (Notification Center, notch "Widgets", desktop) is cheap.
+- **Blockers / risks:** libgweather providers (MET Norway) need network; respect the user's location settings.
+- **Linux equivalents today:** GNOME Weather, the Shell's date-menu weather.
+- **Kiwi status:** none.
+- **Recommendation:** Skip the app; the weather widget is Later (P3), **S**.
+
+### Stickies
+- **Introduced / changed:** ancient; mostly unchanged (Big Sur icon, Tahoe glass).
+- **What it is:** coloured floating sticky notes on the desktop, with an optional translucent "Float on Top".
+- **Caveats (on macOS):** no sync.
+- **Port to GNOME 50:** configure an existing app: **Sticky Notes** (com.vixalien.sticky, GTK4, Flathub). Floating "always on top" works on Wayland only through the compositor; Kiwi's Window menu has "Always on Top" (`Meta.Window.make_above()`).
+- **Blockers / risks:** none.
+- **Linux equivalents today:** Sticky Notes, Xpad (X11).
+- **Kiwi status:** none.
+- **Recommendation:** Skip, **–**.
+
+### Digital Color Meter
+- **Introduced / changed:** stable utility.
+- **What it is:** shows the RGB value under the pointer, with an aperture size, colour-space choice (sRGB, P3, native) and copy-as-text or as an image (⇧⌘C).
+- **Caveats (on macOS):** colour-space confusion.
+- **Port to GNOME 50:** configure an existing app: **Eyedropper** (GNOME Circle) uses the portal's `PickColor` (backed by the Shell's `Shell.Screenshot.pick_color`). Kiwi Spotlight or Control Center could offer "Pick Color" by calling the same Shell API in-process and copying the hex value.
+- **Blockers / risks:** none.
+- **Linux equivalents today:** Eyedropper, Gpick.
+- **Kiwi status:** none.
+- **Recommendation:** Later (P3), **S**, as a Spotlight action; otherwise Skip.
+
+### Screenshot (app)
+- **Introduced / changed:** Mojave (see the toolbar section above).
+- **What it is:** the app behind ⇧⌘5, in Utilities.
+- **Caveats (on macOS):** see above.
+- **Port to GNOME 50:** covered by the Shell screenshot UI section above.
+- **Blockers / risks:** see above.
+- **Linux equivalents today:** the GNOME screenshot UI.
+- **Kiwi status:** none.
+- **Recommendation:** see "Screenshot and Screen Recording toolbar" (P2, **M**).
+
+### Time Machine
+- **Introduced / changed:**
+  - Leopard (2007).
+  - Big Sur: backups to APFS volumes.
+  - Monterey and later: quick restore of the whole Mac from Migration Assistant.
+  - The **"star field" restore UI** (enter Time Machine from Finder and scroll back in time) is unchanged in style.
+  - Menu-bar status item.
+- **What it is:** automatic hourly/daily/weekly snapshots to an external or network disk, browsed with the time-tunnel UI, and restored per file or for the whole system.
+- **Caveats (on macOS):** slow over the network; failures go unnoticed.
+- **Port to GNOME 50:** configure existing apps: **Déjà Dup "Backups"** (GNOME, scheduled, restores files and folders, Nautilus "Revert to previous version" integration) and **Pika Backup** (Circle, Borg, browse archives). System snapshots: Btrfs plus snapper/Timeshift (Fedora uses Btrfs).
+- **Blockers / risks:** a "star field" UI would be a huge companion-app project for little value.
+- **Linux equivalents today:** Déjà Dup, Pika Backup, Timeshift, snapper.
+- **Kiwi status:** none.
+- **Recommendation:** Skip (recommend Pika or Déjà Dup), **–**.
+
+### Keychain Access and Passwords
+- **Introduced / changed:**
+  - Monterey: passwords in System Preferences.
+  - **Sequoia: the Passwords app** (passwords, passkeys, codes/TOTP, Wi-Fi, security warnings, shared groups).
+  - Tahoe: **password history**.
+  - 27: (planned) automatic change of weak passwords.
+  - Keychain Access remains for certificates and keys.
+- **What it is:** a system credential store with autofill in Safari and apps, iCloud Keychain sync, and passkeys.
+- **Caveats (on macOS):** sync works only between Apple devices (plus iCloud for Windows).
+- **Port to GNOME 50:** configure existing apps: **Passwords and Keys (Seahorse)** for gnome-keyring, **Key Rack** (Flatpak secrets), **Secrets** (KeePass, Circle), and the Bitwarden or KeePassXC browser integrations.
+- **Blockers / risks:** no system autofill on Linux.
+- **Linux equivalents today:** Seahorse, Secrets, KeePassXC, Bitwarden.
+- **Kiwi status:** none.
+- **Recommendation:** Skip, **–**.
+
+### Image Capture
+- **Introduced / changed:** stable.
+- **What it is:** import from cameras, iPhones and scanners; scanner controls (flatbed, document feeder, format); delete after import.
+- **Caveats (on macOS):** none.
+- **Port to GNOME 50:** configure existing apps: **Document Scanner** (simple-scan) for scanners; **Shotwell** or Nautilus (gphoto2 MTP mount) for camera import.
+- **Blockers / risks:** iPhone import is via libimobiledevice/gvfs-afc (it works).
+- **Linux equivalents today:** Document Scanner, Shotwell, Rapid Photo Downloader.
+- **Kiwi status:** none.
+- **Recommendation:** Skip, **–**.
+
+### Automator and Shortcuts
+- **Introduced / changed:**
+  - Automator (Tiger 2005) still ships.
+  - **Monterey brought Shortcuts to the Mac**, with Quick Actions, the menu bar, Spotlight and Siri.
+  - Ventura/Sonoma added actions.
+  - **Tahoe:** **Automations** (time of day, sunrise or sunset, alarms, email or message arrival, files changed in a folder, drive connect, Wi-Fi, Bluetooth, displays, Stage Manager, app open/close, Focus) and Apple Intelligence "Use Model" actions; shortcuts in Spotlight with quick keys.
+  - **27:** **describe a shortcut in natural language**; screenshot and notification triggers.
+- **What it is:** visual automation across apps, built on App Intents.
+- **Caveats (on macOS):** App Intents adoption varies; Automator is legacy.
+- **Port to GNOME 50:** mostly skip.
+  - There is no cross-app intent system on Linux.
+  - What Kiwi can reuse:
+    - `.desktop` actions as "Actions" in Spotlight;
+    - **Nautilus scripts** (`~/.local/share/nautilus/scripts`) as Quick Actions;
+    - user-defined Spotlight commands (a name plus a shell command, run with `Gio.Subprocess` on explicit user action).
+  - A full Shortcuts or Automations app would be a large companion project.
+- **Blockers / risks:** running user commands from the Shell is allowed only on explicit user action, and must be async.
+- **Linux equivalents today:** Nautilus scripts, "Actions for Nautilus", GNOME custom keyboard shortcuts, Home Assistant, n8n, cron/systemd timers.
+- **Kiwi status:** none.
+- **Recommendation:** Later (P3) for user commands in Spotlight, **S**; Skip a Shortcuts app.
+
+### Archive Utility
+- **Introduced / changed:** stable.
+- **What it is:** a hidden helper: double-click a .zip, .tar or .gz to extract it next to the archive; Finder ▸ Compress makes a .zip.
+- **Caveats (on macOS):** no .rar or .7z without third-party apps.
+- **Port to GNOME 50:** configure an existing app. Nautilus has built-in extract and compress (gnome-autoar; formats .zip, .tar.xz, .7z, encrypted .zip), and **File Roller** is the full archive manager.
+- **Blockers / risks:** none.
+- **Linux equivalents today:** Nautilus, File Roller, Ark.
+- **Kiwi status:** none.
+- **Recommendation:** Skip, **–**.
+
+### System Information and "About This Mac"
+- **Introduced / changed:** **Ventura** turned About This Mac into a small iOS-style window (Mac model and picture, chip, memory, serial, macOS version, a "More Info…" button into System Settings ▸ General ▸ About), with "System Report…" for System Information. Tahoe added a **Parts and Service history** section (Repair Assistant).
+- **What it is:** a friendly summary window plus a deep hardware and software report.
+- **Caveats (on macOS):** none.
+- **Port to GNOME 50:** Shell extension dialog (planned in the logo menu: "About This PC").
+  - Data comes from async reads only:
+    - `org.freedesktop.hostname1` (`Chassis`, `HardwareVendor`, `HardwareModel`, `OperatingSystemPrettyName`, `KernelRelease`);
+    - `GLib.get_os_info()`;
+    - `/proc/cpuinfo` and `/proc/meminfo`, read async with Gio;
+    - `net.hadess.SwitcherooControl` `GPUs`;
+    - `Gio.File.query_filesystem_info_async` for the disk;
+    - `Config.PACKAGE_VERSION` for the GNOME version.
+  - A chassis icon (laptop or desktop), and "More Info…" opens `gnome-control-center system`.
+- **Blockers / risks:** the hardware model is missing on some boards (fall back to the DMI vendor).
+- **Linux equivalents today:** Settings ▸ System ▸ About, Hardinfo2, inxi.
+- **Kiwi status:** none (planned P1).
+- **Recommendation:** Port (P1, part of the menu bar), **S**.
+
+### Migration Assistant
+- **Introduced / changed:** stable; Sonoma and later integrate it with Setup Assistant; Tahoe and 27 use it with the Apple Account.
+- **What it is:** transfers users, apps, settings and files from another Mac, a Time Machine backup or a Windows PC.
+- **Caveats (on macOS):** slow over Wi-Fi.
+- **Port to GNOME 50:** skip. The closest options are restoring a Déjà Dup or Pika backup of `$HOME`, or Flatpak plus dconf export. Kiwi's own settings can be exported and imported from prefs (a JSON dump of the Kiwi schema), which is cheap.
+- **Blockers / risks:** none.
+- **Linux equivalents today:** Déjà Dup restore, `dconf dump`.
+- **Kiwi status:** none.
+- **Recommendation:** Skip; export/import of Kiwi settings is Later (P3), **S**.
+
+### Software Update
+- **Introduced / changed:**
+  - **Mojave moved macOS updates out of the App Store** into System Preferences ▸ Software Update.
+  - Big Sur: snapshot-based faster updates (signed system volume).
+  - Ventura: Rapid Security Responses (later Background Security Improvements).
+  - Tahoe and 27: General ▸ Software Update, automatic updates, Beta Updates.
+  - The Apple menu shows "System Settings… • 1 update".
+- **What it is:** OS and App Store updates with a badge in the Apple menu and on the System Settings icon.
+- **Caveats (on macOS):** forced restarts; large downloads.
+- **Port to GNOME 50:** configure an existing app plus a small Shell piece. **GNOME Software** does offline OS (dnf/PackageKit) and Flatpak updates. Kiwi's logo menu shows "Software Update… (n)":
+  - the count comes from PackageKit's D-Bus `GetUpdates` (async), or from GNOME Software's own update notification;
+  - clicking opens `gnome-software --mode=updates`;
+  - "App Store…" opens GNOME Software.
+- **Blockers / risks:** a PackageKit query costs CPU and network, so cache it and refresh at most every few hours, or listen to Software's notifications instead.
+- **Linux equivalents today:** GNOME Software, dnf, Flatpak.
+- **Kiwi status:** none (the logo menu "App Store…" is planned).
+- **Recommendation:** Port (P2), **S**. A badge in the logo menu is a nice Mac touch.
+
+### Boot Camp
+- **Introduced / changed:** Intel Macs only; gone with Apple silicon.
+- **What it is:** dual-boot Windows.
+- **Caveats (on macOS):** dead on Apple silicon.
+- **Port to GNOME 50:** not applicable.
+- **Blockers / risks:** none.
+- **Linux equivalents today:** GRUB/systemd-boot dual boot.
+- **Kiwi status:** none.
+- **Recommendation:** Skip.
+
+---
+
+## Summary
+
+| Item | Type | Recommendation | Effort | Main blocker |
+|---|---|---|---|---|
+| Menu bar (logo menu, app menus, status items, multi-display, auto-hide) | shell | Port (P1 core) | L | libadwaita apps export no menu bar; DBusMenu only for Xwayland apps; no SNI host in GNOME |
+| Dock (magnification, Stacks, Genie/Scale, bounce, badges) | shell | Port (P1 core), Genie P2 | XL | DeformEffect cost; badges need the LauncherEntry API in apps; Dash to Dock coexistence |
+| Mission Control, Spaces, App Exposé | shell | Port (P3) | L | Private overview internals; no per-monitor independent workspaces in Mutter |
+| Hot corners (4 corners + modifiers) | shell | Port (P2) | S | Barrier edge cases on multi-monitor; must not steal menu-bar clicks |
+| Trackpad gestures | shell | Port (P3) | M | No 2-finger edge-swipe; replacing GNOME's own swipe trackers |
+| Cmd-Tab app switcher | shell | Port (P1 core) | S–M | No real ⌘ key (Super-Tab); custom keybinding handler must be restored |
+| Launchpad / Apps | shell | Port (P2) | M | Private AppDisplay internals |
+| Spotlight (Tahoe tabs, Tab-scope, quick keys, menu search) | shell | Have; extend P2 | M | No App Intents; localsearch coverage |
+| Notification Center | shell | Port (P2) | M | Private message-tray internals |
+| Widgets (NC + desktop) | shell | Later (P3) | L | No widget platform; built-in widgets only |
+| Control Center (Edit Controls, pin to bar, Tahoe HUD) | shell | Have; extend P2 | M | Private Quick Settings internals |
+| Window management (traffic lights, Fill & Arrange, Hide) | shell | Port (P1 core) | M | No Wayland "hide"; app headerbar buttons keep Adwaita look (no GTK CSS) |
+| Full screen as a Space + Split View | shell | Port (P3) | M | Compositor-forced full screen quirks in some apps |
+| Quick Look | theme existing app (Sushi) + shell hook | Port (P2) | S | Sushi is a separate package; no previewer in other apps' file lists |
+| Screenshot toolbar (⇧⌘3/4/5, timer, floating thumbnail) | shell | Port (P2) | M | Private ScreenshotUI; no audio in Shell recorder |
+| Lock screen restyle | shell (unlock-dialog mode) | Port (P3) | M | EGO scrutiny of unlock-dialog code |
+| Login window (GDM) | shell (system-wide, installer) | Later (P3) | M | GDM extensions need system-wide install; theming unsupported |
+| Setup Assistant / Kiwi onboarding | companion (installer / prefs first-run) | Port (P7) | S | Depends on the owner's installer |
+| System Settings | theme existing app (GNOME Settings) + Kiwi prefs | Configure (P0/P1) | S | No plugin API in gnome-control-center |
+| ⌘ glyphs + optional Ctrl/Super swap | shell (xkb option) | Port (P1) | S | No per-app remap on Wayland from the Shell |
+| keyd/Toshy ⌘ remapping | system tool via installer | Later (P3) | M | Needs root or input group |
+| Emoji / Character Viewer popover | shell | Port (P2) | S | Synthesised paste fails in some apps |
+| Text replacement | companion (IBus engine) | Skip now; Later | L | The Shell must not watch keystrokes (EGO, privacy) |
+| Sounds | shell + original assets | Later (P3) | S | Apple sounds are copyrighted |
+| Haptics | skip | Skip | – | No hardware or driver |
+| Accessibility parity (reduced motion, contrast, Show Borders) | shell | Port (P1 core) | S | Confirm GNOME 50's reduced-motion key |
+| Finder (tags, folder colours, Quick Actions, Get Info) | theme existing app (Nautilus) + Nautilus extension | Port (P3) | L | Nautilus has no view/sidebar API; nautilus-python dependency; installer-only |
+| Finder column / Gallery view | skip | Skip | – | Needs Nautilus upstream |
+| Preview | theme existing app (Papers, Loupe, PDF Arranger) | Configure (P3) | S | No single app matches |
+| Activity Monitor | theme existing app (Mission Center) | Configure (P3) | S | Flathub, not default |
+| Force Quit dialog | shell | Port (P1) | S | None |
+| Disk Utility | skip (GNOME Disks) | Skip | – | – |
+| Font Book | skip (GNOME Fonts / Font Manager) | Skip | – | – |
+| Terminal | skip (Ptyxis) | Skip | – | – |
+| TextEdit | skip (Text Editor) | Skip | – | – |
+| Calculator | skip (GNOME Calculator); Spotlight conversions | Skip app; P2 conversions | S | – |
+| Notes | skip (Iotas); Quick Note shortcut | Skip app; P2 Quick Note | S | No notes API |
+| Reminders | skip (Errands); due tasks via EDS | Later (P3) | S | Read-only EDS from the Shell |
+| Calendar | skip (GNOME Calendar); Kiwi calendar card | Have (card) | – | – |
+| Contacts | skip (GNOME Contacts) | Skip | – | – |
+| Mail | skip (Geary, Evolution, Thunderbird) | Skip | – | – |
+| Photos | skip (Shotwell, Loupe) | Skip | – | – |
+| Music | skip; MPRIS in Kiwi | Have (MPRIS) | – | – |
+| Clock | skip (GNOME Clocks); notch timers | P2 timers | S | No Clocks timer API |
+| Weather | skip (GNOME Weather); Kiwi widget | Later (P3) | S | Network and location consent |
+| Stickies | skip (Sticky Notes app) | Skip | – | – |
+| Digital Color Meter | shell (Spotlight action) or Eyedropper | Later (P3) | S | – |
+| Screenshot app | shell (see toolbar) | Port (P2) | M | see toolbar |
+| Time Machine | skip (Déjà Dup, Pika) | Skip | – | – |
+| Keychain / Passwords | skip (Seahorse, Secrets) | Skip | – | – |
+| Image Capture | skip (Document Scanner, Shotwell) | Skip | – | – |
+| Automator / Shortcuts | shell (Spotlight user commands) | Later (P3) | S | No cross-app intents on Linux |
+| Archive Utility | skip (Nautilus, File Roller) | Skip | – | – |
+| About This Mac / System Information | shell (logo-menu dialog) | Port (P1) | S | Missing DMI model on some boards |
+| Migration Assistant | skip; Kiwi settings export | Later (P3) | S | – |
+| Software Update | shell (logo-menu badge) + GNOME Software | Port (P2) | S | PackageKit query cost |
+| Boot Camp | skip | Skip | – | – |
+
+**Takeaways for the porting matrix.**
+- The macOS "feel" lives almost entirely in the **Shell layer**: menu bar, dock, Mission Control, switcher, Spotlight, Control Center, window controls and screenshots. That is where Kiwi should spend its effort, and it matches the overhaul plan.
+- Bundled apps are best handled by **recommending and configuring GNOME apps**, with exactly one worthwhile companion piece: a **Nautilus extension** for tags, folder colours and Quick Actions, shipped by the installer.
+- No bundled app justifies a Kiwi-written GTK4 clone.
+- Tahoe's Launchpad removal is an opportunity rather than a requirement: GNOME's app grid already gives Kiwi folders and manual order, which Tahoe users miss.
+
+## Sources
+- Apple, Mac User Guide (macOS 27):
+  - [Use the Dock](https://support.apple.com/guide/mac-help/mh35859/mac)
+  - [Mission Control](https://support.apple.com/guide/mac-help/mh35798/mac)
+  - [Hot corners](https://support.apple.com/guide/mac-help/mchlp3000/mac)
+  - [Screenshots and screen recordings](https://support.apple.com/guide/mac-help/mh26782/mac)
+  - [Quick Look](https://support.apple.com/guide/mac-help/mh14119/mac)
+  - [Tags](https://support.apple.com/guide/mac-help/mchlp15236/mac)
+  - [Preview pane](https://support.apple.com/guide/mac-help/mchl1e4644c2/mac)
+  - [Quick Actions](https://support.apple.com/guide/mac-help/mchl97ff9142/mac)
+  - [Emoji and symbols / Character Viewer](https://support.apple.com/guide/mac-help/mchlp1560/mac)
+  - [Text replacement](https://support.apple.com/guide/mac-help/mh35735/mac)
+  - [Control Center](https://support.apple.com/guide/mac-help/mchl50f94f8f/mac)
+  - [Notifications settings](https://support.apple.com/guide/mac-help/mh40583/mac)
+  - [Widgets](https://support.apple.com/guide/mac-help/mchl52be5da5/mac)
+  - [Full screen](https://support.apple.com/guide/mac-help/mchl9c21d2be/mac)
+  - [Window tiling icons and shortcuts](https://support.apple.com/guide/mac-help/mchl9674d0b0/mac)
+  - [What's in the menu bar](https://support.apple.com/guide/mac-help/mchlp1446/mac)
+  - [Spotlight](https://support.apple.com/guide/mac-help/mchlp1008/mac)
+  - [Input Sources settings / Globe key](https://support.apple.com/guide/mac-help/mchl84525d76/mac)
+  - [Move and arrange app windows](https://support.apple.com/guide/mac-help/mchlp2469/mac)
+- Apple:
+  - [Mac keyboard shortcuts](https://support.apple.com/en-us/102650)
+  - [Use Multi-Touch gestures on your Mac](https://support.apple.com/en-us/102482)
+  - [What's new in the updates for macOS 27 Golden Gate](https://support.apple.com/en-us/127257)
+  - [All New Features, macOS Tahoe (PDF)](https://www.apple.com/in/os/pdf/All_New_Features_macOS_Tahoe_Sept_2025.pdf)
+- Reviews and news:
+  - [MacStories: macOS 26 Tahoe review, Liquid Glass](https://www.macstories.net/stories/macos-26-tahoe-the-macstories-review/2/)
+  - [MacStories: system features (menu bar, Control Center, Spotlight)](https://www.macstories.net/stories/macos-26-tahoe-the-macstories-review/3/)
+  - [MacStories: apps (Shortcuts)](https://www.macstories.net/stories/macos-26-tahoe-the-macstories-review/4/)
+  - [MacStories: Notes, Journal, Maps](https://www.macstories.net/stories/macos-26-tahoe-the-macstories-review/5/)
+  - [MacStories: Terminal, Passwords, accessibility](https://www.macstories.net/stories/macos-26-tahoe-the-macstories-review/6/)
+  - [MacRumors: 50 new macOS Tahoe features](https://www.macrumors.com/2025/09/24/all-the-new-macos-tahoe-features/)
+  - [MacRumors: 50 new macOS Golden Gate features](https://www.macrumors.com/2026/09/17/new-features-changes-macos-27/)
+  - [MacRumors: macOS Tahoe 26.1 (Liquid Glass setting)](https://www.macrumors.com/2025/11/03/apple-releases-macos-tahoe-26-1/)
+  - [Wikipedia: macOS Tahoe](https://en.wikipedia.org/wiki/MacOS_Tahoe)
+  - [9to5Mac: Tahoe Control Center](https://9to5mac.com/2025/06/28/new-macos-tahoe-feature-solves-common-complaint/)
+  - [Fast Company SA: why macOS 26 is a mistake (Launchpad)](https://fastcompany.co.za/tech/2025-09-18-why-apples-macos-26-is-a-mistake-for-users)
+  - [Apple Community: Tahoe removed Launchpad folders](https://discussions.apple.com/thread/256138531)
+  - [MacMost: launching apps now that Launchpad is gone](https://macmost.com/how-to-launch-apps-now-that-launchpad-is-gone.html)
+  - [MacMost: customize folders in Tahoe](https://macmost.com/how-to-customize-folders-in-macos-tahoe.html)
+  - [MacTech: Tahoe lock screen clock font](https://www.mactech.com/2025/10/15/macos-tahoe-adds-the-ability-to-change-your-macs-clock-screen-font)
+  - [mac.install.guide: Launchpad in Tahoe/27](https://mac.install.guide/mac-setup/launchpad)
+- GNOME:
+  - [GNOME 50 release notes](https://release.gnome.org/50/)
+  - [GNOME 49 release notes](https://release.gnome.org/49/)
+  - [This Week in GNOME #240 (Files 50)](https://thisweek.gnome.org/posts/2026/03/twig-240/)
+  - [TWIG #224 Reduced Motion](https://thisweek.gnome.org/posts/2025/11/twig-224/)
+  - [gnome-control-center MR 3253 (reduced motion)](https://gitlab.gnome.org/GNOME/gnome-control-center/-/merge_requests/3253)
+  - [Phoronix: GNOME 48 groups notifications by app](https://www.phoronix.com/news/GNOME-48-Notifications-App)
+  - [gnome-shell issue 5524: audio in screencasts](https://gitlab.gnome.org/GNOME/gnome-shell/-/issues/5524)
+  - [Screencast extra Feature extension](https://extensions.gnome.org/extension/8764/screencast-extra-feature/)
+  - [OMG Ubuntu: Sushi GTK4 port](https://www.omgubuntu.co.uk/2026/09/gnome-sushi-gtk4-port)
+  - [Ubuntu Handbook: Sushi 51](https://ubuntuhandbook.org/index.php/2026/08/gnome-file-previewer-sushi-51-ports-to-gtk4-adds-new-click-actions/)
+  - [nautilus-python InfoProvider reference](https://sources.debian.org/src/nautilus-python/4.1.0-1/docs/reference/nautilus-python-info-provider.xml)
+  - [Nautilus Miller-columns patch](https://gitlab.com/jguece/nautilus-miller-columns-patch/-/tags)
+  - [GNOME Discourse: enabling an extension for the gdm user](https://discourse.gnome.org/t/how-to-enable-extension-for-the-gdm-user/18140)
+- Other Linux:
+  - [Mission Center review (Linuxiac)](https://linuxiac.com/mission-center-system-monitoring-app/)
+  - [It's FOSS: Mission Center vs Resources](https://itsfoss.com/comparison/mission-center-vs-resources/)
+  - [espanso Wayland issue 1955](https://www.github.com/espanso/espanso/issues/1955)
