@@ -127,8 +127,6 @@ export class Magnifier {
             rest.keep[i]?.set_pivot_point(pivot[0], pivot[1]);
         });
         this._rest = rest;
-        // Magnified icons rise above the dock's band
-        this._view.band.clip_to_allocation = false;
     }
 
     _apply() {
@@ -178,6 +176,5 @@ export class Magnifier {
             rest.keep[i]?.set_scale(1, 1);
         });
         this._view.setGrowth(0, 0);
-        this._view.band.clip_to_allocation = true;
     }
 }
