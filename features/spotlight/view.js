@@ -49,6 +49,12 @@ function N_(s) {
     return s;
 }
 
+// What makes a row look the same: a row with the same key is reused as it is
+function rowKey(item, isTop) {
+    return [isTop, item.id, item.kind, item.title, item.subtitle, item.quickKey, item.iconName,
+        item.gicon?.to_string?.()].join('\u0002');
+}
+
 function makeIcon(item, size) {
     const props = { icon_size: size, style_class: 'kiwi-spotlight-icon' };
     const icon = item.gicon
@@ -72,9 +78,11 @@ export class SpotlightView {
      * @param {(direction:number)=>boolean} p.onHistory Up (-1) / Down (+1) in the field; true when used
      * @param {()=>boolean} p.onTab Tab; true when it scoped the search (else Tab jumps groups)
      * @param {(item:object)=>boolean} p.onPreview Space on a selected row; true when it previewed
+     * @param {object} p.motion ctx.motion: the list's height eases to its new size
      */
-    constructor({ gettext, onQuery, onActivate, onCopy, onClose, onView, onHistory, onTab, onPreview }) {
+    constructor({ motion, gettext, onQuery, onActivate, onCopy, onClose, onView, onHistory, onTab, onPreview }) {
         this._ = gettext;
+        this._motion = motion;
         this._onQuery = onQuery;
         this._onActivate = onActivate;
         this._onCopy = onCopy;
@@ -87,6 +95,9 @@ export class SpotlightView {
         this._index = -1;
         this._moved = false;
         this._rows = [];
+        this._cache = new Map();   // key -> list row or section label that survived the last render
+        this._lines = [];          // grid lines of the last render (their tiles are not cached)
+        this._heightAnim = null;
         this._superTap = new SuperTapTracker();
         this._signals = [];
         this._ui = null;
@@ -191,13 +202,18 @@ export class SpotlightView {
         ui.chip.text = chip ?? '';
     }
 
-    /** Replace the sections. Keeps the selection on the same item once the user moved. */
-    setSections(sections) {
+    /**
+     * Replace the sections. Keeps the selection on the same item once the user moved.
+     * @param {object[]} sections
+     * @param {{empty?: boolean, waiting?: boolean}} [opts] empty: no hits and none to come, so
+     *   say so; waiting: more results are on their way, so the list does not shrink meanwhile
+     */
+    setSections(sections, { empty = false, waiting = false } = {}) {
         if (!this._ui)
             return;
         this._index = reselect(this._sections, this._index, sections, this._moved);
         this._sections = sections;
-        this._render();
+        this._render(empty && sections.length === 0, waiting);
     }
 
     get selected() {
@@ -210,50 +226,116 @@ export class SpotlightView {
             obj.disconnect(id);
         this._signals = [];
         this._superTap.reset();
+        this._heightAnim?.cancel();
+        this._heightAnim = null;
         this._ui = null;
         this._rows = [];
+        this._cache.clear();
+        this._lines = [];
         this._sections = [];
     }
 
     // ---- rendering
 
-    _render() {
+    _render(empty, waiting) {
         const { list, scroll } = this._ui;
         const _ = this._;
-        list.destroy_all_children();
+        const from = scroll.visible ? scroll.height : 0;
+        this._heightAnim?.cancel();
+        scroll.set_height(-1);
+
+        // Rows and headers that did not change are kept (and reordered), not rebuilt
+        const kept = new Map();
+        const seen = new Map();
+        const take = (key, make) => {
+            const n = seen.get(key) ?? 0;
+            seen.set(key, n + 1);
+            const slot = `${key}\u0001${n}`;
+            const actor = this._cache.get(slot) ?? make();
+            kept.set(slot, actor);
+            return actor;
+        };
+        const children = [];
+        const lines = [];
         this._rows = [];
         let flatIndex = 0;
+        if (empty) {
+            children.push(take('empty', () => new St.Label({
+                text: _('No Results'), style_class: 'kiwi-spotlight-empty',
+            })));
+        }
         for (const section of this._sections) {
             const isTop = section.id === 'top';
             const label = isTop
                 ? `${_('Top hit')} · ${section.items[0].title}`
                 : _(SECTION_TITLES[section.id] ?? '');
             if (label)
-                list.add_child(new St.Label({ text: label, style_class: 'kiwi-spotlight-section' }));
+                children.push(take(`section:${label}`, () => new St.Label({ text: label, style_class: 'kiwi-spotlight-section' })));
             if (section.layout === 'grid') {
                 for (let i = 0; i < section.items.length; i += GRID_COLS) {
                     const line = new St.BoxLayout({ style_class: 'kiwi-spotlight-grid-row' });
                     for (const item of section.items.slice(i, i + GRID_COLS)) {
-                        const tile = this._makeTile(item, flatIndex++);
+                        const tile = this._makeTile(item);
+                        tile._kiwiIndex = flatIndex++;
                         this._rows.push(tile);
                         line.add_child(tile);
                     }
-                    list.add_child(line);
+                    children.push(line);
+                    lines.push(line);
                 }
                 continue;
             }
             for (const item of section.items) {
-                const row = this._makeRow(item, isTop, flatIndex);
+                const row = take(rowKey(item, isTop), () => this._makeRow(item, isTop));
+                row._kiwiItem = item;
+                row._kiwiIndex = flatIndex++;
                 this._rows.push(row);
-                list.add_child(row);
-                flatIndex++;
+                children.push(row);
             }
         }
-        scroll.visible = this._sections.length > 0;
+        for (const [slot, actor] of this._cache) {
+            if (!kept.has(slot))
+                actor.destroy();
+        }
+        this._lines.forEach(line => line.destroy());
+        this._cache = kept;
+        this._lines = lines;
+        children.forEach((child, i) => {
+            if (list.get_child_at_index(i) === child)
+                return;
+            if (child.get_parent() === list)
+                list.set_child_at_index(child, i);
+            else
+                list.insert_child_at_index(child, i);
+        });
+        scroll.visible = children.length > 0;
         this._paintSelection(false);
+        this._easeHeight(from, waiting);
     }
 
-    _makeTile(item, index) {
+    /** The list grows or shrinks to its new height instead of snapping (it only grows while waiting). */
+    _easeHeight(from, waiting) {
+        const { scroll } = this._ui;
+        if (!scroll.visible)
+            return;
+        const [, to] = scroll.get_preferred_height(-1);
+        if (Math.abs(to - from) < 1)
+            return;
+        if (waiting && to < from) {
+            scroll.set_height(from);
+            return;
+        }
+        scroll.set_height(from);
+        this._heightAnim = this._motion.ease(scroll, { height: to }, {
+            duration: 'short', curve: 'standard',
+            onDone: finished => {
+                if (finished && this._ui)
+                    this._ui.scroll.set_height(-1);
+            },
+        });
+    }
+
+    _makeTile(item) {
         const tile = new St.BoxLayout({
             style_class: 'kiwi-spotlight-row kiwi-spotlight-tile', orientation: Clutter.Orientation.VERTICAL,
             reactive: true, track_hover: true, accessible_name: item.title,
@@ -264,11 +346,12 @@ export class SpotlightView {
         const title = new St.Label({ text: item.title, style_class: 'kiwi-spotlight-tile-title', x_align: Clutter.ActorAlign.CENTER });
         title.clutter_text.ellipsize = 3; // Pango.EllipsizeMode.END
         tile.add_child(title);
-        this._wireRow(tile, item, index);
+        tile._kiwiItem = item;
+        this._wireRow(tile);
         return tile;
     }
 
-    _makeRow(item, isTop, index) {
+    _makeRow(item, isTop) {
         const extra = [
             isTop ? ' kiwi-spotlight-top' : '',
             item.kind === 'calc' ? ' kiwi-spotlight-calc' : '',
@@ -303,12 +386,15 @@ export class SpotlightView {
                 text: '↵', style_class: 'kiwi-spotlight-return', y_align: Clutter.ActorAlign.CENTER,
             }));
         }
-        this._wireRow(row, item, index);
+        row._kiwiItem = item;
+        this._wireRow(row);
         return row;
     }
 
-    _wireRow(row, item, index) {
+    // Rows outlive renders, so the index and item are read from the row when the event comes
+    _wireRow(row) {
         row.connect('enter-event', () => {
+            const index = row._kiwiIndex;
             // Pointer movement only: a list that re-renders under a still pointer must not steal the selection
             if (this._index !== index && this._pointerMoved(row)) {
                 this._index = index;
@@ -320,8 +406,8 @@ export class SpotlightView {
         row.connect('button-release-event', (_a, event) => {
             if (event.get_button() !== 1)
                 return Clutter.EVENT_PROPAGATE;
-            this._index = index;
-            this._onActivate(item, { reveal: false });
+            this._index = row._kiwiIndex;
+            this._onActivate(row._kiwiItem, { reveal: false });
             return Clutter.EVENT_STOP;
         });
     }

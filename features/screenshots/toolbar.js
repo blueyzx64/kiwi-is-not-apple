@@ -10,7 +10,6 @@
 
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
-import * as Layout from 'resource:///org/gnome/shell/ui/layout.js';
 
 import { Glass } from '../../lib/glass.js';
 import { MODES, TIMERS, normalizeDestination, normalizeTimer } from './model.js';
@@ -37,12 +36,14 @@ export class ScreenshotToolbar {
     /**
      * @param {object} p
      * @param {Clutter.Actor} p.parent the screenshot UI
+     * @param {{x: number, y: number, width: number, height: number}} p.area where the bar may go:
+     *   the primary work area (layout.workArea), so it sits above the dock
      * @param {import('../../lib/settings.js').KiwiSettings} p.ks
      * @param {object} p.motion ctx.motion
      * @param {(s: string) => string} p._ gettext
      * @param {{mode: Function, capture: Function, close: Function, pickFolder: Function}} p.on
      */
-    constructor({ parent, ks, motion, _, on }) {
+    constructor({ parent, area, ks, motion, _, on }) {
         this._ks = ks;
         this._motion = motion;
         this._ = _;
@@ -51,8 +52,10 @@ export class ScreenshotToolbar {
         this._modeButtons = new Map();
         this._optionRows = [];
 
-        this.actor = new St.Widget({ layout_manager: new Clutter.BinLayout(), name: 'kiwi-screenshot-toolbar-host' });
-        this.actor.add_constraint(new Layout.MonitorConstraint({ primary: true }));
+        this.actor = new St.Widget({
+            layout_manager: new Clutter.BinLayout(), name: 'kiwi-screenshot-toolbar-host',
+            x: area.x, y: area.y, width: area.width, height: area.height,
+        });
         parent.add_child(this.actor);
 
         this._bar = new St.BoxLayout({
@@ -64,19 +67,10 @@ export class ScreenshotToolbar {
         this._build();
         this._glass = Glass.attach(this._bar, { surface: 'overlays', role: 'content' });
 
-        this._popover = new St.BoxLayout({
-            style_class: 'kiwi-screenshot-options',
-            orientation: Clutter.Orientation.VERTICAL,
-            x_align: Clutter.ActorAlign.START, y_align: Clutter.ActorAlign.END,
-            x_expand: true, y_expand: true, reactive: true, visible: false,
-        });
-        this.actor.add_child(this._popover);
-        this._buildOptions();
-        this._popoverGlass = Glass.attach(this._popover, { surface: 'menus', role: 'content' });
-
+        this._popover = null;       // built the first time Options opens
+        this._popoverGlass = null;
         this._watch = ks.watch(['screenshots-save-to', 'screenshots-timer', 'screenshots-other-folder',
             ...TOGGLES.map(t => t[0])], () => this._syncOptions());
-        this._syncOptions();
 
         this._bar.opacity = 0;
         this._bar.translation_y = 16;
@@ -96,7 +90,7 @@ export class ScreenshotToolbar {
     }
 
     get optionsOpen() {
-        return this._popover.visible;
+        return !!this._popover?.visible;
     }
 
     /** Reflect the chosen mode, and which modes the stock UI can do right now. */
@@ -118,7 +112,11 @@ export class ScreenshotToolbar {
         this.actor.visible = !hidden;
     }
 
-    toggleOptions(open = !this._popover.visible) {
+    toggleOptions(open = !this.optionsOpen) {
+        if (open && !this._popover)
+            this._createPopover();
+        if (!this._popover)
+            return;
         if (open) {
             // Line the popover up with the Options button, just above the bar (the popover
             // rests on the bottom of the monitor, so it moves up by the bar's distance)
@@ -131,6 +129,19 @@ export class ScreenshotToolbar {
         }
         this._popover.visible = open;
         this._optionsButton.checked = open;
+    }
+
+    _createPopover() {
+        this._popover = new St.BoxLayout({
+            style_class: 'kiwi-screenshot-options',
+            orientation: Clutter.Orientation.VERTICAL,
+            x_align: Clutter.ActorAlign.START, y_align: Clutter.ActorAlign.END,
+            x_expand: true, y_expand: true, reactive: true, visible: false,
+        });
+        this.actor.add_child(this._popover);
+        this._buildOptions();
+        this._popoverGlass = Glass.attach(this._popover, { surface: 'menus', role: 'content' });
+        this._syncOptions();
     }
 
     // ---- building --------------------------------------------------------------------
@@ -189,7 +200,7 @@ export class ScreenshotToolbar {
             style_class: 'kiwi-screenshot-options-button', accessible_name: _('Options'),
             toggle_mode: true, child: optBox, y_align: Clutter.ActorAlign.CENTER,
         });
-        this._optionsButton.connect('clicked', () => this.toggleOptions(!this._popover.visible));
+        this._optionsButton.connect('clicked', () => this.toggleOptions());
         this._bar.add_child(this._optionsButton);
 
         this._capture = this._button({
@@ -245,6 +256,8 @@ export class ScreenshotToolbar {
     }
 
     _syncOptions() {
+        if (!this._popover)
+            return;
         for (const { row, check, isOn } of this._optionRows) {
             const on = isOn();
             check.opacity = on ? 255 : 0;

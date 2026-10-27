@@ -3624,7 +3624,7 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
    lib/glass.js gives the bar, popover and pill their fill ('overlays' / 'menus'); these are
    the shapes, and the solid look when glass is off. */
 .kiwi-screenshot-toolbar {
-    margin-bottom: 48px;
+    margin-bottom: 12px;
     padding: 6px 8px;
     spacing: 2px;
     border-radius: 18px;
@@ -4044,6 +4044,18 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
 
 .kiwi-spotlight-note .kiwi-spotlight-title {
   font-weight: 600;
+}
+
+/* A "/" filter with no hits */
+.kiwi-spotlight-empty {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 13px;
+  padding: 14px 10px;
+  text-align: center;
+}
+
+.kiwi-modal-light .kiwi-spotlight-empty {
+  color: rgba(0, 0, 0, 0.5);
 }
 
 /* ==== features/stageManager/style.css ==== */

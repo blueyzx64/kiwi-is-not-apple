@@ -9,6 +9,8 @@
 //   results.empty()              -> sections for the empty field (recents, history, suggestions)
 //   await results.view('files')  -> sections for a browse view
 
+import Shell from 'gi://Shell';
+
 import { evaluateQuery } from './calculator.js';
 import { looksLikeUrl, rank, webSearchUrl } from './model.js';
 import {
@@ -171,9 +173,11 @@ export class Results {
                 const found = await this._menus()?.menuItems();
                 if (!found)
                     return [];
+                // The focused app's own icon, so a row reads as "in that app's menu"
+                const gicon = Shell.WindowTracker.get_default().focus_app?.get_icon() ?? null;
                 const rows = found.entries.map(e => ({
                     id: `menu:${e.path}:${e.label}`, kind: 'menu', title: e.label,
-                    subtitle: `${e.path}`, iconName: 'open-menu-symbolic', run: e.run,
+                    subtitle: `${e.path}`, gicon, iconName: 'open-menu-symbolic', run: e.run,
                 }));
                 const ranked = rank(rows, query, query ? MENU_RESULTS : FILTERED_LIMIT);
                 // A menu item is never the top hit over an app or file with the same score

@@ -157,7 +157,7 @@ function stepPage(step, { settings, extension, _ }) {
             alternative_text: 'Kiwi',
         }));
     } else {
-        page.append(new Gtk.Image({ icon_name: step.icon, pixel_size: 72, css_classes: ['kiwi-setup-icon'] }));
+        page.append(new Gtk.Image({ icon_name: step.icon, pixel_size: 80, css_classes: ['kiwi-setup-icon'] }));
     }
     page.append(new Gtk.Label({ label: _(step.title), css_classes: ['title-1'], wrap: true, justify: Gtk.Justification.CENTER }));
     page.append(new Gtk.Label({
