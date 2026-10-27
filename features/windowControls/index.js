@@ -494,9 +494,13 @@ export class WindowControlsFeature {
             // GNOME 50.6 with the green button)
             onAction: name => cleanup.idle(() => this._act(name), { name: 'kiwi window control' }),
             onGreenMenu: () => this._openGreenMenu(),
-            // The green button's hover goes out as an event (Split View offers its menu on it)
-            onHover: (actor, hovered) => this._ctx.events?.emit('green-button-hover',
-                { window: global.display.focus_window ?? null, actor, hovered }),
+            // With the green menu off, the green button's hover goes out as an event so Split
+            // View can offer its own menu; with it on, the green menu offers Split View itself
+            onHover: (actor, hovered) => {
+                if (!ks.bool('windows-green-menu'))
+                    this._ctx.events?.emit('green-button-hover',
+                        { window: global.display.focus_window ?? null, actor, hovered });
+            },
             gettext,
         });
         cleanup.add(() => {
@@ -746,7 +750,12 @@ export class WindowControlsFeature {
             win.move_to_monitor(arg);
             break;
         default:
-            this._ctx.events.emit('window-tile-requested', { window: win, mode: action });
+            // A full-screen window's halves are Split View's (it picks the partner window)
+            if (win.is_fullscreen() && (action === 'left' || action === 'right') &&
+                this._ctx.features.instance('split-view'))
+                this._ctx.events.emit('split-view-requested', { window: win, side: action });
+            else
+                this._ctx.events.emit('window-tile-requested', { window: win, mode: action });
         }
     }
 

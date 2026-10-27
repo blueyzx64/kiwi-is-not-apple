@@ -4,7 +4,7 @@
 //
 //   1. Hovering the green button of a full-screen window (the 'green-button-hover' event of
 //      the top-bar controls) shows "Tile Window to Left/Right of Screen". The windows feature's
-//      green menu can offer the same by emitting 'split-view-requested'.
+//      green menu (features/windowControls) offers the same by emitting 'split-view-requested'.
 //   2. The window leaves full screen but stays in its Space (WindowState 'splitView', which
 //      fullscreenSpace honours) and takes that half of the work area.
 //   3. The other half shows thumbnails (live clones) of the other windows; a click moves that
