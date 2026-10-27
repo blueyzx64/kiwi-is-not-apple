@@ -321,6 +321,146 @@
         <description>Windows whose WM_CLASS or app id (for example "org.gnome.Terminal" or "firefox") is listed keep square corners. Not case-sensitive.</description>
       </key>
 
+      <!-- Window tiling, green-button menu, Hide (features/windows, features/windowControls) -->
+      <key name="windows-traffic-style" type="s">
+        <choices>
+          <choice value="glass"/>
+          <choice value="flat"/>
+        </choices>
+        <default>'glass'</default>
+        <summary>Traffic light style</summary>
+        <description>Look of Kiwi's top-bar window controls while macOS window buttons are on: 'glass' (macOS 27 Golden Gate glass beads, the default) or 'flat' (the classic flat traffic lights).</description>
+      </key>
+      <key name="windows-green-click" type="s">
+        <choices>
+          <choice value="fullscreen"/>
+          <choice value="zoom"/>
+        </choices>
+        <default>'fullscreen'</default>
+        <summary>Green button click</summary>
+        <description>What clicking the green (maximize) top-bar control does: 'fullscreen' (macOS default; the window goes full screen, in its own Space when that option is on) or 'zoom' (fill the screen without full screen). Alt-click does the other one.</description>
+      </key>
+      <key name="windows-green-menu" type="b">
+        <default>true</default>
+        <summary>Green button menu</summary>
+        <description>Hovering over the green top-bar control, or pressing and holding it, opens the macOS Fill &amp; Arrange menu: Move &amp; Resize, Fill &amp; Arrange, Center, Full Screen, Move to workspace or display, Return to Previous Size.</description>
+      </key>
+      <key name="windows-tiling" type="b">
+        <default>true</default>
+        <summary>Window tiling</summary>
+        <description>Kiwi tiles windows the way macOS 15 does: by dragging to the screen edges, corners and menu bar, from the green-button menu and with keyboard shortcuts. While it runs, GNOME's own edge tiling (org.gnome.mutter edge-tiling) is off; the user's value is saved and restored.</description>
+      </key>
+      <key name="windows-tile-drag-edges" type="b">
+        <default>true</default>
+        <summary>Drag windows to screen edges to tile</summary>
+        <description>Drag a window to the left or right edge for a half, or to a corner for a quarter. A translucent outline shows the tile; releasing tiles the window.</description>
+      </key>
+      <key name="windows-tile-drag-menubar" type="b">
+        <default>true</default>
+        <summary>Drag windows to menu bar to fill screen</summary>
+        <description>Drag a window onto the top bar to fill the screen (without full screen).</description>
+      </key>
+      <key name="windows-tile-drag-modifier" type="b">
+        <default>true</default>
+        <summary>Hold Alt while dragging windows to tile</summary>
+        <description>While Alt (the macOS Option key) is held during a drag, the half outlines show at once, without reaching the edge.</description>
+      </key>
+      <key name="windows-tile-margins" type="b">
+        <default>false</default>
+        <summary>Tiled windows have margins</summary>
+        <description>Leave a small margin around and between tiled windows. Off by default, as on macOS.</description>
+      </key>
+      <key name="windows-tile-left-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;Left']</default>
+        <summary>Tile left shortcut</summary>
+        <description>Move the focused window to the left half of the screen. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-tile-right-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;Right']</default>
+        <summary>Tile right shortcut</summary>
+        <description>Move the focused window to the right half of the screen. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-tile-top-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;Up']</default>
+        <summary>Tile top shortcut</summary>
+        <description>Move the focused window to the top half of the screen. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-tile-bottom-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;Down']</default>
+        <summary>Tile bottom shortcut</summary>
+        <description>Move the focused window to the bottom half of the screen. Left unbound while Stage Manager uses the same shortcut. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-fill-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;f']</default>
+        <summary>Fill shortcut</summary>
+        <description>Fill the screen with the focused window, without full screen. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-center-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;c']</default>
+        <summary>Center shortcut</summary>
+        <description>Centre the focused window on the screen. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-restore-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;r']</default>
+        <summary>Return to previous size shortcut</summary>
+        <description>Put the focused window back where it was before it was tiled. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-arrange-left-right-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;&lt;Shift&gt;Left']</default>
+        <summary>Arrange left and right shortcut</summary>
+        <description>The focused window on the left half, the previous window on the right half. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-arrange-right-left-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;&lt;Shift&gt;Right']</default>
+        <summary>Arrange right and left shortcut</summary>
+        <description>The focused window on the right half, the previous window on the left half. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-arrange-top-bottom-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;&lt;Shift&gt;Up']</default>
+        <summary>Arrange top and bottom shortcut</summary>
+        <description>The focused window on the top half, the previous window on the bottom half. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-arrange-bottom-top-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;&lt;Shift&gt;Down']</default>
+        <summary>Arrange bottom and top shortcut</summary>
+        <description>The focused window on the bottom half, the previous window on the top half. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-arrange-left-quarters-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;&lt;Alt&gt;&lt;Shift&gt;Left']</default>
+        <summary>Arrange left and quarters shortcut</summary>
+        <description>The focused window on the left half, the next two windows in the right quarters. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-arrange-right-quarters-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;&lt;Alt&gt;&lt;Shift&gt;Right']</default>
+        <summary>Arrange right and quarters shortcut</summary>
+        <description>The focused window on the right half, the next two windows in the left quarters. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-arrange-top-quarters-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;&lt;Alt&gt;&lt;Shift&gt;Up']</default>
+        <summary>Arrange top and quarters shortcut</summary>
+        <description>The focused window on the top half, the next two windows in the bottom quarters. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-arrange-bottom-quarters-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;&lt;Alt&gt;&lt;Shift&gt;Down']</default>
+        <summary>Arrange bottom and quarters shortcut</summary>
+        <description>The focused window on the bottom half, the next two windows in the top quarters. A shortcut that GNOME or another active Kiwi shortcut already uses is left unbound.</description>
+      </key>
+      <key name="windows-app-hide" type="b">
+        <default>true</default>
+        <summary>Hide and Hide Others</summary>
+        <description>Hide an app (Super+H, or Hide in the app menu): its windows are minimized without the minimize effect and come back together when the app is activated again. Hide Others hides every other app.</description>
+      </key>
+      <key name="windows-hide-shortcut" type="as">
+        <default>['&lt;Super&gt;h']</default>
+        <summary>Hide shortcut</summary>
+        <description>Hides the focused app. While it is GNOME's minimize shortcut (Super+H by default), Kiwi takes it from GNOME's minimize binding and gives it back on disable.</description>
+      </key>
+      <key name="windows-hide-others-shortcut" type="as">
+        <default>['&lt;Alt&gt;&lt;Super&gt;h']</default>
+        <summary>Hide Others shortcut</summary>
+        <description>Hides every app except the focused one.</description>
+      </key>
+
       <!-- Shell behaviour (features/shellBehaviour) -->
       <key name="overview-gestures-workspace-only" type="b">
         <default>true</default>
