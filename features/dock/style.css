@@ -1,11 +1,14 @@
 /* feature: dock */
-/* Kiwi's dock: a floating glass slab (lib/glass.js 'dock' surface gives the fill when glass is
-   on; this background is the solid fallback), a bright 1px rim and a soft shadow (Tahoe F21).
-   Sizes and radii are set inline from model.dockMetrics() so they follow the Size setting. */
+/* Kiwi's dock: a floating glass slab. lib/glass.js ('dock' surface) gives the fill, rim and,
+   on the .kiwi-dock-shadow host behind it, the drop shadow; this is the solid look when glass
+   is off for the dock. Sizes and radii are inline from model.dockMetrics() (the Size setting). */
 .kiwi-dock {
-    background-color: rgba(40, 40, 44, 0.72);
-    border: 1px solid rgba(255, 255, 255, 0.26);
-    box-shadow: 0 8px 26px rgba(0, 0, 0, 0.30);
+    background-color: rgba(40, 40, 44, 0.86);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.kiwi-dock-shadow {
+    background-color: transparent;
 }
 
 /* The band and frame are hit boxes only */
@@ -84,10 +87,6 @@
     spacing: 8px;
 }
 
-.kiwi-dock-stack-partial {
-    opacity: 0.5;
-}
-
 /* In the fan the names sit on dark pills, as on macOS */
 #kiwi-dock-stack > .kiwi-dock-stack-file .kiwi-dock-stack-name {
     padding: 3px 10px;
@@ -115,7 +114,6 @@
     border-radius: 18px;
     background-color: rgba(36, 36, 40, 0.94);
     border: 1px solid rgba(255, 255, 255, 0.16);
-    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.35);
     color: #f5f5f7;
     spacing: 8px;
 }

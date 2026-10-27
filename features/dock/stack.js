@@ -39,6 +39,7 @@ const BATCH = 64;
 const PILE = 3;               // files drawn in the dock tile
 const GRID_COLUMNS = 5;
 const GRID_ROWS_VISIBLE = 3;
+const PARTIAL_OPACITY = 128;  // a download still running shows greyed
 
 const cancelled = e => e?.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED);
 const BADGES = { rpm: 'RPM', flatpak: 'Flatpak', appimage: 'AppImage' };
@@ -283,6 +284,8 @@ class StackPopup {
         }
         box.add_child(iconBin);
         button.set_child(box);
+        if (f.entry.partial)
+            button.opacity = PARTIAL_OPACITY;
         button.connect('clicked', (_b, clicked) => {
             if (clicked === Clutter.BUTTON_SECONDARY)
                 this._host.openFileMenu(button, f, this._stack);
@@ -368,7 +371,7 @@ class StackPopup {
         const m = this._host.metrics;
         const _ = this._host.gettext;
         const panel = new St.BoxLayout({ style_class: `kiwi-dock-stack-panel kiwi-dock-stack-panel-${view}`, orientation: Clutter.Orientation.VERTICAL });
-        const glass = Glass.attach(panel, { surface: 'menus', role: 'large' });
+        const glass = Glass.attach(panel, { surface: 'menus', role: 'content' });
         this._cleanup.add(() => glass.destroy());
         panel.add_child(new St.Label({ style_class: 'kiwi-dock-stack-title', text: this._stack.dir.get_basename() }));
 

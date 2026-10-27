@@ -94,10 +94,15 @@ export class DockView {
             reactive: true,
         });
         this.pill.set_style(`border-radius: ${m.radius}px; padding: ${m.padding}px;`);
+        // The glass's drop shadow is drawn by a host right behind the pill, same rect
+        const shadow = new St.Widget({ style_class: 'kiwi-dock-shadow' });
+        shadow.set_style(`border-radius: ${m.radius}px;`);
+        shadow.add_constraint(new Clutter.BindConstraint({ source: this.pill, coordinate: Clutter.BindCoordinate.ALL }));
+        this.frame.add_child(shadow);
         this.frame.add_child(this.pill);
         this.band.add_child(this.frame);
         this.band.add_child(this.edge);
-        const glass = Glass.attach(this.pill, { surface: 'dock', role: 'small' });
+        const glass = Glass.attach(this.pill, { surface: 'dock', role: 'bar', shadow });
         reg.add(() => glass.destroy());
 
         // Reorder drops land on the pill (app icons first get the chance to take a file drop)

@@ -11,6 +11,8 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as BoxPointer from 'resource:///org/gnome/shell/ui/boxpointer.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
+import { Glass } from '../../lib/glass.js';
+
 const ARROW_SIDE = { bottom: St.Side.BOTTOM, left: St.Side.LEFT, right: St.Side.RIGHT };
 const ALT_KEYS = [Clutter.KEY_Alt_L, Clutter.KEY_Alt_R, Clutter.KEY_Meta_L, Clutter.KEY_Meta_R];
 
@@ -24,6 +26,13 @@ export class DockMenu extends PopupMenu.PopupMenu {
         this.actor.add_style_class_name('kiwi-dock-menu');
         Main.uiGroup.add_child(this.actor);
         this.actor.hide();
+        this._glass = Glass.attachMenu(this);
+    }
+
+    destroy() {
+        this._glass?.destroy();
+        this._glass = null;
+        super.destroy();
     }
 
     popup() {
