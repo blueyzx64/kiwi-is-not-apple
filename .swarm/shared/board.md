@@ -11,13 +11,13 @@
 | L5 | sonnet | P3 Mission Control + App Exposé + start-on-desktop | kiwi-l5 / v3/l5-mission | | merged |
 | L6 | sonnet | P3 App switcher (Super+Tab, Super+`) + trackpad gestures + hot corners | kiwi-l6 / v3/l6 | | merged |
 | L7 | sonnet | P3 Launchpad (folders, jiggle delete with installer/Flatpak rules) + click-wallpaper/Show Desktop wiring + full screen Split View | kiwi-l7 / v3/l7-launchpad | | merged |
-| L8 | sonnet | P4 Stage Manager v3 rebuild on core (sets, strip, other-side rule with dock, scenario + fuzz suites) | kiwi-l8 / v3/l8-stage | | done, held |
+| L8 | sonnet | P4 Stage Manager v3 rebuild on core (sets, strip, other-side rule with dock, scenario + fuzz suites) | kiwi-l8 / v3/l8-stage | | merged |
 | L9 | sonnet | P5 Notch v3: hover, tabs, live activities, file shelf, perf | kiwi-l9 / v3/l9-notch | | merged |
-| L10 | sonnet | P5 Notification Center column (clock click), Focus modes, time-sensitive | kiwi-l10 / v3/l10-nc | | started |
-| L11 | sonnet | P5 Widget model + desktop widget layer + gallery + built-in widgets | kiwi-l11 / v3/l11-widgets | | started |
+| L10 | sonnet | P5 Notification Center column (clock click), Focus modes, time-sensitive | kiwi-l10 / v3/l10-nc | | merged |
+| L11 | sonnet | P5 Widget model + desktop widget layer + gallery + built-in widgets | kiwi-l11 / v3/l11-widgets | | merged |
 | L12 | sonnet | P6 App menu providers: GTK menubar, DBusMenu registrar, AT-SPI, Help search | kiwi-l12 / v3/l12 | P1-menubar | merged |
 | L13 | sonnet | P6 Spotlight Tahoe features | kiwi-l13 / v3/l13-spotlight | | merged |
-| L14 | sonnet | P6 Control Center customisation, pinned controls, status-item (SNI) host, menu bar item manager, Low Power/battery rows | kiwi-l14 / v3/l14 | P1-menubar | started |
+| L14 | sonnet | P6 Control Center customisation, pinned controls, status-item (SNI) host, menu bar item manager, Low Power/battery rows | kiwi-l14 / v3/l14 | P1-menubar | merged |
 | L15 | sonnet | P7 Installer integration (Kiwi side) + onboarding | kiwi-l15 / v3/l15-installer | | started |
 | R1–R5 | sonnet | Adversarial review of merged work | read-only | merges | R1, R2, R3 done; R4 once after wave 3 |
 | H* | haiku | see helper list below | | | |
@@ -101,3 +101,10 @@ Groups (about 6 agents): (1) dock and minimize effects; (2) Stage Manager and wi
 - ccr runs: after P1-windows and L3 (20261027-151727-…-f44), and after L2, L4, FX3 and L9 (20261027-153451-…-f44d): both 0 Kiwi errors, 8/8 PASS.
 - L12 → merged (GTK exported menus, DBusMenu registrar with Qt verified, R3 #1–3 and the `%s` fix; keys `menubar-native-menus` on, `menubar-atspi-*` off). OPEN, owner asked for all layers: the AT-SPI ☰ menu read does not work (it finds the button, not the popover's items, and may leave the menu open). Needs a focused follow-up (FX4) or an explicit deferral. Electron is untested. Qt/Electron need X11 (docs/features/app-menus.md).
 - H13 → done: /home/user/kiwi-swarm-tools/perf-lib.sh + classify.js (PERF and JITTER lines). Software-rendering baseline for the stock overview: mean 26.6 ms, p95 42 ms. Warm up first (the first frame is about 290 ms of shader setup). Spotlight open has jumps=1, to be checked in verification.
+
+- Orchestrator fix: Mission Control's start-on-desktop hid the overview mid-startup, so the Shell's startup never completed and its reactive cover pane blocked top-bar and desktop clicks (found by L8, L10, L11 and L14). Now it hides after `startup-complete`. Verified in the real Shell: startingUp=false, cover gone, overview hidden (4/4). Lesson: pointer-click probes must stay in every lead's final run.
+- L8 → merged (round 2: Page Up/Down cycle keys verified, sF re-run passed, GRACE_MS kept with its reason; the minimize-button failure was the cover pane).
+- L11 → merged (core/widgets model and registry, desktop widget layer, gallery, 6 built-ins). Open: the notch Widgets tab should use `Widgets.acquire()` providers (proposal in L11.md); DING stacking and multi-monitor untested.
+- L14 → merged (Edit Controls, pinned controls, SNI host, item manager, Low Power). Open: the pinned Wi-Fi menu misses network rows under the NM mock; two DBusMenu parsers (core/appMenus and menuBarItems) should be unified; AppIndicator and other-watcher modes untested. PERF cc: mean 24 ms, p95 49 ms, jitter 0.
+- L10 → merged (Notification Center column, Focus modes with schedules and app triggers, DND sync). The orchestrator ported the Focus icon onto L9's Widgets-tab toggle (L10 had edited the pre-L9 dashboard). Open: an expanded notch banner swallows the first outside click.
+- Remaining: L15 running. Then the verification phase.
