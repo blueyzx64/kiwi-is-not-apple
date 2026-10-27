@@ -35,7 +35,9 @@ export function addSwitchRows(settings, group, items) {
 
 /** A drop-down over a string key with fixed values (labels in the same order). */
 export function comboRow(settings, { title, subtitle, key, values, labels }) {
-    const row = new Adw.ComboRow({ title, subtitle, model: Gtk.StringList.new(labels) });
+    const row = new Adw.ComboRow({ title, model: Gtk.StringList.new(labels) });
+    if (subtitle)
+        row.subtitle = subtitle;
     const sync = () => {
         const i = values.indexOf(settings.get_string(key));
         row.selected = i < 0 ? 0 : i;

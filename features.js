@@ -153,4 +153,10 @@ export const FEATURES = [
         id: 'notch', setting: 'notch',
         load: async () => (await import('./features/notch/index.js')).NotchFeature,
     },
+    {
+        // The Setup Assistant, offered once (features/onboarding/model.js): runs only while
+        // it has never been offered, opens the preferences, then stops
+        id: 'onboarding', when: ctx => ctx.settings.get_string('onboarding') === 'new',
+        load: async () => (await import('./features/onboarding/index.js')).Onboarding,
+    },
 ];

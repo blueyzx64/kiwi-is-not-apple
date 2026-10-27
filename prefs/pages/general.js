@@ -7,7 +7,7 @@ import Gtk from 'gi://Gtk';
 import { addSwitchRows } from '../widgets.js';
 
 /** Kiwi's own bookkeeping: never reset (it is what puts the user's GNOME settings back). */
-const INTERNAL_KEYS = new Set(['migrations-done', 'saved-originals', 'clipboard-recording']);
+const INTERNAL_KEYS = new Set(['migrations-done', 'saved-originals', 'clipboard-recording', 'onboarding']);
 
 export const PAGE = { id: 'general', icon: 'preferences-system-symbolic' };
 

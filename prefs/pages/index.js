@@ -6,6 +6,7 @@
 import Adw from 'gi://Adw';
 
 import * as general from './general.js';
+import * as loginItems from './loginItems.js';
 import * as menuBar from './menuBar.js';
 import * as dock from './dock.js';
 import * as windows from './windows.js';
@@ -34,7 +35,7 @@ function featurePage(id, title, icon, mod) {
 
 /** [{title, pages: [module with PAGE and build(args)]}] */
 export const SECTIONS = [
-    { title: N_('General'), pages: [general] },
+    { title: N_('General'), pages: [general, loginItems] },
     { title: N_('Desktop'), pages: [menuBar, dock, windows,
         featurePage('stage-manager', N_('Stage Manager'), 'view-app-grid-symbolic', stageManagerPrefs)] },
     { title: N_('Features'), pages: [

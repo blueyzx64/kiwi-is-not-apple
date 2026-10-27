@@ -13,6 +13,7 @@ import St from 'gi://St';
 import * as DND from 'resource:///org/gnome/shell/ui/dnd.js';
 
 import { CleanupRegistry } from '../../lib/disposables.js';
+import { progressOf } from '../../core/launcherEntryModel.js';
 
 /** Base of every clickable dock tile: a square St.Button with a centred content box. */
 export class DockItem {
@@ -162,6 +163,45 @@ export class AppItem extends DockItem {
     update(spec) {
         super.update(spec);
         this._dot.visible = spec.running && this._host.config.runningDots;
+    }
+
+    /**
+     * The app's LauncherEntry (core/launcherEntry.js): a progress bar across the bottom of the
+     * icon while it reports one, as macOS draws for downloads and installs.
+     *
+     * @param {?object} entry
+     */
+    setEntry(entry) {
+        const value = progressOf(entry);
+        if (value === null) {
+            if (this._progress)
+                this._progress.visible = false;
+            return;
+        }
+        if (!this._progress) {
+            const m = this._host.metrics;
+            const height = Math.max(5, Math.round(m.icon * 0.13));
+            this._progressWidth = Math.round(m.icon * 0.78);
+            this._progress = new St.Widget({
+                style_class: 'kiwi-dock-progress',
+                layout_manager: new Clutter.BinLayout(),
+                width: this._progressWidth, height,
+                x_expand: true, y_expand: true,
+                x_align: Clutter.ActorAlign.CENTER, y_align: Clutter.ActorAlign.END,
+            });
+            const radius = Math.ceil(height / 2);
+            this._progress.set_style(`border-radius: ${radius}px; margin-bottom: ${Math.round((m.tile - m.icon) / 2 + m.icon * 0.1)}px;`);
+            this._progressFill = new St.Widget({
+                style_class: 'kiwi-dock-progress-fill',
+                x_expand: true, y_expand: true,
+                x_align: Clutter.ActorAlign.START, y_align: Clutter.ActorAlign.FILL,
+            });
+            this._progressFill.set_style(`border-radius: ${radius}px;`);
+            this._progress.add_child(this._progressFill);
+            this.content.add_child(this._progress);
+        }
+        this._progress.visible = true;
+        this._progressFill.width = Math.max(this._progress.height, Math.round(this._progressWidth * value));
     }
 
     activate(button) {

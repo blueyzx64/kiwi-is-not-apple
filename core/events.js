@@ -41,6 +41,13 @@ export const EVENTS = Object.freeze({
     // policy listens; with no listener the app menu runs a plain fallback itself.
     'app-hide-requested': { appId: 'string|null', mode: "'hide' | 'others' | 'all'" },
     'window-tile-requested': { window: 'Meta.Window', mode: "'left' | 'right'" },
+    // core/installer.js (the owner's installer, Installer1; P7)
+    'installer-availability-changed': { availability: "'running' | 'activatable' | 'incompatible' | 'absent'" },
+    'installer-progress': { operations: 'object[] in flight', fraction: 'number 0..1 | null' },
+    'installer-apps-changed': {},
+    'installer-uninstall-finished': { appId: 'string', outcome: "'removed' | 'cancelled' | 'failed'", code: 'string' },
+    // core/launcherEntry.js (com.canonical.Unity.LauncherEntry: progress and count per app)
+    'launcher-entry-changed': { appId: 'string', entry: 'LauncherEntry | null' },
 });
 
 export class EventHub {

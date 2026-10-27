@@ -69,6 +69,9 @@ prefs.js metadata.json stylesheet.css schemas/ po/`). `make pack-check` verifies
 | `motion` | `core/motion.js` Motion (`ease`, `spring`, `env`) |
 | `appMenus` | `core/appMenus/service.js` AppMenuService (menus of the focused app) |
 | `originals` | `core/originals.js` OriginalsStore (give it to a `SettingOwner`) |
+| `installer` | `core/installer.js` InstallerClient for the owner's installer (`acquire(cleanup)`; idle until then) |
+| `launcherEntry` | `core/launcherEntry.js` per-app progress and counts (`acquire(cleanup)`, `entry(appId)`) |
+| `uninstall` | `core/uninstall.js` the ⓧ rules and backends (`acquire(cleanup)`, `decide(info)`, `run(decision, {confirm})`) |
 
 ## 3. core/
 
@@ -86,13 +89,19 @@ prefs.js metadata.json stylesheet.css schemas/ po/`). `make pack-check` verifies
 | `windowState.js` | why a window is not in its normal place (`staged`, ...) | `WindowState.set/has/list/watch`, `interceptMinimize`, `setStageActive` |
 | `notificationRouter.js` | banners to the notch or stock, shared `{count, dnd}` | `setBannerSink`, `pinBanners`, `connect`, `state`, `setDnd` |
 | `mprisWatcher.js` | one MPRIS source for the extension | `MprisWatcher.acquire(cleanup, gettext)` |
+| `installerModel.js` | the Installer1 contract as data (`INSTALLER1_XML`, kept equal to `installer-dbus-contract.md` by a test), parsers, `ProgressBook` | `parseApps`, `parseOutcome`, `parseProgress`, `availability`, `isUsable` |
+| `installer.js` | client of `io.github.blueyzx64.Installer1`: availability (running / activatable / incompatible / absent), calls with timeouts, signals as events | `acquire`, `available`, `listApps`, `ownsDesktopId`, `open(path)`, `uninstall(appId)` -> outcome, `progress` |
+| `launcherEntryModel.js` / `launcherEntry.js` | `com.canonical.Unity.LauncherEntry` Update signals merged per app; dropped when the sender leaves the bus | `entry(appId)`, `progressOf`, `badgeOf`; event `launcher-entry-changed` |
+| `uninstallModel.js` / `uninstall.js` | who may delete an app: installer-owned -> Installer1; Flatpak -> GNOME Software (`details` page) or `flatpak uninstall` after Kiwi's confirm; RPMs never | `decide(facts, backends)`; service `decide(info)`, `run(decision, {confirm})` -> removed / cancelled / failed / handed-off |
 | `appMenus/` | the focused app's menus (ctx.appMenus): pure `model.js` (generic menus, well-known GTK actions, Help search, ⌘ shortcut labels), `gtkActions.js` (org.gtk.Actions provider), `commands.js` (generic commands), `service.js` (providers, cache, activation) | `acquire(owner)`, `targetFor(win)`, `peek/results(target)`, `build(target, results, opts)`, `activate(target, command)`, `registerProvider(owner, provider)` |
 
 Events (`EVENTS` in `core/events.js`): `window-added`, `window-changed`, `window-removed`,
 `window-focused`, `app-focused`, `workspaces-changed`, `monitors-changed`, `work-area-changed`,
 `motion-changed`, `feature-changed`, `minimize-requested`, `notification-center-requested`
 (the clock), `app-hide-requested` and `window-tile-requested` (app-menu commands for the
-window manager; the menu bar runs a fallback when nobody listens).
+window manager; the menu bar runs a fallback when nobody listens), `installer-availability-changed`,
+`installer-progress`, `installer-apps-changed`, `installer-uninstall-finished`,
+`launcher-entry-changed` (P7).
 
 ## 4. lib/
 
@@ -131,6 +140,7 @@ window manager; the menu bar runs a fallback when nobody listens).
 | `shellBehaviour/` | `shell-behaviour` | swipes stop at workspaces; no hot corner |
 | `fullscreenSpace/` | `move-window-to-new-workspace` | full screen in its own Space (kept as in 2.x) |
 | `dock/` | `dock` | Kiwi's own dock: favourites, running and recent apps, minimized windows, Downloads stack (`stack.js`), Trash (`trash.js`), menus (`appMenu.js`), Open at Login (`autostart.js`); an edge claim in core/layout; keeps Dash to Dock off (`dashToDock.js`); `iconRect(appId)` / `minimizeTarget(win)` for Genie |
+| `onboarding/` | `onboarding` | the Setup Assistant: declarative `STEPS` and the offer rules (`model.js`), the Shell trigger that opens prefs once (`index.js`), the About row (`prefs.js`); the UI is `prefs/setupAssistant.js` ([onboarding.md](onboarding.md)) |
 | `appearance/` | `appearance`, `popup-menu-styling` | Auto Light/Dark (owns `color-scheme` through core/originals), accent (`accent-color`) and highlight colours (`scheme.js`, `model.js`); accent menus (`index.js`; the GTK app fixes are in `gtk-theme`) |
 
 Shared-resource rules (defined once in `features.js`): `window-controls`/`app-buttons` are
@@ -142,7 +152,7 @@ mirrors over `button-layout`; `control-center` beats `dnd-button`; `stage-manage
 `prefs.js` builds the window from `prefs/pages/index.js` `SECTIONS`; `prefs/window.js` is the
 sidebar (sections, search across every row, narrow-window collapse); `prefs/widgets.js` the
 shared rows; each page module composes `features/<name>/prefs.js` `buildPrefs()` groups.
-Order: General | Menu Bar, Dock, Windows, Stage Manager | Notch, Spotlight, Control Center,
+Order: General, Login Items (`loginItems.js`, model `lib/loginItemsModel.js`) | Menu Bar, Dock, Windows, Stage Manager | Notch, Spotlight, Control Center,
 Clipboard | Appearance | About.
 
 ## 7. Settings
