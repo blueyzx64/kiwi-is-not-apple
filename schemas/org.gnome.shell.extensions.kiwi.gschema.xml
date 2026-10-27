@@ -376,10 +376,59 @@
         <summary>Highlight colour</summary>
         <description>The text selection colour in Kiwi's search fields (Spotlight, clipboard). "accent" follows the accent colour, the macOS default.</description>
       </key>
+      <key name="appearance-icon-style" type="s">
+        <choices>
+          <choice value="default"/>
+          <choice value="dark"/>
+          <choice value="clear"/>
+          <choice value="tinted"/>
+        </choices>
+        <default>'default'</default>
+        <summary>Icon style</summary>
+        <description>The look of app icons Kiwi draws (dock, Spotlight, switcher, Launchpad), as in macOS Tahoe: Default, Dark (darker icons), Clear (decolourised, translucent) or Tinted (in the accent colour).</description>
+      </key>
       <key name="popup-menu-styling" type="b">
         <default>true</default>
         <summary>Menu and App Styling</summary>
         <description>Restyle shell popup menus with taller items and accent-colored hover, selected and checked entries, and apply the GTK 3 and GTK 4 app fixes (fixes3.css, fixes4.css).</description>
+      </key>
+
+      <!-- Keyboard (features/inputIndicator, features/emoji) -->
+      <key name="input-indicator" type="b">
+        <default>true</default>
+        <summary>Text cursor indicators</summary>
+        <description>Show a small badge at the text cursor when Caps Lock or the input source changes (macOS Sonoma). Near the pointer when the app does not report its cursor.</description>
+      </key>
+      <key name="input-indicator-caps-lock" type="b">
+        <default>true</default>
+        <summary>Caps Lock indicator</summary>
+        <description>Show the Caps Lock badge at the text cursor when Caps Lock is turned on or off.</description>
+      </key>
+      <key name="input-indicator-source" type="b">
+        <default>true</default>
+        <summary>Input source indicator</summary>
+        <description>Show the new input source (for example EN or DE) at the text cursor when it changes.</description>
+      </key>
+      <key name="emoji-picker" type="b">
+        <default>true</default>
+        <summary>Emoji and Symbols</summary>
+        <description>A searchable emoji popover at the text cursor that types the chosen emoji into the focused app (macOS Character Viewer).</description>
+      </key>
+      <key name="emoji-shortcut" type="as">
+        <default><![CDATA[['<Control><Super>space']]]></default>
+        <summary>Emoji and Symbols shortcut</summary>
+        <description>Opens the emoji popover (macOS: Control-Command-Space). Empty means no shortcut.</description>
+      </key>
+      <key name="emoji-skin-tone" type="i">
+        <default>0</default>
+        <range min="0" max="5"/>
+        <summary>Emoji skin tone</summary>
+        <description>0 is the default yellow; 1 to 5 are light to dark. Set from the popover.</description>
+      </key>
+      <key name="emoji-recents" type="as">
+        <default>[]</default>
+        <summary>Recently used emoji</summary>
+        <description>Written by the emoji popover, newest first. Kept only in your settings.</description>
       </key>
 
       <!-- Control Center (features/controlCenter) -->

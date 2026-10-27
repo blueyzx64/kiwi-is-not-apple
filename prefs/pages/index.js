@@ -10,6 +10,7 @@ import * as menuBar from './menuBar.js';
 import * as dock from './dock.js';
 import * as windows from './windows.js';
 import * as appearance from './appearance.js';
+import * as keyboard from './keyboard.js';
 import * as about from './about.js';
 import * as stageManagerPrefs from '../../features/stageManager/prefs.js';
 import * as notchPrefs from '../../features/notch/prefs.js';
@@ -42,6 +43,7 @@ export const SECTIONS = [
         featurePage('spotlight', N_('Spotlight'), 'system-search-symbolic', spotlightPrefs),
         featurePage('control-center', N_('Control Center'), 'preferences-system-symbolic', controlCenterPrefs),
         featurePage('clipboard', N_('Clipboard'), 'edit-paste-symbolic', clipboardPrefs),
+        keyboard,
     ] },
     { title: N_('Look'), pages: [appearance] },
     { title: N_('Kiwi'), pages: [about] },
