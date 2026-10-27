@@ -5,7 +5,7 @@ import GdkPixbuf from 'gi://GdkPixbuf';
 import {
     checkDimensions, imageDimensions, isPasswordManagerApp, looksSecret, luhnValid,
     parseHistory, parseHistoryChecked, pickMime, shannonEntropy,
-} from '../apps/clipboard/model.js';
+} from '../features/clipboard/model.js';
 
 let failed = 0;
 function test(name, fn) {

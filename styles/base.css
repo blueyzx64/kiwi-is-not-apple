@@ -1,0 +1,135 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Kiwi (is not Apple): shared Shell styles. `make css` builds stylesheet.css from this file
+   followed by every features/<name>/style.css (in name order). Edit those, never
+   stylesheet.css. Rules here belong to lib/ services used by several features. */
+
+/* lib/glass.js (the liquid-glass feature turns it on)
+   Plain transparency: no blur, no shader, no extra layer. GlassService puts these classes
+   on the surface actor itself, so the fill is that actor's own background and follows its
+   own border-radius (menu bubble, notch, strip pill, modal frame). Never give a glass
+   surface a background on a parent or sibling: a rectangle shows behind the rounded corners.
+     .kiwi-glass-fill          on every glass surface
+     .kiwi-glass-dark|-light   tint colour (lib/glassParams.js TINT_DARK / TINT_LIGHT)
+     .kiwi-glass-aNN           fill opacity NN %, from the Tint and Blur (frost) sliders,
+                               in FILL_STEP (5 %) buckets; a100 is the high-contrast solid fill
+     .kiwi-glass-dim           Clear style over a light scheme: a 35 % black veil
+     .kiwi-glass-highlight     the Edge highlight setting (a light rim)
+     .kiwi-glass-opaque        high contrast: solid fill and a strong rim
+     .kiwi-glass-<surface>     panel | menus | dock | overlays
+   #panel needs its own selector to outrank the theme's #panel background. */
+
+.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a5, #panel.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a5 { background-color: rgba(28, 28, 30, 0.05); }
+.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a10, #panel.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a10 { background-color: rgba(28, 28, 30, 0.10); }
+.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a15, #panel.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a15 { background-color: rgba(28, 28, 30, 0.15); }
+.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a20, #panel.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a20 { background-color: rgba(28, 28, 30, 0.20); }
+.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a25, #panel.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a25 { background-color: rgba(28, 28, 30, 0.25); }
+.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a30, #panel.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a30 { background-color: rgba(28, 28, 30, 0.30); }
+.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a35, #panel.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a35 { background-color: rgba(28, 28, 30, 0.35); }
+.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a40, #panel.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a40 { background-color: rgba(28, 28, 30, 0.40); }
+.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a45, #panel.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a45 { background-color: rgba(28, 28, 30, 0.45); }
+.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a50, #panel.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a50 { background-color: rgba(28, 28, 30, 0.50); }
+.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a55, #panel.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a55 { background-color: rgba(28, 28, 30, 0.55); }
+.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a60, #panel.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a60 { background-color: rgba(28, 28, 30, 0.60); }
+.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a65, #panel.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a65 { background-color: rgba(28, 28, 30, 0.65); }
+.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a70, #panel.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a70 { background-color: rgba(28, 28, 30, 0.70); }
+.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a75, #panel.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a75 { background-color: rgba(28, 28, 30, 0.75); }
+.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a80, #panel.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a80 { background-color: rgba(28, 28, 30, 0.80); }
+.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a85, #panel.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a85 { background-color: rgba(28, 28, 30, 0.85); }
+.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a90, #panel.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a90 { background-color: rgba(28, 28, 30, 0.90); }
+.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a95, #panel.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a95 { background-color: rgba(28, 28, 30, 0.95); }
+.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a100, #panel.kiwi-glass-fill.kiwi-glass-dark.kiwi-glass-a100 { background-color: rgba(28, 28, 30, 1.00); }
+.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a5, #panel.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a5 { background-color: rgba(246, 246, 248, 0.05); }
+.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a10, #panel.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a10 { background-color: rgba(246, 246, 248, 0.10); }
+.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a15, #panel.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a15 { background-color: rgba(246, 246, 248, 0.15); }
+.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a20, #panel.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a20 { background-color: rgba(246, 246, 248, 0.20); }
+.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a25, #panel.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a25 { background-color: rgba(246, 246, 248, 0.25); }
+.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a30, #panel.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a30 { background-color: rgba(246, 246, 248, 0.30); }
+.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a35, #panel.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a35 { background-color: rgba(246, 246, 248, 0.35); }
+.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a40, #panel.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a40 { background-color: rgba(246, 246, 248, 0.40); }
+.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a45, #panel.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a45 { background-color: rgba(246, 246, 248, 0.45); }
+.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a50, #panel.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a50 { background-color: rgba(246, 246, 248, 0.50); }
+.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a55, #panel.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a55 { background-color: rgba(246, 246, 248, 0.55); }
+.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a60, #panel.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a60 { background-color: rgba(246, 246, 248, 0.60); }
+.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a65, #panel.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a65 { background-color: rgba(246, 246, 248, 0.65); }
+.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a70, #panel.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a70 { background-color: rgba(246, 246, 248, 0.70); }
+.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a75, #panel.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a75 { background-color: rgba(246, 246, 248, 0.75); }
+.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a80, #panel.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a80 { background-color: rgba(246, 246, 248, 0.80); }
+.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a85, #panel.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a85 { background-color: rgba(246, 246, 248, 0.85); }
+.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a90, #panel.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a90 { background-color: rgba(246, 246, 248, 0.90); }
+.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a95, #panel.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a95 { background-color: rgba(246, 246, 248, 0.95); }
+.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a100, #panel.kiwi-glass-fill.kiwi-glass-light.kiwi-glass-a100 { background-color: rgba(246, 246, 248, 1.00); }
+
+.kiwi-glass-fill.kiwi-glass-dim,
+#panel.kiwi-glass-fill.kiwi-glass-dim {
+  background-color: rgba(0, 0, 0, 0.35);
+}
+
+/* rim: only where the surface already has a border (menus) or is a floating overlay */
+.kiwi-glass-menus.kiwi-glass-highlight {
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.kiwi-glass-menus.kiwi-glass-light.kiwi-glass-highlight {
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.kiwi-glass-overlays.kiwi-glass-highlight {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.kiwi-glass-overlays.kiwi-glass-light.kiwi-glass-highlight {
+  border: 1px solid rgba(255, 255, 255, 0.55);
+}
+
+/* high contrast: solid surface, 1px rim at 60 % of the foreground colour */
+.kiwi-glass-menus.kiwi-glass-opaque,
+.kiwi-glass-overlays.kiwi-glass-opaque {
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.kiwi-glass-menus.kiwi-glass-light.kiwi-glass-opaque,
+.kiwi-glass-overlays.kiwi-glass-light.kiwi-glass-opaque {
+  border: 1px solid rgba(0, 0, 0, 0.6);
+}
+
+/* reduced motion: no fades on the glass */
+.kiwi-glass-static {
+  transition-duration: 0ms;
+}
+
+
+/* lib/modalSurface.js: Spotlight and Quick Paste share these frames */
+
+/* Subtle dim behind any Kiwi modal */
+.kiwi-modal-overlay {
+  background-color: rgba(0, 0, 0, 0.12);
+}
+
+.kiwi-modal {
+  border-radius: 24px;
+}
+
+.kiwi-modal-dark {
+  background-color: rgba(32, 32, 36, 0.93);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.40);
+  color: #f5f5f7;
+}
+
+.kiwi-modal-light {
+  background-color: rgba(240, 240, 244, 0.94);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.24);
+  color: #1d1d1f;
+}
+
+/* High contrast: no see-through, a firmer rim */
+.kiwi-modal-dark.kiwi-modal-opaque {
+  background-color: #1e1e22;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+}
+
+.kiwi-modal-light.kiwi-modal-opaque {
+  background-color: #fafafa;
+  border: 1px solid rgba(0, 0, 0, 0.55);
+}

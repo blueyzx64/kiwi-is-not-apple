@@ -2,7 +2,7 @@
 // Runs every Kiwi migration against the real schema, in a memory settings backend.
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
-import { ALL_MIGRATIONS, runAllMigrations } from '../lib/migrations.js';
+import { ALL_MIGRATIONS, restoreLegacyButtonLayout, runAllMigrations } from '../lib/migrations.js';
 import { migrationId } from '../lib/settings.js';
 
 let failed = 0;
@@ -87,6 +87,39 @@ test('second run is a no-op even after the user resets a new key', () => {
     gs.reset('control-center-user-row');
     eq(runAllMigrations(gs), []);
     eq(userSet(gs, 'control-center-user-row'), false);
+});
+
+test('v3: hide-activities-button becomes menubar-show-activities, the other way round', () => {
+    const gs = fresh();
+    gs.set_boolean('hide-activities-button', false);
+    runAllMigrations(gs);
+    eq(gs.get_boolean('menubar-show-activities'), true);
+    const gs2 = fresh();
+    eq(gs2.get_boolean('menubar-show-activities'), false, 'macOS default: no Activities button');
+});
+
+test('v3 defaults follow macOS (overhaul plan §12)', () => {
+    const gs = fresh();
+    eq(gs.get_boolean('stage-manager'), false);
+    eq(gs.get_string('app-buttons-style'), 'macos');
+    eq(gs.get_boolean('move-window-to-new-workspace'), true);
+    // the owner's explicit choices stay
+    eq(gs.get_boolean('show-window-controls'), true);
+    eq(gs.get_boolean('spotlight-on-super'), true);
+    eq(gs.get_boolean('overview-gestures-workspace-only'), true);
+    eq(gs.get_boolean('disable-hot-corner'), true);
+    eq(gs.get_string('rounded-corners-which'), 'top');
+});
+
+test('a 2.x saved button layout is written back once', () => {
+    const gs = fresh();
+    gs.set_string('saved-button-layout', 'appmenu:close');
+    const values = { 'button-layout': 'appmenu:' };
+    const wm = { get_string: k => values[k], set_string: (k, v) => (values[k] = v) };
+    eq(restoreLegacyButtonLayout(gs, wm), true);
+    eq(values['button-layout'], 'appmenu:close');
+    eq(gs.get_string('saved-button-layout'), '');
+    eq(restoreLegacyButtonLayout(gs, wm), false);
 });
 
 if (failed) {

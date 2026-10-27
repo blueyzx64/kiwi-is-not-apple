@@ -1,0 +1,315 @@
+/* feature: clipboard
+   Only kiwi- classes; no backdrop-filter (the glass
+   comes from lib/glass.js behind the frame). Corners are concentric: frame 26, row 12. */
+
+/* ---- shared rows ---- */
+.kiwi-clip-section {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(128, 128, 128, 1);
+  padding: 8px 10px 2px 10px;
+}
+
+.kiwi-clip-row {
+  border-radius: 10px;
+  padding: 0;
+  margin: 1px 0;
+}
+
+.kiwi-clip-row:hover,
+.kiwi-clip-row:focus {
+  background-color: rgba(128, 128, 128, 0.16);
+}
+
+.kiwi-clip-row:selected,
+.kiwi-clip-row:selected:hover {
+  background-color: -st-accent-color;
+  color: -st-accent-fg-color;
+}
+
+.kiwi-clip-row-box {
+  spacing: 10px;
+  padding: 6px 8px;
+}
+
+.kiwi-clip-text {
+  spacing: 1px;
+}
+
+.kiwi-clip-title {
+  font-size: 14px;
+}
+
+.kiwi-clip-sub,
+.kiwi-clip-time {
+  font-size: 12px;
+  color: rgba(128, 128, 128, 1);
+}
+
+.kiwi-clip-row:selected .kiwi-clip-sub,
+.kiwi-clip-row:selected .kiwi-clip-time {
+  color: -st-accent-fg-color;
+}
+
+.kiwi-clip-tile {
+  border-radius: 8px;
+  background-color: rgba(128, 128, 128, 0.22);
+}
+
+.kiwi-clip-tile-image {
+  background-color: rgba(128, 128, 128, 0.12);
+}
+
+.kiwi-clip-tile-color {
+  border: 1px solid rgba(128, 128, 128, 0.4);
+}
+
+.kiwi-clip-actions {
+  spacing: 2px;
+}
+
+.kiwi-clip-action {
+  border-radius: 99px;
+  padding: 4px;
+}
+
+.kiwi-clip-action:hover,
+.kiwi-clip-action:focus {
+  background-color: rgba(128, 128, 128, 0.3);
+}
+
+.kiwi-clip-empty {
+  padding: 28px 12px;
+  color: rgba(128, 128, 128, 1);
+}
+
+/* ---- panel popover: minimal, one line per entry ---- */
+.kiwi-clip-popover-item {
+  padding: 0;
+}
+
+.kiwi-clip-popover {
+  padding: 6px;
+  spacing: 6px;
+}
+
+.kiwi-clip-search {
+  border-radius: 8px;
+  padding: 5px 8px;
+  min-height: 0;
+  font-size: 14px;
+  background-color: rgba(128, 128, 128, 0.16);
+  border: none;
+  box-shadow: none;
+}
+
+.kiwi-qp-search {
+  border-radius: 10px;
+  padding: 6px 10px;
+  background-color: rgba(128, 128, 128, 0.18);
+  border: none;
+  box-shadow: none;
+}
+
+.kiwi-clip-search:focus,
+.kiwi-qp-search:focus {
+  box-shadow: inset 0 0 0 2px st-transparentize(-st-accent-color, 0.4);
+}
+
+.kiwi-clip-search-icon {
+  icon-size: 14px;
+  padding-right: 6px;
+  color: rgba(128, 128, 128, 1);
+}
+
+.kiwi-clip-filters {
+  spacing: 2px;
+  padding: 0 2px;
+}
+
+.kiwi-clip-filter {
+  border-radius: 6px;
+  padding: 1px 8px;
+  font-size: 12px;
+  color: rgba(128, 128, 128, 1);
+  background-color: transparent;
+}
+
+.kiwi-clip-filter:hover {
+  background-color: rgba(128, 128, 128, 0.12);
+}
+
+.kiwi-clip-filter:checked {
+  font-weight: 600;
+  color: inherit;
+  background-color: rgba(128, 128, 128, 0.2);
+}
+
+.kiwi-clip-scroll {
+  max-height: 340px;
+}
+
+.kiwi-clip-row-compact .kiwi-clip-row-box {
+  spacing: 8px;
+  padding: 5px 8px;
+}
+
+.kiwi-clip-row-compact .kiwi-clip-tile {
+  border-radius: 6px;
+}
+
+.kiwi-clip-time {
+  padding-left: 6px;
+}
+
+.kiwi-clip-empty {
+  spacing: 4px;
+  padding: 32px 12px 30px 12px;
+}
+
+.kiwi-clip-empty-icon {
+  icon-size: 28px;
+  padding-bottom: 6px;
+  color: rgba(128, 128, 128, 0.8);
+}
+
+.kiwi-clip-empty-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.kiwi-clip-empty-hint {
+  font-size: 12px;
+  color: rgba(128, 128, 128, 1);
+}
+
+.kiwi-clip-foot {
+  spacing: 8px;
+  padding: 6px 4px 0 6px;
+  border-top: 1px solid rgba(128, 128, 128, 0.18);
+}
+
+.kiwi-clip-recording .toggle-switch {
+  width: 36px;
+  height: 20px;
+}
+
+.kiwi-clip-recording-label,
+.kiwi-clip-hint {
+  font-size: 12px;
+  color: rgba(128, 128, 128, 1);
+}
+
+.kiwi-clip-clear {
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 12px;
+  background-color: transparent;
+}
+
+.kiwi-clip-clear:hover,
+.kiwi-clip-clear:focus {
+  background-color: rgba(128, 128, 128, 0.18);
+}
+
+/* Secondary text: a fixed shade per style for contrast (4.5:1 on the popover fill) */
+.kiwi-clip-popover .kiwi-clip-time,
+.kiwi-clip-popover .kiwi-clip-section,
+.kiwi-clip-popover .kiwi-clip-filter,
+.kiwi-clip-popover .kiwi-clip-empty-hint,
+.kiwi-clip-popover .kiwi-clip-recording-label,
+.kiwi-clip-popover .kiwi-clip-search-icon {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.kiwi-clip-popover.kiwi-clip-light .kiwi-clip-time,
+.kiwi-clip-popover.kiwi-clip-light .kiwi-clip-section,
+.kiwi-clip-popover.kiwi-clip-light .kiwi-clip-filter,
+.kiwi-clip-popover.kiwi-clip-light .kiwi-clip-empty-hint,
+.kiwi-clip-popover.kiwi-clip-light .kiwi-clip-recording-label,
+.kiwi-clip-popover.kiwi-clip-light .kiwi-clip-search-icon {
+  color: rgba(0, 0, 0, 0.56);
+}
+
+.kiwi-clip-popover .kiwi-clip-filter:checked {
+  color: #ffffff;
+}
+
+.kiwi-clip-popover.kiwi-clip-light .kiwi-clip-filter:checked {
+  color: #1d1d1f;
+}
+
+.kiwi-clip-popover .kiwi-clip-row:selected .kiwi-clip-time {
+  color: -st-accent-fg-color;
+}
+
+/* ---- Quick Paste ---- */
+.kiwi-quick-paste {
+  padding: 14px;
+  spacing: 10px;
+  border-radius: 26px;
+}
+
+.kiwi-qp-body {
+  spacing: 12px;
+}
+
+.kiwi-qp-list {
+  padding-right: 4px;
+}
+
+.kiwi-qp-side {
+  spacing: 8px;
+}
+
+.kiwi-qp-preview {
+  border-radius: 14px;
+  padding: 12px;
+  background-color: rgba(128, 128, 128, 0.14);
+}
+
+.kiwi-qp-text {
+  font-size: 14px;
+}
+
+.kiwi-qp-swatch {
+  border-radius: 10px;
+  min-height: 120px;
+}
+
+.kiwi-qp-color-text {
+  padding-top: 8px;
+  font-family: monospace;
+}
+
+.kiwi-qp-meta,
+.kiwi-qp-hints {
+  font-size: 12px;
+  color: rgba(128, 128, 128, 0.95);
+}
+
+.kiwi-qp-hints {
+  padding: 0 4px;
+}
+
+.kiwi-qp-buttons {
+  spacing: 8px;
+}
+
+.kiwi-qp-button {
+  border-radius: 99px;
+  padding: 5px 16px;
+  background-color: rgba(128, 128, 128, 0.22);
+}
+
+.kiwi-qp-button:hover,
+.kiwi-qp-button:focus {
+  background-color: rgba(128, 128, 128, 0.36);
+}
+
+.kiwi-qp-primary,
+.kiwi-qp-primary:hover,
+.kiwi-qp-primary:focus {
+  background-color: -st-accent-color;
+  color: -st-accent-fg-color;
+}

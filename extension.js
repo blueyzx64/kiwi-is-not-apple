@@ -17,85 +17,102 @@
  */
 
 import Gio from 'gi://Gio';
-import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
+
 import { CleanupRegistry } from './lib/disposables.js';
 import { FeatureRegistry } from './lib/featureRegistry.js';
-import { runAllMigrations } from './lib/migrations.js';
-import { FEATURES } from './features.js';
+import { restoreLegacyButtonLayout, runAllMigrations } from './lib/migrations.js';
+import { runCleanup } from './lib/cleanup/index.js';
 import { Glass } from './lib/glass.js';
-import { isDockExtension, resetDockSettings } from './apps/dockUtils.js';
-import { restoreStaleColors } from './apps/dockColors.js';
-import { restoreStaleButtonLayout } from './apps/windowControls/buttonLayout.js';
+import { EventHub } from './core/events.js';
+import { DesktopService } from './core/desktop.js';
+import { LayoutService } from './core/layout.js';
+import { Motion } from './core/motion.js';
+import { OriginalsStore, STORE_KEY, restoreStale } from './core/originals.js';
+import { FEATURES } from './features.js';
 
 // Keys Kiwi writes itself at run time. No `when` or restartOn reads them, and a write made
 // during a refresh would re-enter the registry, so they do not trigger a pass.
-const KEYS_THAT_NEVER_AFFECT_FEATURES = new Set(['dock-colors-saved', 'clipboard-recording', 'migrations-done',
-    'saved-button-layout']);
+const KEYS_THAT_NEVER_AFFECT_FEATURES = new Set(['clipboard-recording', 'migrations-done', STORE_KEY]);
 
+// Schemas whose keys Kiwi may own through core/originals.js
+const openSettings = schemaId =>
+    Gio.SettingsSchemaSource.get_default()?.lookup(schemaId, true)
+        ? new Gio.Settings({ schema_id: schemaId }) : null;
+
+/**
+ * The composition root: core services, migrations, then the feature registry. Every feature
+ * gets the same ctx:
+ *   extension, settings (Kiwi's Gio.Settings), gettext, features ({instance(id)}),
+ *   events (core/events.js), desktop (core/desktop.js), layout (core/layout.js),
+ *   motion (core/motion.js), originals (core/originals.js)
+ */
 export default class KiwiExtension extends Extension {
     enable() {
         this._cleanup = new CleanupRegistry();
         this._settings = this.getSettings();
-        this._interfaceSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.interface' });
         Glass.configure(this._settings);
-        // Before anything reads settings: a migration write during the registry's first pass
-        // would re-enter it with half-migrated values.
+
+        // Before anything reads settings or owns a GNOME key: a migration write during the
+        // registry's first pass would re-enter it with half-migrated values, and a GNOME key a
+        // crashed session still held must be the user's again before a feature saves it.
         runAllMigrations(this._settings);
+        this._originals = new OriginalsStore(this._settings);
+        try {
+            restoreLegacyButtonLayout(this._settings, openSettings('org.gnome.desktop.wm.preferences'));
+            restoreStale(this._originals, openSettings);
+        } catch (err) {
+            console.error('[Kiwi] could not restore saved GNOME settings:', err);
+        }
 
-        this._features = new FeatureRegistry(CleanupRegistry);
+        this._events = new EventHub();
+        this._desktop = new DesktopService(this._events);
+        this._layout = new LayoutService(this._events);
+        this._motion = new Motion(this._events);
+        this._motion.start();
+
+        this._features = new FeatureRegistry(CleanupRegistry, {
+            onChange: (id, active) => this._events?.emit('feature-changed', { id, active }),
+        });
         this._features.registerAll(FEATURES);
-
-        this._cleanup.connect(this._settings, 'changed',
-            (_settings, key) => {
-                if (!KEYS_THAT_NEVER_AFFECT_FEATURES.has(key))
-                    this._features.refresh(key);
-            });
-        this._cleanup.connect(this._interfaceSettings, 'changed::show-battery-percentage',
-            () => this._features.apply('battery-percentage'));
-
-        // The dock is a separate extension the user can turn on and off under
-        // us, and the dock features follow it either way
-        this._cleanup.connect(Main.extensionManager, 'extension-state-changed',
-            (_manager, extension) => {
-                if (!isDockExtension(extension))
-                    return;
-                resetDockSettings();
-                this._features.refresh(null);
-            });
-
-        // A crash or hard logout can leave Dash to Dock colours Kiwi changed; put them back first
-        try {
-            restoreStaleColors(this._settings);
-        } catch (err) {
-            console.error('[Kiwi] could not restore dock colours:', err);
-        }
-        // Same for the window button layout the panel window controls replace
-        try {
-            restoreStaleButtonLayout(this._settings,
-                new Gio.Settings({ schema_id: 'org.gnome.desktop.wm.preferences' }));
-        } catch (err) {
-            console.error('[Kiwi] could not restore the window button layout:', err);
-        }
+        this._cleanup.connect(this._settings, 'changed', (_settings, key) => {
+            if (!KEYS_THAT_NEVER_AFFECT_FEATURES.has(key))
+                this._features.refresh(key);
+        });
 
         this._features.start({
             extension: this,
             settings: this._settings,
             gettext: this.gettext.bind(this),
-            interfaceSettings: this._interfaceSettings,
             // Read-only lookup of other running features: features.instance('stage-manager')
             features: { instance: id => this._features?.instance(id) ?? null },
+            events: this._events,
+            desktop: this._desktop,
+            layout: this._layout,
+            motion: this._motion,
+            originals: this._originals,
         });
+
+        // What Kiwi 2.x left in the user's files for features v3 dropped: once, in the
+        // background, Kiwi-marked content only (lib/cleanup/index.js)
+        const generation = this._generation = (this._generation ?? 0) + 1;
+        runCleanup(this._settings, { isCurrent: () => this._generation === generation && !!this._settings })
+            .catch(e => console.error('[Kiwi] user file cleanup failed:', e));
     }
 
     disable() {
+        this._generation++;
         this._cleanup?.dispose();
         this._cleanup = null;
         this._features?.stop();
         this._features = null;
+        this._motion?.stop();
+        this._layout?.stop();
+        this._desktop?.stop();
+        this._events?.clear();
+        this._motion = this._layout = this._desktop = this._events = null;
+        this._originals = null;
         Glass.configure(null);
-        this._interfaceSettings = null;
-        resetDockSettings();
         this._settings = null;
     }
 }

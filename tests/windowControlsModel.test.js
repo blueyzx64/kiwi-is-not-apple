@@ -1,13 +1,14 @@
 // Run: gjs -m tests/windowControlsModel.test.js
 import {
     parseButtonLayout, resolvePlacement, shouldShow,
-    titlebarHideSheet, resolveIcon, MIGRATIONS, createJobQueue,
+    titlebarHideSheet, resolveIcon, gtkSheets,
     stripControlButtons, ownsButtonLayout, planMinimize, planMaximize, centerIn, sameRect,
     appButtonsLayout, appButtonsMacos,
-} from '../apps/windowControls/model.js';
-import { ButtonLayoutOwner, restoreStaleButtonLayout, SAVED_KEY } from '../apps/windowControls/buttonLayout.js';
-import { isHelperWindowInfo } from '../apps/util/windows.js';
-import { runMigrations } from '../lib/settings.js';
+} from '../features/windowControls/model.js';
+import { ButtonLayoutOwner, WM_SCHEMA } from '../features/windowControls/buttonLayout.js';
+import { OriginalsStore, STORE_KEY, restoreStale, originalId } from '../core/originals.js';
+import { isHelperWindowInfo } from '../core/desktopModel.js';
+import { createJobQueue } from '../lib/jobQueue.js';
 
 let failed = 0;
 function test(name, fn) {
@@ -120,10 +121,11 @@ test('sameRect slack', () => {
 });
 
 // --- ButtonLayoutOwner (fake settings)
-function fakeSettings(values) {
+function fakeSettings(values, schemaId = 'org.gnome.shell.extensions.kiwi') {
     const handlers = new Map();
     let next = 1;
     return {
+        schema_id: schemaId,
         values,
         get_string: k => values[k],
         set_string(k, v) {
@@ -143,25 +145,31 @@ function fakeSettings(values) {
         },
     };
 }
+const wmSettings = values => fakeSettings(values, WM_SCHEMA);
+const LAYOUT_ID = originalId(WM_SCHEMA, 'button-layout');
+// The user's layout as the originals store holds it ('' when none is stored)
+const saved = kiwi => (kiwi.values[STORE_KEY] ? JSON.parse(kiwi.values[STORE_KEY])[LAYOUT_ID]?.value ?? '' : '');
+const kiwiWith = layout => fakeSettings({ [STORE_KEY]: JSON.stringify({ [LAYOUT_ID]: { type: 's', value: layout } }) });
+
 test('owner saves, strips and restores exactly', () => {
-    const kiwi = fakeSettings({ [SAVED_KEY]: '' });
-    const wm = fakeSettings({ 'button-layout': 'appmenu:minimize,close' });
-    const o = new ButtonLayoutOwner(kiwi, wm);
+    const kiwi = fakeSettings({ [STORE_KEY]: '' });
+    const wm = wmSettings({ 'button-layout': 'appmenu:minimize,close' });
+    const o = new ButtonLayoutOwner(new OriginalsStore(kiwi), wm);
     o.sync(true);
     eq(wm.values['button-layout'], 'appmenu:');
-    eq(kiwi.values[SAVED_KEY], 'appmenu:minimize,close');
+    eq(saved(kiwi), 'appmenu:minimize,close');
     eq(o.original, 'appmenu:minimize,close');
     o.sync(false);
     eq(wm.values['button-layout'], 'appmenu:minimize,close');
-    eq(kiwi.values[SAVED_KEY], '');
+    eq(saved(kiwi), '');
     eq(wm.nHandlers, 0);
     eq(o.original, 'appmenu:minimize,close');
 });
 test('owner: user change while owned becomes the new original', () => {
-    const kiwi = fakeSettings({ [SAVED_KEY]: '' });
-    const wm = fakeSettings({ 'button-layout': 'appmenu:close' });
+    const kiwi = fakeSettings({ [STORE_KEY]: '' });
+    const wm = wmSettings({ 'button-layout': 'appmenu:close' });
     let notified = 0;
-    const o = new ButtonLayoutOwner(kiwi, wm, () => notified++);
+    const o = new ButtonLayoutOwner(new OriginalsStore(kiwi), wm, () => notified++);
     o.sync(true);
     wm.set_string('button-layout', 'close,minimize,maximize:');
     eq(wm.values['button-layout'], ':');
@@ -171,23 +179,24 @@ test('owner: user change while owned becomes the new original', () => {
     eq(wm.values['button-layout'], 'close,minimize,maximize:');
 });
 test('owner: release when not owning is a no-op', () => {
-    const kiwi = fakeSettings({ [SAVED_KEY]: '' });
-    const wm = fakeSettings({ 'button-layout': 'appmenu:close' });
-    new ButtonLayoutOwner(kiwi, wm).release();
+    const kiwi = fakeSettings({ [STORE_KEY]: '' });
+    const wm = wmSettings({ 'button-layout': 'appmenu:close' });
+    new ButtonLayoutOwner(new OriginalsStore(kiwi), wm).release();
     eq(wm.values['button-layout'], 'appmenu:close');
 });
 test('stale saved layout is restored once', () => {
-    const kiwi = fakeSettings({ [SAVED_KEY]: 'appmenu:close' });
-    const wm = fakeSettings({ 'button-layout': 'appmenu:' });
-    eq(restoreStaleButtonLayout(kiwi, wm), true);
+    const kiwi = kiwiWith('appmenu:close');
+    const wm = wmSettings({ 'button-layout': 'appmenu:' });
+    const store = new OriginalsStore(kiwi);
+    eq(restoreStale(store, id => (id === WM_SCHEMA ? wm : null)), [LAYOUT_ID]);
     eq(wm.values['button-layout'], 'appmenu:close');
-    eq(kiwi.values[SAVED_KEY], '');
-    eq(restoreStaleButtonLayout(kiwi, wm), false);
+    eq(saved(kiwi), '');
+    eq(restoreStale(store, () => wm), []);
 });
 test('owner after a crash keeps the saved original, not the stripped live value', () => {
-    const kiwi = fakeSettings({ [SAVED_KEY]: 'appmenu:close' });
-    const wm = fakeSettings({ 'button-layout': 'appmenu:' });
-    const o = new ButtonLayoutOwner(kiwi, wm);
+    const kiwi = kiwiWith('appmenu:close');
+    const wm = wmSettings({ 'button-layout': 'appmenu:' });
+    const o = new ButtonLayoutOwner(new OriginalsStore(kiwi), wm);
     o.sync(true);
     eq(o.original, 'appmenu:close');
     o.sync(false);
@@ -202,68 +211,33 @@ test('fullscreen -> fullscreen sheet', () => eq(sheet({ scope: 'fullscreen' }), 
 test('remove off -> none', () => eq(sheet({ remove: false }), null));
 test('panel controls off -> none', () => eq(sheet({ showOnPanel: false }), null));
 
-// --- resolveIcon
+// --- resolveIcon (one traffic-light set)
 const files = new Set(['titlebuttons/button-close.png', 'titlebuttons/button-close@2.png',
-    'titlebuttons/button-close-hover.png', 'titlebuttons/button-close-hover-alt.png',
-    'titlebuttons-glass/button-close.png']);
+    'titlebuttons/button-close-hover.png']);
 const has = (f, n) => files.has(`${f}/${n}`);
 test('plain 1x', () =>
-    eq(resolveIcon({ buttonType: 'titlebuttons', iconName: 'button-close.png', scale: 1, has }),
+    eq(resolveIcon({ iconName: 'button-close.png', scale: 1, has }),
         { folder: 'titlebuttons', name: 'button-close.png' }));
 test('plain 2x', () =>
-    eq(resolveIcon({ buttonType: 'titlebuttons', iconName: 'button-close.png', scale: 2, has }),
+    eq(resolveIcon({ iconName: 'button-close.png', scale: 2, has }),
         { folder: 'titlebuttons', name: 'button-close@2.png' }));
 test('2x missing falls back to 1x', () =>
-    eq(resolveIcon({ buttonType: 'titlebuttons', iconName: 'button-close-hover.png', scale: 2, has }),
+    eq(resolveIcon({ iconName: 'button-close-hover.png', scale: 2, has }),
         { folder: 'titlebuttons', name: 'button-close-hover.png' }));
-test('alt hover uses the -alt file', () =>
-    eq(resolveIcon({ buttonType: 'titlebuttons-alt', iconName: 'button-close-hover.png', scale: 1, has }),
-        { folder: 'titlebuttons', name: 'button-close-hover-alt.png' }));
-test('alt idle uses the plain file', () =>
-    eq(resolveIcon({ buttonType: 'titlebuttons-alt', iconName: 'button-close.png', scale: 1, has }),
-        { folder: 'titlebuttons', name: 'button-close.png' }));
-test('glass missing file falls back to default set', () =>
-    eq(resolveIcon({ buttonType: 'titlebuttons-glass', iconName: 'button-close-hover.png', scale: 1, has }),
-        { folder: 'titlebuttons', name: 'button-close-hover.png' }));
-test('nothing exists -> default set, plain name', () =>
-    eq(resolveIcon({ buttonType: 'titlebuttons', iconName: 'x.png', scale: 2, has: () => false }),
-        { folder: 'titlebuttons', name: 'x.png' }));
-test('optimistic has picks the first candidate', () =>
-    eq(resolveIcon({ buttonType: 'titlebuttons-glass', iconName: 'button-close.png', scale: 2, has: () => true }),
-        { folder: 'titlebuttons-glass', name: 'button-close@2.png' }));
+test('optimistic has picks the @2 file', () =>
+    eq(resolveIcon({ iconName: 'button-close.png', scale: 2, has: () => true }),
+        { folder: 'titlebuttons', name: 'button-close@2.png' }));
 
-// --- migration (runs through the real runMigrations)
-function fakeGs(user) {
-    const types = { 'show-window-controls-fullscreen-only': 'b', 'window-controls-scope': 's' };
-    const gs = {
-        user: { ...user },
-        settings_schema: { has_key: k => k in types },
-        get_user_value: k => (k in gs.user ? { v: gs.user[k] } : null),
-        get_value: k => ({ get_type_string: () => types[k] }),
-        get_boolean: k => gs.user[k],
-        set_string: (k, v) => { gs.user[k] = v; return true; },
-    };
-    return gs;
-}
-test('migration: fullscreen-only true -> scope fullscreen', () => {
-    const gs = fakeGs({ 'show-window-controls-fullscreen-only': true });
-    eq(runMigrations(gs, MIGRATIONS), ['window-controls-scope']);
-    eq(gs.user['window-controls-scope'], 'fullscreen');
-});
-test('migration: fullscreen-only false (user set) -> scope all', () => {
-    const gs = fakeGs({ 'show-window-controls-fullscreen-only': false });
-    runMigrations(gs, MIGRATIONS);
-    eq(gs.user['window-controls-scope'], 'all');
-});
-test('migration: old key never set -> nothing written', () => {
-    const gs = fakeGs({});
-    eq(runMigrations(gs, MIGRATIONS), []);
-});
-test('migration: idempotent, new key wins', () => {
-    const gs = fakeGs({ 'show-window-controls-fullscreen-only': true, 'window-controls-scope': 'maximized' });
-    eq(runMigrations(gs, MIGRATIONS), []);
-    eq(gs.user['window-controls-scope'], 'maximized');
-});
+// --- gtkSheets: one traffic-light set, the hide sheet, the app fixes last
+const cfg = o => ({ showOnPanel: false, remove: true, scope: 'all', enableAppButtons: true,
+    style: 'macos', size: 'normal', appFixes: false, ...o });
+test('gtkSheets: macOS style, small size, fixes last', () =>
+    eq(gtkSheets(cfg({ size: 'small', appFixes: true }), '4'),
+        ['titlebuttons4.css', 'titlebuttons-size-small4.css', 'fixes4.css']));
+test('gtkSheets: GNOME style imports no button set', () =>
+    eq(gtkSheets(cfg({ style: 'gnome' }), '3'), []));
+test('gtkSheets: maximized scope hides the titlebar buttons in GTK', () =>
+    eq(gtkSheets(cfg({ showOnPanel: true, scope: 'maximized', enableAppButtons: false }), '3'), ['hide-titlebar3.css']));
 
 // --- app buttons while the top-bar controls are off (UX round 2, #8)
 const AB = (orig, position, set) => appButtonsLayout(orig, { position, set });
@@ -324,30 +298,30 @@ test('appButtonsMacos: controls off follow app-buttons-style', () => {
     eq(appButtonsMacos({ showOnPanel: false, enableAppButtons: false, style: 'macos' }), true);
 });
 test('owner with the app-buttons transform: take, reapply, restore exactly', () => {
-    const kiwi = fakeSettings({ [SAVED_KEY]: '' });
-    const wm = fakeSettings({ 'button-layout': 'appmenu:close' });
+    const kiwi = fakeSettings({ [STORE_KEY]: '' });
+    const wm = wmSettings({ 'button-layout': 'appmenu:close' });
     let position = 'right';
-    const o = new ButtonLayoutOwner(kiwi, wm, () => {}, orig => appButtonsLayout(orig, { position }));
+    const o = new ButtonLayoutOwner(new OriginalsStore(kiwi), wm, () => {}, orig => appButtonsLayout(orig, { position }));
     o.sync(true);
     eq(wm.values['button-layout'], 'appmenu:minimize,maximize,close');
-    eq(kiwi.values[SAVED_KEY], 'appmenu:close');
+    eq(saved(kiwi), 'appmenu:close');
     position = 'left';
     o.reapply();
     eq(wm.values['button-layout'], 'close,minimize,maximize:appmenu');
-    eq(kiwi.values[SAVED_KEY], 'appmenu:close');
+    eq(saved(kiwi), 'appmenu:close');
     o.release();
     eq(wm.values['button-layout'], 'appmenu:close');
-    eq(kiwi.values[SAVED_KEY], '');
+    eq(saved(kiwi), '');
     eq(wm.nHandlers, 0);
 });
 test('owner handover: panel controls -> app buttons -> panel controls keeps the original', () => {
-    const kiwi = fakeSettings({ [SAVED_KEY]: '' });
-    const wm = fakeSettings({ 'button-layout': 'icon:close' });
-    const panel = new ButtonLayoutOwner(kiwi, wm);
+    const kiwi = fakeSettings({ [STORE_KEY]: '' });
+    const wm = wmSettings({ 'button-layout': 'icon:close' });
+    const panel = new ButtonLayoutOwner(new OriginalsStore(kiwi), wm);
     panel.sync(true);
     eq(wm.values['button-layout'], 'icon:');
     panel.release(); // the registry stops the old owner first
-    const apps = new ButtonLayoutOwner(kiwi, wm, () => {}, orig => appButtonsLayout(orig));
+    const apps = new ButtonLayoutOwner(new OriginalsStore(kiwi), wm, () => {}, orig => appButtonsLayout(orig));
     apps.sync(true);
     eq(wm.values['button-layout'], 'icon:minimize,maximize,close');
     apps.release();
@@ -355,46 +329,13 @@ test('owner handover: panel controls -> app buttons -> panel controls keeps the 
     eq(wm.values['button-layout'], 'icon:');
     panel.release();
     eq(wm.values['button-layout'], 'icon:close');
-    eq(kiwi.values[SAVED_KEY], '');
+    eq(saved(kiwi), '');
 });
 test('owner reapply while not owning does nothing', () => {
-    const wm = fakeSettings({ 'button-layout': 'appmenu:close' });
-    new ButtonLayoutOwner(fakeSettings({ [SAVED_KEY]: '' }), wm, () => {}, () => 'x:y').reapply();
+    const wm = wmSettings({ 'button-layout': 'appmenu:close' });
+    new ButtonLayoutOwner(new OriginalsStore(fakeSettings({ [STORE_KEY]: '' })), wm, () => {}, () => 'x:y').reapply();
     eq(wm.values['button-layout'], 'appmenu:close');
 });
-function fakeGs2(user, defaults = { 'enable-app-window-buttons': true, 'show-window-controls': true }) {
-    const types = { 'show-window-controls': 'b', 'enable-app-window-buttons': 'b', 'app-buttons-style': 's' };
-    const gs = {
-        user: { ...user },
-        settings_schema: { has_key: k => k in types },
-        get_user_value: k => (k in gs.user ? { v: gs.user[k] } : null),
-        get_value: k => ({ get_type_string: () => types[k] }),
-        get_boolean: k => (k in gs.user ? gs.user[k] : defaults[k]),
-        set_string: (k, v) => { gs.user[k] = v; return true; },
-    };
-    return gs;
-}
-test('migration: controls already off + macOS app buttons (default) -> style macos', () => {
-    const gs = fakeGs2({ 'show-window-controls': false });
-    eq(runMigrations(gs, MIGRATIONS), ['app-buttons-style']);
-    eq(gs.user['app-buttons-style'], 'macos');
-});
-test('migration: controls off, macOS app buttons turned off -> style gnome', () => {
-    const gs = fakeGs2({ 'show-window-controls': false, 'enable-app-window-buttons': false });
-    runMigrations(gs, MIGRATIONS);
-    eq(gs.user['app-buttons-style'], 'gnome');
-});
-test('migration: controls never touched -> style stays default', () => {
-    const gs = fakeGs2({ 'enable-app-window-buttons': true });
-    eq(runMigrations(gs, MIGRATIONS), []);
-    eq(gs.user['app-buttons-style'], undefined);
-});
-test('migration: app-buttons-style set by the user wins', () => {
-    const gs = fakeGs2({ 'show-window-controls': false, 'app-buttons-style': 'gnome' });
-    eq(runMigrations(gs, MIGRATIONS), []);
-    eq(gs.user['app-buttons-style'], 'gnome');
-});
-
 try {
     const q = createJobQueue(() => {});
     const log = [];

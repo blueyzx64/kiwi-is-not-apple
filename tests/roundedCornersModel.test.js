@@ -2,7 +2,7 @@
 import {
     RADIUS_DEFAULT, WHICH_DEFAULT, WHICH_VALUES, clampRadius, cornerMask, enlargeForEffects, fboOrigin, fitRadius, frameInActor,
     isExcluded, normalizeId, qualifies, shaderGeometry,
-} from '../apps/roundedCorners/model.js';
+} from '../features/roundedCorners/model.js';
 
 let failed = 0;
 function test(name, fn) {
