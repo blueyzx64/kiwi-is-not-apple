@@ -1905,8 +1905,8 @@ should either match or fix on purpose:
 | Safari 17 profiles and private lock | Sonoma | Skip (desktop actions in dock menu) | S | Browser territory |
 | Sonoma bundled-app changes | Sonoma | Skip (concurrent notch timers) | S | App territory |
 
-**Count:** 58 feature sections (31 Ventura-era including the Stage Manager group, 27 Sonoma-era),
-plus one non-feature "lessons" section for Stage Manager v3.
+**Count:** 57 feature sections (28 Ventura-era, including the 8 Stage Manager sections, and 29
+Sonoma-era), plus one non-feature "lessons" section for Stage Manager v3.
 
 **Top port candidates for Kiwi (in order):**
 1. **Stage Manager v3**: core, strip, sets and integration.
