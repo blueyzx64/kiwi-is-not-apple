@@ -39,7 +39,13 @@ export function tintWithText(icon, cleanup) {
     };
     icon.add_effect_with_name(EFFECT_NAME, effect);
     cleanup.connect(icon, 'style-changed', sync);
-    cleanup.add(() => icon.remove_effect(effect));
+    // The effect goes with the icon when the button is destroyed first
+    let gone = false;
+    cleanup.connect(icon, 'destroy', () => (gone = true));
+    cleanup.add(() => {
+        if (!gone)
+            icon.remove_effect(effect);
+    });
     sync();
     return true;
 }
