@@ -13,6 +13,8 @@
 //   - Stage Manager owns window placement: fullscreen-to-its-own-Space pauses (its saved
 //     value is kept).
 //   - The notch owns the centre of the top bar: the date menu moves right (calendar).
+//   - Tiling shortcuts: window-tiling binds only accelerators that no stock GNOME binding and no
+//     running Kiwi shortcut holds (Stage Manager's Ctrl+Super+Down wins while it runs).
 
 // ctx: see extension.js (settings, gettext, events, desktop, layout, motion, originals, ...)
 const bool = (ctx, key) => ctx.settings.get_boolean(key);
@@ -72,6 +74,17 @@ export const FEATURES = [
         id: 'app-buttons', when: ctx => !bool(ctx, 'show-window-controls'),
         keys: ['show-window-controls'],
         load: async () => (await import('./features/windowControls/appButtons.js')).AppButtonsFeature,
+    },
+    {
+        // Sequoia tiling: drag zones, the green-button menu's tiles, Ctrl+Super shortcuts.
+        // Owns org.gnome.mutter edge-tiling (off while it runs). Asked through 'tile-requested'.
+        id: 'window-tiling', setting: 'windows-tiling',
+        load: async () => (await import('./features/windows/index.js')).WindowTiling,
+    },
+    {
+        // Hide / Hide Others (Super+H, 'app-hide-requested'); takes Super+H from GNOME's minimize
+        id: 'app-hide', setting: 'windows-app-hide',
+        load: async () => (await import('./features/windows/hide.js')).AppHide,
     },
     {
         // Local clipboard history; its panel icon claims a slot through PanelLayout

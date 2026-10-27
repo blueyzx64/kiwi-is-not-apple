@@ -7,8 +7,10 @@
 //
 //   staged              Stage Manager put it off the stage (hidden, or minimized by Kiwi)
 //   isolatedFullscreen  reserved: a full-screen window in its own Space (phase 3)
-//   tiled               reserved: the tiling engine holds a restore rect for it (phase 1)
+//   tiled               the tiling engine (features/windows) holds a tile and a restore rect
 //   parkedInDock        reserved: the dock owns its minimize (phase 1)
+//   hidden              Hide / Hide Others (features/windows/hide.js) minimized it without
+//                       effect; the dock should not show it among minimized windows
 //
 //   import { WindowState } from '../../core/windowState.js';
 //   WindowState.set(win, 'staged', true);          // true if the flag changed
@@ -24,7 +26,7 @@
 // No gi imports: runs under `gjs -m` in tests. A window is any object; if it has
 // connect/disconnect, its flags are dropped on 'unmanaged' by track().
 
-export const FLAGS = Object.freeze(['staged', 'isolatedFullscreen', 'tiled', 'parkedInDock']);
+export const FLAGS = Object.freeze(['staged', 'isolatedFullscreen', 'tiled', 'parkedInDock', 'hidden']);
 
 export class WindowStateRegistry {
     constructor() {

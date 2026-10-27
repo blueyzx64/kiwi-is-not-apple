@@ -34,6 +34,18 @@ export const EVENTS = Object.freeze({
     'feature-changed': { id: 'string', active: 'boolean' },
     // Requests between features (the owner of the policy listens, see features.js)
     'minimize-requested': { window: 'Meta.Window', source: 'string' },
+    // Window tiling (features/windows): any feature asks; the tiling engine acts. `action` is a
+    // zone ('left', 'top-right', 'fill', ...), 'center', 'restore' or 'arrange-<name>'
+    // (features/windows/model.js parseAction). Ignored while window-tiling is off.
+    'tile-requested': { window: 'Meta.Window', action: 'string' },
+    // The tiling engine put a window in a tile (zone) or took it out (zone null)
+    'window-tiled': { window: 'Meta.Window', zone: 'string|null' },
+    // Hide / Hide Others / Show All (macOS App menu, Super+H): mode 'hide' hides `appId`,
+    // 'others' every app but `appId`, 'show-all' brings every hidden app back (appId unused).
+    // features/windows/hide.js acts; ignored while app-hide is off.
+    'app-hide-requested': { appId: 'string|null', mode: "'hide'|'others'|'show-all'" },
+    // An app was hidden (its windows minimized without effect, WindowState 'hidden') or shown
+    'app-hidden': { appId: 'string', hidden: 'boolean' },
 });
 
 export class EventHub {

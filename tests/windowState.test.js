@@ -41,8 +41,8 @@ class FakeWin {
     }
 }
 
-test('flags are the four from the architecture doc', () =>
-    eq([...FLAGS], ['staged', 'isolatedFullscreen', 'tiled', 'parkedInDock']));
+test('flags are the reasons a window is out of place', () =>
+    eq([...FLAGS], ['staged', 'isolatedFullscreen', 'tiled', 'parkedInDock', 'hidden']));
 test('set and has', () => {
     const r = new WindowStateRegistry();
     const w = {};
