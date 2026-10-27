@@ -33,7 +33,7 @@ import { DBusMenuProvider } from '../../core/appMenus/dbusMenu.js';
 import { AtspiProvider } from '../../core/appMenus/atspi.js';
 import { fitMenus } from './model.js';
 import { LazyMenu, menuHeading, menuItem } from './menuItems.js';
-import { MenuGlass } from './menuGlass.js';
+import { MenuGlass } from '../../lib/menuGlass.js';
 
 export const APPS_CLAIM = 'kiwi-menubar-apps';
 const OVERFLOW_ID = 'overflow';

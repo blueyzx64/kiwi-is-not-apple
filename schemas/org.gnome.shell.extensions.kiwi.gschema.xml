@@ -659,6 +659,60 @@
         <summary>Always show battery percentage</summary>
         <description>Show the battery charge in the top bar at any level, not only when it is low. Not shown while GNOME's own battery percentage is on.</description>
       </key>
+      <key name="control-center-layout" type="as">
+        <default>[]</default>
+        <summary>Control Center layout</summary>
+        <description>The controls of the Control Center in order, each "id:size" (small, medium or large), as arranged with Edit Controls. Empty means Kiwi's default arrangement. Controls left out are hidden; other extensions' items are always kept.</description>
+      </key>
+
+      <!-- Low Power Mode (features/lowPower) -->
+      <key name="low-power-battery" type="b">
+        <default>false</default>
+        <summary>Low Power Mode on battery</summary>
+        <description>Hold the power-saver profile of power-profiles-daemon while the computer runs on battery. The hold is released on power or when Kiwi stops, so GNOME's own choice comes back.</description>
+      </key>
+      <key name="low-power-adapter" type="b">
+        <default>false</default>
+        <summary>Low Power Mode on power adapter</summary>
+        <description>Hold the power-saver profile while the computer is plugged in (or has no battery).</description>
+      </key>
+
+      <!-- Menu bar items (features/menuBarItems) -->
+      <key name="menubar-status-items" type="b">
+        <default>true</default>
+        <summary>App status icons</summary>
+        <description>Show apps' status icons (StatusNotifierItem tray icons: Discord, Steam, Nextcloud...) in the menu bar with their menus. When the AppIndicator extension is enabled, it draws them and Kiwi only hides and orders them.</description>
+      </key>
+      <key name="menubar-pinned" type="as">
+        <default>[]</default>
+        <summary>Controls in the menu bar</summary>
+        <description>Control Center controls shown in the menu bar, each "id=always" or "id=active" (only while active). Ids: wifi, bluetooth, sound, battery, focus, now-playing, keyboard-brightness, screen-recording.</description>
+      </key>
+      <key name="menubar-battery-percentage" type="b">
+        <default>false</default>
+        <summary>Battery percentage in the menu bar</summary>
+        <description>Show the charge next to the pinned Battery item (macOS shows no percentage by default).</description>
+      </key>
+      <key name="menubar-item-order" type="as">
+        <default>[]</default>
+        <summary>Menu bar item order</summary>
+        <description>The order of the managed menu bar items, left to right (pin:wifi, sni:discord, stock:keyboard...). New items go first.</description>
+      </key>
+      <key name="menubar-item-hidden" type="as">
+        <default>[]</default>
+        <summary>Hidden menu bar items</summary>
+        <description>Managed menu bar items the user hid.</description>
+      </key>
+      <key name="menubar-item-registry" type="as">
+        <default>[]</default>
+        <summary>Known menu bar items (internal)</summary>
+        <description>Written by Kiwi: the items it has seen ("id&#9;title"), so the preferences can list them.</description>
+      </key>
+      <key name="menubar-overflow" type="b">
+        <default>true</default>
+        <summary>Menu bar overflow</summary>
+        <description>When the menu bar is crowded, put the items that do not fit behind a chevron.</description>
+      </key>
 
       <!-- Stage Manager (features/stageManager) -->
       <key name="stage-manager" type="b">

@@ -7,6 +7,8 @@ import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
+export { LazyMenu } from '../../lib/lazyMenu.js';
+
 import { formatAccel } from '../../core/appMenus/model.js';
 
 /**
@@ -43,21 +45,4 @@ export function menuHeading(text) {
     const item = new PopupMenu.PopupMenuItem(text, { reactive: false, can_focus: false });
     item.add_style_class_name('kiwi-menubar-menu-heading');
     return item;
-}
-
-/**
- * A popup menu that is filled just before it opens: PopupMenu.open() refuses an empty menu,
- * and the items are built only when needed (a closed menu bar holds no items).
- */
-export class LazyMenu extends PopupMenu.PopupMenu {
-    constructor(source, fill) {
-        super(source, 0.0, St.Side.TOP);
-        this._fillMenu = fill;
-    }
-
-    open(animate) {
-        if (!this.isOpen)
-            this._fillMenu(this);
-        super.open(animate);
-    }
 }

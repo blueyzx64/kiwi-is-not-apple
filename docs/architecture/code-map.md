@@ -117,7 +117,10 @@ pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view
 | `modalSurface.js` (+`modalLook.js`, `modalModel.js`) | one Kiwi modal at a time (Spotlight, Quick Paste, clipboard popover) |
 | `keybindings.js` (+`Model`) | registers Kiwi shortcuts, conflict list |
 | `mpris.js` (+`Model`) | MPRIS players |
-| `quickSettings.js` | `readyQuickSettings()`, `whenQuickSettingsReady(cleanup, fn, name)` (bounded wait) |
+| `quickSettings.js` | `readyQuickSettings()`, `whenQuickSettingsReady(cleanup, fn, name)` (bounded wait), `stockKeys(qs)` (stock items by model key) |
+| `menuGlass.js`, `lazyMenu.js` | glass on Kiwi's panel menus; a panel popup filled as it opens |
+| `menuBarPins.js` | the `menubar-pinned` contract (Always / When Active / Never) for the Control Center editor, the prefs and menu-bar-items |
+| `batteryModel.js` | battery time from UPower values (user row, Battery item) |
 | `keepHidden.js` | keep a Shell actor hidden while a feature runs, give back its wanted visibility |
 | `jobQueue.js` | promise queue (`createJobQueue`) |
 | `launcherEntry.js` (+`Model`) | `com.canonical.Unity.LauncherEntry` badges, progress, urgent (entries go with their sender) |
@@ -131,7 +134,9 @@ pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view
 | `windowControls/` | `window-controls`, `app-buttons`, `gtk-theme` | traffic lights in the top bar (`index.js`), the apps' own buttons when off (`appButtons.js`), both owning `button-layout` through `buttonLayout.js` (a `SettingOwner`); GTK stylesheets in `gtk/` imported into the user's gtk.css by `gtkTheme.js` |
 | `menuBar/` | `menu-bar` | the macOS menu bar: logo menu, app name and menus (core/appMenus), transparent adaptive bar, full-screen reveal, privacy dots, About This PC, Force Quit, clock hook, Activities policy |
 | `calendar/` | `calendar`, `quick-settings-notifications`, `dnd-button` | date menu on the right as a card; notification list in Quick Settings; Kiwi's Do Not Disturb (beaten by `control-center`) |
-| `controlCenter/` | `control-center` | Quick Settings restyled |
+| `controlCenter/` | `control-center` | Quick Settings restyled; Edit Controls (`editor.js`, `customModel.js`: gallery, sizes, `control-center-layout`, empty = default plan), Kiwi's own controls (`controls.js`: feature and accessibility switches, Screenshot, Screen Recording, Timer, Keep Awake, Low Power Mode) |
+| `lowPower/` | `low-power` | Low Power Mode per power source (`low-power-battery`/`-adapter`) via power-profiles-daemon HoldProfile; battery health; event `low-power-changed` |
+| `menuBarItems/` | `menu-bar-items` | right side of the menu bar: StatusNotifierItem host (`host.js`: owns org.kde.StatusNotifierWatcher, or joins another watcher, or defers to the AppIndicator extension; `sniItem.js`, `dbusMenu.js`), pinned Control Center controls (`pinned.js`, mirrors of the stock items), item manager (`manager.js`: order, hidden, overflow chevron, input-source menu, AppIndicator icons) |
 | `notch/` | `notch` | banners, live activities, OSD; hover/click opens Now / Tray / Widgets tabs. `stateMachine.js` (queue, shape, tabs) and `model.js` (activity priority, code detection, shelf, derivations) are pure; `sources/` feed activities (UPower, BlueZ, core timers, recording, calendar server, downloads, one-time codes, mic and weather); `shelf.js` + `drop.js` (files dropped from apps via the DND selection); `view.js`, `pills.js`, `tabs.js`, `ui.js` draw |
 | `spotlight/` | `spotlight` | Super tap, providers; Tahoe browse views (Super+1..4), "/" filters, Actions, Quick Keys, history, Quick Look, menu items (`queryModel.js`, `actionsModel.js`, `results.js`) |
 | `clipboard/` | `clipboard-history` | history, popover, Quick Paste |

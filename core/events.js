@@ -64,7 +64,7 @@ export const EVENTS = Object.freeze({
     'launchpad-requested': { source: "string ('corner'|'gesture'|'dock')" },
     // Spotlight's "Start Timer" action (features/spotlight). The timers' owner (the notch's
     // live activities, P5) listens; with no listener Spotlight runs a plain notification timer.
-    'timer-start-requested': { seconds: 'number', label: 'string', source: "string ('spotlight')" },
+    'timer-start-requested': { seconds: 'number', label: 'string', source: "string ('spotlight'|'control-center')" },
     // The green button of the top-bar controls (features/windowControls) was hovered or left;
     // Split View (features/splitView) offers its menu for a full-screen window
     'green-button-hover': { window: 'Meta.Window|null', actor: 'Clutter.Actor', hovered: 'boolean' },
@@ -73,6 +73,9 @@ export const EVENTS = Object.freeze({
     'split-view-requested': { window: 'Meta.Window', side: "'left' | 'right'" },
     // A Split View pair formed (active) or ended (features/splitView)
     'split-view-changed': { windows: 'Meta.Window[]', active: 'boolean' },
+    // features/lowPower: Low Power Mode started or stopped applying, the power source changed,
+    // or the daemon or the battery was found
+    'low-power-changed': { active: 'boolean' },
 });
 
 export class EventHub {
