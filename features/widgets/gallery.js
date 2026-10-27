@@ -181,7 +181,7 @@ export class Gallery {
         });
         tile.add_child(slot);
         // Live previews at full size, drawn at half scale (so text keeps its proportions)
-        const holder = new St.Widget({ layout_manager: new Clutter.BinLayout(), x_expand: true, y_expand: true });
+        const holder = new St.Widget({ layout_manager: new Clutter.BinLayout(), width: SLOT.width, height: SLOT.height });
         slot.set_child(holder);
         let preview = null;
         let box = null;
