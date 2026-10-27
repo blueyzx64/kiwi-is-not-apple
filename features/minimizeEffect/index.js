@@ -234,7 +234,8 @@ export class MinimizeEffect {
             source: actor, x: rect.x - reach.x, y: rect.y - reach.y, width: rect.width, height: rect.height,
         }));
         container.add_effect_with_name(EFFECT_NAME, effect);
-        actor.get_parent().insert_child_above(container, actor);
+        // Above every window, as on macOS: the funnel passes over the windows between it and the dock
+        actor.get_parent().insert_child_above(container, null);
         actor.opacity = 0;
         const stats = this.stats;
         const frame = p => {
