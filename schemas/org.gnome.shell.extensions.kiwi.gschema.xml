@@ -8,13 +8,18 @@
       <!-- Internal bookkeeping (never shown in prefs) -->
       <key name="migrations-done" type="as">
         <default>[]</default>
-        <summary>Settings migrations that already ran</summary>
+        <summary>Settings migrations that already ran (internal)</summary>
         <description>Internal. Ids of the one-time settings migrations (old key to new key) that Kiwi has already applied, so they never run again. Do not edit.</description>
       </key>
       <key name="saved-originals" type="s">
         <default>''</default>
         <summary>Saved originals of GNOME settings Kiwi changed (internal)</summary>
         <description>JSON written by core/originals.js: the user's own value of every GNOME setting Kiwi currently owns (for example the window button-layout), so it can be put back after a crash. Do not edit.</description>
+      </key>
+      <key name="saved-originals-backup" type="s">
+        <default>''</default>
+        <summary>Unreadable saved originals, kept (internal)</summary>
+        <description>Internal. The text of saved-originals when it could not be parsed, kept so a damaged store is never silently lost. Do not edit.</description>
       </key>
 
       <!-- Menu bar (features/menuBar, features/calendar) -->
