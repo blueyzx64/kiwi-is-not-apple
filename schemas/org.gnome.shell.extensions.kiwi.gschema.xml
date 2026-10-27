@@ -65,9 +65,9 @@
         <description>Alt-clicking the clock turns Do Not Disturb on or off, like Option-click on macOS.</description>
       </key>
       <key name="menubar-focus-shortcut" type="as">
-        <default>['F10']</default>
+        <default>['&lt;Control&gt;F2']</default>
         <summary>Focus the menu bar</summary>
-        <description>Opens the app menu so the menus can be used with the keyboard (Left and Right move between menus). Empty means no shortcut.</description>
+        <description>Opens the app menu so the menus can be used with the keyboard (Left and Right move between menus), like Ctrl+F2 on macOS. F10 is the other common choice, but it takes F10 from apps. Empty means no shortcut.</description>
       </key>
       <key name="menubar-force-quit-shortcut" type="as">
         <default>['&lt;Super&gt;&lt;Alt&gt;Escape']</default>

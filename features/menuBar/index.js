@@ -13,7 +13,7 @@
 //   clock        here                emits 'notification-center-requested'; Alt-click toggles
 //                                    Do Not Disturb (menubar-clock-option-dnd)
 //   dialogs      aboutDialog.js, forceQuit.js (menubar-force-quit-shortcut)
-//   keyboard     menubar-focus-shortcut opens the app menu (F10)
+//   keyboard     menubar-focus-shortcut opens the app menu (Ctrl+F2, macOS's "Move focus to the menu bar")
 //   menubar-show-activities          GNOME's Activities button (off: macOS has none)
 //
 // Places: PanelLayout claims 'kiwi-menubar-logo' (left, first) and 'kiwi-menubar-apps'
@@ -155,8 +155,16 @@ export class MenuBar {
         // The cleanup registry, disposed right after this, stops every part
     }
 
-    /** Keyboard access (F10): the app menu, or the logo menu when app menus are off. */
+    /** Keyboard access (Ctrl+F2): the app menu, or the logo menu when app menus are off. */
     focus() {
+        // Over a full-screen window the bar is hidden: slide it in first, and away when done
+        const fullscreen = this.part('fullscreen');
+        fullscreen?.reveal();
+        this._focusMenu();
+        fullscreen?.concealWhenIdle();
+    }
+
+    _focusMenu() {
         if (this.part('apps')?.focus())
             return;
         const logo = this.part('logo');
