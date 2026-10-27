@@ -39,7 +39,14 @@
 //   {type: 'timer', key, ms}              send {type: 'timer', key} after ms
 //   {type: 'cancel', key}                 forget that timer
 
-/** A stage that empties by a close waits this long for a new window before the next comes. */
+/**
+ * A stage that empties by a close waits this long for a new window before the next entry
+ * comes back (research seed 2: an Open dialog closes before its document window exists).
+ * The wait ends early on every signal that settles it: a new window mapping (it takes the
+ * stage), a strip click, a shortcut or Show Desktop. No signal can end it the other way:
+ * on Wayland an app creates its next window only after the last one is gone, so nothing
+ * says "no window is coming". Mutter's own default focus during the wait is held, not obeyed.
+ */
 export const GRACE_MS = 400;
 /** After a switch the model made, focus changes to other entries are ignored this long
  * (Mutter's default focus after a minimize, and windows that raise each other). */
