@@ -10,6 +10,7 @@ import * as menuBar from './menuBar.js';
 import * as dock from './dock.js';
 import * as windows from './windows.js';
 import * as appearance from './appearance.js';
+import * as notifications from './notifications.js';
 import * as about from './about.js';
 import * as stageManagerPrefs from '../../features/stageManager/prefs.js';
 import * as notchPrefs from '../../features/notch/prefs.js';
@@ -38,6 +39,7 @@ export const SECTIONS = [
     { title: N_('Desktop'), pages: [menuBar, dock, windows,
         featurePage('stage-manager', N_('Stage Manager'), 'view-app-grid-symbolic', stageManagerPrefs)] },
     { title: N_('Features'), pages: [
+        notifications,
         featurePage('notch', N_('Notch'), 'preferences-system-notifications-symbolic', notchPrefs),
         featurePage('spotlight', N_('Spotlight'), 'system-search-symbolic', spotlightPrefs),
         featurePage('control-center', N_('Control Center'), 'preferences-system-symbolic', controlCenterPrefs),

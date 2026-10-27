@@ -32,6 +32,9 @@ export const EVENTS = Object.freeze({
     'motion-changed': { reducedMotion: 'boolean', animations: 'boolean' },
     // lib/featureRegistry.js, through extension.js: a feature started or stopped
     'feature-changed': { id: 'string', active: 'boolean' },
+    // features/focus: the active Focus mode changed (id null: Focus off). The notch and the
+    // menu bar show its icon; ctx.features.instance('focus').state() gives the same at any time.
+    'focus-changed': { id: 'string|null', name: 'string|null', icon: 'string|null', reason: "'manual'|'app'|'schedule'|null" },
     // Requests between features (the owner of the policy listens, see features.js)
     'minimize-requested': { window: 'Meta.Window', source: 'string' },
     // The menu bar (features/menuBar): the clock was clicked. The Notification Center (P5)

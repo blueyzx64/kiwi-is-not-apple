@@ -102,6 +102,8 @@ export class NotchFeature {
 
         // Shared inputs
         NotificationRouter.connect(cleanup, () => this._syncExternal());
+        // The active Focus mode's icon (features/focus) shows in the dashboard's corner
+        this._ctx.events.on('focus-changed', () => this._sync(), cleanup);
         cleanup.connect(global.display, 'in-fullscreen-changed', () => this._syncExternal());
         this._syncExternal(true);
 
@@ -273,6 +275,7 @@ export class NotchFeature {
             notification,
             media: media ? { ...mediaInfo(media), appIcon: media.app?.get_icon() ?? null } : null,
             dnd: state.dnd,
+            focus: this._ctx.features.instance('focus')?.state() ?? null,
             count: NotificationRouter.state().count,
             recent: vm.content === 'dashboard' ? this._recentNotifications() : null,
             clipboard: this._clipboardEntries(),

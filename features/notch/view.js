@@ -441,7 +441,7 @@ export class NotchView {
 
     /**
      * @param {object} vm stateMachine.view(state)
-     * @param {object} ctx {notification, media, dnd, count, recent, clipboard}
+     * @param {object} ctx {notification, media, dnd, focus (features/focus state()), count, recent, clipboard}
      */
     render(vm, ctx) {
         if (this._destroyed)
@@ -814,7 +814,7 @@ export class NotchView {
         if (layout.mode === 'media')
             live.push(() => (date.text = GLib.DateTime.new_now_local().format('%a %e %b').replace(/\s+/g, ' ')));
         header.add_child(date);
-        header.add_child(this._dndButton(ctx.dnd));
+        header.add_child(this._dndButton(ctx.dnd, ctx.focus));
         page.add_child(header);
 
         const body = new St.BoxLayout({ style_class: 'kiwi-notch-dash-body', y_expand: true });
@@ -830,15 +830,16 @@ export class NotchView {
         return page;
     }
 
-    // A small moon in the corner; the look follows the state, the behaviour is the router's.
-    _dndButton(on) {
+    // A small moon in the corner, or the active Focus mode's icon; the look follows the state,
+    // the behaviour is the router's.
+    _dndButton(on, focus = null) {
         const button = new St.Button({
             style_class: 'kiwi-notch-dnd',
-            child: new St.Icon({ icon_name: 'weather-clear-night-symbolic', icon_size: 16 }),
+            child: new St.Icon({ icon_name: focus?.icon ?? 'weather-clear-night-symbolic', icon_size: 16 }),
             can_focus: true,
             toggle_mode: true,
-            checked: !!on,
-            accessible_name: this._('Do Not Disturb'),
+            checked: !!on || !!focus?.id,
+            accessible_name: focus?.id ? `${this._('Focus')}: ${focus.name}` : this._('Do Not Disturb'),
             y_align: Clutter.ActorAlign.CENTER,
         });
         button.connect('clicked', () => this._h.onToggleDnd());
