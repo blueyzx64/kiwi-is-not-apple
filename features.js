@@ -131,6 +131,14 @@ export const FEATURES = [
         load: async () => (await import('./features/shellBehaviour/index.js')).ShellBehaviour,
     },
     {
+        // The overview restyled as Mission Control, App Exposé, start on the desktop. It owns
+        // dynamic-workspaces (static Spaces) and app-switcher current-workspace-only through
+        // core/originals; the dock and the Stage Manager strip hide with the overview.
+        id: 'mission-control', setting: 'mission-control',
+        restartOn: ['mission-control-shortcut', 'app-expose-shortcut', 'mc-static-spaces'],
+        load: async () => (await import('./features/missionControl/index.js')).MissionControl,
+    },
+    {
         // macOS-style rounded corners: one shader effect per window actor
         id: 'rounded-corners', setting: 'rounded-corners',
         load: async () => (await import('./features/roundedCorners/index.js')).RoundedCorners,
