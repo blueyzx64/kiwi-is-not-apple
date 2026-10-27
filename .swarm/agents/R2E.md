@@ -1,18 +1,17 @@
 ## Status
-working (started; no code changes yet)
+nearly done: v3/r2-mission committed; final run-f44.sh 20 pending
 
 ## Plan
-1. Probe overview structure (controls group order, thumbnailsSlider) in the real Shell; reproduce bug 1 (spaces layer in overviewGroup is above windows).
-2. Move the Spaces chrome layer next to the thumbnails slider (below workspacesDisplay), mirror slider opacity/translation, position via relative transforms; drop per-frame resync.
-3. Bug 2: compare clone sharpness at progress 0.9 stock vs Kiwi; try scaling filters / no offscreen redirect.
-4. Bug 3: new-Space animation; track_actor on thumbnails, labels, plus: 0 jumps.
-5. make check, make pack-check, final run-f44.sh 20, commit.
+done: 1 chrome as thumbnail children; 2 sharp previews (rounded-corner effect off in overview); 3 centringShift for add/remove.
 
 ## Progress log
-- 2026-10-27: read briefs and missionControl/index.js, spaces.js. Layer is added to Main.layoutManager.overviewGroup (above everything) with a per-frame laters resync while animationInProgress.
+- 2026-10-27: root causes found. Bug1: layer in overviewGroup above whole overview; ControlsManager/ThumbnailsBox allocate no foreign children, so chrome became children of each thumbnail (FixedLayout), translations set on notify::allocation (same frame). Bug2: KiwiRoundedCornersEffect's offscreen texture on WindowActor, painted by overview Clutter.Clone, 40% less edge contrast (36040 -> 21495 gradient sum at p90); scaling filters did not help; effect disabled while overview visible. Bug3: stock ThumbnailsBox centres with n incl. collapsed thumbs and assumes it gets n*maxW width: 33px jump then glide; centringShift as box.translation_x.
+- Evidence: scratchpad e/ (main.sh, out-*), runs 20261027-203645 (before) vs 20261027-213816 (after).
 
 ## Findings for orchestrator
-(none yet)
+- roundedCorners hunk (features/roundedCorners/index.js) is outside missionControl: effect off while overview.visible.
+- Pre-existing: GLib-GObject-CRITICAL "-nan translation-y" once at shell start (also in the before run), not from Kiwi MC.
+- 9+ Spaces: the + clips at the screen edge.
 
 ## Handoff
-Worktree /home/user/kiwi-r2-mission, branch v3/r2-mission, clean. Scenario scripts go in the scratchpad.
+Commit on v3/r2-mission. Do not push.
