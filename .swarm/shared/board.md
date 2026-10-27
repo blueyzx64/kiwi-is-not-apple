@@ -59,3 +59,9 @@ Deploy conservatively, sized to the scope and type of work. Resume in waves of a
 ## Merges (2026-10-27, after the reset)
 - L6 → merged (switcher, gestures, hot corners; core/desktopActions; events `app-expose-requested` for L5 and `launchpad-requested` for L7).
 - FX1 → merged (R1 F1–F5, F7–F15, F21; dock view.js guard; Reset Everything uses schema "(internal)" summaries). R1's F6 and F16–F20 (S3) are deferred. The final 20-cycle run will be done on ccr by the orchestrator.
+
+## Pacing update (owner, 2026-10-27, later): be conservative on tokens
+- At most 4 or 5 agents running at once. No new agent starts until one finishes.
+- Agents: read only the files they need, do one final 20-cycle Shell run plus at most one targeted run, and keep reports to 20 lines or fewer.
+- Cut: H10 and H11 are folded into H9's library (no separate agents). H12 becomes an orchestrator grep. R4 and R5 become one reviewer (R4), run once after wave 3.
+- Order after the current eight: L2, L3, L4, L8, then L9, L10, L11, L12, L14, L15.
