@@ -1,9 +1,11 @@
 // Run: gjs -m tests/dockModel.test.js
 // features/dock/model.js: the dock's pure decisions.
 import {
-    RECENT_MAX, AUTOSTART_MARK, Reveal, autostartState, autostartText, clickAction, dockItems,
-    dockMetrics, downloadEntry, downloadFinished, dropIndex, fanLayout, menuEntries, nextWindow,
-    packageKind, pinPosition, pushRecent, readConfig, sortDownloads, stableOrder, stackView,
+    RECENT_MAX, AUTOSTART_MARK, LAUNCH_BOUNCES_MAX, ATTENTION_BOUNCES, Reveal, addFolder,
+    autostartState, autostartText, badgeProgress, badgeText, bounceAgain, bounceSteps, clickAction,
+    dockItems, dockMetrics, downloadEntry, downloadFinished, dropIndex, fanLayout, folderDropAccepted,
+    magnify, magnifyScale, menuEntries, nextWindow, packageKind, pinPosition, pushRecent, readConfig,
+    removeFolder, sortDownloads, stableOrder, stackView,
 } from '../features/dock/model.js';
 
 let failed = 0;
@@ -22,10 +24,14 @@ test('config: defaults pass through, bad values fall back', () => {
         'dock-position': 'top', 'dock-icon-size': 400, 'dock-autohide': false, 'dock-autohide-delay': -5,
         'dock-show-recents': true, 'dock-running-dots': true, 'dock-minimize-to-app': false,
         'dock-downloads': true, 'dock-downloads-view': 'spiral',
+        'dock-magnification': false, 'dock-magnification-size': 999, 'dock-launch-animation': true,
+        'dock-attention-bounce': true, 'dock-badges': true, 'dock-background-apps': true,
+        'dock-folders': ['/home/u/Projects', 'relative', ''],
     };
-    const get = { bool: k => vals[k], int: k => vals[k], string: k => vals[k] };
+    const get = { bool: k => vals[k], int: k => vals[k], string: k => vals[k], strv: k => vals[k] };
     const c = readConfig(get);
     eq([c.position, c.iconSize, c.autohideDelay, c.stackView], ['bottom', 128, 0, 'automatic']);
+    eq([c.magnification, c.magnifiedSize, c.folders], [false, 160, ['/home/u/Projects']]);
 });
 test('metrics: the edge claim includes the floating gap; radii are concentric', () => {
     const m = dockMetrics(48);
@@ -212,6 +218,124 @@ test('reveal: leaving the edge before the delay disarms it', () => {
     r.edge(true);
     r.edge(false);
     eq([r.wantsTimer, r.settle()], [false, false]);
+});
+
+// ---- P2: background apps and folder stacks
+test('items: a background app shows with a grey dot, pinned or not', () => {
+    const items = dockItems({
+        pinned: ['files', 'mail'], running: ['files'], recents: [], showRecents: false,
+        background: ['mail', 'chat', 'files'], downloads: false,
+    });
+    const apps = items.filter(i => i.kind === 'app').map(i => `${i.id}:${i.running ? 'run' : 'off'}${i.background ? ':bg' : ''}`);
+    eq(apps, ['files:run', 'mail:run:bg', 'chat:run:bg']);
+});
+test('items: folder stacks follow Downloads, once each, before the Trash', () => {
+    const items = dockItems({ pinned: [], running: [], recents: [], showRecents: true, folders: ['/a', '/b', '/a'] });
+    eq(items.map(i => i.id), ['separator-system', 'downloads', 'folder:/a', 'folder:/b', 'trash']);
+});
+test('folders: add once, never Downloads or a relative path; remove', () => {
+    const f = ['/a'];
+    eq(addFolder(f, '/b', '/d'), ['/a', '/b']);
+    if (addFolder(f, '/a', '/d') !== f || addFolder(f, '/d', '/d') !== f || addFolder(f, 'x', '/d') !== f)
+        throw new Error('unchanged list must be returned as is');
+    eq(removeFolder(['/a', '/b'], '/a'), ['/b']);
+});
+test('folders: only the right side of the dock takes a folder', () => {
+    eq([folderDropAccepted(500, 400), folderDropAccepted(300, 400), folderDropAccepted(500, null)], [true, false, false]);
+});
+test('menu: a background-only app offers Stop Running in Background, not Quit', () => {
+    const e = menuEntries({
+        windows: [], focusedWindow: null, actions: [], canNewWindow: true, pinned: true,
+        hasDesktopFile: true, autostart: { enabled: false, editable: true }, alt: false, background: true,
+    });
+    eq(e.map(x => x.type).slice(-2), ['separator', 'stop-background']);
+});
+
+// ---- P2: magnification
+const mk = (n, tile = 60) => {
+    const centres = Array.from({ length: n }, (_, i) => tile * i + tile / 2);
+    return { centres, sizes: centres.map(() => tile), weights: centres.map(() => 1), count: n, tile };
+};
+const out = n => ({ scales: new Array(n), offsets: new Array(n), before: 0, after: 0 });
+test('magnify: the icon under the pointer reaches the max; a cosine falloff; none far away', () => {
+    const p = mk(12);
+    const o = magnify({ ...p, pointer: p.centres[5], maxScale: 2, amount: 1 }, out(12));
+    eq(o.scales[5], 2);
+    if (!(o.scales[4] < 2 && o.scales[4] > o.scales[3] && o.scales[3] > 1))
+        throw new Error(`falloff ${o.scales.slice(2, 6)}`);
+    eq(o.scales[0], 1);
+    eq(o.scales[11], 1);
+    // symmetric
+    if (Math.abs(o.scales[4] - o.scales[6]) > 1e-9)
+        throw new Error('not symmetric');
+});
+test('magnify: icons stay edge to edge and the point under the pointer does not move', () => {
+    const p = mk(10);
+    for (const pointer of [37, 125, 300.5, 590]) {
+        const o = magnify({ ...p, pointer, maxScale: 1.8, amount: 1 }, out(10));
+        for (let i = 1; i < 10; i++) {
+            const prevEnd = p.centres[i - 1] + o.offsets[i - 1] + (p.sizes[i - 1] * o.scales[i - 1]) / 2;
+            const start = p.centres[i] + o.offsets[i] - (p.sizes[i] * o.scales[i]) / 2;
+            if (Math.abs(prevEnd - start) > 1e-6)
+                throw new Error(`gap at ${i} for pointer ${pointer}`);
+        }
+        // The item under the pointer: the same fraction of it stays under the pointer
+        const i = Math.min(9, Math.floor(pointer / 60));
+        const frac = (pointer - (p.centres[i] - 30)) / 60;
+        const now = p.centres[i] + o.offsets[i] - (60 * o.scales[i]) / 2 + frac * 60 * o.scales[i];
+        if (Math.abs(now - pointer) > 1e-6)
+            throw new Error(`pointer ${pointer} drifted to ${now}`);
+        if (Math.abs(o.before + o.after - p.sizes.reduce((a, s, k) => a + (o.scales[k] - 1) * s, 0)) > 1e-6)
+            throw new Error('growth does not add up');
+    }
+});
+test('magnify: continuous in the pointer (no jumps between neighbours)', () => {
+    const p = mk(8);
+    let prev = null;
+    for (let x = 0; x <= 480; x += 0.5) {
+        const o = magnify({ ...p, pointer: x, maxScale: 2, amount: 1 }, out(8));
+        if (prev) {
+            for (let i = 0; i < 8; i++) {
+                if (Math.abs(o.offsets[i] - prev[i]) > 2)
+                    throw new Error(`jump at ${x}`);
+            }
+        }
+        prev = [...o.offsets];
+    }
+});
+test('magnify: amount 0 is the rest layout; separators do not grow', () => {
+    const p = mk(5);
+    const o = magnify({ ...p, pointer: 150, maxScale: 2, amount: 0 }, out(5));
+    eq([...o.scales], [1, 1, 1, 1, 1]);
+    eq([o.before, o.after], [0, 0]);
+    const q = { ...p, weights: [1, 1, 0, 1, 1] };
+    eq(magnify({ ...q, pointer: 150, maxScale: 2, amount: 1 }, out(5)).scales[2], 1);
+    eq([magnifyScale(48, 96), magnifyScale(64, 48)], [2, 1]);
+});
+
+// ---- P2: bounce and badges
+test('bounce: launches bounce until up, at most LAUNCH_BOUNCES_MAX; attention a few times', () => {
+    eq(bounceAgain('launch', 3, true), true);
+    eq(bounceAgain('launch', LAUNCH_BOUNCES_MAX, true), false);
+    eq(bounceAgain('launch', 1, false), false);
+    eq(bounceAgain('attention', ATTENTION_BOUNCES, true), false);
+    eq(bounceAgain('download', 1, false), false);
+    eq(bounceSteps(60).height, 30);
+});
+test('badges: counts shown only when visible and positive; capped; progress clamped', () => {
+    eq(badgeText({ count: 3, countVisible: true }), '3');
+    eq(badgeText({ count: 3, countVisible: false }), null);
+    eq(badgeText({ count: 0, countVisible: true }), null);
+    eq(badgeText({ count: 123456, countVisible: true }), '9999+');
+    eq(badgeText(null), null);
+    eq(badgeProgress({ progress: 1.4, progressVisible: true }), 1);
+    eq(badgeProgress({ progress: 0.4, progressVisible: false }), null);
+    eq(badgeProgress({ progress: NaN, progressVisible: true }), null);
+});
+test('dockItems: the Launchpad tile comes first when asked', () => {
+    const items = dockItems({ pinned: ['a'], running: [], recents: [], showRecents: false, launchpad: true });
+    eq(items[0], { kind: 'launchpad', id: 'launchpad' });
+    eq(dockItems({ pinned: ['a'], running: [], recents: [], showRecents: false })[0].kind, 'app');
 });
 
 if (failed) {

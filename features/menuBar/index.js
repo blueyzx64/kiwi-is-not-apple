@@ -58,6 +58,11 @@ export class MenuBar {
         return this._parts.get(name)?.instance ?? null;
     }
 
+    /** The focused app's menu items (Spotlight), or null while the app menus are off. */
+    menuItems() {
+        return this.part('apps')?.menuItems() ?? Promise.resolve(null);
+    }
+
     get about() {
         return this._about;
     }

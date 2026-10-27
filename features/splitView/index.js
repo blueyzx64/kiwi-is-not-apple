@@ -1,0 +1,335 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Full screen Split View (macOS, on by default; overhaul plan §12 #1). Builds on full screen as
+// its own Space (features/fullscreenSpace): a full-screen window is alone in its Space.
+//
+//   1. Hovering the green button of a full-screen window (the 'green-button-hover' event of
+//      the top-bar controls) shows "Tile Window to Left/Right of Screen". The windows feature's
+//      green menu can offer the same by emitting 'split-view-requested'.
+//   2. The window leaves full screen but stays in its Space (WindowState 'splitView', which
+//      fullscreenSpace honours) and takes that half of the work area.
+//   3. The other half shows thumbnails (live clones) of the other windows; a click moves that
+//      window into the Space, on the other half. Esc or a click on the tiled half cancels: the
+//      window goes back to full screen.
+//   4. The pair ends when one window closes, is minimized, goes full screen, maximizes, or the
+//      green menu's "Exit Full Screen" is chosen: that window goes back to the workspace the
+//      partner came from, and the other one is full screen again, alone in the Space.
+//
+// Disable (Kiwi disables on every screen lock) only clears the flags and the picker: windows
+// keep their place and size, so nothing jumps.
+//
+// Shell API: Meta.Window make_fullscreen / unmake_fullscreen / move_resize_frame /
+// change_workspace, Clutter.Clone of window actors (as the overview does), PopupMenu,
+// Main.pushModal; checked on GNOME 50.
+
+import Clutter from 'gi://Clutter';
+import Meta from 'gi://Meta';
+import Shell from 'gi://Shell';
+import St from 'gi://St';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
+
+import { WindowState } from '../../core/windowState.js';
+import { MENU_CLOSE_ARGS, isMaximized, unmaximizeWindow } from '../../lib/compat.js';
+import { CleanupRegistry } from '../../lib/disposables.js';
+import { Glass } from '../../lib/glass.js';
+import { isCandidate, menuEntries, splitRects, survivorAfter, thumbnailRects } from './model.js';
+
+// macOS shows the menu after the pointer rests on the green button a moment
+const HOVER_MS = 450;
+const FLAG = 'splitView';
+
+const isNormal = w => w.get_window_type() === Meta.WindowType.NORMAL;
+
+export class SplitView {
+    constructor(ctx, cleanup) {
+        this._ctx = ctx;
+        this._cleanup = cleanup;
+        this._ = s => ctx.gettext(s);
+        this._pairs = [];          // {a, b, ws, home, reg}
+        this._picker = null;       // {win, side, ws, reg, overlay, grab}
+        this._menu = null;
+        this._hover = 0;
+    }
+
+    enable() {
+        const { events } = this._ctx;
+        const cleanup = this._cleanup;
+        events.on('green-button-hover', ({ window, actor, hovered }) => this._hovered(window, actor, hovered), cleanup);
+        events.on('split-view-requested', ({ window, side }) => this.tile(window, side), cleanup);
+        cleanup.add(() => {
+            this._closeMenu();
+            this._cancelPicker({ refullscreen: false });
+            for (const pair of [...this._pairs])
+                this._forget(pair);
+            WindowState.clearFlag(FLAG);
+        });
+    }
+
+    disable() {
+        // Everything is in the cleanup registry
+    }
+
+    /** The pair a window is in, or null. */
+    pairOf(win) {
+        return this._pairs.find(p => p.a === win || p.b === win) ?? null;
+    }
+
+    _candidates(except) {
+        return global.display.get_tab_list(Meta.TabList.NORMAL_ALL, null).filter(w => isCandidate({
+            type: isNormal(w) ? 'normal' : 'other',
+            skipTaskbar: w.is_skip_taskbar(),
+            fullscreen: w.is_fullscreen(),
+            inSplit: !!this.pairOf(w),
+            isTiled: w === except,
+        }) && w.get_monitor() === except.get_monitor());
+    }
+
+    // ---- the green button menu -------------------------------------------------------------
+
+    _hovered(win, actor, hovered) {
+        if (this._hover) {
+            this._cleanup.release(this._hover);
+            this._hover = 0;
+        }
+        if (!hovered || !win || this._menu)
+            return;
+        this._hover = this._cleanup.timeout(HOVER_MS, () => {
+            this._hover = 0;
+            if (actor.hover)
+                this.showMenu(win, actor);
+            return false;
+        }, { name: 'split-view-hover' });
+    }
+
+    /** Show the Split View entries for `win` under `actor` (the green button). */
+    showMenu(win, actor) {
+        const entries = menuEntries({
+            fullscreen: win.is_fullscreen(), inSplit: !!this.pairOf(win),
+            candidates: win.is_fullscreen() ? this._candidates(win).length : 0,
+        });
+        if (!entries.length)
+            return false;
+        this._closeMenu();
+        const _ = this._;
+        const reg = new CleanupRegistry();
+        const menu = new PopupMenu.PopupMenu(actor, 0.5, St.Side.TOP);
+        menu.actor.add_style_class_name('kiwi-split-menu');
+        Main.uiGroup.add_child(menu.actor);
+        menu.actor.hide();
+        const manager = new PopupMenu.PopupMenuManager(actor);
+        manager.addMenu(menu);
+        const glass = Glass.attachMenu(menu);
+        reg.add(() => {
+            glass.destroy();
+            menu.destroy();
+        });
+        const labels = {
+            'tile-left': _('Tile Window to Left of Screen'),
+            'tile-right': _('Tile Window to Right of Screen'),
+            swap: _('Swap Windows'),
+            exit: _('Exit Full Screen'),
+        };
+        for (const entry of entries) {
+            menu.addAction(labels[entry], () => {
+                if (entry === 'tile-left' || entry === 'tile-right')
+                    this.tile(win, entry === 'tile-left' ? 'left' : 'right');
+                else if (entry === 'swap')
+                    this.swap(win);
+                else
+                    this.exit(win);
+            });
+        }
+        reg.connect(menu, 'open-state-changed', (_m, open) => {
+            if (!open)
+                this._cleanup.idle(() => this._menu === reg && this._closeMenu(), { name: 'split-view-menu' });
+        });
+        this._menu = reg;
+        this._menuActor = menu;
+        menu.open();
+        return true;
+    }
+
+    _closeMenu() {
+        const reg = this._menu;
+        if (!reg)
+            return;
+        this._menu = null;
+        if (this._menuActor?.isOpen)
+            this._menuActor.close(MENU_CLOSE_ARGS);
+        this._menuActor = null;
+        reg.dispose();
+    }
+
+    // ---- tile and pick -----------------------------------------------------------------------
+
+    /** Tile a full-screen window to one half and show the picker on the other. */
+    tile(win, side) {
+        if (!win?.is_fullscreen() || this.pairOf(win) || this._picker)
+            return false;
+        const candidates = this._candidates(win);
+        if (!candidates.length)
+            return false;
+        const area = win.get_work_area_current_monitor();
+        const rects = splitRects(area, side);
+        const ws = win.get_workspace();
+        WindowState.set(win, FLAG, true);
+        win.unmake_fullscreen();
+        win.move_resize_frame(true, rects.tiled.x, rects.tiled.y, rects.tiled.width, rects.tiled.height);
+        this._showPicker(win, side, ws, rects.other, candidates);
+        return true;
+    }
+
+    _showPicker(win, side, ws, half, candidates) {
+        const _ = this._;
+        const reg = new CleanupRegistry();
+        const overlay = reg.actor(new St.Widget({
+            name: 'kiwi-split-picker', style_class: 'kiwi-split-picker', reactive: true, can_focus: true,
+            layout_manager: new Clutter.FixedLayout(),
+            x: half.x, y: half.y, width: half.width, height: half.height,
+        }));
+        const local = { x: 0, y: 0, width: half.width, height: half.height };
+        const rects = thumbnailRects(candidates.map(w => w.get_frame_rect()), local);
+        candidates.forEach((w, i) => {
+            const r = rects[i];
+            const actor = w.get_compositor_private();
+            const button = new St.Button({
+                style_class: 'kiwi-split-thumb', reactive: true, can_focus: true, track_hover: true,
+                accessible_name: w.get_title() ?? _('Window'),
+                x: r.x - 6, y: r.y - 6, width: r.width + 12, height: r.height + 12,
+            });
+            const box = new St.Widget({ layout_manager: new Clutter.FixedLayout() });
+            if (actor)
+                box.add_child(new Clutter.Clone({ source: actor, x: 6, y: 6, width: r.width, height: r.height }));
+            button.set_child(box);
+            button.connect('clicked', () => this._pick(w));
+            overlay.add_child(button);
+            const label = new St.Label({
+                style_class: 'kiwi-split-thumb-label', text: w.get_title() ?? '',
+                x: r.x, y: r.y + r.height + 10, width: r.width,
+            });
+            label.clutter_text.ellipsize = 3;  // Pango.EllipsizeMode.END
+            overlay.add_child(label);
+        });
+        Main.layoutManager.uiGroup.add_child(overlay);
+        const grab = Main.pushModal(overlay, { actionMode: Shell.ActionMode.POPUP });
+        reg.add(() => Main.popModal(grab));
+        reg.connect(overlay, 'key-press-event', (_a, event) => {
+            if (event.get_key_symbol() !== Clutter.KEY_Escape)
+                return Clutter.EVENT_PROPAGATE;
+            this._cancelPicker({ refullscreen: true });
+            return Clutter.EVENT_STOP;
+        });
+        // A click outside the picker (the tiled half) cancels, as on macOS
+        reg.connect(global.stage, 'captured-event', (_s, event) => {
+            if (event.type() !== Clutter.EventType.BUTTON_PRESS)
+                return Clutter.EVENT_PROPAGATE;
+            const [x, y] = event.get_coords();
+            if (x >= half.x && x < half.x + half.width && y >= half.y && y < half.y + half.height)
+                return Clutter.EVENT_PROPAGATE;
+            this._cancelPicker({ refullscreen: true });
+            return Clutter.EVENT_STOP;
+        });
+        reg.connect(win, 'unmanaged', () => this._cancelPicker({ refullscreen: false }));
+        overlay.grab_key_focus();
+        overlay.opacity = 0;
+        this._ctx.motion.ease(overlay, { opacity: 255 }, { duration: 'short', curve: 'standard' }, reg);
+        this._picker = { win, side, ws, half, reg };
+    }
+
+    _cancelPicker({ refullscreen }) {
+        const picker = this._picker;
+        if (!picker)
+            return;
+        this._picker = null;
+        picker.reg.dispose();
+        if (!refullscreen)
+            return;
+        WindowState.set(picker.win, FLAG, false);
+        picker.win.make_fullscreen();
+    }
+
+    _pick(other) {
+        const picker = this._picker;
+        if (!picker)
+            return;
+        const { win, ws, half } = picker;
+        this._picker = null;
+        picker.reg.dispose();
+        const home = other.get_workspace();
+        WindowState.set(other, FLAG, true);
+        if (other.minimized)
+            other.unminimize();
+        if (isMaximized(other))
+            unmaximizeWindow(other);
+        if (home !== ws)
+            other.change_workspace(ws);
+        other.move_resize_frame(true, half.x, half.y, half.width, half.height);
+        other.activate(global.get_current_time());
+        this._watch({ a: win, b: other, ws, home });
+    }
+
+    _watch(pair) {
+        const reg = new CleanupRegistry();
+        pair.reg = reg;
+        this._pairs.push(pair);
+        for (const w of [pair.a, pair.b]) {
+            reg.connect(w, 'unmanaged', () => this._end(pair, w, { closed: true }));
+            reg.connect(w, 'notify::minimized', () => w.minimized && this._end(pair, w));
+            reg.connect(w, 'notify::fullscreen', () => w.is_fullscreen() && this._end(pair, w, { fullscreen: true }));
+            reg.connect(w, 'notify::maximized-horizontally', () => isMaximized(w) && this._end(pair, w));
+            reg.connect(w, 'workspace-changed', () => w.get_workspace() !== pair.ws && this._end(pair, w));
+        }
+        this._ctx.events.emit('split-view-changed', { windows: [pair.a, pair.b], active: true });
+    }
+
+    /** Stop tracking a pair (flags off), without moving anything. */
+    _forget(pair) {
+        this._pairs = this._pairs.filter(p => p !== pair);
+        pair.reg.dispose();
+        WindowState.set(pair.a, FLAG, false);
+        WindowState.set(pair.b, FLAG, false);
+        this._ctx.events.emit('split-view-changed', { windows: [pair.a, pair.b], active: false });
+    }
+
+    /**
+     * One window leaves the pair: it goes back to where the partner came from (unless it was
+     * closed or made full screen itself), and the other one is full screen again in the Space.
+     */
+    _end(pair, gone, { closed = false, fullscreen = false } = {}) {
+        if (!this._pairs.includes(pair))
+            return;
+        this._forget(pair);
+        const survivor = survivorAfter(pair, gone);
+        const home = pair.home && pair.home !== pair.ws ? pair.home : null;
+        if (fullscreen) {
+            // It took the Space for itself: the partner goes back to where it came from
+            if (home && survivor?.get_compositor_private())
+                survivor.change_workspace(home);
+            return;
+        }
+        if (!closed && home && gone.get_workspace() === pair.ws)
+            gone.change_workspace(home);
+        if (survivor?.get_compositor_private())
+            survivor.make_fullscreen();
+    }
+
+    /** The green menu's "Exit Full Screen" on a window of a pair. */
+    exit(win) {
+        const pair = this.pairOf(win);
+        if (!pair)
+            return;
+        this._end(pair, win);
+        if (pair.home)
+            pair.home.activate_with_focus(win, global.get_current_time());
+    }
+
+    /** Swap the two halves. */
+    swap(win) {
+        const pair = this.pairOf(win);
+        if (!pair)
+            return;
+        const ra = pair.a.get_frame_rect(), rb = pair.b.get_frame_rect();
+        pair.a.move_resize_frame(true, rb.x, rb.y, rb.width, rb.height);
+        pair.b.move_resize_frame(true, ra.x, ra.y, ra.width, ra.height);
+    }
+}

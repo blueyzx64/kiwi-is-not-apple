@@ -80,7 +80,8 @@ prefs.js metadata.json stylesheet.css schemas/ po/`). `make pack-check` verifies
 | `layoutModel.js` | edge claims -> rects and work area | `claim(spec)`, `update(id, fields)`, `release(id)`, `compute(index, monitorRect, {base, primary, strutsApplied})` |
 | `layout.js` | claims the menu bar itself; Mutter's work area as the base; an `actor` claim is chrome (hidden over full screen), with struts while its reserve is `strut` (`update({reserve})` switches live) | `acquire(owner)`, `claim(owner, spec)` -> `{rect, update, release}`, `rect(id, monitor)`, `workArea(monitor)` |
 | `motionModel.js` | durations, curves, springs; animations-off and reduced-motion rules | `DURATIONS`, `CURVES`, `SPRINGS`, `resolve(request, env)`, `splitProps`, `springAt`, `springDuration`, `springKeyframes` |
-| `motion.js` | applies them to actors; cancellable | `start/stop`, `env`, `duration(req)`, `ease(actor, props, req, owner)`, `spring(actor, prop, to, req, owner)` |
+| `motion.js` | applies them to actors; cancellable | `start/stop`, `env`, `duration(req)`, `ease(actor, props, req, owner)`, `spring(actor, prop, to, req, owner)`, `tween(actor, req, onFrame(p), owner)` (a 0..1 progress for meshes and computed layouts) |
+| `desktopActions.js` (+`Model`) | one desktop action (Mission Control, App Exposé, Desktop, Notification Center, Launchpad, lock, display sleep) for hot corners, gestures and the switcher; asks the owner by event or `ctx.features`, stock fallback when nobody listens | `new DesktopActions(ctx)`, `run(action, {source, appId?})`, `allowed(action)`; `DESKTOP_ACTIONS`, `normalizeAction` |
 | `originals.js` | the user's value of GNOME keys Kiwi owns (pure; the Shell side is a Gio.Settings) | `OriginalsStore`, `SettingOwner(store, settings, key, {type, transform/value, onOriginalChanged})` with `sync/reapply/release/original`, `restoreStale(store, openSettings)`; `ListMembersOwner(store, settings, key, members)` takes only some members out of a string list (Dash to Dock from `enabled-extensions`) and adds back just those |
 | `panelLayout.js` (+`Model`) | who sits where in the top bar; hides stock items | `PanelLayout.claim(cleanup, {id, actor, box, anchor})`, `PanelLayout.hide(cleanup, role)` |
 | `windowState.js` | why a window is not in its normal place (`staged`, ...) | `WindowState.set/has/list/watch`, `interceptMinimize`, `setStageActive` |
@@ -92,7 +93,8 @@ Events (`EVENTS` in `core/events.js`): `window-added`, `window-changed`, `window
 `window-focused`, `app-focused`, `workspaces-changed`, `monitors-changed`, `work-area-changed`,
 `motion-changed`, `feature-changed`, `minimize-requested`, `notification-center-requested`
 (the clock), `app-hide-requested` and `window-tile-requested` (app-menu commands for the
-window manager; the menu bar runs a fallback when nobody listens), `recording-started` /
+window manager; the menu bar runs a fallback when nobody listens), `launchpad-requested` (dock tile,
+pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view-changed` (Split View), `recording-started` /
 `recording-stopped` (screenshots; for the notch's recording live activity).
 
 ## 4. lib/
@@ -112,6 +114,8 @@ window manager; the menu bar runs a fallback when nobody listens), `recording-st
 | `quickSettings.js` | `readyQuickSettings()`, `whenQuickSettingsReady(cleanup, fn, name)` (bounded wait) |
 | `keepHidden.js` | keep a Shell actor hidden while a feature runs, give back its wanted visibility |
 | `jobQueue.js` | promise queue (`createJobQueue`) |
+| `launcherEntry.js` (+`Model`) | `com.canonical.Unity.LauncherEntry` badges, progress, urgent (entries go with their sender) |
+| `backgroundApps.js` (+`Model`) | the Background portal's `org.freedesktop.background.Monitor` list; `stop(app)` |
 | `cleanup/` | v3 one-shot cleanup: `index.js` (`runCleanup`, steps, `CLEANUP_ID`), `mozilla.js` (+`mozillaModel.js`), `cleanupModel.js` (gtk.css, environment.d, dock colours), `fileOps.js` (async Gio helpers, `enqueueUserFileJob`) |
 
 ## 5. features/
@@ -123,16 +127,21 @@ window manager; the menu bar runs a fallback when nobody listens), `recording-st
 | `calendar/` | `calendar`, `quick-settings-notifications`, `dnd-button` | date menu on the right as a card; notification list in Quick Settings; Kiwi's Do Not Disturb (beaten by `control-center`) |
 | `controlCenter/` | `control-center` | Quick Settings restyled |
 | `notch/` | `notch` | banners, media, OSD, dashboard |
-| `spotlight/` | `spotlight` | Super tap, providers |
+| `spotlight/` | `spotlight` | Super tap, providers; Tahoe browse views (Super+1..4), "/" filters, Actions, Quick Keys, history, Quick Look, menu items (`queryModel.js`, `actionsModel.js`, `results.js`) |
 | `clipboard/` | `clipboard-history` | history, popover, Quick Paste |
 | `stageManager/` | `stage-manager`, `stage-manager-shortcut` | strip, sets, flights (rebuilt in phase 4) |
-| `showDesktop/` | `show-desktop` | top-bar button, Super+D; delegates to Stage Manager |
+| `showDesktop/` | `show-desktop` | top-bar button, Super+D, click on empty wallpaper (`click-wallpaper-reveals-desktop`: always / stage-manager / never); delegates to Stage Manager |
+| `launchpad/` | `launchpad` | macOS 11–15 Launchpad: full-screen grid (`view.js`), GNOME's app folders and app-picker-layout as data (`store.js`), jiggle mode ⓧ through GNOME Software or the Installer (`uninstall.js`); opened by `launchpad-requested`, Super+A / F4 (takes them from GNOME's toggle-application-view through core/originals) |
 | `roundedCorners/` | `rounded-corners` | shader effect per window |
 | `liquidGlass/` | `liquid-glass` | attaches `lib/glass.js` to the panel, Control Center and calendar menus; the glass prefs |
 | `shellBehaviour/` | `shell-behaviour` | swipes stop at workspaces; no hot corner |
-| `fullscreenSpace/` | `move-window-to-new-workspace` | full screen in its own Space (kept as in 2.x) |
-| `dock/` | `dock` | Kiwi's own dock: favourites, running and recent apps, minimized windows, Downloads stack (`stack.js`), Trash (`trash.js`), menus (`appMenu.js`), Open at Login (`autostart.js`); an edge claim in core/layout; keeps Dash to Dock off (`dashToDock.js`); `iconRect(appId)` / `minimizeTarget(win)` for Genie |
-| `screenshots/` | `screenshots` | Shift+Super+3/4/5 on GNOME's own screenshot UI (`uiDriver.js`, the only file touching `Main.screenshotUI`): the glass toolbar with Options (`toolbar.js`), the Timer (`countdown.js`), the floating thumbnail (`thumbnail.js`), moving GNOME's file to the Save to folder under its macOS name (`files.js`), Other Location via the portal (`folderPicker.js`); emits `recording-started/stopped`. The thumbnail cannot be dragged into apps (the Shell cannot start a drag into Wayland clients) |
+| `fullscreenSpace/` | `move-window-to-new-workspace` | full screen in its own Space (kept as in 2.x); a `splitView`-flagged window stays in its Space when it leaves full screen |
+| `splitView/` | `split-view` | full screen Split View: green-button hover menu, tile a half, pick the partner from thumbnails; WindowState `splitView` |
+| `dock/` | `dock` | Kiwi's own dock: favourites, running and recent apps, minimized windows, Downloads stack (`stack.js`), Trash (`trash.js`), menus (`appMenu.js`), Open at Login (`autostart.js`); an edge claim in core/layout; keeps Dash to Dock off (`dashToDock.js`); `iconRect(appId)` / `minimizeTarget(win)` for Genie; P2: magnification (`magnify.js`), launch/attention bounce, LauncherEntry badges, grey background-app dots, minimized-window thumbnail on the app icon, folder Stacks (`dock-folders`) |
+| `minimizeEffect/` | `minimize-effect` | Genie (`genie.js`, a `Clutter.DeformEffect`) and Scale minimize/restore into the dock; blocks the stock Shell.WM minimize handlers only while it runs and hands GNOME the windows it does not animate; `setTargetProvider(owner, fn)` for Stage Manager |
+| `switcher/` | `app-switcher` | Cmd-Tab panel on Super+Tab (`popup.js`, a SwitcherPopup subclass) and Super+` window cycling; own handlers for `switch-applications`/`switch-group`, the Shell's given back on disable |
+| `gestures/` | `gestures` | touchpad router (`captured-event::touchpad` on the stage): 4-finger down App Exposé, pinch Launchpad, spread Show Desktop; GNOME's swipes held back only when turned off |
+| `hotCorners/` | `hot-corners` | four corners per monitor (PressureBarrier + Meta.Barrier), optional modifier; off while every corner is 'none' |
 | `appearance/` | `appearance`, `popup-menu-styling` | Auto Light/Dark (owns `color-scheme` through core/originals), accent (`accent-color`) and highlight colours (`scheme.js`, `model.js`); accent menus (`index.js`; the GTK app fixes are in `gtk-theme`) |
 
 Shared-resource rules (defined once in `features.js`): `window-controls`/`app-buttons` are
