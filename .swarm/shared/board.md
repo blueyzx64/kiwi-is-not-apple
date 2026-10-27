@@ -226,3 +226,11 @@ No more installer work: no new pieces (Trash-drag uninstall, fly-to-dock, update
   - The toolbar sits above the dock.
   - The Spotlight list height eases (reversals 17→0, stalls 6→0; the typing p95 number isn't comparable because the probes differ, so R4 re-measures).
   - "No Results" empty state, app icons on menu rows, Setup Assistant icons (not rendered in the harness).
+- FX8 → merged:
+  - magnifier invalidate order;
+  - Launchpad lazy pages (open p95 168→~77 ms, stalls 4→1);
+  - folder intent (a slow drag makes a folder; folder open and jiggle verified);
+  - stack prebuild (grid p95 99→29 ms);
+  - icon styles on the system tiles; badges;
+  - MC labels, the new-Space layout, F3 from Launchpad, wallpaper in Space thumbnails.
+  For R4: MC now re-syncs the Spaces bar every frame while the overview animates (check its cost); the magnification sweep still reverses 32 times on x/w; auto-hide's "first frame" is the 500 ms autohideDelay (by design).
