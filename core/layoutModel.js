@@ -111,6 +111,11 @@ export class LayoutModel {
         return this._claims.has(id);
     }
 
+    /** @returns {?object} the stored (frozen) claim */
+    get(id) {
+        return this._claims.get(id) ?? null;
+    }
+
     /** Claims that apply to one monitor, in stacking order per edge. */
     claimsOn(index, primary = 0) {
         return [...this._claims.values()]

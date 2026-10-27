@@ -12,15 +12,17 @@
 //   ctx.events.on('app-focused', ({ appId }) => ..., cleanup);
 //
 // WindowInfo (frozen): {id, appId, title, type, workspace (-1 = on all), monitor, minimized,
-//   fullscreen, maximized, skipTaskbar}. `id` is Meta.Window.get_stable_sequence().
+//   fullscreen, maximized, skipTaskbar, above, parent}. `id` is Meta.Window.get_stable_sequence();
+//   `parent` is the id of the window it is transient for (a dialog's owner), or null.
 
 /** Field names a WindowInfo carries (besides id). */
 export const WINDOW_FIELDS = Object.freeze(['appId', 'title', 'type', 'workspace', 'monitor',
-    'minimized', 'fullscreen', 'maximized', 'skipTaskbar']);
+    'minimized', 'fullscreen', 'maximized', 'skipTaskbar', 'above', 'parent']);
 
 const DEFAULTS = Object.freeze({
     appId: null, title: '', type: 'normal', workspace: 0, monitor: 0,
     minimized: false, fullscreen: false, maximized: false, skipTaskbar: false,
+    above: false, parent: null,
 });
 
 /**
@@ -41,6 +43,49 @@ export function isHelperWindowInfo({ title, appName }) {
     }
     const a = (appName ?? '').trim().toLowerCase();
     return a.startsWith('com.') || a.startsWith('gjs');
+}
+
+/**
+ * Desktop ids to try for a window the Shell's tracker could not match to an installed app
+ * (it then makes a window-backed app). Web apps are the usual case:
+ *   - Chrome/Chromium PWAs: WM_CLASS 'crx_<id>' (Xwayland) or app id 'chrome-<id>-<profile>'
+ *     (Wayland); the browser writes 'chrome-<id>-<profile>.desktop'. `prefix` lists the start
+ *     of an id to look for when the profile is unknown.
+ *   - GNOME Web (Epiphany) web apps: app id 'org.gnome.Epiphany.WebApp_<id>' (older:
+ *     'epiphany-<id>'), desktop file 'org.gnome.Epiphany.WebApp_<id>.desktop' (from the
+ *     DynamicLauncher portal; also the '-' spelling of older versions).
+ *   - Anything else: the class itself, and lower-cased, as '<class>.desktop'.
+ *
+ * @param {?string} wmClass WM_CLASS or the Wayland app id
+ * @returns {{ids: string[], prefix: ?string}}
+ */
+export function appIdCandidates(wmClass) {
+    const cls = (wmClass ?? '').trim();
+    if (!cls)
+        return { ids: [], prefix: null };
+    const ids = [];
+    const add = id => {
+        if (!ids.includes(id))
+            ids.push(id);
+    };
+    let prefix = null;
+    const crx = /^crx_([a-p]{32})$/i.exec(cls);
+    const chrome = /^chrome-([a-p]{32})-(.+)$/i.exec(cls);
+    const web = /^(?:org\.gnome\.Epiphany\.WebApp[_-]|epiphany-)(.+)$/i.exec(cls);
+    if (crx) {
+        add(`chrome-${crx[1].toLowerCase()}-Default.desktop`);
+        prefix = `chrome-${crx[1].toLowerCase()}-`;
+    } else if (chrome) {
+        add(`chrome-${chrome[1].toLowerCase()}-${chrome[2]}.desktop`);
+        prefix = `chrome-${chrome[1].toLowerCase()}-`;
+    } else if (web) {
+        add(`org.gnome.Epiphany.WebApp_${web[1]}.desktop`);
+        add(`org.gnome.Epiphany.WebApp-${web[1]}.desktop`);
+        add(`epiphany-${web[1]}.desktop`);
+    }
+    add(`${cls}.desktop`);
+    add(`${cls.toLowerCase()}.desktop`);
+    return { ids, prefix };
 }
 
 /** True for windows the user switches between (dock dots, app switcher, Stage Manager). */
@@ -70,8 +115,8 @@ export class DesktopModel {
     // ---- windows --------------------------------------------------------------------------
 
     /**
-     * Add a window or update its fields. Unknown fields are ignored; missing ones keep their
-     * value (or the default for a new window).
+     * Add a window or update its fields. Unknown fields are ignored; missing or undefined ones
+     * keep their value (or the default for a new window).
      *
      * @param {number} id
      * @param {object} fields part of WindowInfo
@@ -82,7 +127,7 @@ export class DesktopModel {
         const next = { id };
         const changed = [];
         for (const f of WINDOW_FIELDS) {
-            const v = f in fields ? fields[f] : old ? old[f] : DEFAULTS[f];
+            const v = fields[f] !== undefined ? fields[f] : old ? old[f] : DEFAULTS[f];
             next[f] = v;
             if (!old || old[f] !== v)
                 changed.push(f);
@@ -127,8 +172,8 @@ export class DesktopModel {
      *
      * @param {{workspace?: number, monitor?: number, appId?: string, minimized?: boolean,
      *   userFacing?: boolean}} [filter] workspace matches windows on it and windows on all
-     *   (-1); minimized: false leaves minimized windows out; userFacing (default true) leaves
-     *   out skip-taskbar and non-normal/dialog windows
+     *   (-1); minimized: true returns only minimized windows, false only the others; userFacing
+     *   (default true) leaves out skip-taskbar and non-normal/dialog windows
      * @returns {WindowInfo[]}
      */
     windows(filter = {}) {
@@ -144,7 +189,7 @@ export class DesktopModel {
                 continue;
             if (appId !== undefined && w.appId !== appId)
                 continue;
-            if (minimized === false && w.minimized)
+            if (minimized !== undefined && !!w.minimized !== minimized)
                 continue;
             out.push(w);
         }

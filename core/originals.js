@@ -19,10 +19,32 @@
 //   owner.reapply();     // Kiwi's inputs changed: write transform(original) again
 //   owner.release();     // the user's value back
 //
+// A string list shared with the Shell and the user (org.gnome.shell enabled-extensions) is not
+// owned whole: a ListMembersOwner takes only some members out (Dash to Dock while Kiwi's dock
+// runs) and puts back just those, so every other change made meanwhile is kept. Its store entry
+// has mode 'members' and holds the members that were present; restoreStale() adds them back.
+//
+// Damage control (each case has a test in tests/originals.test.js):
+//   - the owner also keeps the original in memory: if the store is wiped while Kiwi owns the key
+//     (gsettings reset, dconf reset), release() still gives the user's value back and the
+//     entry is written again at once;
+//   - each entry stores the value Kiwi forced; restoreStale() writes the original back only
+//     while the live value still is that one, so a change the user made after a crash stands;
+//   - an entry records whether the user had set the key at all: a default goes back with
+//     reset(), not as an explicit value;
+//   - two owners of one key share one entry: only the last release gives the value back;
+//   - a store that does not parse is kept in `saved-originals-backup`, never silently dropped.
+//
 // No gi imports: settings objects are passed in (Gio.Settings in the Shell, fakes in tests).
 
-/** Kiwi key holding the store: JSON {"<schema>::<key>": {"type": "s", "value": ...}}. */
+/**
+ * Kiwi key holding the store: JSON {"<schema>::<key>": {"type": "s", "value": ..., "forced": ...,
+ * "user": true}}. `forced` is what Kiwi wrote, `user` false when the key was never set by the
+ * user; both are absent in entries of older sessions (then restored unconditionally).
+ */
 export const STORE_KEY = 'saved-originals';
+/** Kiwi key keeping the text of a store that could not be parsed. */
+export const STORE_BACKUP_KEY = 'saved-originals-backup';
 
 const GETTERS = {
     b: (gs, k) => gs.get_boolean(k),
@@ -63,14 +85,31 @@ export class OriginalsStore {
     /** @param {{get_string: Function, set_string: Function}} kiwiSettings */
     constructor(kiwiSettings) {
         this._gs = kiwiSettings;
+        this._holders = new Map();   // id -> number of owners holding it
+        /**
+         * While true, owners leave their keys and entries as they are when they release (the
+         * Shell disables every extension on a screen lock and enables them at unlock: nothing
+         * should flip meanwhile). The next take finds the entry and goes on from it.
+         */
+        this.keepStored = false;
     }
 
     _read() {
+        const raw = this._gs.get_string(STORE_KEY);
         try {
-            const data = JSON.parse(this._gs.get_string(STORE_KEY) || '{}');
-            return data && typeof data === 'object' && !Array.isArray(data) ? data : {};
+            const data = JSON.parse(raw || '{}');
+            if (data && typeof data === 'object' && !Array.isArray(data))
+                return data;
+            throw new Error('not an object');
         } catch (e) {
-            console.error('[Kiwi] saved originals unreadable, starting empty:', e);
+            // Keep what was there before the next write replaces it
+            console.error('[Kiwi] saved originals unreadable, kept in the backup key:', e);
+            try {
+                this._gs.set_string(STORE_BACKUP_KEY, raw);
+            } catch (e2) {
+                console.error('[Kiwi] could not back up the saved originals:', e2);
+            }
+            this._gs.set_string(STORE_KEY, '');
             return {};
         }
     }
@@ -86,19 +125,35 @@ export class OriginalsStore {
         return Object.keys(this._read());
     }
 
-    /** @returns {?{type: string, value: *}} */
+    /** @returns {?{type: string, value: *, forced?: *, user?: boolean, mode?: string}} */
     get(id) {
         return this._read()[id] ?? null;
     }
 
-    /** Save a value, replacing any stored one. */
-    set(id, type, value) {
+    /**
+     * Save a value, replacing any stored one.
+     *
+     * @param {string} id
+     * @param {string} type GVariant type
+     * @param {*} value
+     * @param {{mode?: string, forced?: *, user?: boolean}} [extra] mode 'members' for a
+     *   ListMembersOwner entry (value: the members to add back); forced: the value Kiwi
+     *   wrote; user: false when the user had never set the key
+     */
+    set(id, type, value, extra = {}) {
         if (!GETTERS[type])
             throw new Error(`originals: unsupported type '${type}'`);
         const data = this._read();
-        if (same(data[id], { type, value }))
+        const entry = { type, value };
+        if (extra.mode)
+            entry.mode = extra.mode;
+        if (extra.forced !== undefined)
+            entry.forced = extra.forced;
+        if (extra.user === false)
+            entry.user = false;
+        if (same(data[id], entry))
             return;
-        data[id] = { type, value };
+        data[id] = entry;
         this._write(data);
     }
 
@@ -109,28 +164,103 @@ export class OriginalsStore {
         delete data[id];
         this._write(data);
     }
+
+    /** An owner takes `id`. @returns {number} owners now holding it */
+    hold(id) {
+        const n = (this._holders.get(id) ?? 0) + 1;
+        this._holders.set(id, n);
+        return n;
+    }
+
+    /** An owner lets go of `id`. @returns {number} owners still holding it */
+    unhold(id) {
+        const n = Math.max(0, (this._holders.get(id) ?? 0) - 1);
+        if (n)
+            this._holders.set(id, n);
+        else
+            this._holders.delete(id);
+        return n;
+    }
+
+    /** True while an owner holds `id`. */
+    isHeld(id) {
+        return this._holders.has(id);
+    }
+
+    /**
+     * Call `fn` whenever the stored text changes (also from outside: a settings reset).
+     *
+     * @returns {() => void} stops watching
+     */
+    watch(fn) {
+        const handler = this._gs.connect(`changed::${STORE_KEY}`, fn);
+        return () => this._gs.disconnect(handler);
+    }
+}
+
+/** `list` with every one of `members` it lacks appended (order of `list` kept). */
+export function withMembers(list, members) {
+    const out = [...list];
+    for (const m of members ?? []) {
+        if (!out.includes(m))
+            out.push(m);
+    }
+    return out;
+}
+
+/** True when the user had set `key` (a default is not the user's value). */
+function userSet(gs, key) {
+    return typeof gs.get_user_value === 'function' ? gs.get_user_value(key) !== null : true;
+}
+
+/** Write `value` back; a key the user never set returns to its default. */
+function putBack(gs, type, key, value, user) {
+    if (user === false && typeof gs.reset === 'function')
+        gs.reset(key);
+    else if (!same(GETTERS[type](gs, key), value))
+        SETTERS[type](gs, key, value);
 }
 
 /**
- * Write back every stored original and empty the store. Used once at startup: anything still
- * stored was not given back by the last session.
+ * Write back the stored originals and empty the store. Used at startup: anything still stored
+ * was not given back by the last session.
+ *
+ * A whole value is written back only while the live value still is the one Kiwi forced: if the
+ * user changed the key after the crash, their choice stands (entries of older sessions without
+ * a forced value are written back as before).
  *
  * @param {OriginalsStore} store
  * @param {(schemaId: string) => ?object} openSettings a Gio.Settings for a schema, or null
  *   when the schema is not installed (the entry is then dropped)
+ * @param {{members?: 'restore'|'leave'|'only'}} [opts] what to do with the 'members' entries
+ *   (a ListMembersOwner's): 'restore' (default) adds them back, 'leave' keeps them in the
+ *   store for the owner that will take them again (extension.js, first start), 'only' handles
+ *   just those entries no owner holds, nothing else
  * @returns {string[]} ids written back
  */
-export function restoreStale(store, openSettings) {
+export function restoreStale(store, openSettings, { members = 'restore' } = {}) {
     const restored = [];
     for (const id of store.ids()) {
         const entry = store.get(id);
+        const isMembers = entry?.mode === 'members';
+        if (isMembers ? members === 'leave' : members === 'only')
+            continue;
+        if (isMembers && store.isHeld(id))
+            continue;
         const parsed = parseOriginalId(id);
         try {
             const gs = parsed ? openSettings(parsed.schemaId) : null;
             if (gs && entry && SETTERS[entry.type]) {
-                if (!same(GETTERS[entry.type](gs, parsed.key), entry.value))
-                    SETTERS[entry.type](gs, parsed.key, entry.value);
-                restored.push(id);
+                const live = GETTERS[entry.type](gs, parsed.key);
+                if (isMembers) {
+                    const next = withMembers(live, entry.value);
+                    if (!same(live, next))
+                        SETTERS[entry.type](gs, parsed.key, next);
+                    restored.push(id);
+                } else if (entry.forced === undefined || same(live, entry.forced)) {
+                    putBack(gs, entry.type, parsed.key, entry.value, entry.user);
+                    restored.push(id);
+                }
             }
         } catch (e) {
             console.error(`[Kiwi] could not restore ${id}:`, e);
@@ -151,8 +281,11 @@ export class SettingOwner {
      *   (default: a fixed opts.value)
      * @param {*} [opts.value] the value Kiwi sets when there is no transform
      * @param {() => void} [opts.onOriginalChanged] the user changed the key while Kiwi owned it
+     * @param {boolean} [opts.yieldToUser] on such a change, let the user's value stand and stop
+     *   owning (Auto Light/Dark: picking a style yourself turns Auto off), instead of storing it
+     *   as the new original and writing Kiwi's value again
      */
-    constructor(store, settings, key, { type, transform, value, onOriginalChanged = () => {} }) {
+    constructor(store, settings, key, { type, transform, value, onOriginalChanged = () => {}, yieldToUser = false }) {
         if (!GETTERS[type])
             throw new Error(`SettingOwner: unsupported type '${type}'`);
         this._store = store;
@@ -161,10 +294,13 @@ export class SettingOwner {
         this._type = type;
         this._transform = transform ?? (() => value);
         this._onOriginalChanged = onOriginalChanged;
+        this._yield = yieldToUser;
         this._id = originalId(settings.schema_id, key);
         this._owning = false;
         this._forced = undefined;
+        this._orig = null;          // {value, user}: the user's value, also kept here
         this._changedId = 0;
+        this._unwatch = null;
     }
 
     get owning() {
@@ -180,14 +316,31 @@ export class SettingOwner {
             SETTERS[this._type](this._gs, this._key, v);
     }
 
-    /** The user's own value: the stored one while Kiwi owns the key, else the live one. */
+    /** The user's own value: the one saved while Kiwi owns the key, else the live one. */
     get original() {
-        if (this._owning) {
-            const saved = this._store.get(this._id);
-            if (saved)
-                return saved.value;
+        return this._owning ? this._orig.value : this._live();
+    }
+
+    _disconnect() {
+        if (this._changedId) {
+            this._gs.disconnect(this._changedId);
+            this._changedId = 0;
         }
-        return this._live();
+        this._unwatch?.();
+        this._unwatch = null;
+    }
+
+    // Save the original with the value Kiwi forces for it, then write that value
+    _persist() {
+        this._forced = this._transform(this._orig.value);
+        this._store.set(this._id, this._type, this._orig.value, { forced: this._forced, user: this._orig.user });
+        this._set(this._forced);
+    }
+
+    // The store was emptied or damaged from outside while Kiwi owns the key: write it again
+    _restoreEntry() {
+        if (this._owning && !this._store.get(this._id))
+            this._store.set(this._id, this._type, this._orig.value, { forced: this._forced, user: this._orig.user });
     }
 
     /** Take (true) or give back (false) the key. */
@@ -199,52 +352,185 @@ export class SettingOwner {
     }
 
     _take() {
-        // An entry already stored (another owner instance of a crashed session) is the
-        // user's real value: never overwrite it with Kiwi's.
-        let saved = this._store.get(this._id);
-        if (!saved) {
-            this._store.set(this._id, this._type, this._live());
-            saved = this._store.get(this._id);
-        }
+        // An entry already stored (another owner instance of a crashed session, or another
+        // owner of this key now) is the user's real value: never overwrite it with Kiwi's.
+        const saved = this._store.get(this._id);
+        this._orig = saved ? { value: saved.value, user: saved.user !== false }
+            : { value: this._live(), user: userSet(this._gs, this._key) };
         this._owning = true;
-        this._forced = this._transform(saved.value);
-        this._set(this._forced);
+        this._store.hold(this._id);
+        this._persist();
         this._changedId = this._gs.connect(`changed::${this._key}`, () => this._onChanged());
+        this._unwatch = this._store.watch(() => this._restoreEntry());
     }
 
     /** The transform's inputs changed (e.g. a Kiwi setting): write Kiwi's value again. */
     reapply() {
-        if (!this._owning)
-            return;
-        this._forced = this._transform(this.original);
-        this._set(this._forced);
+        if (this._owning)
+            this._persist();
     }
 
     // Someone else (Tweaks, gsettings) wrote the key while Kiwi owns it: that is the user's
-    // new choice. Store it as the original and keep Kiwi's value applied.
+    // new choice. Store it as the original and keep Kiwi's value applied, or (yieldToUser)
+    // keep theirs and let go.
     _onChanged() {
         const live = this._live();
         if (!this._owning || same(live, this._forced))
             return;
-        this._store.set(this._id, this._type, live);
-        this._forced = this._transform(live);
-        this._set(this._forced);
+        if (this._yield) {
+            this._disconnect();
+            this._owning = false;
+            this._forced = undefined;
+            if (!this._store.unhold(this._id))
+                this._store.forget(this._id);
+            this._onOriginalChanged();
+            return;
+        }
+        this._orig = { value: live, user: userSet(this._gs, this._key) };
+        this._persist();
         this._onOriginalChanged();
     }
 
-    /** Put the user's value back exactly and forget it. Safe to call when not owning. */
+    /**
+     * Put the user's value back exactly and forget it. Safe to call when not owning. With two
+     * owners of one key, only the last one to let go gives the value back.
+     */
     release() {
-        if (this._changedId) {
-            this._gs.disconnect(this._changedId);
-            this._changedId = 0;
-        }
+        this._disconnect();
         if (!this._owning)
             return;
         this._owning = false;
         this._forced = undefined;
-        const saved = this._store.get(this._id);
-        if (saved)
-            this._set(saved.value);
+        if (this._store.unhold(this._id) || this._store.keepStored)
+            return;
+        putBack(this._gs, this._type, this._key, this._orig.value, this._orig.user);
+        this._store.forget(this._id);
+    }
+}
+
+/**
+ * Keeps some members out of a string-list key while Kiwi runs, and puts back only those.
+ *
+ *   const owner = new ListMembersOwner(ctx.originals, shellSettings, 'enabled-extensions',
+ *       ['dash-to-dock@micxgx.gmail.com']);
+ *   owner.sync(true);    // the members present are saved, then removed from the list
+ *   owner.release();     // the saved members are added back to the list as it is now
+ *
+ * A member the user adds back while Kiwi holds the key is saved too and taken out again: it
+ * returns with the rest on release. Entries other than the members are never touched.
+ *
+ * Taking the key while the store already holds members (a session that ended without
+ * disable(), as every logout does) adopts them: the list is not touched and the entry stays.
+ */
+export class ListMembersOwner {
+    /**
+     * @param {OriginalsStore} store
+     * @param {object} settings the Gio.Settings that has `key` (it needs schema_id)
+     * @param {string} key a string-list ('as') key
+     * @param {string[]} members
+     * @param {{defer?: (fn: Function) => void}} [opts] defer: runs the strip that follows a
+     *   change of the key (default: at once). A caller whose list is also read by an asynchronous
+     *   consumer (the Shell enabling extensions) schedules it for after that consumer is done.
+     */
+    constructor(store, settings, key, members, { defer = fn => fn() } = {}) {
+        this._store = store;
+        this._gs = settings;
+        this._key = key;
+        this._members = [...members];
+        this._defer = defer;
+        this._stripQueued = false;
+        this._id = originalId(settings.schema_id, key);
+        this._owning = false;
+        this._mem = [];             // the members taken out, also kept here
+        this._changedId = 0;
+        this._unwatch = null;
+    }
+
+    get owning() {
+        return this._owning;
+    }
+
+    /** @returns {string[]} the members Kiwi took out and will add back */
+    get held() {
+        return withMembers(this._store.get(this._id)?.value ?? [], this._mem);
+    }
+
+    _live() {
+        return this._gs.get_strv(this._key);
+    }
+
+    /** Take (true) or give back (false). */
+    sync(want) {
+        if (want && !this._owning)
+            this._take();
+        else if (!want && this._owning)
+            this.release();
+    }
+
+    _take() {
+        this._owning = true;
+        this._mem = this.held;
+        this._store.hold(this._id);
+        this._strip();
+        this._changedId = this._gs.connect(`changed::${this._key}`, () => this._stripLater());
+        this._unwatch = this._store.watch(() => this._saveHeld());
+    }
+
+    _saveHeld() {
+        if (this._owning && this._mem.length && !this._store.get(this._id))
+            this._store.set(this._id, 'as', this._mem, { mode: 'members' });
+    }
+
+    // A change of the key: take the members out again once `defer` allows (one strip per burst)
+    _stripLater() {
+        if (this._stripQueued)
+            return;
+        this._stripQueued = true;
+        this._defer(() => {
+            this._stripQueued = false;
+            if (this._owning)
+                this._strip();
+        });
+    }
+
+    // Save the members now in the list (added to any already stored), then take them out.
+    // Runs on take and whenever the key changes; the write re-enters it with nothing to do.
+    _strip() {
+        const live = this._live();
+        const present = this._members.filter(m => live.includes(m));
+        if (!present.length)
+            return;
+        this._mem = withMembers(this.held, present);
+        this._store.set(this._id, 'as', this._mem, { mode: 'members' });
+        this._gs.set_strv(this._key, live.filter(m => !this._members.includes(m)));
+    }
+
+    /**
+     * Add the saved members back to the list and forget them.
+     *
+     * @param {{keepStored?: boolean}} [opts] keepStored: leave the list and the store as they
+     *   are (Kiwi is only being restarted, e.g. by the Shell re-basing its extension order); the
+     *   next take, or restoreStale() at the next start, finds the entry
+     */
+    release({ keepStored = false } = {}) {
+        if (this._changedId) {
+            this._gs.disconnect(this._changedId);
+            this._changedId = 0;
+        }
+        this._unwatch?.();
+        this._unwatch = null;
+        if (!this._owning)
+            return;
+        this._owning = false;
+        const remaining = this._store.unhold(this._id);
+        if (keepStored || remaining || this._store.keepStored)
+            return;
+        const held = this.held;
+        this._mem = [];
+        const live = this._live();
+        const next = withMembers(live, held);
+        if (!same(live, next))
+            this._gs.set_strv(this._key, next);
         this._store.forget(this._id);
     }
 }

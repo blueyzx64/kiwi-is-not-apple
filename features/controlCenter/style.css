@@ -482,3 +482,344 @@
     -barlevel-background-color: rgba(0, 0, 0, 0.12);
     -barlevel-active-background-color: #ffffff;
 }
+
+/* ---- glass (.kiwi-cc-glass while Liquid Glass styles the menus) ----
+   The panel itself is Kiwi glass (lib/glass.js on the menu box). Modules are lighter glass
+   platters on it, with the same 1px top rim as every glass surface; the classes lib/glass.js
+   puts on the box (.kiwi-glass-borders, .kiwi-glass-contrast) outline them too. */
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .quick-toggle,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .quick-toggle:checked,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .quick-toggle-has-menu,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .quick-slider,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .kiwi-cc-caption,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .kiwi-cc-module,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .kiwi-cc-now-playing {
+    background-color: rgba(255, 255, 255, 0.09);
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.07);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-toggle,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-toggle:checked,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-toggle-has-menu,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-slider,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .kiwi-cc-caption,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .kiwi-cc-module,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .kiwi-cc-now-playing {
+    background-color: rgba(0, 0, 0, 0.05);
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.7);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .quick-toggle:hover,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .quick-toggle:checked:hover {
+    background-color: rgba(255, 255, 255, 0.14);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .quick-toggle:active,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .quick-toggle:checked:active {
+    background-color: rgba(255, 255, 255, 0.19);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-toggle:hover,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-toggle:checked:hover {
+    background-color: rgba(0, 0, 0, 0.09);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-toggle:active,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-toggle:checked:active {
+    background-color: rgba(0, 0, 0, 0.13);
+}
+
+/* Inside a menu toggle the outer box is the platter: its halves stay flat */
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .quick-toggle-has-menu .quick-toggle,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .quick-toggle-has-menu .quick-toggle:checked,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .quick-toggle-has-menu .quick-toggle-menu-button {
+    background-color: transparent;
+    box-shadow: none;
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .quick-toggle-has-menu .quick-toggle:hover,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .quick-toggle-has-menu .quick-toggle-menu-button:hover {
+    background-color: rgba(255, 255, 255, 0.07);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-toggle-has-menu .quick-toggle:hover,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-toggle-has-menu .quick-toggle-menu-button:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Increase Contrast, light: the white slider fill would vanish on the white panel */
+.quick-settings.kiwi-cc-calm.kiwi-cc-light.kiwi-glass-contrast .quick-slider .slider {
+    -barlevel-background-color: rgba(0, 0, 0, 0.2);
+    -barlevel-active-background-color: rgba(0, 0, 0, 0.7);
+}
+
+/* Show Borders and Increase Contrast: every platter outlined, joined modules keep one line */
+.quick-settings.kiwi-cc-calm.kiwi-glass-borders .quick-toggle,
+.quick-settings.kiwi-cc-calm.kiwi-glass-borders .quick-toggle-has-menu,
+.quick-settings.kiwi-cc-calm.kiwi-glass-borders .quick-slider,
+.quick-settings.kiwi-cc-calm.kiwi-glass-borders .kiwi-cc-caption,
+.quick-settings.kiwi-cc-calm.kiwi-glass-borders .kiwi-cc-module,
+.quick-settings.kiwi-cc-calm.kiwi-glass-borders .kiwi-cc-now-playing {
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-glass-contrast .quick-toggle,
+.quick-settings.kiwi-cc-calm.kiwi-glass-contrast .quick-toggle-has-menu,
+.quick-settings.kiwi-cc-calm.kiwi-glass-contrast .quick-slider,
+.quick-settings.kiwi-cc-calm.kiwi-glass-contrast .kiwi-cc-caption,
+.quick-settings.kiwi-cc-calm.kiwi-glass-contrast .kiwi-cc-module,
+.quick-settings.kiwi-cc-calm.kiwi-glass-contrast .kiwi-cc-now-playing {
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: none;
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light.kiwi-glass-borders .quick-toggle,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light.kiwi-glass-borders .quick-toggle-has-menu,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light.kiwi-glass-borders .quick-slider,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light.kiwi-glass-borders .kiwi-cc-caption,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light.kiwi-glass-borders .kiwi-cc-module,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light.kiwi-glass-borders .kiwi-cc-now-playing {
+    border-color: rgba(0, 0, 0, 0.3);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light.kiwi-glass-contrast .quick-toggle,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light.kiwi-glass-contrast .quick-toggle-has-menu,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light.kiwi-glass-contrast .quick-slider,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light.kiwi-glass-contrast .kiwi-cc-caption,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light.kiwi-glass-contrast .kiwi-cc-module,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light.kiwi-glass-contrast .kiwi-cc-now-playing {
+    border-color: rgba(0, 0, 0, 0.6);
+}
+
+/* Inside a menu toggle only the outer box is outlined */
+.quick-settings.kiwi-cc-calm.kiwi-glass-borders .quick-toggle-has-menu .quick-toggle,
+.quick-settings.kiwi-cc-calm.kiwi-glass-contrast .quick-toggle-has-menu .quick-toggle {
+    border-width: 0;
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-glass-borders .kiwi-cc-item.kiwi-cc-join-next,
+.quick-settings.kiwi-cc-calm.kiwi-glass-contrast .kiwi-cc-item.kiwi-cc-join-next {
+    border-bottom-width: 0;
+}
+
+/* Light glass: off glyphs and the slider track need more weight over the pale panel */
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-toggle .quick-toggle-icon,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .kiwi-cc-kiwi-tile {
+    color: #1d1d1f;
+    background-color: rgba(0, 0, 0, 0.11);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-toggle:checked .quick-toggle-icon,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .kiwi-cc-kiwi-tile:checked {
+    color: -st-accent-fg-color;
+    background-color: -st-accent-color;
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .kiwi-cc-np-button,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-settings-system-item .icon-button,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-settings-system-item .power-item,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-slider .icon-button {
+    color: rgba(0, 0, 0, 0.85);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-slider .slider {
+    -barlevel-background-color: rgba(0, 0, 0, 0.2);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light.kiwi-glass-contrast .quick-slider .slider {
+    -barlevel-background-color: rgba(0, 0, 0, 0.2);
+    -barlevel-active-background-color: rgba(0, 0, 0, 0.7);
+}
+
+/* ---- Edit Controls (editor.js) and Kiwi's own controls ---- */
+.quick-settings.kiwi-control-center .kiwi-cc-edit-controls {
+    margin-top: 8px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 9.5pt;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.78);
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-edit-controls:hover,
+.quick-settings.kiwi-control-center .kiwi-cc-edit-controls:focus {
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-editor {
+    width: 306px;
+    spacing: 10px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-editor-head {
+    spacing: 6px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-editor-title {
+    font-size: 11pt;
+    font-weight: 700;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-editor-text-button {
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 9.5pt;
+    font-weight: 600;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-editor-done {
+    color: #ffffff;
+    background-color: -st-accent-color;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-editor-text-button:hover {
+    background-color: rgba(255, 255, 255, 0.18);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-editor-done:hover {
+    background-color: st-lighten(-st-accent-color, 6%);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-edit-tile {
+    min-height: 58px;
+    padding: 4px;
+    border-radius: 14px;
+    background-color: rgba(255, 255, 255, 0.08);
+    border: 1px dashed rgba(255, 255, 255, 0.22);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-edit-body {
+    spacing: 6px;
+    padding: 2px 0;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-edit-label {
+    font-size: 9pt;
+    font-weight: 600;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-edit-button {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border-radius: 999px;
+    color: rgba(255, 255, 255, 0.85);
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-edit-button:hover,
+.quick-settings.kiwi-control-center .kiwi-cc-edit-button:focus {
+    background-color: rgba(255, 255, 255, 0.24);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-edit-button:checked {
+    color: #ffffff;
+    background-color: -st-accent-color;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-edit-button:insensitive {
+    color: rgba(255, 255, 255, 0.3);
+    background-color: transparent;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-edit-empty {
+    padding: 8px;
+    font-size: 9pt;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-editor-search {
+    padding: 4px 8px;
+    border-radius: 10px;
+    font-size: 9.5pt;
+    background-color: rgba(255, 255, 255, 0.08);
+    border: none;
+    box-shadow: none;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-editor-preview-scroll {
+    max-height: 290px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-gallery-scroll {
+    max-height: 200px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-gallery {
+    spacing: 8px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-gallery-title {
+    padding: 0 4px 2px 4px;
+    font-size: 8.5pt;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-gallery-item {
+    padding: 5px 8px;
+    border-radius: 10px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-gallery-item > StBoxLayout {
+    spacing: 8px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-gallery-item:hover,
+.quick-settings.kiwi-control-center .kiwi-cc-gallery-item:focus {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-gallery-label {
+    font-size: 9.5pt;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-gallery-add {
+    color: #30d158;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-gallery-added {
+    color: rgba(255, 255, 255, 0.45);
+}
+
+/* light style */
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-edit-controls,
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-edit-tile,
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-editor-search,
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-editor-text-button {
+    color: rgba(0, 0, 0, 0.8);
+    background-color: rgba(0, 0, 0, 0.06);
+    border-color: rgba(0, 0, 0, 0.2);
+}
+
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-editor-done {
+    color: #ffffff;
+    background-color: -st-accent-color;
+}
+
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-edit-button {
+    color: rgba(0, 0, 0, 0.75);
+    background-color: rgba(0, 0, 0, 0.08);
+}
+
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-edit-button:checked {
+    color: #ffffff;
+    background-color: -st-accent-color;
+}
+
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-gallery-title,
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-edit-empty,
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-gallery-added {
+    color: rgba(0, 0, 0, 0.5);
+}
+
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-gallery-item:hover,
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-gallery-item:focus {
+    background-color: rgba(0, 0, 0, 0.06);
+}
+
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-gallery-add {
+    color: #28a745;
+}

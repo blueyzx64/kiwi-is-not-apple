@@ -192,6 +192,24 @@ export function planMaximize({ fullscreen, maximized, filled, resizable }) {
     return resizable ? 'maximize' : 'center';
 }
 
+/** What a click on the green button can do (windows-green-click). */
+export const GREEN_CLICK_MODES = ['fullscreen', 'zoom'];
+
+/**
+ * What a click on the green button does. macOS: a click enters full screen and Option-click
+ * zooms; with the 'zoom' setting it is the other way round. A full-screen window leaves full
+ * screen either way.
+ *
+ * @param {{mode: string, alt: boolean, fullscreen: boolean}} s
+ * @returns {'unfullscreen'|'fullscreen'|'zoom'}
+ */
+export function planGreenClick({ mode, alt, fullscreen }) {
+    if (fullscreen)
+        return 'unfullscreen';
+    const zoom = (mode === 'zoom') !== !!alt;
+    return zoom ? 'zoom' : 'fullscreen';
+}
+
 /** Rect of the given size centred in `area` (all {x, y, width, height}), kept inside it. */
 export function centerIn(area, width, height) {
     const w = Math.min(width, area.width);

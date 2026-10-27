@@ -221,7 +221,7 @@ Status words: **have** means Kiwi ships it today, **partial** means some of it o
   - Screencasts record no audio in GNOME's built-in recorder (an open GNOME issue). Kiwi could pipe PipeWire audio only by replacing the recorder (L).
   - Super+Shift+number may clash with workspace or app shortcuts, so check conflicts with `keybindingsModel.js`.
 - **Linux equivalents today:** GNOME Screenshot UI, Kooha (recorder with audio), GPU Screen Recorder, OBS, Gradia, Satty, Flameshot (works on GNOME Wayland via the portal, with a prompt).
-- **Kiwi status:** none.
+- **Kiwi status:** built in P2 (`features/screenshots`): ⇧Super-3/4/5 on `Main.screenshotUI`, Space toggles window picking in ⇧Super-4, a glass toolbar with Options (Save to, Timer, thumbnail, Remember Last Selection, pointer), and `recording-started/stopped` events for the notch.
 - **Recommendation:** **Port (P2)**, effort **M**. macOS shortcuts plus Options on top of GNOME's own UI are a high-visibility, low-risk win.
 
 ### Floating screenshot thumbnail and instant Markup
@@ -241,7 +241,7 @@ Status words: **have** means Kiwi ships it today, **partial** means some of it o
   - **Suppress** the stock "Screenshot captured" notification while the thumbnail is up: filter via the notch / message tray source, matching on `Main.screenshotUI` source title.
 - **Blockers / risks:** **dragging from a Shell actor into a Wayland client is not supported**, so drag-to-Slack can't be copied; this is the main gap. The stock notification filtering touches private message-tray code.
 - **Linux equivalents today:** GNOME's notification with an image preview (click opens the file), Flameshot's pin and upload, Gradia.
-- **Kiwi status:** none.
+- **Kiwi status:** built in P2: the thumbnail slides in bottom-right, saves after 5 s (hover pauses), swipe right saves, click opens Loupe, right-click has Save to / Show in Files / Delete / Close. **Dragging it into an app is not possible** (the Shell cannot start a drag into a Wayland client).
 - **Recommendation:** **Port (P2)**, effort **M**. Very macOS and visible; the notch can host it. Accept no drag-out.
 
 ### Dock: recent applications

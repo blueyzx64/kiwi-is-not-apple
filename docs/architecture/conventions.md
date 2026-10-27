@@ -113,6 +113,17 @@ Rules:
 
 - Every `St.Button` has an `accessible_name` (or a text `label`); `tests/architecture.test.js`
   checks it. Icon-only toggles also need a tooltip or caption where the design allows.
+- Every `St.Entry` has an `accessible_name` (a `hint_text` is not a name). Two-state buttons use
+  `toggle_mode`/`checked` and the TOGGLE_BUTTON role, not a style class alone.
+- Shared helpers are in `lib/a11y.js`: `name`, `control`, `toggle`, `dialog`, `setEnabled`,
+  `focusGroup` (Ctrl+Alt+Tab entry for chrome such as the dock, notch and Stage Manager strip),
+  `keyNavGroup` (Tab and arrow keys inside a popup) and `describeSelection` (the highlighted
+  result of a list whose focus stays in a search field).
+- A `ModalSurface` always passes `accessibleName`; it gets the DIALOG role, a key-navigation
+  group and Esc to close. A popup that is not a modal handles Esc itself, on its root.
+- A control that is hidden until hover (an auto-hiding dock, the Stage Manager strip) also
+  reveals on keyboard focus inside it, and a disabled control is neither reactive nor focusable.
+- Focus rings: any new focusable class gets a `:focus` rule (`styles/base.css` has the shared one).
 - Animations go through `ctx.motion`, which applies the rules of `core/motionModel.js`:
   animations off -> no animation; reduced motion (`org.gnome.desktop.a11y.interface
   reduced-motion` on GNOME 50) -> no movement, scaling or springs, only a short crossfade.

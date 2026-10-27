@@ -1,18 +1,21 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Menu Bar: what the top bar holds. The full macOS menu bar (logo menu, app name and menus)
-// arrives in phase 1 (docs/architecture/overhaul-plan.md §5.1); its options go here.
+// Menu Bar: the macOS menu bar (features/menuBar/prefs.js), what else the top bar holds, and
+// where volume and brightness show (features/osd/prefs.js).
 
 import Adw from 'gi://Adw';
 import Gio from 'gi://Gio';
 
-import { comboRow, comingSoonGroup, switchRow, watchKey } from '../widgets.js';
+import { addFeatureGroups, comboRow, switchRow, watchKey } from '../widgets.js';
+import * as menuBarPrefs from '../../features/menuBar/prefs.js';
+import * as osdPrefs from '../../features/osd/prefs.js';
+import * as menuBarItemsPrefs from '../../features/menuBarItems/prefs.js';
 
 export const PAGE = { id: 'menu-bar', icon: 'focus-top-bar-symbolic' };
 
-export function build({ settings, _ }) {
+export function build(args) {
+    const { settings, _ } = args;
     const page = new Adw.PreferencesPage({ title: _('Menu Bar'), icon_name: PAGE.icon });
-    page.add(comingSoonGroup(_('The macOS menu bar is on its way'),
-        _('The logo menu, the app name and the app menus arrive in a coming version.')));
+    addFeatureGroups(page, menuBarPrefs, args);
 
     const bar = new Adw.PreferencesGroup({ title: _('Top bar') });
     bar.add(switchRow(settings, _('Activities Button'),
@@ -55,5 +58,7 @@ export function build({ settings, _ }) {
     watchKey(settings, 'control-center', dnd, syncCc);
     bar.add(dnd);
     page.add(bar);
+    addFeatureGroups(page, osdPrefs, args);
+    addFeatureGroups(page, menuBarItemsPrefs, args);
     return page;
 }

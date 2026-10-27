@@ -1,152 +1,182 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // gjs -m tests/glassParams.test.js
-import { POWER_PROFILE_SERVICES, pickPowerProxy, isPowerSaver, followRect, readSnapshot, MIN_TINTED_ALPHA, MIN_TINT_PERCENT, wantsSurface, resolve, tintAlpha, legacySurfaces, worstCaseContrast, tintColor, SETTING_FIELDS, fillAlpha, fillClasses, FILL_STEP, SURFACE_MIN_ALPHA }
-    from '../lib/glassParams.js';
+// lib/glassParams.js: the faux Liquid Glass look (fill, edge, rim, variants) for every surface.
+import {
+    ALPHA_RANGE, SETTING_FIELDS, TINT, WALLPAPER_MIX, fillStyle, glassClasses, hostClasses,
+    hostStyle, legacySurfaces, legacyTint, readSnapshot, resolve, roleFor, sliderAlpha,
+    stripFragments, wantsSurface, worstCaseContrast, wrapFragment,
+} from '../lib/glassParams.js';
 
 let failed = 0;
-function check(name, cond) {
-    if (!cond) {
-        failed++;
-        print(`FAIL: ${name}`);
-    }
+function test(name, fn) {
+    try { fn(); print(`ok   ${name}`); } catch (e) { failed++; print(`FAIL ${name}: ${e.message}`); }
+}
+function eq(a, b, msg = '') {
+    if (JSON.stringify(a) !== JSON.stringify(b))
+        throw new Error(`${msg} expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`);
+}
+function ok(cond, msg) {
+    if (!cond)
+        throw new Error(msg);
 }
 
 const snap = (over = {}) => ({
-    liquid: true, style: 'tinted', blur: 30, tint: 55, highlight: true, refraction: false,
-    surfaces: ['panel', 'menus', 'dock', 'overlays'], performance: false, offInPowersave: true, ...over,
+    liquid: true, surfaces: ['panel', 'menus', 'dock', 'overlays'], tint: 0, wallpaperTint: true,
+    reduceTransparency: false, increaseContrast: false, showBorders: false, noise: false, ...over,
 });
-const env = (over = {}) => ({ highContrast: false, reducedMotion: false, powerSaver: false,
-    dark: true, blurOk: true, ...over });
+const env = (over = {}) => ({ dark: true, highContrast: false, reducedMotion: false, wallpaper: null, ...over });
 
-// surfaces
-check('on: panel wanted', wantsSurface(snap(), 'panel'));
-check('surface list respected', !wantsSurface(snap({ surfaces: ['menus'] }), 'panel'));
-check('off: no surface wanted', ['panel', 'menus', 'dock', 'overlays'].every(s => !wantsSurface(snap({ liquid: false }), s)));
+test('defaults follow macOS: glass on, Clear, wallpaper tint on, accessibility off', () => {
+    const d = Object.fromEntries(Object.values(SETTING_FIELDS));
+    eq([d.liquid, d.tint, d.wallpaperTint, d.reduceTransparency, d.increaseContrast, d.showBorders, d.noise],
+        [true, 0, true, false, false, false, false]);
+});
 
-// tiers
-check('tinted blur tier', resolve(snap(), env(), 'panel').tier === 'blur');
-check('high contrast -> opaque, no highlight', (() => {
-    const p = resolve(snap(), env({ highContrast: true }), 'dock');
-    return p.tier === 'opaque' && p.alpha === 1 && !p.highlight;
-})());
-check('no blur available -> light tier, more alpha', (() => {
-    const a = resolve(snap(), env(), 'dock').alpha;
-    const p = resolve(snap(), env({ blurOk: false }), 'dock');
-    return p.tier === 'light' && p.alpha > a;
-})());
-check('off: every surface is off', resolve(snap({ liquid: false }), env(), 'dock').tier === 'off');
-check('unwanted surface off', resolve(snap({ surfaces: [] }), env(), 'panel').tier === 'off');
-check('reduced motion flag', resolve(snap(), env({ reducedMotion: true }), 'panel').motion === false);
-check('powersave -> still', resolve(snap(), env({ powerSaver: true }), 'panel').still);
-check('powersave pref off -> live', !resolve(snap({ offInPowersave: false }), env({ powerSaver: true }), 'panel').still);
-check('performance -> still', resolve(snap({ performance: true }), env(), 'panel').still);
-check('refraction needs blur tier', !resolve(snap({ refraction: true }), env({ blurOk: false }), 'panel').refraction
-    && resolve(snap({ refraction: true }), env(), 'panel').refraction);
-check('refraction forces still copy', resolve(snap({ refraction: true }), env(), 'panel').still);
-check('clear halves blur', resolve(snap({ style: 'clear' }), env(), 'panel').radius === 15);
-check('clear + light scheme dims', resolve(snap({ style: 'clear' }), env({ dark: false }), 'panel').dim);
-check('clear + dark no dim', !resolve(snap({ style: 'clear' }), env(), 'panel').dim);
+test('surfaces: the list and the master switch decide', () => {
+    ok(wantsSurface(snap(), 'menus'), 'menus wanted');
+    ok(!wantsSurface(snap({ surfaces: ['dock'] }), 'menus'), 'list respected');
+    ok(!wantsSurface(snap({ liquid: false }), 'dock'), 'master off');
+    eq(resolve(snap({ liquid: false }), env(), 'menus').tier, 'off');
+    eq(glassClasses(resolve(snap({ liquid: false }), env(), 'menus'), 'menus'), []);
+    eq(fillStyle(resolve(snap({ liquid: false }), env(), 'menus')), '');
+});
 
-// tint maths
-check('default tint alpha 0.6225', Math.abs(tintAlpha({ style: 'tinted', tint: 55, role: 'small', tier: 'blur' }) - 0.6225) < 1e-9);
-check('large +0.10', Math.abs(tintAlpha({ style: 'tinted', tint: 55, role: 'large', tier: 'blur' }) - 0.7225) < 1e-9);
-check('alpha capped 0.92', tintAlpha({ style: 'tinted', tint: 100, role: 'large', tier: 'light' }) === 0.92);
-check('tint clamped low to the contrast floor', tintAlpha({ style: 'tinted', tint: -50, role: 'small', tier: 'blur' }) === MIN_TINTED_ALPHA);
-for (const dark of [true, false]) {
-    const c = worstCaseContrast(tintAlpha({ style: 'tinted', tint: 0, role: 'small', tier: 'blur' }), dark);
-    check(`contrast at slider 0 (${dark ? 'dark' : 'light'}) >= 4.5 (got ${c.toFixed(2)})`, c >= 4.5);
-}
-check('floor is below default alpha', MIN_TINTED_ALPHA < 0.6225 && MIN_TINT_PERCENT < 55);
-check('tintColor dim is black', tintColor({ dim: true, dark: false, alpha: 0.1 }) === 'rgba(0, 0, 0, 0.35)');
-check('tintColor dark', tintColor({ dim: false, dark: true, alpha: 0.5 }) === 'rgba(28, 28, 30, 0.500)');
+test('roles: bars for the menu bar and dock, content elsewhere, callers may say', () => {
+    eq([roleFor('panel'), roleFor('dock'), roleFor('menus'), roleFor('overlays')], ['bar', 'bar', 'content', 'content']);
+    eq(roleFor('overlays', 'bar'), 'bar');
+    eq(roleFor('menus', 'large'), 'content', 'legacy role names map to the surface default');
+});
 
-// acceptance: contrast >= 4.5 at default tint, small and large, both schemes
-for (const dark of [true, false]) {
-    for (const role of ['small', 'large']) {
-        const a = tintAlpha({ style: 'tinted', tint: 55, role, tier: 'blur' });
-        const c = worstCaseContrast(a, dark);
-        check(`contrast ${dark ? 'dark' : 'light'}/${role} >= 4.5 (got ${c.toFixed(2)})`, c >= 4.5);
+test('Clear <-> Tinted slider spans the role range', () => {
+    eq(sliderAlpha(0, 'content'), ALPHA_RANGE.content[0]);
+    eq(sliderAlpha(100, 'content'), ALPHA_RANGE.content[1]);
+    ok(sliderAlpha(50, 'bar') > ALPHA_RANGE.bar[0] && sliderAlpha(50, 'bar') < ALPHA_RANGE.bar[1], 'bar mid');
+    eq(sliderAlpha(-5, 'content'), ALPHA_RANGE.content[0], 'clamped');
+    ok(resolve(snap({ tint: 100 }), env(), 'menus').alpha > resolve(snap(), env(), 'menus').alpha, 'tinted is denser');
+});
+
+test('the fill is a gradient: lighter top (sheen), denser darker bottom (shade)', () => {
+    for (const dark of [true, false]) {
+        const l = resolve(snap(), env({ dark }), 'menus');
+        ok(l.top && l.bottom, 'two stops');
+        ok(l.top[0] > l.bottom[0], `top lighter (${dark ? 'dark' : 'light'})`);
+        ok(l.bottom[3] > l.top[3], 'bottom denser');
+        const s = fillStyle(l);
+        ok(s.includes('background-gradient-direction: vertical') && s.includes('background-gradient-end'), s);
     }
-}
-check('thin tint fails contrast (sanity)', worstCaseContrast(0.2, true) < 4.5);
+});
 
-// migration
-check('migrate: none set -> null', legacySurfaces({ panelBlur: null, dockBlur: null }) === null);
-check('migrate: panel on, dock default', JSON.stringify(legacySurfaces({ panelBlur: true, dockBlur: null }))
-    === JSON.stringify(['panel', 'dock', 'menus', 'overlays']));
-check('migrate: dock off only', JSON.stringify(legacySurfaces({ panelBlur: null, dockBlur: false }))
-    === JSON.stringify(['menus', 'overlays']));
-check('migrate: both off', JSON.stringify(legacySurfaces({ panelBlur: false, dockBlur: false }))
-    === JSON.stringify(['menus', 'overlays']));
+test('text stays readable over the worst backdrop at the clearest setting (4.5:1)', () => {
+    for (const dark of [true, false]) {
+        for (const surface of ['overlays', 'panel']) {
+            const l = resolve(snap({ tint: 0 }), env({ dark }), surface);
+            ok(worstCaseContrast(l) >= 4.5, `${surface} ${dark ? 'dark' : 'light'}: ${worstCaseContrast(l).toFixed(2)}`);
+        }
+    }
+});
 
-check('every field has a key', Object.keys(SETTING_FIELDS).length === 9);
+test('a bright or dark wallpaper never takes the text below 4.5:1 (the tint floor)', () => {
+    for (const dark of [true, false]) {
+        for (const wallpaper of [[255, 255, 255], [0, 0, 0], [255, 0, 0], [0, 0, 255], [128, 128, 128]]) {
+            for (const surface of ['panel', 'dock', 'menus', 'overlays']) {
+                for (const noise of [false, true]) {
+                    const l = resolve(snap({ tint: 0, noise }), env({ dark, wallpaper }), surface);
+                    ok(worstCaseContrast(l) >= 4.5, `${surface} ${dark} ${wallpaper} ${noise}: ${worstCaseContrast(l).toFixed(2)}`);
+                }
+            }
+        }
+    }
+    const plain = resolve(snap({ tint: 0 }), env({ dark: true }), 'panel');
+    const bright = resolve(snap({ tint: 0 }), env({ dark: true, wallpaper: [255, 255, 255] }), 'panel');
+    ok(bright.alpha > plain.alpha, 'denser on a bright wallpaper');
+});
 
-// Glass.wants(surface, gs) reads a passed Gio.Settings fresh (no stale snapshot)
-{
-    const store = { 'liquid-glass': true, 'liquid-glass-surfaces': ['panel'] };
-    const fake = {
-        settings_schema: { has_key: k => k in store },
-        get_boolean: k => store[k], get_int: k => store[k], get_string: k => store[k], get_strv: k => store[k],
+test('wallpaper tint: 8 % of the wallpaper colour, only when wanted and translucent', () => {
+    const red = [255, 0, 0];
+    const tinted = resolve(snap(), env({ wallpaper: red }), 'menus');
+    const plain = resolve(snap(), env(), 'menus');
+    ok(tinted.top[0] > plain.top[0] && tinted.top[2] < plain.top[2], 'redder');
+    const expectBase = Math.round(TINT.dark[0] + (255 - TINT.dark[0]) * WALLPAPER_MIX);
+    ok(Math.abs(resolve(snap({ noise: true }), env({ wallpaper: red }), 'menus').top[0] - expectBase) <= 1, 'mix share');
+    eq(resolve(snap({ wallpaperTint: false }), env({ wallpaper: red }), 'menus').top, plain.top, 'off');
+    eq(resolve(snap({ reduceTransparency: true }), env({ wallpaper: red }), 'menus').top,
+        resolve(snap({ reduceTransparency: true }), env(), 'menus').top, 'not under Reduce Transparency');
+});
+
+test('Reduce Transparency: opaque, rim kept, no grain', () => {
+    const l = resolve(snap({ reduceTransparency: true, noise: true }), env(), 'menus');
+    eq([l.tier, l.alpha, l.top[3], l.noise], ['solid', 1, 1, false]);
+    const c = glassClasses(l, 'menus');
+    ok(c.includes('kiwi-glass-solid') && !c.includes('kiwi-glass-contrast'), c.join());
+});
+
+test('Increase Contrast and GNOME high contrast: flat, opaque, strong edge', () => {
+    for (const l of [resolve(snap({ increaseContrast: true }), env(), 'menus'),
+        resolve(snap(), env({ highContrast: true }), 'menus')]) {
+        eq([l.tier, l.alpha, l.bottom, l.edge], ['solid', 1, null, 'contrast']);
+        ok(glassClasses(l, 'menus').includes('kiwi-glass-contrast'), 'class');
+        ok(fillStyle(l).includes('background-gradient-direction: none'), 'no gradient');
+        ok(worstCaseContrast(l) >= 7, 'AAA');
+    }
+});
+
+test('Show Borders adds the borders edge; contrast wins over it', () => {
+    ok(glassClasses(resolve(snap({ showBorders: true }), env(), 'dock'), 'dock').includes('kiwi-glass-borders'), 'borders');
+    eq(resolve(snap({ showBorders: true, increaseContrast: true }), env(), 'dock').edge, 'contrast');
+});
+
+test('grain: a flat fill (St draws an image or a gradient, not both)', () => {
+    const l = resolve(snap({ noise: true }), env(), 'menus');
+    eq([l.noise, l.bottom], [true, null]);
+    ok(glassClasses(l, 'menus').includes('kiwi-glass-noise'), 'class');
+});
+
+test('classes: scheme, surface, role, motion', () => {
+    const c = glassClasses(resolve(snap(), env({ dark: false, reducedMotion: true }), 'dock'), 'dock');
+    eq(c.slice(0, 4), ['kiwi-glass', 'kiwi-glass-dock', 'kiwi-glass-bar', 'kiwi-glass-light']);
+    ok(c.includes('kiwi-glass-static'), 'reduced motion');
+    eq(hostClasses(resolve(snap(), env(), 'menus')), ['kiwi-glass-shadow', 'kiwi-glass-dark']);
+    eq(hostClasses(resolve(snap({ liquid: false }), env(), 'menus')), []);
+});
+
+test('a content surface writes its rim inline, over the theme outer shadow', () => {
+    ok(fillStyle(resolve(snap(), env({ dark: true }), 'menus')).includes('box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.22)'), 'dark rim');
+    ok(fillStyle(resolve(snap(), env({ dark: false }), 'menus')).includes('rgba(255, 255, 255, 0.95)'), 'light rim');
+    ok(!fillStyle(resolve(snap(), env(), 'panel')).includes('box-shadow'), 'a bar keeps the stylesheet');
+    ok(fillStyle(resolve(snap({ increaseContrast: true }), env(), 'menus')).includes('box-shadow: none'), 'contrast: no rim');
+});
+
+test('fragments are fenced, so they come off wherever they ended up', () => {
+    const f = fillStyle(resolve(snap(), env(), 'menus'), 24);
+    ok(f.includes('border-radius: 24px;'), 'radius');
+    const other = 'min-width: 300px;';
+    eq(stripFragments(other + f), other);
+    eq(stripFragments(f + other + f), other, 'a stale copy in the middle goes too');
+    eq(stripFragments(other + hostStyle(18)), other);
+    eq(wrapFragment(''), '');
+    eq(stripFragments(null), '');
+});
+
+test('readSnapshot reads typed keys, defaults for missing ones', () => {
+    const values = { 'liquid-glass': false, 'glass-tint': 70, 'liquid-glass-surfaces': ['dock'] };
+    const gs = {
+        settings_schema: { has_key: k => k in values },
+        get_boolean: k => values[k], get_int: k => values[k], get_strv: k => values[k],
     };
-    check('fresh read: dock off', !wantsSurface(readSnapshot(fake), 'dock'));
-    store['liquid-glass-surfaces'] = ['panel', 'dock'];
-    check('fresh read: dock on right after the change', wantsSurface(readSnapshot(fake), 'dock'));
-    check('missing keys fall back to defaults', readSnapshot(fake).style === 'tinted');
-}
+    const s = readSnapshot(gs);
+    eq([s.liquid, s.tint, s.surfaces, s.reduceTransparency], [false, 70, ['dock'], false]);
+    eq(readSnapshot(null).liquid, true);
+});
 
-// followRect: never NaN, never 0-size
-check('rect: plain child', JSON.stringify(followRect({ x: 1, y: 2, width: 30, height: 40 })) === '{"x":1,"y":2,"width":30,"height":40}');
-check('rect: zero width -> null', followRect({ x: 0, y: 0, width: 0, height: 10 }) === null);
-check('rect: NaN size -> null', followRect({ x: 0, y: 0, width: NaN, height: 10 }) === null);
-check('rect: NaN transformed position -> null', followRect({ x: 0, y: 0, width: 5, height: 5 }, [NaN, 3], [0, 0]) === null);
-check('rect: one position missing -> null', followRect({ x: 0, y: 0, width: 5, height: 5 }, [1, 1], null) === null);
-check('rect: transformed difference', JSON.stringify(followRect({ x: 9, y: 9, width: 5, height: 6 }, [110, 220], [100, 200]))
-    === '{"x":10,"y":20,"width":5,"height":6}');
-check('rect: undefined -> null', followRect({ x: undefined, y: 0, width: 5, height: 5 }) === null);
-
-// power profiles: UPower name first, net.hadess fallback
-check('UPower preferred', POWER_PROFILE_SERVICES[0][0] === 'org.freedesktop.UPower.PowerProfiles'
-    && POWER_PROFILE_SERVICES[0][1] === '/org/freedesktop/UPower/PowerProfiles');
-check('hadess fallback', POWER_PROFILE_SERVICES[1][0] === 'net.hadess.PowerProfiles');
-{
-    const up = { g_name_owner: ':1.5' }, upDead = { g_name_owner: null }, had = { g_name_owner: ':1.9' };
-    check('owned UPower wins', pickPowerProxy([up, had]) === up);
-    check('unowned UPower -> owned hadess', pickPowerProxy([upDead, had]) === had);
-    check('none owned -> first created', pickPowerProxy([upDead, { g_name_owner: null }]) === upDead);
-    check('failed first -> second', pickPowerProxy([null, had]) === had);
-    check('nothing -> null', pickPowerProxy([null, null]) === null);
-}
-check('power-saver semantics', isPowerSaver('power-saver') && !isPowerSaver('balanced') && !isPowerSaver(undefined));
-
-// translucent fill (no blur): classes on the surface actor itself
-{
-    const p = resolve(snap(), env(), 'menus', 'large');
-    const c = fillClasses(p, 'menus');
-    const bucket = c.find(x => /^kiwi-glass-a\d+$/.test(x));
-    check('fill: base classes', c.includes('kiwi-glass-fill') && c.includes('kiwi-glass-menus') && c.includes('kiwi-glass-dark'));
-    check('fill: one alpha bucket on the step', !!bucket && Number(bucket.slice(12)) % FILL_STEP === 0);
-    check('fill: bucket near the alpha, never under the surface floor', Math.abs(Number(bucket.slice(12)) / 100 - Math.max(fillAlpha(p), SURFACE_MIN_ALPHA.menus)) <= FILL_STEP / 200 + 1e-9);
-    check('fill: highlight follows the setting', c.includes('kiwi-glass-highlight') &&
-        !fillClasses(resolve(snap({ highlight: false }), env(), 'menus'), 'menus').includes('kiwi-glass-highlight'));
-    check('fill: off -> no classes', fillClasses(resolve(snap({ surfaces: [] }), env(), 'menus'), 'menus').length === 0);
-    check('fill: legacy blur -> no classes', fillClasses(resolve(snap({ liquid: false }), env(), 'dock'), 'dock').length === 0);
-    check('fill: null params -> none', fillClasses(null, 'panel').length === 0);
-    const hc = fillClasses(resolve(snap(), env({ highContrast: true }), 'panel'), 'panel');
-    check('fill: high contrast is solid', hc.includes('kiwi-glass-a100') && hc.includes('kiwi-glass-opaque') && !hc.includes('kiwi-glass-highlight'));
-    check('fill: reduced motion -> static', fillClasses(resolve(snap(), env({ reducedMotion: true }), 'panel'), 'panel').includes('kiwi-glass-static'));
-    check('fill: light scheme', fillClasses(resolve(snap(), env({ dark: false }), 'panel'), 'panel').includes('kiwi-glass-light'));
-    const dim = fillClasses(resolve(snap({ style: 'clear' }), env({ dark: false }), 'panel'), 'panel');
-    check('fill: clear over light -> dim veil, no bucket', dim.includes('kiwi-glass-dim') && !dim.some(x => /^kiwi-glass-a\d+$/.test(x)));
-    const lo = fillAlpha(resolve(snap({ blur: 0 }), env(), 'panel'));
-    const hi = fillAlpha(resolve(snap({ blur: 100 }), env(), 'panel'));
-    check('fill: frost (blur slider) raises opacity', hi > lo && hi - lo < 0.2);
-    check('fill: never fully opaque unless high contrast', fillAlpha(resolve(snap({ tint: 100, blur: 100 }), env(), 'menus', 'large')) < 1);
-    const clear = fillClasses(resolve(snap({ style: 'clear', tint: 0, blur: 0 }), env(), 'panel'), 'panel');
-    check('fill: smallest bucket is a5', clear.includes('kiwi-glass-a5'));
-}
+test('migrations: old blur toggles and style', () => {
+    eq(legacySurfaces({ panelBlur: null, dockBlur: null }), null);
+    eq(legacySurfaces({ panelBlur: true, dockBlur: false }), ['panel', 'menus', 'overlays']);
+    eq(legacyTint('clear', 80), 0);
+    eq(legacyTint('tinted', null), 55);
+    eq(legacyTint('tinted', 130), 100);
+});
 
 if (failed) {
-    print(`${failed} failed`);
+    print(`${failed} test(s) failed`);
     imports.system.exit(1);
 }
-print('glassParams: all ok');

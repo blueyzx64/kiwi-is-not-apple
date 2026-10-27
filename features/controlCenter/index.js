@@ -9,13 +9,21 @@
 // tile per Kiwi feature (bound to its settings key), Now Playing, the user row, and Do Not
 // Disturb on GNOME 48.
 //
+// Edit Controls (customModel.js, editor.js; macOS Tahoe): the user's own list of controls
+// in `control-center-layout`, with sizes, from a gallery of GNOME's items, Kiwi feature
+// switches, accessibility switches and Kiwi actions (controls.js). Empty = the default
+// arrangement above. Removed stock items are hidden (keepHidden), never destroyed; other
+// extensions' items always stay, under "More".
+//
 // Disable puts the order, spans and column count back from a snapshot of the actors, so a
 // grid rebuilt in between never receives stale {parent, index} pairs.
-// Glass: the menu bubble's blur layer belongs to features/liquidGlass (surface 'menus'); this
-// feature only reacts to Glass.watch with style classes, so there is no second layer.
+// Glass: the menu bubble is Kiwi glass, attached by features/liquidGlass (surface 'menus');
+// this feature only adds .kiwi-cc-glass for the glass platters of its modules (style.css).
 
 import Gio from 'gi://Gio';
 import St from 'gi://St';
+
+import Clutter from 'gi://Clutter';
 
 import { Glass } from '../../lib/glass.js';
 import { SHELL_HAS_SYSTEM_DND } from '../../lib/compat.js';
@@ -24,13 +32,18 @@ import {
 } from './model.js';
 import { NowPlaying } from './nowPlaying.js';
 import {
+    isOwnControl, layoutFromPlan, parseLayout, planCustom, serializeLayout,
+} from './customModel.js';
+import { controlAvailable, createControl } from './controls.js';
+import { ControlsEditor } from './editor.js';
+import {
     ITEM_CLASS, JOIN_NEXT_CLASS, JOIN_PREV_CLASS,
     applyPlan, centerToggleIcon, columnSpan, compactable, gridAlive, managedChildren,
     restoreCompact, restoreGrid, restoreLayoutClasses, restoreToggleIcons, setCompact,
-    setLayoutClasses, snapshotGrid, stockKeys,
+    setLayoutClasses, snapshotGrid,
 } from './shell.js';
 import { keepHidden } from '../../lib/keepHidden.js';
-import { whenQuickSettingsReady } from '../../lib/quickSettings.js';
+import { stockKeys, whenQuickSettingsReady } from '../../lib/quickSettings.js';
 import { createDndToggle, createKiwiModule } from './tiles.js';
 import { PanelBattery, UserRow } from './userRow.js';
 
@@ -62,6 +75,72 @@ export class ControlCenter {
         this._spacers = [];             // blank half cells of the top block
         this._classed = new Set();      // actors carrying layout classes
         this._notifUndo = null;         // the hidden notification list, while the notch is on
+        this._ownControls = new Map();  // control id -> actor Kiwi built for the custom layout
+        this._layoutHides = new Map();  // stock actor removed from the custom layout -> undo
+        this._lastDefault = null;       // {plan, keyOf} of the last default arrangement
+        this._editor = null;
+        this._gridUndo = null;
+    }
+
+    /** The edit view while editing (tests, harness), else null. */
+    get editor() {
+        return this._editor;
+    }
+
+    /** The controls in order: the saved layout, or the default arrangement written down. */
+    layout() {
+        const saved = parseLayout(this._ctx.settings.get_strv('control-center-layout'));
+        if (saved.length || !this._lastDefault)
+            return saved;
+        return layoutFromPlan(this._lastDefault.plan, this._lastDefault.keyOf);
+    }
+
+    setLayout(layout) {
+        this._ctx.settings.set_strv('control-center-layout', serializeLayout(layout));
+    }
+
+    /** Open Edit Controls inside the (open) Control Center. */
+    edit() {
+        if (this._editor || !this._qs)
+            return;
+        const qs = this._qs;
+        const ctx = this._ctx;
+        this._editor = new ControlsEditor({
+            ctx,
+            getLayout: () => this.layout(),
+            setLayout: layout => this.setLayout(layout),
+            available: id => this._available(id),
+            onDone: () => this.stopEditing(),
+            onReset: () => {
+                ctx.settings.reset('control-center-layout');
+                this._relayout();
+                this._editor?.refresh();
+            },
+        });
+        // The first edit starts from what the user sees
+        if (!ctx.settings.get_strv('control-center-layout').length)
+            this.setLayout(this.layout());
+        this._gridUndo = keepHidden(this._grid);
+        qs.menu.box.add_child(this._editor.actor);
+        if (!qs.menu.isOpen)
+            qs.menu.open();
+    }
+
+    stopEditing() {
+        if (!this._editor)
+            return;
+        const editor = this._editor;
+        this._editor = null;
+        editor.destroy();
+        this._gridUndo?.();
+        this._gridUndo = null;
+    }
+
+    _available(id) {
+        if (isOwnControl(id))
+            return controlAvailable(id, this._ctx.settings);
+        // GNOME's items and Kiwi's modules exist when the grid has them
+        return [...this._own.values(), ...this._stockKeys?.values() ?? []].includes(id);
     }
 
     enable() {
@@ -115,6 +194,7 @@ export class ControlCenter {
         });
         cleanup.connect(this._grid, 'child-removed', (_g, actor) => {
             this._unwatchVisible(actor);
+            this._setLayoutHidden(actor, false);
             this._classed.delete(actor);
             this._stockSpans.delete(actor);
             // A toggle that leaves the grid gets its label and icon back on the way out
@@ -129,6 +209,15 @@ export class ControlCenter {
         cleanup.connect(settings, 'changed::notch', () => this._queueRelayout());
         cleanup.connect(settings, 'changed::control-center-user-row', () => this._syncUserRow());
         cleanup.connect(settings, 'changed::battery-percentage-always', () => this._syncBattery());
+        cleanup.connect(settings, 'changed::control-center-layout', () => {
+            this._queueRelayout();
+            this._editor?.refresh();
+        });
+        // Edit Controls ends with the menu, as on macOS
+        cleanup.connect(qs.menu, 'open-state-changed', (_m, open) => {
+            if (!open)
+                this.stopEditing();
+        });
         // The footer extras are optional: a failure there must not stop the layout
         for (const sync of [() => this._syncUserRow(), () => this._syncBattery()]) {
             try {
@@ -177,6 +266,53 @@ export class ControlCenter {
 
         this._nowPlaying = new NowPlaying({ gettext, cleanup: this._cleanup });
         add(this._nowPlaying.actor, 'now-playing');
+
+        const edit = new St.Button({
+            style_class: 'kiwi-cc-edit-controls',
+            label: gettext('Edit Controls…'),
+            can_focus: true,
+            x_expand: true,
+            x_align: Clutter.ActorAlign.CENTER,
+        });
+        edit.connect('clicked', () => this.edit());
+        add(edit, 'edit-controls');
+    }
+
+    /** Build or drop Kiwi's own controls so the grid holds exactly those of the layout. */
+    _syncOwnControls(layout) {
+        const wanted = new Set(layout.map(e => e.id).filter(isOwnControl));
+        for (const [id, actor] of [...this._ownControls]) {
+            if (!wanted.has(id)) {
+                this._ownControls.delete(id);
+                this._own.delete(actor);
+                actor.destroy();
+            }
+        }
+        for (const id of wanted) {
+            if (this._ownControls.has(id))
+                continue;
+            let actor = null;
+            try {
+                actor = createControl(id, { ctx: this._ctx, closeMenu: () => this._qs?.menu.close() });
+            } catch (e) {
+                console.error(`[Kiwi] Control Center: control ${id} failed:`, e);
+            }
+            if (!actor)
+                continue;
+            this._ownControls.set(id, actor);
+            this._own.set(actor, id);
+            this._grid.add_child(actor);
+        }
+    }
+
+    _setLayoutHidden(actor, hide) {
+        const undo = this._layoutHides.get(actor);
+        if (hide && !undo) {
+            this._layoutHides.set(actor, keepHidden(actor));
+        } else if (!hide && undo) {
+            this._layoutHides.delete(actor);
+            undo();
+        }
     }
 
     _toggleClass(actor, name, on) {
@@ -274,6 +410,9 @@ export class ControlCenter {
         const key = this._own.get(actor) ?? this._stockKeys.get(actor);
         if (key)
             return key;
+        // The Focus tile of features/focus takes Do Not Disturb's place
+        if (actor.style_class?.includes('kiwi-focus-toggle'))
+            return 'dnd';
         // The notification list of features/calendar/notificationList.js
         return actor.style_class?.includes('kiwi-notifications') ? 'notifications' : null;
     }
@@ -283,6 +422,8 @@ export class ControlCenter {
         if (!gridAlive(grid))
             return;
 
+        const saved = parseLayout(this._ctx.settings.get_strv('control-center-layout'));
+        this._syncOwnControls(saved);
         const children = managedChildren(grid).filter(actor => !this._isLayoutActor(actor));
         this._syncNotifications(children.find(actor => this._keyOf(actor) === 'notifications'));
         const byId = new Map();
@@ -301,7 +442,24 @@ export class ControlCenter {
         for (const [id, label] of this._captions)
             byId.set(id, label);
 
-        const plan = planLayout(entries);
+        const plan = saved.length ? planCustom(entries, saved) : planLayout(entries);
+        if (!saved.length) {
+            this._lastDefault = {
+                plan, keyOf: new Map(entries.map(e => [e.id, e.key])),
+            };
+        }
+        // Removed from the custom layout: hidden while it stays out
+        for (const p of plan) {
+            const actor = byId.get(p.id);
+            if (actor && !this._isLayoutActor(actor))
+                this._setLayoutHidden(actor, !!p.hide);
+        }
+        // Captions the plan does not place (a custom layout has none but "More")
+        const planned = new Set(plan.map(p => p.id));
+        for (const [id, label] of this._captions) {
+            if (!planned.has(id))
+                label.visible = false;
+        }
         const usedSpacers = new Set();
         const placed = [];
         for (const p of plan) {
@@ -341,6 +499,11 @@ export class ControlCenter {
         try {
             this._notifUndo?.();
             this._notifUndo = null;
+            this.stopEditing();
+            for (const undo of this._layoutHides.values())
+                undo();
+            this._layoutHides.clear();
+            this._ownControls.clear();
             restoreLayoutClasses(this._classed);
             this._userRow?.destroy();
             this._battery?.destroy();

@@ -9,6 +9,7 @@ import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
+import * as A11y from '../../lib/a11y.js';
 import { Glass } from '../../lib/glass.js';
 import { ModalSurface } from '../../lib/modalSurface.js';
 import { addRow, sectionLabel } from './view.js';
@@ -60,7 +61,7 @@ export class ClipboardPopover {
         this._root = root;
 
         this._entry = new St.Entry({
-            style_class: 'kiwi-clip-search', hint_text: _('Search'), can_focus: true, x_expand: true,
+            style_class: 'kiwi-clip-search', hint_text: _('Search'), accessible_name: _('Search Clipboard'), can_focus: true, x_expand: true,
             primary_icon: new St.Icon({ icon_name: 'edit-find-symbolic', style_class: 'kiwi-clip-search-icon' }),
         });
         this._entry.clutter_text.connect('text-changed', () => {
@@ -73,7 +74,8 @@ export class ClipboardPopover {
         const filters = new St.BoxLayout({ style_class: 'kiwi-clip-filters' });
         this._filterButtons = new Map();
         for (const [id, label] of [['all', _('All')], ['text', _('Text')], ['links', _('Links')], ['images', _('Images')]]) {
-            const b = new St.Button({ label, style_class: 'kiwi-clip-filter', can_focus: true, toggle_mode: true });
+            const b = new St.Button({ label, style_class: 'kiwi-clip-filter', can_focus: true, toggle_mode: true,
+                accessible_name: label, accessible_role: A11y.Role.TOGGLE_BUTTON });
             b.connect('clicked', () => {
                 this._filter = id;
                 this._syncFilters();
@@ -96,9 +98,10 @@ export class ClipboardPopover {
 
         const foot = new St.BoxLayout({ style_class: 'kiwi-clip-foot' });
         this._switch = new PopupMenu.Switch(this._ctl.recording);
-        const toggle = new St.Button({
+        const toggle = this._recToggle = new St.Button({
             style_class: 'kiwi-clip-recording', can_focus: true, reactive: true, child: this._switch,
-            accessible_name: _('Recording'), y_align: Clutter.ActorAlign.CENTER,
+            accessible_name: _('Recording'), accessible_role: A11y.Role.TOGGLE_BUTTON, toggle_mode: true,
+            checked: this._ctl.recording, y_align: Clutter.ActorAlign.CENTER,
         });
         toggle.connect('clicked', () => this._ctl.setRecording(!this._ctl.recording));
         this._recLabel = new St.Label({
@@ -107,7 +110,7 @@ export class ClipboardPopover {
         foot.add_child(toggle);
         foot.add_child(this._recLabel);
         const clear = new St.Button({
-            label: _('Clear'), style_class: 'kiwi-clip-clear', can_focus: true, y_align: Clutter.ActorAlign.CENTER,
+            label: _('Clear'), accessible_name: _('Clear Clipboard History'), style_class: 'kiwi-clip-clear', can_focus: true, y_align: Clutter.ActorAlign.CENTER,
         });
         clear.connect('clicked', () => this._ctl.clear());
         foot.add_child(clear);
@@ -147,6 +150,7 @@ export class ClipboardPopover {
                 row.remove_style_pseudo_class('selected');
         });
         const row = rows[this._selected];
+        A11y.describeSelection(this._entry, row?.accessible_name);
         if (row) {
             const adj = this._scroll.vadjustment;
             const [top, bottom] = [row.y, row.y + row.height];
@@ -178,6 +182,7 @@ export class ClipboardPopover {
         const ctl = this._ctl;
         // Header and footer first: they must be right even if a row fails
         this._switch.state = ctl.recording;
+        this._recToggle.checked = ctl.recording;
         this._recLabel.text = ctl.recording ? _('Recording') : _('Paused');
         this._entry.hint_text = ctl.count
             ? _('Search %d items').replace('%d', ctl.count)
@@ -233,14 +238,13 @@ export class ClipboardPopover {
         return box;
     }
 
-    // ---- glass: a translucent fill on the rounded menu box itself (lib/glass.js) ----
+    // ---- glass: the rounded menu box, its BoxPointer bin carries the shadow (lib/glass.js) ----
 
     _attachGlass() {
-        const box = this._menu.box;
-        if (!box)
+        if (!this._menu.box)
             return;
         try {
-            this._glass = Glass.attach(box, { surface: 'overlays', role: 'large' });
+            this._glass = Glass.attachMenu(this._menu, { surface: 'overlays' });
         } catch (e) {
             console.warn(`[Kiwi] clipboard popover glass failed: ${e.message}`);
         }

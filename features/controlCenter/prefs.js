@@ -3,10 +3,9 @@
 // buildPrefs() returns the Adw.PreferencesGroup[]; prefs/pages/ places them on a page.
 
 import Adw from 'gi://Adw';
-import { switchRow } from '../../prefs/widgets.js';
+import Gtk from 'gi://Gtk';
 
-
-
+import { switchRow, watchKey } from '../../prefs/widgets.js';
 
 /**
  * @param {{settings: Gio.Settings, window: Adw.PreferencesWindow, extension: object}} args
@@ -31,8 +30,26 @@ export function buildPrefs({ settings, window, extension }) {
         _('Show the charge in the top bar at any level, not only when it is low'),
         'battery-percentage-always'));
 
+    const layout = new Adw.PreferencesGroup({
+        title: _('Controls'),
+        description: _('Choose, order and size the controls with "Edit Controls…" at the bottom of the Control Center.'),
+    });
+    const custom = new Adw.ActionRow({ title: _('Layout') });
+    const reset = new Gtk.Button({ label: _('Reset'), valign: Gtk.Align.CENTER });
+    reset.connect('clicked', () => settings.reset('control-center-layout'));
+    custom.add_suffix(reset);
+    const syncLayout = () => {
+        const n = settings.get_strv('control-center-layout').length;
+        custom.subtitle = n ? _('Your own arrangement') : _('Kiwi’s default arrangement');
+        reset.sensitive = n > 0;
+    };
+    syncLayout();
+    watchKey(settings, 'control-center-layout', custom, syncLayout);
+    layout.add(custom);
+
     const sync = () => {
         details.sensitive = settings.get_boolean('control-center');
+        layout.sensitive = details.sensitive;
     };
     sync();
     const id = settings.connect('changed::control-center', sync);
@@ -41,5 +58,5 @@ export function buildPrefs({ settings, window, extension }) {
         return false;
     });
 
-    return [main, details];
+    return [main, layout, details];
 }

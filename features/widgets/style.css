@@ -1,0 +1,328 @@
+/* feature: desktop-widgets */
+/* Widget cards (core/widgets/view.js) are shared by the desktop layer, the Notification
+   Center and the notch, so their rules live here for every surface. lib/glass.js ('overlays')
+   gives the fill and rim; this is the solid look when glass is off. Radius and padding are
+   inline (view.js RADIUS / PADDING, scaled). */
+.kiwi-widget {
+  background-color: rgba(36, 36, 40, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+.kiwi-widget.kiwi-glass-light {
+  color: #1d1d1f;
+}
+
+.kiwi-widget-content {
+  spacing: 4px;
+}
+
+.kiwi-widget-row {
+  spacing: 10px;
+}
+
+.kiwi-widget-column {
+  spacing: 2px;
+}
+
+.kiwi-widget-hero {
+  font-size: 2.4em;
+  font-weight: 600;
+}
+
+.kiwi-widget-medium .kiwi-widget-hero,
+.kiwi-widget-large .kiwi-widget-hero {
+  font-size: 2.1em;
+}
+
+.kiwi-widget-body {
+  font-size: 1em;
+}
+
+.kiwi-widget-caption {
+  font-size: 0.85em;
+}
+
+.kiwi-widget-strong {
+  font-weight: 700;
+}
+
+.kiwi-widget-dim {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.kiwi-glass-light .kiwi-widget-dim {
+  color: rgba(0, 0, 0, 0.55);
+}
+
+/* The calendar's weekday and the clock's date: macOS red */
+.kiwi-widget-accent {
+  color: #ff453a;
+}
+
+.kiwi-glass-light .kiwi-widget-accent {
+  color: #d70015;
+}
+
+.kiwi-widget-icon {
+  color: inherit;
+}
+
+/* Calendar */
+.kiwi-widget-date {
+  min-width: 90px;
+}
+
+.kiwi-widget-events {
+  spacing: 6px;
+}
+
+.kiwi-widget-event {
+  spacing: 6px;
+}
+
+.kiwi-widget-event-bar {
+  width: 3px;
+  border-radius: 2px;
+  background-color: #ff453a;
+}
+
+.kiwi-widget-month {
+  spacing-rows: 2px;
+}
+
+.kiwi-widget-month-head {
+  font-size: 0.75em;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.kiwi-widget-month-day {
+  font-size: 0.8em;
+  min-width: 22px;
+  padding: 2px 0;
+  border-radius: 11px;
+  text-align: center;
+}
+
+.kiwi-widget-month-day.kiwi-widget-today {
+  background-color: #ff453a;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+/* Weather */
+.kiwi-widget-forecast {
+  spacing: 4px;
+  padding-top: 6px;
+}
+
+.kiwi-widget-hour {
+  spacing: 4px;
+}
+
+/* Clocks, batteries, system */
+.kiwi-widget-clocks {
+  spacing: 10px;
+}
+
+.kiwi-widget-world {
+  spacing: 6px;
+}
+
+.kiwi-widget-batteries,
+.kiwi-widget-battery,
+.kiwi-widget-gauge {
+  spacing: 6px;
+}
+
+/* Now Playing: art concentric with the card (22 - 14 = 8 px) */
+.kiwi-widget-artwork {
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.kiwi-widget-art-icon {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.kiwi-widget-controls {
+  spacing: 6px;
+}
+
+.kiwi-widget-button {
+  border-radius: 999px;
+  padding: 6px;
+  background-color: rgba(255, 255, 255, 0.14);
+  color: inherit;
+}
+
+.kiwi-widget-button:hover {
+  background-color: rgba(255, 255, 255, 0.24);
+}
+
+.kiwi-widget-button:active {
+  background-color: rgba(255, 255, 255, 0.32);
+}
+
+.kiwi-widget-button:focus {
+  box-shadow: inset 0 0 0 2px -st-accent-color;
+}
+
+.kiwi-widget-button:insensitive {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.kiwi-glass-light .kiwi-widget-button {
+  background-color: rgba(0, 0, 0, 0.08);
+}
+
+.kiwi-glass-light .kiwi-widget-button:hover {
+  background-color: rgba(0, 0, 0, 0.14);
+}
+
+/* Desktop layer */
+.kiwi-widgets-layer {
+  background-color: transparent;
+}
+
+.kiwi-widget-dragging {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+/* The snap target while dragging */
+.kiwi-widget-outline {
+  border-radius: 22px;
+  border: 2px dashed rgba(255, 255, 255, 0.55);
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.kiwi-widget-remove {
+  width: 22px;
+  height: 22px;
+  border-radius: 11px;
+  background-color: rgba(60, 60, 64, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.kiwi-widget-remove:hover {
+  background-color: rgba(90, 90, 96, 0.98);
+}
+
+/* Gallery */
+.kiwi-widgets-gallery {
+  border-radius: 26px;
+  padding: 14px 18px;
+  spacing: 10px;
+  background-color: rgba(36, 36, 40, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.kiwi-widgets-gallery-header {
+  spacing: 10px;
+}
+
+.kiwi-widgets-gallery-title {
+  font-size: 1.25em;
+  font-weight: 700;
+  padding-right: 6px;
+}
+
+.kiwi-widgets-gallery-search {
+  border-radius: 999px;
+  padding: 4px 10px;
+  max-width: 360px;
+}
+
+.kiwi-widgets-gallery-search-icon {
+  icon-size: 14px;
+  padding-right: 4px;
+}
+
+.kiwi-widgets-gallery-pill {
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-weight: 600;
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+.kiwi-widgets-gallery-pill:hover {
+  background-color: rgba(255, 255, 255, 0.22);
+}
+
+.kiwi-widgets-gallery-done {
+  background-color: -st-accent-color;
+  color: -st-accent-fg-color;
+}
+
+.kiwi-widgets-gallery-categories {
+  spacing: 6px;
+}
+
+.kiwi-widgets-gallery-chip {
+  border-radius: 8px;
+  padding: 3px 10px;
+  font-size: 0.9em;
+}
+
+.kiwi-widgets-gallery-chip:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.kiwi-widgets-gallery-chip:checked {
+  background-color: rgba(255, 255, 255, 0.2);
+  font-weight: 700;
+}
+
+.kiwi-widgets-gallery-row {
+  spacing: 18px;
+  padding: 4px 18px 12px 2px;
+}
+
+.kiwi-widgets-gallery-tile {
+  spacing: 6px;
+}
+
+.kiwi-widgets-gallery-preview {
+  border-radius: 14px;
+}
+
+.kiwi-widgets-gallery-preview:hover,
+.kiwi-widgets-gallery-preview:focus {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.kiwi-widgets-gallery-name {
+  font-weight: 600;
+}
+
+.kiwi-widgets-gallery-add {
+  width: 24px;
+  height: 24px;
+  border-radius: 12px;
+  background-color: -st-accent-color;
+  color: -st-accent-fg-color;
+}
+
+.kiwi-widgets-gallery-sizes {
+  spacing: 4px;
+}
+
+.kiwi-widgets-gallery-size {
+  border-radius: 6px;
+  padding: 1px 8px;
+  font-size: 0.8em;
+  font-weight: 600;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.kiwi-widgets-gallery-size:checked {
+  background-color: rgba(255, 255, 255, 0.28);
+}
+
+.kiwi-widgets-gallery-empty {
+  padding: 24px;
+  color: rgba(255, 255, 255, 0.62);
+}

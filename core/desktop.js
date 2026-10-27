@@ -12,7 +12,8 @@
 // window-entered-monitor.
 //
 // Shell API: global.display (window-created, notify::focus-window, window-entered-monitor),
-// global.workspace_manager, Shell.WindowTracker, Main.layoutManager monitors-changed.
+// global.workspace_manager, Shell.WindowTracker, Shell.AppSystem (web-app ids),
+// Main.layoutManager monitors-changed.
 
 import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
@@ -20,7 +21,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import { CleanupRegistry } from '../lib/disposables.js';
 import { isMaximized } from '../lib/compat.js';
-import { DesktopModel } from './desktopModel.js';
+import { DesktopModel, appIdCandidates } from './desktopModel.js';
 
 const WINDOW_TYPES = new Map([
     [Meta.WindowType.NORMAL, 'normal'],
@@ -39,6 +40,8 @@ const WINDOW_SIGNALS = [
     ['notify::title', ['title']],
     ['notify::wm-class', ['appId']],
     ['notify::skip-taskbar', ['skipTaskbar']],
+    ['notify::above', ['above']],
+    ['notify::transient-for', ['parent']],
 ];
 
 export class DesktopService {
@@ -162,7 +165,7 @@ export class DesktopService {
         const out = {};
         const want = f => !fields || fields.includes(f);
         if (want('appId'))
-            out.appId = this._tracker?.get_window_app(win)?.get_id() ?? null;
+            out.appId = this._appIdOf(win);
         if (want('title'))
             out.title = win.get_title() ?? '';
         if (want('type'))
@@ -179,7 +182,35 @@ export class DesktopService {
             out.maximized = isMaximized(win);
         if (want('skipTaskbar'))
             out.skipTaskbar = !!win.skip_taskbar;
+        if (want('above'))
+            out.above = !!win.is_above();
+        if (want('parent'))
+            out.parent = win.get_transient_for()?.get_stable_sequence() ?? null;
         return out;
+    }
+
+    // The tracker's app, or for a window it could only give a window-backed app (web apps
+    // whose WM_CLASS / app id differs from their .desktop id), the installed app the
+    // candidates name. Shell.AppSystem lookups are in-memory.
+    _appIdOf(win) {
+        const app = this._tracker?.get_window_app(win) ?? null;
+        if (!app || !app.is_window_backed())
+            return app?.get_id() ?? null;
+        const appSystem = Shell.AppSystem.get_default();
+        for (const cls of [win.get_sandboxed_app_id?.(), win.get_gtk_application_id?.(), win.get_wm_class()]) {
+            const { ids, prefix } = appIdCandidates(cls);
+            for (const id of ids) {
+                if (appSystem.lookup_app(id))
+                    return id;
+            }
+            const byClass = cls ? appSystem.lookup_startup_wmclass(cls) ?? appSystem.lookup_desktop_wmclass(cls) : null;
+            if (byClass)
+                return byClass.get_id();
+            const byPrefix = prefix && appSystem.get_installed().find(info => info.get_id()?.startsWith(prefix));
+            if (byPrefix)
+                return byPrefix.get_id();
+        }
+        return app.get_id();
     }
 
     _sync(win, fields) {
