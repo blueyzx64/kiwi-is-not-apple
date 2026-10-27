@@ -155,3 +155,18 @@ No more installer work: no new pieces (Trash-drag uninstall, fly-to-dock, update
   - Perf: Genie p95 27 ms with 0 jitter, Scale p95 32 ms, bounce p95 17 ms.
   - Orchestrator review: the stack grid (stack-grid.png) looks right. The Stage Manager strip sits on an opaque dark panel, where macOS Sequoia floats thumbnails on the wallpaper (S3, for V2/L8). genie-mid is inconclusive (a small funnel near the dock).
 - Owner: REMOVE the installer code too. FX5 is removing it in kiwi-rm-installer / v3/remove-installer: core/installer*, the contract doc, the mock, the dock's "Open with Installer", and Launchpad's installer delete path. Kept: Flatpak delete via GNOME Software, package badges, Setup Assistant, Login Items.
+- V4 (menu bar, CC, OSD, dialogs, filters): no S1.
+  - S2:
+    - Ctrl+F2 over a full-screen window reveals the bar but opens no menu (open after the slide ends).
+    - The colour filter blacks out the wallpaper while a window is mapped. It is real, not harness-only: stock DesaturateEffect on the stage does it too (MetaBackgroundActor culling). Try per-group effects or force a background redraw.
+    - **The ghost rectangle behind glass menus is still there.** The orchestrator confirms it in m5b-help-typed.png and c1-cc-open.png: a square lighter area extends past the rounded menu at right and bottom, and in the CC at bottom-left. The suspect is the shadow host `_boxPointer.bin` in lib/glass.js attachMenu (~405), which has no radius and doesn't track resizes. FX3's F3 rim fix did not cover it.
+  - S3:
+    - dialogs stay dark in light mode;
+    - the logo is near-invisible on mid-blue;
+    - wallpaperProbe "too large (0x0)";
+    - StLabel -10x0 warnings;
+    - CC p95 50–98 ms;
+    - rapid menu switching max 203 ms.
+  - Orchestrator review:
+    - The OSD pill (o1-osd-volume.png) looks right.
+    - CC: a stray empty circle left of the battery row; the Wi-Fi icon shows the disconnected glyph while connected to "Kiwi Home" (S3).
