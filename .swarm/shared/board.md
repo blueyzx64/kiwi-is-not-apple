@@ -11,7 +11,7 @@
 | L5 | sonnet | P3 Mission Control + App Exposé + start-on-desktop | kiwi-l5 / v3/l5-mission | | merged |
 | L6 | sonnet | P3 App switcher (Super+Tab, Super+`) + trackpad gestures + hot corners | kiwi-l6 / v3/l6 | | merged |
 | L7 | sonnet | P3 Launchpad (folders, jiggle delete with installer/Flatpak rules) + click-wallpaper/Show Desktop wiring + full screen Split View | kiwi-l7 / v3/l7-launchpad | | merged |
-| L8 | sonnet | P4 Stage Manager v3 rebuild on core (sets, strip, other-side rule with dock, scenario + fuzz suites) | kiwi-l8 / v3/l8-stage | | started |
+| L8 | sonnet | P4 Stage Manager v3 rebuild on core (sets, strip, other-side rule with dock, scenario + fuzz suites) | kiwi-l8 / v3/l8-stage | | done, held |
 | L9 | sonnet | P5 Notch v3: hover, tabs, live activities, file shelf, perf | kiwi-l9 / v3/l9-notch | | started |
 | L10 | sonnet | P5 Notification Center column (clock click), Focus modes, time-sensitive | kiwi-l10 / v3/l10-nc | | started |
 | L11 | sonnet | P5 Widget model + desktop widget layer + gallery + built-in widgets | kiwi-l11 / v3/l11-widgets | | started |
@@ -88,3 +88,4 @@ Deploy conservatively, sized to the scope and type of work. Resume in waves of a
 - Resumed L9 notch (running: L2, FX3, L8, L9).
 - FX3 → merged (R2 F1–F8, F10, F11): one off-process wallpaper decode (lib/wallpaperProbe.js + wallpaperDecode.js, 64 MP cap); deferred DtD strip; glass rim selector outranks the theme shadow; originals kept across a lock (no session-modes); lazy stack rows plus debounce; tint floor for 4.5:1. Not shown visually: the F3 shadow fix. Not measured: F5 on 3000 files. Harness note: inner-real.sh's ALL list lacks the v3 keys, so KIWI_ONLY doesn't isolate them.
 - L2 done (v3/l2@becd643, OSD routing core/osd.js, glass dialogs, colour filters). HELD, not merged: waiting on the owner's decision about a pre-merge review gate. Open: black wallpaper under a colour filter in the roots (no wallpaper file there).
+- L8 done (v3/l8@7b306b8, StageMachine model plus fuzz). HELD, not merged. Open: the panel minimize on a window in a set failed after the merge (it passed before); the new Page Up/Down cycle keys are untested in the Shell; two sF failures were not re-run; a 400 ms wait after the last stage window closes (a magic timeout, for the reviewer to judge). Waiting on the owner's review-gate decision.
