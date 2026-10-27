@@ -4,7 +4,8 @@
 //
 // One KiwiRoundedCornersEffect (effect.js) per window actor, added on enable and for every
 // window created later (display `window-created`). The effect is disabled, not removed, while
-// the window does not qualify (maximized, tiled, fullscreen, excluded app); see model.qualifies.
+// the window does not qualify (tiled, fullscreen, excluded app; maximized unless the transparent menu bar
+// shows its corners); see model.qualifies.
 // Geometry follows size-changed; whether a window qualifies follows the maximize, fullscreen,
 // type and identity notifies.
 // Disable removes every effect and disconnects every signal (per-window owners plus the
@@ -40,7 +41,7 @@ export class RoundedCorners {
         this._ctx = ctx;
         this._cleanup = cleanup;
         this._windows = new Map();   // Meta.WindowActor -> {win, effect}
-        this._config = { radius: 12, blacklist: [], corners: cornerMask('top') };
+        this._config = { radius: 12, blacklist: [], corners: cornerMask('top'), roundMaximized: true };
         this._Effect = null;
         this._pending = new Map();   // Meta.Window without an actor yet -> stop()
     }
@@ -58,10 +59,13 @@ export class RoundedCorners {
                 radius: clampRadius(ks.int('rounded-corners-radius')),
                 blacklist: ks.strv('rounded-corners-blacklist'),
                 corners: cornerMask(ks.string('rounded-corners-which')),
+                // The transparent menu bar leaves the top corners of a maximized window on show
+                roundMaximized: ks.bool('menubar-transparent') && !ks.bool('menubar-solid-on-window'),
             };
         };
         read();
-        ks.watch(['rounded-corners-radius', 'rounded-corners-blacklist', 'rounded-corners-which'], () => {
+        ks.watch(['rounded-corners-radius', 'rounded-corners-blacklist', 'rounded-corners-which',
+            'menubar-transparent', 'menubar-solid-on-window'], () => {
             read();
             this._syncAll();
         });
@@ -170,8 +174,12 @@ export class RoundedCorners {
 
     // Where the corners go: the frame inside the actor (shadows and CSD margins excluded)
     _syncGeometry({ win, effect }) {
-        if (effect.enabled)
-            effect.setGeometry(frameInActor(win.get_frame_rect(), win.get_buffer_rect()),
-                this._config.radius, this._config.corners);
+        if (!effect.enabled)
+            return;
+        // Maximized: the top corners only, whatever the setting, the bottom ones meet the dock
+        const corners = win.maximized_horizontally && win.maximized_vertically
+            ? cornerMask('top') : this._config.corners;
+        effect.setGeometry(frameInActor(win.get_frame_rect(), win.get_buffer_rect()),
+            this._config.radius, corners);
     }
 }

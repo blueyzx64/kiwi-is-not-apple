@@ -1,5 +1,5 @@
 // Run: gjs -m tests/modalModel.test.js
-import { ModalArbiter } from '../lib/modalModel.js';
+import { ModalArbiter, menuAtPoint } from '../lib/modalModel.js';
 
 let failed = 0;
 function test(name, fn) {
@@ -68,6 +68,15 @@ test('stale closed() does not clear a newer modal', () => {
     a.opened('b', () => {});
     a.closed('a');
     eq(a.current, 'b');
+});
+
+test('menuAtPoint finds the button under the pointer', () => {
+    const a = { menu: 'a', rect: { x: 0, y: 0, width: 40, height: 32 } };
+    const b = { menu: 'b', rect: { x: 40, y: 0, width: 40, height: 32 } };
+    eq(menuAtPoint([a, b], 10, 5), 'a');
+    eq(menuAtPoint([a, b], 40, 5), 'b');
+    eq(menuAtPoint([a, b], 80, 5), null);
+    eq(menuAtPoint([a, b], 10, 32), null);
 });
 
 if (failed) {

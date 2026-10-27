@@ -20,11 +20,14 @@ import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as SystemActions from 'resource:///org/gnome/shell/misc/systemActions.js';
 
-import { fillPlaceholders, parseOsRelease, parseRecentXbel, systemLogoSource } from './model.js';
+import { CleanupRegistry } from '../../lib/disposables.js';
+import { fillPlaceholders, parseOsRelease, parseRecentXbel, systemLogoNames } from './model.js';
 import { menuHeading, menuItem } from './menuItems.js';
+import { tintWithText } from './logoTint.js';
 import { readText } from './systemInfo.js';
 
 const KIWI_LOGO = 'icons/kiwi-logo-symbolic.svg';
+const DEFAULT_SYSTEM_LOGO = 'fedora-logo-icon';
 const RECENT_APPS = 5;
 const RECENT_DOCS = 8;
 const SETTINGS_APP = 'org.gnome.Settings.desktop';
@@ -50,6 +53,8 @@ class KiwiLogoMenu extends PanelMenu.Button {
         this.add_child(this._icon);
         this._cancellable = new Gio.Cancellable();
         cleanup.add(() => this._cancellable.cancel());
+        this._tint = null;
+        cleanup.add(() => this._untint());
 
         const sys = SystemActions.getDefault();
         const appSystem = Shell.AppSystem.get_default();
@@ -104,23 +109,43 @@ class KiwiLogoMenu extends PanelMenu.Button {
     /** @param {string} logo 'fedora' | 'kiwi' */
     setLogo(logo) {
         if (logo === 'kiwi') {
-            this._icon.gicon = Gio.FileIcon.new(this._ctx.extension.dir.resolve_relative_path(KIWI_LOGO));
+            this._setKiwiLogo();
             return;
         }
-        // The system's logo: os-release LOGO, symbolic so it follows the bar's text colour
-        this._setSystemLogo('fedora-logo-icon');
+        // The system's own logo (os-release LOGO), the Kiwi mark when the theme has none
+        this._setSystemLogo(DEFAULT_SYSTEM_LOGO);
         readText('/etc/os-release', this._cancellable).then(text => {
-            const logo = parseOsRelease(text ?? '').LOGO;
-            if (logo && !this._cancellable.is_cancelled() && this._icon)
-                this._setSystemLogo(logo);
+            const named = parseOsRelease(text ?? '').LOGO;
+            if (named && named !== DEFAULT_SYSTEM_LOGO && !this._cancellable.is_cancelled() && this._icon)
+                this._setSystemLogo(named);
         });
     }
 
+    _setKiwiLogo() {
+        this._untint();
+        this._icon.icon_name = null;
+        this._icon.gicon = Gio.FileIcon.new(this._ctx.extension.dir.resolve_relative_path(KIWI_LOGO));
+    }
+
+    _untint() {
+        this._tint?.dispose();
+        this._tint = null;
+    }
+
     _setSystemLogo(logo) {
-        const source = systemLogoSource(logo);
-        this._icon.gicon = source.file
-            ? Gio.FileIcon.new(this._ctx.extension.dir.resolve_relative_path(source.file))
-            : Gio.ThemedIcon.new_from_names(source.names);
+        this._untint();
+        const theme = new St.IconTheme();
+        const name = systemLogoNames(logo).find(n => theme.has_icon(n));
+        if (!name) {
+            this._setKiwiLogo();
+            return;
+        }
+        this._icon.gicon = null;
+        this._icon.icon_name = name;
+        if (!name.endsWith('-symbolic')) {
+            this._tint = new CleanupRegistry();
+            tintWithText(this._icon, this._tint);
+        }
     }
 
     _fillRecent() {

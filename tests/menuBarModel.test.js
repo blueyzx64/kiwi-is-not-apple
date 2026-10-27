@@ -1,6 +1,6 @@
 // Run: gjs -m tests/menuBarModel.test.js
 import {
-    chooseText, touchesBar, barLook, parseOsRelease, systemLogoSource, parseCpuInfo, parseMemTotal,
+    chooseText, touchesBar, barLook, parseOsRelease, systemLogoNames, parseCpuInfo, parseMemTotal,
     formatBytes, deviceModel, chassisIcon, gpuNames, parseRecentXbel, forceQuitRows,
     privacyDots, micApps, confirmationHolds, fillPlaceholders, fitMenus,
 } from '../features/menuBar/model.js';
@@ -150,8 +150,9 @@ test('a window touches the bar at the top of the work area', () => {
 });
 
 test('bar look', () => {
-    eq(barLook({ transparent: true, windowAtTop: false, overview: false, solidOnly: false }), 'clear');
-    eq(barLook({ transparent: true, windowAtTop: true, overview: false, solidOnly: false }), 'solid');
+    eq(barLook({ transparent: true, windowAtTop: false, solidOnWindow: true, overview: false, solidOnly: false }), 'clear');
+    eq(barLook({ transparent: true, windowAtTop: true, solidOnWindow: true, overview: false, solidOnly: false }), 'solid');
+eq(barLook({ transparent: true, windowAtTop: true, solidOnWindow: false, overview: false, solidOnly: false }), 'clear');
     eq(barLook({ transparent: false, windowAtTop: false, overview: false, solidOnly: false }), 'solid');
     eq(barLook({ transparent: true, windowAtTop: false, overview: false, solidOnly: true }), 'solid');
     eq(barLook({ transparent: true, windowAtTop: true, overview: true, solidOnly: false }), 'overview');
@@ -213,10 +214,9 @@ test('privacy dots and mic apps', () => {
         { appId: 'y', name: 'Recorder' }, { appId: 'z', name: null }]), ['Recorder', 'z']);
 });
 
-test('systemLogoSource bundles a symbolic mark for Fedora and uses the theme elsewhere', () => {
-    eq(systemLogoSource('fedora-logo-icon'), { file: 'icons/fedora-logo-symbolic.svg' });
-    eq(systemLogoSource('ubuntu-logo-icon').names,
-        ['ubuntu-logo-icon-symbolic', 'ubuntu-logo-symbolic', 'start-here-symbolic']);
+test('systemLogoNames tries the symbolic icon first', () => {
+    eq(systemLogoNames('fedora-logo-icon'), ['fedora-logo-icon-symbolic', 'fedora-logo-icon']);
+    eq(systemLogoNames('x-symbolic'), ['x-symbolic']);
 });
 
 if (failed)

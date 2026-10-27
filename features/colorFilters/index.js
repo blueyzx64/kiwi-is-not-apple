@@ -17,12 +17,11 @@
 // Shell API: Main.uiGroup effects, global.stage paint-view; lib/compat.js
 // createShaderEffect (48-51 shader APIs).
 
-import GObject from 'gi://GObject';
 import Mtk from 'gi://Mtk';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import { KiwiSettings } from '../../lib/settings.js';
-import { createShaderEffect } from '../../lib/compat.js';
+import { createShaderEffect, floatUniform } from '../../lib/compat.js';
 import { filterMatrix } from './model.js';
 
 const EFFECT_NAME = 'kiwi-color-filter';
@@ -38,13 +37,6 @@ vec4 kiwi_effect(vec2 uv, vec4 color) {
                   kiwi_m02, kiwi_m12, kiwi_m22);
     return vec4(clamp(m * color.rgb, 0.0, color.a), color.a);
 }`;
-
-function floatValue(v) {
-    const value = new GObject.Value();
-    value.init(GObject.TYPE_FLOAT);
-    value.set_float(v);
-    return value;
-}
 
 export class ColorFilters {
     constructor(ctx, cleanup) {
@@ -92,6 +84,6 @@ export class ColorFilters {
     }
 
     _setUniforms(effect) {
-        this._values.forEach((v, i) => effect.set_uniform_value(UNIFORMS[i], floatValue(v)));
+        this._values.forEach((v, i) => effect.set_uniform_value(UNIFORMS[i], floatUniform(v)));
     }
 }
