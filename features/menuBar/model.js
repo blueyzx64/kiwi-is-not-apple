@@ -340,3 +340,16 @@ export function micApps(outputs) {
     }
     return names;
 }
+
+/**
+ * Where the bar's system logo comes from. Fedora's own packages ship no symbolic logo, only a
+ * full-colour one that ignores the bar's text colour, so Fedora-family logos use Kiwi's bundled
+ * symbolic mark; any other distro uses its theme's `<LOGO>-symbolic`.
+ * @param {string} logo os-release LOGO
+ * @returns {{file: string}|{names: string[]}}
+ */
+export function systemLogoSource(logo) {
+    if (/^fedora/.test(logo))
+        return { file: 'icons/fedora-logo-symbolic.svg' };
+    return { names: [`${logo}-symbolic`, logo.replace(/-icon$/, '-symbolic'), 'start-here-symbolic'] };
+}

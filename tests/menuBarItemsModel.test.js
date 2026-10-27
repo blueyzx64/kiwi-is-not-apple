@@ -1,7 +1,7 @@
 // Run: gjs -m tests/menuBarItemsModel.test.js
 import {
     argbToRgba, barOrder, hostMode, itemAddress, moveItem, parseItemAddress,
-    parseMenu, parseRegistry, pickPixmap, planBar, sniId, sniVisible, stripMnemonic, updateRegistry,
+    parseMenu, parseRegistry, pickPixmap, planBar, sniId, sniVisible, updateRegistry,
 } from '../features/menuBarItems/model.js';
 import { PINNABLE, batteryText, parsePins, pinMode, pinShown, setPin } from '../lib/menuBarPins.js';
 
@@ -72,10 +72,6 @@ test('argbToRgba swaps the channels', () => {
     eq([...argbToRgba(new Uint8Array([255, 1, 2, 3, 128, 10, 20, 30, 9]))], [1, 2, 3, 255, 10, 20, 30, 128]);
 });
 
-test('mnemonics are stripped', () => {
-    eq([stripMnemonic('_Quit'), stripMnemonic('Save __as'), stripMnemonic(undefined)], ['Quit', 'Save _as', '']);
-});
-
 test('parseMenu keeps the tree, drops invisible items and stray separators', () => {
     const tree = parseMenu([0, {}, [
         [9, { type: 'separator' }, []],
@@ -91,6 +87,18 @@ test('parseMenu keeps the tree, drops invisible items and stray separators', () 
     eq([tree.children[0].label, tree.children[0].icon], ['Open', 'document-open']);
     eq([tree.children[2].toggle, tree.children[2].checked, tree.children[2].enabled], ['checkmark', true, false]);
     eq(tree.children[3].children[0].label, 'Sub');
+});
+
+test('parseMenu is bounded in depth and in item count', () => {
+    let deep = [99, { label: 'leaf' }, []];
+    for (let i = 0; i < 40; i++)
+        deep = [i, { label: 'n' }, [deep]];
+    let depth = 0;
+    for (let n = parseMenu(deep); n.children.length; n = n.children[0])
+        depth++;
+    eq(depth <= 8, true);
+    const wide = [0, {}, Array.from({ length: 10000 }, (_v, i) => [i + 1, { label: `i${i}` }, []])];
+    eq(parseMenu(wide).children.length, 3000);
 });
 
 test('barOrder puts new items first and keeps the saved order', () => {

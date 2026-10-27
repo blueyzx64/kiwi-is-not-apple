@@ -21,6 +21,9 @@ export const MAX_REPLY_BYTES = 1024 * 1024;
 /** At most this many items are built for one app's menus. */
 export const MAX_ITEMS = 3000;
 
+/** Submenus nest at most this deep. */
+export const MAX_DEPTH = 8;
+
 /** Drop a mnemonic: '_File' -> 'File', '__init' -> '_init' (GTK, and Qt through DBusMenu). */
 export function stripMnemonic(label) {
     return String(label ?? '').replace(/_(_)?/g, (_m, u) => u ?? '');
@@ -297,7 +300,7 @@ function itemFromLayout([id, props, children], provider, depth, budget) {
         return SEP;
     const label = stripMnemonic(props.label ?? '');
     const enabled = props.enabled !== false;
-    if ((props['children-display'] === 'submenu' || children?.length) && depth < 8) {
+    if ((props['children-display'] === 'submenu' || children?.length) && depth < MAX_DEPTH) {
         const inner = tidy((children ?? []).map(c => itemFromLayout(c, provider, depth + 1, budget)));
         return { kind: 'submenu', id: `${provider}:${id}`, label, enabled, items: inner, nativeId: id };
     }
