@@ -6,7 +6,7 @@
 | P1-windows | (earlier agent) | Tiling, green menu, Hide | kiwi-v3-windows / v3/p1-windows | | merged |
 | L1 | sonnet | P2 Dock motion & extras: Genie/Scale minimize, bounce, magnification, LauncherEntry badges, grey background-app dots, folder Stacks | kiwi-l1 / v3/l1 | dock merged | merged |
 | L2 | sonnet | P2 System surfaces: Tahoe volume/brightness OSD under the menu bar, centred dialogs, colour filters | kiwi-l2 / v3/l2-surfaces | | started |
-| L3 | sonnet | P2 Screenshot toolbar (Shift+Super+3/4/5) + floating thumbnail | kiwi-l3 / v3/l3-screenshot | | started |
+| L3 | sonnet | P2 Screenshot toolbar (Shift+Super+3/4/5) + floating thumbnail | kiwi-l3 / v3/l3-screenshot | | merged |
 | L4 | sonnet | P2 Input: Caps Lock / input-source badge, emoji popover, icon styles (dark/tinted) | kiwi-l4 / v3/l4-input | | started |
 | L5 | sonnet | P3 Mission Control + App Exposé + start-on-desktop | kiwi-l5 / v3/l5-mission | | merged |
 | L6 | sonnet | P3 App switcher (Super+Tab, Super+`) + trackpad gestures + hot corners | kiwi-l6 / v3/l6 | | merged |
@@ -81,3 +81,5 @@ Deploy conservatively, sized to the scope and type of work. Resume in waves of a
 - Resumed L4 (cap 5: P1-windows, L2, L3, FX3, L4).
 - ccr after the L7 merge: run-f44.sh 20 gave 0 Kiwi errors, 8/8 PASS (/tmp/x2/runs/20261027-150951-kiwi-is-not-apple-f44).
 - P1-windows → merged (Sequoia tiling `window-tiling`, green-button menu, Hide `app-hide`, glass traffic lights; core/tileActions.js; events `window-tiled`, `app-hidden`; WindowState `hidden`). Orchestrator follow-up done: with the green menu on, full-screen Left/Right go to Split View (`split-view-requested`), and Split View's own hover menu shows only when the green menu is off. To FX3: the dock must skip `hidden` windows among minimized ones, and the square grey shadow behind the green menu is the same issue as R2 F3. Open: press-and-hold opens on release, not while held; Move to Display is untested (one monitor); tile memory is lost on lock.
+- L3 → merged (Shift+Super+3/4/5, glass toolbar, timer, floating thumbnail, macOS file naming; events `recording-started`/`recording-stopped` for L9). Fact for L9/L10: on GNOME 50, `Source.iconName` is null for themed-icon sources, so match `gicon.get_names()`. Limits: no real recording was tested (no recorder in the roots); GNOME still copies every shot to the clipboard.
+- Resumed L8 Stage Manager (cap 5: L2, L4, FX3, L8). Notes for L8: minimizeEffect `setTargetProvider`; the Sushi preview must stay on stage; skip `hidden` and `splitView` windows; `click-wallpaper-reveals-desktop` lives in lib/clickModel.js.
