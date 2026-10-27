@@ -61,6 +61,27 @@ export const WELL_KNOWN = Object.freeze([
     { slot: 'shortcuts', names: ['app.shortcuts', 'app.show-shortcuts', 'win.show-help-overlay', 'app.show-help-overlay'], accel: '<Control>question' },
 ]);
 
+/** DescribeAll replies with more actions than this are not walked (gtkActions.js). */
+export const MAX_DESCRIBE_ALL = 2000;
+
+/**
+ * The well-known action names of one group, without the group prefix: what an app with too
+ * many actions is asked for, one by one.
+ *
+ * @param {'app'|'win'} group
+ * @returns {string[]}
+ */
+export function wellKnownNames(group) {
+    const out = new Set();
+    for (const { names } of WELL_KNOWN) {
+        for (const n of names) {
+            if (n.startsWith(`${group}.`))
+                out.add(n.slice(group.length + 1));
+        }
+    }
+    return [...out];
+}
+
 // Generic commands every app gets: slot -> generic command name. A slot an app's action
 // fills replaces the generic command (app.quit beats Shell.App.request_quit()).
 const GENERIC = Object.freeze({

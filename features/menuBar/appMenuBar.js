@@ -2,7 +2,10 @@
 // The app's part of the menu bar: the focused app's name in bold, then its menus (plan §5.1).
 //
 // The menus come from core/appMenus (ctx.appMenus): generic menus for every app, plus the
-// GTK actions the app exports. Titles are known from the cached provider result; the items
+// GTK actions the app exports. With native menus on, this part registers the menu bar
+// providers while it runs: the GTK exported menu bar and DBusMenu (Qt, Electron and other
+// Xwayland apps), then AT-SPI when its experimental setting is on. A native menu bar
+// replaces File, Edit and View; the App, Window and Help menus stay Kiwi's. Titles are known from the cached provider result; the items
 // are built only when a menu opens, so a closed menu bar costs nothing but a label update on
 // focus changes. With no focused window (the desktop) the menus are Files', as Finder's are
 // on macOS; in the overview the app menus step aside.
@@ -25,7 +28,10 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import { PanelLayout } from '../../core/panelLayout.js';
 import { searchMenus, WM_ACCEL_SLOTS } from '../../core/appMenus/model.js';
-import { LazyMenu, menuItem } from './menuItems.js';
+import { GtkMenusProvider } from '../../core/appMenus/gtkMenus.js';
+import { DBusMenuProvider } from '../../core/appMenus/dbusMenu.js';
+import { AtspiProvider } from '../../core/appMenus/atspi.js';
+import { LazyMenu, menuHeading, menuItem } from './menuItems.js';
 import { MenuGlass } from './menuGlass.js';
 
 export const APPS_CLAIM = 'kiwi-menubar-apps';
@@ -130,12 +136,16 @@ export class AppMenuBar {
     /**
      * @param {object} ctx the feature ctx
      * @param {CleanupRegistry} cleanup this part's registry
-     * @param {{keys: () => object}} opts shortcut label options
+     * @param {object} opts
+     * @param {() => object} opts.keys shortcut label options
+     * @param {{native: boolean, atspi: boolean, popovers: boolean}} [opts.providers] which
+     *   menu bar providers to run
      */
-    constructor(ctx, cleanup, { keys }) {
+    constructor(ctx, cleanup, { keys, providers = {} }) {
         this._ctx = ctx;
         this._cleanup = cleanup;
         this._keys = keys;
+        this._providerOpts = providers;
         this._buttons = [];
         this._target = null;
         this._menus = [];
@@ -160,6 +170,14 @@ export class AppMenuBar {
         const cleanup = this._cleanup;
         this._service = ctx.appMenus.acquire(cleanup);
         this._desktop = ctx.desktop.acquire(cleanup);
+        const { native = true, atspi = false, popovers = false } = this._providerOpts;
+        if (native) {
+            this._service.registerProvider(cleanup, new GtkMenusProvider());
+            this._service.registerProvider(cleanup, new DBusMenuProvider());
+        }
+        if (atspi)
+            this._service.registerProvider(cleanup, new AtspiProvider({ popovers }));
+        this._service.onChanged(cleanup, windowId => this._onProviderChanged(windowId));
         this._wm = new Gio.Settings({ schema_id: 'org.gnome.desktop.wm.keybindings' });
         this._mutter = new Gio.Settings({ schema_id: 'org.gnome.mutter.keybindings' });
 
@@ -205,7 +223,7 @@ export class AppMenuBar {
         }
         const cached = this._service.peek(target);
         this._setMenus(this._build(target, cached));
-        if (!cached && target.gtk) {
+        if (!cached) {
             this._service.results(target).then(results => {
                 if (this._target === target && !this._openButton())
                     this._setMenus(this._build(target, results));
@@ -342,6 +360,30 @@ export class AppMenuBar {
         });
     }
 
+    // A provider saw the app's menus change. Menus that came or went (org.gtk.Menus Changed,
+    // DBusMenu LayoutUpdated, a window registering its menu) are re-read at once for the titles;
+    // a state change (org.gtk.Actions Changed: Undo became possible) only matters to an open
+    // menu, which is refilled. Closed menus re-read their stale result when they open.
+    _onProviderChanged(windowId, { structure }) {
+        const target = this._target;
+        if (!target || target.windowId !== windowId)
+            return;
+        if (!structure && !this._openButton())
+            return;
+        this._service.results(target).then(results => {
+            if (this._target !== target)
+                return;
+            const open = this._openButton();
+            if (!open) {
+                this._setMenus(this._build(target, results));
+                return;
+            }
+            const menus = this._build(target, results);
+            open.def = menus.find(m => m.id === open.def?.id) ?? open.def;
+            this._fill(open);
+        });
+    }
+
     // After the last menu closed: titles may have changed (Edit or View appeared)
     _refreshTitles() {
         if (this._target)
@@ -379,10 +421,13 @@ export class AppMenuBar {
             case 'search':
                 button.searchEntry = this._addSearch(menu);
                 break;
+            case 'heading':
+                menu.addMenuItem(menuHeading(it.label));
+                break;
             default:
                 menu.addMenuItem(menuItem(it.label, {
                     accel: it.accel, keys: this._keys(), enabled: it.enabled,
-                    checked: checks ? !!it.checked : null,
+                    checked: checks ? !!it.checked : null, radio: !!it.radio,
                     onActivate: () => this._service.activate(target, it.command),
                 }));
             }

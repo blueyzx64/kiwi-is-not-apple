@@ -16,10 +16,11 @@ import { formatAccel } from '../../core/appMenus/model.js';
  * @param {{glyphs: boolean, ctrlIsCommand: boolean}} [opts.keys] how to write it
  * @param {boolean} [opts.enabled]
  * @param {?boolean} [opts.checked] true/false shows a check column; null none
+ * @param {boolean} [opts.radio] a radio item: a dot instead of a checkmark
  * @param {Function} [opts.onActivate]
  * @returns {PopupMenu.PopupMenuItem}
  */
-export function menuItem(label, { accel = null, keys = {}, enabled = true, checked = null, onActivate = null } = {}) {
+export function menuItem(label, { accel = null, keys = {}, enabled = true, checked = null, radio = false, onActivate = null } = {}) {
     const item = new PopupMenu.PopupMenuItem(label);
     item.add_style_class_name('kiwi-menubar-menu-item');
     const text = accel ? formatAccel(accel, keys) : '';
@@ -30,7 +31,7 @@ export function menuItem(label, { accel = null, keys = {}, enabled = true, check
         }));
     }
     if (checked !== null)
-        item.setOrnament(checked ? PopupMenu.Ornament.CHECK : PopupMenu.Ornament.NONE);
+        item.setOrnament(!checked ? PopupMenu.Ornament.NONE : radio ? PopupMenu.Ornament.DOT : PopupMenu.Ornament.CHECK);
     item.setSensitive(enabled);
     if (onActivate)
         item.connect('activate', () => onActivate());

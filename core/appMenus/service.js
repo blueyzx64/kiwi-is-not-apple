@@ -9,10 +9,23 @@
 //   menus.build(target, results, { generic, accels, _ });   // -> menus (core/appMenus/model.js)
 //   menus.activate(target, item.command);
 //   menus.registerProvider(cleanup, provider);       // P6: GTK menu bars, DBusMenu, AT-SPI
+//   menus.onChanged(cleanup, target => ...);         // a provider saw the app's menus change
 //
-// Providers: {id, supports(target), fetch(target, cancellable) -> Promise<{actions?, menus?}>,
-// activate(target, command) -> Promise<boolean>}. Every provider that supports a target is
-// asked; their results are concatenated (actions) and merged (menus).
+// Providers: {id, menubar?, supports(target), fetch(target, cancellable, {actions}) ->
+// Promise<{actions?, menus?, menubar?}>, activate(target, command) -> Promise<boolean>,
+// start?(host), release?(windowId), stop?()}.
+//   - Action providers (no `menubar` flag) are asked together; their actions are concatenated
+//     and their menus merged into Kiwi's (core/appMenus/model.js mergeNativeMenus).
+//   - Menu bar providers (`menubar: true`: GTK exported menus, DBusMenu, AT-SPI) are asked
+//     afterwards, in registration order, with the actions already known; the first that
+//     returns a menu bar wins and replaces Kiwi's File/Edit/View (nativeModel.js applyMenubar).
+//   - host.changed(windowId, {structure}) marks a window's result stale and tells onChanged()
+//     listeners: structure true when menus came or went (org.gtk.Menus Changed, DBusMenu
+//     LayoutUpdated, a window registering its menu), false when only states changed
+//     (org.gtk.Actions Changed). release(windowId) runs when the window goes, stop() when the
+//     provider is removed or the service stops.
+//   - A provider that fails (a timeout, a busy app) leaves the result incomplete: it is shown,
+//     but stays stale, so the next menu open asks again.
 //
 // Cache: one entry per window (its app.* and win.* actions), dropped when the window goes and
 // marked stale when it gains focus, so a menu opened later re-reads the app's actions. Nothing
@@ -27,10 +40,14 @@ import Shell from 'gi://Shell';
 
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { buildMenus, mergeNativeMenus } from './model.js';
+import { applyMenubar } from './nativeModel.js';
 import { GtkActionsProvider } from './gtkActions.js';
 import { GenericCommands } from './commands.js';
+import { x11WindowId } from '../../lib/compat.js';
 
-const EMPTY = Object.freeze({ actions: Object.freeze([]), menus: Object.freeze([]) });
+const EMPTY = Object.freeze({
+    actions: Object.freeze([]), menus: Object.freeze([]), menubar: Object.freeze([]), complete: true,
+});
 
 export class AppMenuService {
     /**
@@ -40,10 +57,13 @@ export class AppMenuService {
         this._core = { events, desktop, layout };
         this._refs = 0;
         this._cleanup = null;
-        this._providers = [GtkActionsProvider];
+        this._actions = new GtkActionsProvider();
+        this._providers = [this._actions];
         this._cache = new Map(); // windowId -> {value, promise, stale}
         this._cancellable = null;
         this._commands = null;
+        this._listeners = new Set();
+        this._host = Object.freeze({ changed: (windowId, how) => this._changed(windowId, how) });
     }
 
     acquire(owner) {
@@ -74,11 +94,13 @@ export class AppMenuService {
     registerProvider(owner, provider) {
         this._providers.push(provider);
         this._cache.clear();
+        provider.start?.(this._host);
         const remove = () => {
             const i = this._providers.indexOf(provider);
             if (i >= 0) {
                 this._providers.splice(i, 1);
                 this._cache.clear();
+                provider.stop?.();
             }
         };
         owner.add(remove);
@@ -86,11 +108,21 @@ export class AppMenuService {
     }
 
     /**
+     * Call `fn(windowId, {structure})` while `owner` lives whenever a provider reports that a
+     * window's menus changed (its cached result is stale by then).
+     */
+    onChanged(owner, fn) {
+        this._listeners.add(fn);
+        owner.add(() => this._listeners.delete(fn));
+    }
+
+    /**
      * The plain description of a window every provider reads.
      *
      * @param {?Meta.Window} win null for the desktop (no focused window)
      * @param {?Shell.App} [fallbackApp] the app to describe when there is no window
-     * @returns {?object} {windowId, appId, appName, gtk: {busName, appPath, windowPath}|null}
+     * @returns {?object} {windowId, appId, appName, pid, xid, title,
+     *   gtk: {busName, appPath, windowPath, menubarPath, appMenuPath}|null}
      */
     targetFor(win, fallbackApp = null) {
         const app = win ? Shell.WindowTracker.get_default().get_window_app(win) : fallbackApp;
@@ -101,11 +133,16 @@ export class AppMenuService {
             busName,
             appPath: win.get_gtk_application_object_path() || null,
             windowPath: win.get_gtk_window_object_path() || null,
+            menubarPath: win.get_gtk_menubar_object_path?.() || null,
+            appMenuPath: win.get_gtk_app_menu_object_path?.() || null,
         } : null;
         return {
             windowId: win ? win.get_stable_sequence() : null,
             appId: app.get_id(),
             appName: app.get_name(),
+            pid: win ? win.get_pid() : null,
+            xid: win ? x11WindowId(win) : null,
+            title: win ? win.get_title() ?? '' : '',
             gtk,
         };
     }
@@ -140,7 +177,7 @@ export class AppMenuService {
         entry.promise = this._fetch(target, cancellable).then(value => {
             if (this._cache.get(key) === entry && !cancellable.is_cancelled()) {
                 entry.value = value;
-                entry.stale = false;
+                entry.stale = !value.complete;
             }
             entry.promise = null;
             return value;
@@ -165,7 +202,7 @@ export class AppMenuService {
         const built = buildMenus({
             appName: target.appName, actions: results?.actions ?? [], generic, accels, _,
         });
-        return mergeNativeMenus(built, results?.menus ?? []);
+        return applyMenubar(mergeNativeMenus(built, results?.menus ?? []), results?.menubar ?? []);
     }
 
     /**
@@ -189,21 +226,45 @@ export class AppMenuService {
     }
 
     async _fetch(target, cancellable) {
-        const parts = await Promise.all(this._providers
-            .filter(p => p.supports(target))
-            .map(p => p.fetch(target, cancellable).catch(e => {
-                console.warn(`[Kiwi] app menus: provider ${p.id} failed: ${e.message}`);
-                return null;
-            })));
+        let complete = true;
+        const ask = (p, known) => p.fetch(target, cancellable, known).catch(e => {
+            complete = false;
+            if (!e.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
+                console.debug(`[Kiwi] app menus: provider ${p.id} failed: ${e.message}`);
+            return null;
+        });
+        const supported = this._providers.filter(p => p.supports(target));
+        const parts = await Promise.all(supported.filter(p => !p.menubar).map(p => ask(p, {})));
         const actions = [];
         const menus = [];
-        for (const part of parts) {
+        const add = part => {
             for (const a of part?.actions ?? [])
                 actions.push(a);
             for (const m of part?.menus ?? [])
                 menus.push(m);
+        };
+        parts.forEach(add);
+        // Menu bar providers in order: the first real menu bar wins
+        let menubar = [];
+        for (const p of supported.filter(x => x.menubar)) {
+            if (cancellable.is_cancelled())
+                break;
+            const part = await ask(p, { actions });
+            add(part);
+            if (part?.menubar?.length) {
+                menubar = part.menubar;
+                break;
+            }
         }
-        return Object.freeze({ actions, menus });
+        return Object.freeze({ actions, menus, menubar, complete });
+    }
+
+    _changed(windowId, { structure = true } = {}) {
+        const entry = this._cache.get(windowId);
+        if (entry)
+            entry.stale = true;
+        for (const fn of this._listeners)
+            fn(windowId, { structure });
     }
 
     _start() {
@@ -214,7 +275,12 @@ export class AppMenuService {
         layout.acquire(cleanup);
         this._cancellable = new Gio.Cancellable();
         this._commands = new GenericCommands({ events, desktop, layout });
-        events.on('window-removed', ({ window }) => this._cache.delete(window.id), cleanup);
+        this._actions.start(this._host);
+        events.on('window-removed', ({ window }) => {
+            this._cache.delete(window.id);
+            for (const p of this._providers)
+                p.release?.(window.id);
+        }, cleanup);
         events.on('window-focused', ({ window }) => {
             const entry = window ? this._cache.get(window.id) : null;
             if (entry)
@@ -230,7 +296,11 @@ export class AppMenuService {
         this._commands.stop();
         this._commands = null;
         this._cache.clear();
-        this._providers = [GtkActionsProvider];
+        const extra = this._providers.filter(p => p !== this._actions);
+        this._providers = [this._actions];
+        for (const p of extra)
+            p.stop?.();
+        this._actions.stop();
         const cleanup = this._cleanup;
         this._cleanup = null;
         cleanup.dispose();

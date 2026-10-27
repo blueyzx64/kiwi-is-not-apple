@@ -6,7 +6,9 @@
 //
 // Parts, each with its own CleanupRegistry so its setting turns it on and off live:
 //   logo         logoMenu.js         menubar-logo ('fedora' | 'kiwi' | 'none')
-//   app menus    appMenuBar.js       menubar-app-menu; menus from core/appMenus (ctx.appMenus)
+//   app menus    appMenuBar.js       menubar-app-menu; menus from core/appMenus (ctx.appMenus);
+//                                    menubar-native-menus (GTK menu bars, DBusMenu),
+//                                    menubar-atspi-menus / -popovers (experimental)
 //   look         adaptiveBar.js      menubar-transparent (transparent bar, adaptive text)
 //   full screen  fullscreenReveal.js menubar-fullscreen-visible
 //   privacy      privacyDots.js      menubar-privacy-dots
@@ -123,10 +125,17 @@ export class MenuBar {
             return logo;
         }, ['menubar-logo', 'menubar-command-glyphs', 'menubar-force-quit-shortcut']);
         part('apps', () => ks.bool('menubar-app-menu'), reg => {
-            const apps = new AppMenuBar(this._ctx, reg, { keys });
+            const apps = new AppMenuBar(this._ctx, reg, {
+                keys,
+                providers: {
+                    native: ks.bool('menubar-native-menus'),
+                    atspi: ks.bool('menubar-atspi-menus'),
+                    popovers: ks.bool('menubar-atspi-popovers'),
+                },
+            });
             apps.start();
             return apps;
-        }, ['menubar-app-menu']);
+        }, ['menubar-app-menu', 'menubar-native-menus', 'menubar-atspi-menus', 'menubar-atspi-popovers']);
         part('look', () => ks.bool('menubar-transparent'), reg => {
             const look = new AdaptiveBar(this._ctx, reg);
             look.start();
