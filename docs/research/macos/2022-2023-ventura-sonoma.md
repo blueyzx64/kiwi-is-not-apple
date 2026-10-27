@@ -998,3 +998,991 @@ should either match or fix on purpose:
   GNOME Web, Endeavour (tasks), Errands, Home Assistant.
 - **Kiwi status:** partial (generic app menus planned in P1).
 - **Recommendation:** **Skip** for the apps. The "Settings…" naming goes into §5.1 (S).
+
+---
+
+## Sonoma features
+
+### Desktop widgets: placement, sizes and layout
+- **Introduced / changed:** Sonoma 14.0 (new). Widgets had been in Notification Center only since
+  Big Sur. Sequoia and later changes are in the 2024+ file.
+- **What it is:**
+  - **Where they live.** WidgetKit widgets can sit **on the desktop**, among desktop icons, on any
+    display. They show on every Space. Notification Center widgets can be dragged to the desktop and
+    back.
+  - **Sizes:** small (1×1), medium (2×1), large (2×2) and **extra-large (4×2, desktop only)**. You
+    pick a size in the gallery or later from the widget's right-click menu.
+  - **Placement rules:**
+    - The first widget in empty space goes anywhere inside the screen.
+    - Near the screen edges and corners a **snap-to-grid outline** keeps it a margin away from the
+      edge. Widgets can also snap below the Dock area.
+    - Each later widget **snaps to an alignment grid relative to the existing ones**, so widgets
+      never overlap.
+    - Holding ⌘ while dragging loosens the snapping (an Ars reader's tip).
+    - Desktop icons move out of a widget's way temporarily and snap back. Existing widgets never
+      move by themselves.
+  - **Moving.** Widgets can be dragged at any time, without an edit mode.
+  - **Multiple displays.** Widgets on the laptop's built-in (primary) display migrate to the
+    primary display when docked. Widgets placed on a secondary display disappear until that display
+    returns.
+  - **Click behaviour.** A plain click on a widget opens its app at the right place (a deep link).
+    Interactive widgets act in place (see below).
+- **Caveats (on macOS):**
+  - The grid is "pretty rigid": a widget must line up with an edge of a neighbour and can't sit
+    between two.
+  - Widgets are hidden behind windows most of the time, which is why Apple added the wallpaper
+    click.
+  - Few third-party Mac apps ship widgets.
+  - Desktop icons and widgets fight for space.
+- **Port to GNOME 50:**
+  - **A Shell extension layer:** one `St.Widget` per monitor, inserted into `global.window_group`
+    **directly above `Main.layoutManager._backgroundGroup`** (private; Shell 50 `layout.js` places
+    the background group first in `window_group`). It sits above the wallpaper and below every
+    window.
+  - **Input.** Reactive St actors there get pointer events, because the Shell is the compositor.
+    They swallow background-menu clicks only where a widget is.
+  - **Shared behaviour.** The window group is hidden in the overview, so widgets vanish in Mission
+    Control as on macOS, and they stay put during workspace switches (they belong to every
+    workspace).
+  - **Geometry.** Use a fixed grid unit (≈ 170 px for 1×1, 16 px gaps; scale with
+    `St.ThemeContext.scale_factor`). Snapping is pure code in `features/widgets/model.js`: the
+    edge-margin snap, then neighbour-alignment snap and overlap rejection. Ctrl-drag loosens it.
+  - **Persistence.** Store `{id, kind, size, config, monitorKey, x, y}` as JSON in one GSettings
+    string key, with `monitorKey` taken from the monitor connector and vendor/serial
+    (`global.backend.get_monitor_manager()`). Kiwi can do better than macOS by restoring a
+    secondary display's widgets when it returns.
+  - **Interplay with `core/layout.js`.** Widgets avoid the menu bar, dock, strip and notch rects.
+    They never reserve work area.
+- **Blockers / risks:**
+  - `_backgroundGroup` is private. Feature-detect it and fall back to inserting at index 1 of
+    `global.window_group`.
+  - Kiwi's own Stage Manager hider and Show Desktop move window actors only, so they don't touch
+    the layer.
+  - **DING** (if installed) draws icons in a DESKTOP-type window *above* the background group, so
+    Kiwi's widgets would sit under DING's transparent window and lose clicks. Detect DING and either
+    stack the layer above DESKTOP-type window actors or document the conflict.
+  - **Performance.** Widgets must update on aligned timers (once a minute for clocks, event-driven
+    for MPRIS and UPower) and stop updating when fully covered.
+- **Linux equivalents today:**
+  - GNOME extensions: **Desktop Widgets (Desktop Clock, `azclock@azclock.gitlab.com`)**, and
+    Conky (X11 and Xwayland; awkward on Wayland).
+  - Other desktops: KDE Plasma widgets (the best Linux reference for the UX) and Cinnamon desklets.
+- **Kiwi status:** none (a calendar card and the notch's planned Widgets tab exist).
+- **Recommendation:** **Port (P2), effort L.** It is the second big Sonoma feature, reuses the
+  notch and calendar data sources, and is safe on Wayland because it lives inside the Shell.
+
+### Widget gallery and editing (Edit Widgets…)
+- **Introduced / changed:** Sonoma 14.0.
+- **What it is:**
+  - **Opening the gallery.** Control-click the wallpaper → **Edit Widgets…** Windows fade away and
+    a **widget gallery** slides up from the bottom.
+  - **Gallery layout.** A search field and a category list (one per app). Each widget shows a
+    preview at each size, and a "Mac / iPhone" source switch sits at the top right.
+  - **Adding.** Click a widget, or its + button, to auto-place it. Or drag it to an exact spot.
+    While editing, every widget shows a − button.
+  - **Done** closes the gallery.
+  - **Right-click on a widget** offers "Edit <Widget>…" (flips it to its configuration face:
+    choose a list, city, album…), the size choices and Remove Widget. In Notification Center,
+    Option-hover shows remove buttons.
+- **Caveats (on macOS):**
+  - The gallery lists every iPhone widget too, even useless ones (QR-code loyalty cards).
+  - Configuration options are limited to what each widget's intent defines.
+- **Port to GNOME 50:**
+  - **Menu entry.** Add "Edit Widgets…" to the Shell's background menu. Each
+    `bgManager.backgroundActor._backgroundMenu` is a `PopupMenu` built in
+    `backgroundMenu.js:addBackgroundMenu` (private). Add an item after construction for each
+    `Main.layoutManager._bgManagers[i]`, re-apply on bgManager `changed`, and remove on disable.
+  - **The gallery** is a Kiwi faux-glass panel at the bottom of the primary monitor, shown with
+    `lib/modal` (pushModal while editing). It has a search `St.Entry` and categories (Clock, Weather,
+    Calendar, Media, Batteries, Photos, Shortcuts, System).
+  - **Flipping a widget** to its config face uses an in-place St form. Complex options open a
+    small prefs page.
+  - Previews are live instances at reduced size.
+- **Blockers / risks:**
+  - The background menu is private API.
+  - The modal must be dropped if the screen locks (Kiwi's Spotlight rule).
+  - Dragging from a modal to the desktop layer needs `DND.makeDraggable` with a custom drop target
+    on the widget layer.
+- **Linux equivalents today:** Plasma's "Add Widgets…" sidebar; azclock's prefs-based editor.
+- **Kiwi status:** none.
+- **Recommendation:** **Port (P2), effort M** (ships with the widget layer).
+
+### Widget dimming and visibility settings (monochrome while windows are in front)
+- **Introduced / changed:** Sonoma 14.0.
+  - **Desktop & Dock → Widgets**, as first shipped:
+    - Show Widgets: ☐ On Desktop ☐ In Stage Manager;
+    - **Widget style: Automatic / Monochrome / Full-color**;
+    - Use iPhone widgets;
+    - Default web browser.
+  - **Later wording** in Apple's current guide: "Dim widgets on desktop: Automatically / Always /
+    Never".
+- **What it is:**
+  - Widgets **fade to a translucent grey or monochrome tint** as soon as any app window is
+    frontmost, so they "blend with the wallpaper" and don't distract. They stay **interactive**
+    while dimmed.
+  - They return to full colour when the desktop (Finder) is focused or the desktop is revealed.
+  - "In Stage Manager" off hides widgets while Stage Manager is on, until the wallpaper is clicked.
+- **Caveats (on macOS):** dimmed widgets are hard to read on busy wallpapers. The monochrome tint
+  uses the wallpaper's colour, which can look muddy.
+- **Port to GNOME 50:**
+  - Add a `Clutter.DesaturateEffect` (factor 1.0) plus an opacity ease (~0.55–0.65) on each widget
+    while any normal, non-minimized window on that monitor is focused. Watch
+    `global.display` `notify::focus-window`; there is no focus when the desktop is clicked, and the
+    Show Desktop or Stage Manager desktop state also counts.
+  - Use full colour when no window is focused or the desktop is revealed. Tint with the wallpaper's
+    average colour for the "monochrome" look (a 1×1 downscale of the background's `Meta.Background`
+    is not exposed, so compute it from the wallpaper file in prefs and store it, or use a neutral
+    grey).
+  - **Settings:** `widgets-show-desktop`, `widgets-show-stage-manager`, and
+    `widgets-dim=auto|always|never`.
+- **Blockers / risks:**
+  - `DesaturateEffect` on many actors means offscreen redirects. Apply it to one container per
+    monitor, not per widget.
+  - Honour high contrast (no dimming) and reduced transparency.
+- **Linux equivalents today:** none (Plasma widgets don't dim).
+- **Kiwi status:** none.
+- **Recommendation:** **Port (P2), effort S.** Cheap, and it is what makes desktop widgets
+  livable.
+
+### Interactive widgets (buttons and toggles that act in place)
+- **Introduced / changed:** Sonoma 14.0 (WidgetKit + App Intents interactivity, shared with iOS 17).
+- **What it is:**
+  - Widgets can hold **Buttons and Toggles** that run an App Intent without opening the app: check
+    off a reminder, play or pause media, toggle a HomeKit accessory, run a Shortcut, start a timer.
+  - The widget re-renders from its timeline after the action, with a brief animated transition.
+  - Everything else in a widget is a deep link that opens the app.
+- **Caveats (on macOS):**
+  - Interactivity is limited to buttons and toggles: no text fields and no scrolling.
+  - iPhone widgets' buttons run on the phone. Their deep links say "Open <app> on your iPhone to
+    continue".
+- **Port to GNOME 50:**
+  - Kiwi's widgets are native St actors, so interactivity is free. What's missing on Linux is a
+    *data and action* source per widget kind:
+    - **Media:** MPRIS through the Shell's `js/ui/mpris.js` players (Kiwi's notch already uses
+      them).
+    - **Batteries:** UPower `org.freedesktop.UPower` → `EnumerateDevices` (laptop, mouse, keyboard,
+      headset, phone through GSConnect, which exposes a UPower-like battery).
+    - **Calendar** ("Up Next", list): the Shell's `org.gnome.Shell.CalendarServer` (Evolution Data
+      Server), as in `js/ui/calendar.js`.
+    - **Weather:** `js/misc/weather.js` `WeatherClient`.
+    - **World clocks:** the `org.gnome.shell.world-clocks` locations, `GLib.TimeZone`.
+    - **Quick toggles:** Wi-Fi, Bluetooth, DND and dark mode, through the same backends as Kiwi's
+      Control Center.
+    - **Shortcuts:** buttons that launch `.desktop` actions or custom commands.
+    - **Photos:** a folder or album slideshow loaded asynchronously.
+    - **Reminders:** EDS task lists; heavy, so later.
+  - **A third-party widget API.** Linux has no WidgetKit. Kiwi could later define a simple D-Bus
+    interface or a declarative JSON widget (title, rows, buttons → D-Bus method or command). Skip it
+    in v1.
+- **Blockers / risks:**
+  - Each data source runs async on the compositor thread, so never block (EGO-X).
+  - EDS task access from GJS is heavy.
+  - Third-party widgets would need a stable protocol and EGO review of any command execution.
+- **Linux equivalents today:** Plasma widgets (interactive, QML); GNOME's Quick Settings and
+  calendar menu cover some of the same data.
+- **Kiwi status:** partial (the notch has media; Control Center has toggles).
+- **Recommendation:** **Port (P2), effort M**, starting with a built-in widget set: Clock, World
+  Clock, Calendar, Weather, Media, Batteries, Toggles and Shortcuts.
+
+### iPhone widgets on the Mac (Continuity)
+- **Introduced / changed:** Sonoma 14.0 (needs iOS 17 on the same Apple ID, nearby or on the same
+  Wi-Fi).
+- **What it is:**
+  - Any widget of any app on the user's iPhone can be added to the Mac's desktop or Notification
+    Center. The phone renders the widgets and they sync over Continuity, even for apps not
+    installed on the Mac.
+  - The gallery labels them "From iPhone".
+  - If several iPhones are signed in, Settings picks which one.
+  - Widgets stop updating when the phone is away.
+- **Caveats (on macOS):**
+  - Tapping usually says "Open <app> on your iPhone to continue".
+  - Many phone widgets are useless on a desk.
+  - Updates stall out of range.
+- **Port to GNOME 50:** impossible for iPhones. Rendering Android widgets on Linux is also not
+  available: KDE Connect and GSConnect sync notifications, battery, media and clipboard, but not
+  widgets. Kiwi could make phone *data* widgets from GSConnect's D-Bus (battery, notifications,
+  media).
+- **Blockers / risks:** Apple's protocol is proprietary. GSConnect is an optional extension.
+- **Linux equivalents today:** GSConnect and KDE Connect (phone battery, notifications, media
+  control).
+- **Kiwi status:** none.
+- **Recommendation:** **Skip, effort XL.** A GSConnect "phone" widget can be **Later (P3), S**.
+
+### Notification Center widgets (shared with the desktop)
+- **Introduced / changed:** Big Sur added NC widgets. Sonoma made them interactive and
+  drag-transferable to the desktop, and added the new widget kinds.
+- **What it is:**
+  - Clicking the date and time in the menu bar opens Notification Center: notifications on top,
+    widgets below in a column, with an "Edit Widgets" button at the bottom.
+  - Widgets dragged between NC and the desktop **keep their configuration**, so NC works as a
+    "holding place" (MacMost).
+  - Extra-large widgets cannot go into NC.
+- **Caveats (on macOS):** a crowded NC, small widgets only, and the column order is manual.
+- **Port to GNOME 50:**
+  - Kiwi's notch "Widgets" tab (§5.6) and the calendar card play NC's role. Use **one widget
+    model** for both surfaces, so a widget instance can move between "desktop" and "notch/calendar"
+    containers without losing its config. The model stays in `features/widgets/`, and the surfaces
+    only render it.
+  - The Shell's calendar menu (`dateMenu.js`) already holds Weather and World Clocks sections that
+    Kiwi can hide or replace.
+- **Blockers / risks:** a dependency between the notch and calendar card owners. Define the widget
+  model as a shared service in `core/`.
+- **Linux equivalents today:** the GNOME calendar menu's Weather and World Clocks sections.
+- **Kiwi status:** partial (calendar card, notch).
+- **Recommendation:** **Port (P2), effort M.**
+
+### Sonoma's new widget kinds (Batteries, Contacts, Photos, Shortcuts, Home, extra-large)
+- **Introduced / changed:** Sonoma 14.0.
+- **What it is:**
+  - **Batteries:** the Mac, AirPods and iPhone.
+  - **Contacts:** favourite people, with mail, message and call actions.
+  - **Photos:** a featured photo or an album shuffle. Users make one-photo albums to pin a picture
+    or a cheat sheet.
+  - **Shortcuts:** buttons for a folder of shortcuts.
+  - **Home:** accessories and scenes.
+  - **Extra-large** variants for Calendar, Podcasts and Stocks.
+  - **Clock widgets:** city clocks in groups of four.
+  - **Freeform** got a share widget.
+- **Caveats (on macOS):** Ars found Battery, Home and Shortcuts the "three most useful" ones. The
+  rest are niche.
+- **Port to GNOME 50:** the same mapping as under interactive widgets.
+  - Batteries come from UPower and GSConnect.
+  - Contacts would read Evolution Data Server address books (Folks); that is heavy, so later.
+  - Photos come from a chosen folder.
+  - Shortcuts are `.desktop` actions or commands.
+  - Home: skip, or Home Assistant via a user-supplied URL and token (later and opt-in, because of
+    network and EGO privacy).
+- **Blockers / risks:** EDS contacts and Home Assistant credentials are sensitive; keep them out of
+  v1.
+- **Linux equivalents today:** Plasma's battery, photo frame and quick-launch widgets.
+- **Kiwi status:** none.
+- **Recommendation:** **Port (P2), effort M** for Batteries, Photos and Shortcuts. Contacts and
+  Home are **Later (P3)**.
+
+### Click wallpaper to reveal desktop
+- **Introduced / changed:** Sonoma 14.0. It is on by default ("Always"). The option sits in
+  Desktop & Dock: *Always* / *Only in Stage Manager*.
+- **What it is:**
+  - Clicking any empty part of the wallpaper (even between icons) makes **all windows fly to the
+    screen edges** and leaves thin slivers visible. Desktop icons and widgets are then in front,
+    and widgets go full colour.
+  - Clicking the wallpaper again, a window sliver, a Dock app or ⌘-Tab brings everything back.
+  - It is the same as the five-finger spread trackpad gesture (Show Desktop).
+  - With Stage Manager on, it sends the whole stage to the strip instead.
+- **Caveats (on macOS):**
+  - **The most-complained-about Sonoma default.** Users click the desktop to deselect or focus
+    Finder and lose their windows. Many how-tos explain setting it to "Only in Stage Manager"
+    (PopSci).
+  - Accidental triggers happen between icons.
+- **Port to GNOME 50:**
+  - Kiwi has **Show Desktop** (`apps/showDesktop/`, which delegates to Stage Manager's
+    `toggleDesktop()`).
+  - **Click detection:** a primary-button `Clutter.ClickGesture` on each bgManager
+    `backgroundActor` (already reactive in Shell 50 for the background menu). Ignore drags and
+    long-presses (the background menu uses `LongPressGesture`), and ignore clicks while a Kiwi modal
+    is open.
+  - **Animation:** ease each window actor's translation toward its nearest monitor edge, keeping
+    ~24 px slivers. Put a reactive transparent catcher strip over each sliver, so a click there
+    restores instead of hitting the app.
+  - Drop keyboard focus with `global.display.unset_input_focus(global.get_current_time())`.
+  - Restore on a second wallpaper click, a sliver click, `focus-window` to any window, a dock or
+    switcher activation, or a workspace switch.
+  - Never use `minimize()`, so window state stays truthful.
+  - **Setting:** `click-wallpaper-reveals-desktop = always | stage-manager | never`, **default
+    `stage-manager`**. GNOME users don't expect windows to fly away, and Sonoma's default is its
+    most-reverted change.
+- **Blockers / risks:**
+  - The actor-only move keeps the real frames. Mutter's input picking follows the actor transform,
+    but the slivers must not take clicks, hence the catchers.
+  - Fullscreen windows are excluded.
+  - With DING, wallpaper clicks land on DING's window, so the feature doesn't trigger.
+  - Workspace-switch animations reparent window actors. Restore before a switch.
+- **Linux equivalents today:** GNOME's Super+D / Show Desktop (minimizes everything); Kiwi's Show
+  Desktop.
+- **Kiwi status:** partial (Show Desktop and the Stage Manager wallpaper click exist; the
+  non-Stage-Manager wallpaper click does not).
+- **Recommendation:** **Port (P1), effort M.** Desktop widgets need it, and it shares code with
+  Show Desktop. Default it to "Only in Stage Manager".
+
+### Aerial screen savers
+- **Introduced / changed:** Sonoma 14.0.
+- **What it is:**
+  - **Content.** 134 (at release) slow-motion 4K videos from Apple TV's aerials in four themes:
+    Landscape, Cityscape, Underwater and Earth. You can shuffle by theme.
+  - **Downloads.** Only "Sonoma" and "Sonoma Horizon" are local. Each other video downloads on
+    first use: 100 MB to 1.5 GB, all 118 videos ≈ 54 GB, in
+    `/Library/Application Support/com.apple.idleassetsd/Customer/4KSDR240FPS`.
+  - The videos are stored as **purgeable** space, so Finder's free-space figure ignores them.
+  - **Transitions.** Apps recede and the screen dissolves into the video. Waking dissolves back as
+    the apps pop in.
+  - **"Show as wallpaper"** uses the same video as the desktop picture.
+- **Caveats (on macOS):**
+  - Default energy settings turn the screen off before the saver starts, so most people never see
+    it.
+  - Frame drops on Intel Macs.
+  - The free-space confusion.
+  - Custom videos are officially impossible. A file-swap hack is unreliable (Ars).
+  - Animated login backgrounds made Screen Sharing logins choppy (Michael Tsai).
+- **Port to GNOME 50:**
+  - GNOME has **no screen saver**: idle → dim → blank (`org.gnome.desktop.session idle-delay`) →
+    lock. A Kiwi "aerial" would be an idle overlay before blanking.
+  - **Rendering:** an out-of-process **GTK4 + GStreamer helper** (`gtk4paintablesink`, VA-API
+    decode) whose fullscreen window the extension promotes above everything while the session is
+    idle. Use the Mutter idle monitor (`global.backend.get_core_idle_monitor().add_idle_watch()`),
+    and dismiss on user activity.
+  - **Assets:** never Apple's videos (copyright). Use user-chosen video files, or a downloadable,
+    openly licensed pack.
+- **Blockers / risks:**
+  - The Shell lock screen is drawn above all windows, so the video can't continue on the lock
+    screen.
+  - Video in the Shell process itself is not realistic: no GTK4 in the Shell, and per-frame texture
+    uploads from GJS are slow.
+  - Battery cost; it must stop on battery or when the screen blanks.
+  - Bundling and spawning a helper is allowed (DING does it), but EGO reviewers look closely.
+- **Linux equivalents today:** **Hanabi** (a GNOME extension with a GTK4/GStreamer video wallpaper
+  helper), xscreensaver (X11 only), KDE's screen locker themes.
+- **Kiwi status:** none.
+- **Recommendation:** **Later (P3), effort L.** It looks great, but the lock-screen hand-off, which
+  is the magic part, isn't possible.
+
+### Aerial live wallpapers (the wallpaper that comes alive)
+- **Introduced / changed:** Sonoma 14.0.
+- **What it is:**
+  - With the aerial chosen as both screen saver and wallpaper, the desktop shows a **still frame**.
+  - When the saver starts, icons and windows fade and **the wallpaper starts moving**.
+  - On wake or login, the video **keeps moving for a few seconds, then eases to a stop** as the
+    icons and apps fade back.
+  - The login window uses the same video.
+- **Caveats (on macOS):** the same disk and GPU costs as the screen savers. Third-party videos
+  crash to black on exit (Ars). Some Intel Macs showed a red menu-bar glitch that users linked to
+  animated wallpapers.
+- **Port to GNOME 50:**
+  - **A still frame is easy:** set the wallpaper to an extracted frame (`gst` thumbnail, done in
+    the helper).
+  - **The "comes alive" effect** needs the video behind windows. The Hanabi approach is a helper
+    window kept at the bottom of the stack: the extension sets it below, sticky and skip-taskbar,
+    and re-parents its `Meta.WindowActor` into the background area.
+  - **The ease-to-stop:** play the video at decreasing rate, then swap to the still image.
+  - The lock screen part is impossible (see above).
+- **Blockers / risks:**
+  - Restacking a client window under the background is a private-actor hack.
+  - The Shell's overview and workspace animations clone background actors, not windows, so the
+    video freezes or disappears there.
+  - GPU and battery cost.
+- **Linux equivalents today:** Hanabi; KDE Plasma video wallpaper plugins; GNOME dynamic
+  (time-of-day XML) wallpapers.
+- **Kiwi status:** none.
+- **Recommendation:** **Later (P3), effort L.** Ship time-of-day dynamic wallpapers first.
+
+### Redesigned lock screen and login window
+- **Introduced / changed:** Sonoma 14.0.
+  - **Lock Screen settings:** "Show large clock: On Screen Saver and Lock Screen / On Lock Screen /
+    Never" (default: lock screen only).
+  - Login window options: user list vs name and password, and so on.
+- **What it is:**
+  - **Clock.** A **large clock and date** sit at the top centre in a bold rounded font.
+  - **Login controls** are at the **bottom**: the user avatar and name with a password field.
+    Other accounts hide behind the most recent one.
+  - **Background:** the **user's own wallpaper or aerial**, not blurred, instead of the system
+    default.
+  - **Bottom row:** Sleep, Restart and Shut Down, plus keyboard and input-source and accessibility
+    menus.
+- **Caveats (on macOS):** looks only. There are no font choices, depth effect or lock-screen
+  widgets as on iOS (Ars). Animated backgrounds are choppy over remote screen sharing.
+- **Port to GNOME 50:**
+  - **The lock screen** (`js/ui/unlockDialog.js`, `screenShield.js`) can be restyled by an
+    extension that lists `"session-modes": ["user", "unlock-dialog"]`:
+    - a big top clock (restyle the `unlock-dialog-clock` actors with CSS);
+    - the auth prompt pinned to the bottom (CSS or layout injection on `UnlockDialog`);
+    - a less-blurred background (inject on `UnlockDialog._updateBackgroundEffects`, private);
+    - keep GNOME 49's lock-screen media controls and the notification list.
+  - **GDM's login screen is out of reach.** GDM runs its own Shell as the `gdm` user and doesn't
+    load user extensions, so that would need system-wide dconf for GDM, which is out of scope.
+- **Blockers / risks:**
+  - EGO requires a justification for `unlock-dialog`, and the extension must not weaken the lock
+    (no keyboard shortcuts or extra entry points).
+  - Kiwi must then keep only the lock-screen styling alive in that mode and disable everything else
+    when the mode changes. Watch `Main.sessionMode` `updated` and split the code paths cleanly.
+  - Private members of `UnlockDialog`.
+- **Linux equivalents today:** GNOME's lock screen (clock centred, blurred wallpaper, swipe up for
+  auth); extensions such as "Blur my Shell" (lock-screen blur control) and lock-screen clock
+  stylers.
+- **Kiwi status:** none (Kiwi has `lockIcon.js`, which is being dropped).
+- **Recommendation:** **Port (P3), effort M**, for the lock screen only. Skip GDM.
+
+### Web apps in the Dock (Safari 17)
+- **Introduced / changed:** Sonoma 14.0 (Safari 17 on Sonoma only; not on Ventura or Monterey).
+- **What it is:**
+  - **Making one.** Safari → File (or the Share menu) → **Add to Dock…**. You edit the name, URL
+    and icon. It creates `~/Applications/<Name>.app` and a Dock icon.
+  - **Running it.** The web app runs in its own window with a minimal toolbar (back, forward,
+    share) and no address bar. It is **its own app** for ⌘-Tab, the Dock, Stage Manager and Focus,
+    and it can post **notifications** and get its own badge.
+  - **Data.** It has separate cookies (Safari's are copied at creation) and its own Settings for
+    the icon, name, URL and toolbar. Clicking an out-of-scope link opens the default browser.
+- **Caveats (on macOS):**
+  - No extensions.
+  - Some sites loop through the browser for login (Plex, in Ars's test).
+  - Icons are sometimes stale.
+  - Each web app spawns its own process group.
+- **Port to GNOME 50:**
+  - The browsers do the creation:
+    - **GNOME Web** (Epiphany) "Install as Web Application" through the
+      **xdg-desktop-portal DynamicLauncher** portal → `org.gnome.Epiphany.WebApp_<id>.desktop`;
+    - **Chromium/Chrome** "Install page as app" → `chrome-<id>-Default.desktop` with
+      `StartupWMClass=crx_<id>`.
+  - **Kiwi's dock must:**
+    1. match web-app windows through `Shell.WindowTracker.get_window_app()` (not raw `wm_class`);
+    2. pin and launch them like any app, and show running dots and badges (from the notification
+       source's app);
+    3. show them in Launchpad and Spotlight (they are `Shell.AppSystem` apps already).
+  - An optional "Add Site to Dock…" in Kiwi is not needed: the browser owns the flow.
+- **Blockers / risks:**
+  - Firefox has no Linux web apps (its "Taskbar Tabs" are Windows-only).
+  - Chrome PWAs on Wayland report `app_id` values that must match the `.desktop` id. Test VS Code,
+    Chrome and Edge PWAs under both Wayland and Xwayland.
+- **Linux equivalents today:** GNOME Web web apps, Chromium and Chrome PWAs, Webapp Manager (Linux
+  Mint), WebApps.
+- **Kiwi status:** none (the dock is new in P1).
+- **Recommendation:** **Port (P1), effort S**, as dock correctness for web apps.
+
+### Text-cursor indicators (Caps Lock, input source, dictation)
+- **Introduced / changed:** Sonoma 14.0 (a redesigned text insertion point).
+- **What it is:**
+  - **Caps Lock:** pressing Caps Lock in any text field shows a small **⇪ up-arrow badge right
+    under the caret**, coloured with the app's **accent colour**. It hides while you type and
+    reappears after a pause.
+  - **Input source:** switching input sources (Globe/fn or ⌃Space) shows a small **badge with the
+    new source** (flag or abbreviation) at the caret.
+  - **Dictation** shows its microphone and language indicator at the caret too.
+  - It works in every app that uses the system text system, without app updates.
+- **Caveats (on macOS):**
+  - There is no setting to turn it off. The only way is an unsupported
+    `defaults`/FeatureFlags hack (`redesigned_text_cursor` in UIKit.plist, or
+    `TSMLanguageIndicatorEnabled`), which can break the caret in some fields.
+  - Some users find the input-source popup slow or intrusive.
+- **Port to GNOME 50:**
+  - **A Shell extension.** It needs two inputs, both available in Shell 50:
+    1. **The caret rectangle.** GNOME Shell is the IBus panel. The IBus `PanelService`
+       `set-cursor-location` signal (used by `js/ui/ibusCandidatePopup.js`) carries the focused
+       client's caret rect for Wayland text-input clients and for X11 apps through ibus-x11.
+       Reach the service through `IBusManager.getIBusManager()` (private `_panelService`).
+       `Main.inputMethod._cursorRect` is the Wayland-only fallback; the AT-SPI
+       `FocusCaretTracker` (`js/ui/focusCaretTracker.js`) is the accessibility fallback.
+    2. **The state:** `Clutter.get_default_backend().get_default_seat().get_keymap()`
+       (`state-changed`, `get_caps_lock_state()`, as `ShellEntry.CapsLockWarning` does), and
+       input-source changes from `Main.inputSourceManager` (`current-source-changed`).
+  - **Drawing.** Draw a tiny accent-coloured pill (⇪, or the source's short name such as "EN" or
+    "DE") as chrome at `(caret.x, caret.y + caret.height + 2)`. Fade it out on the next key press
+    and after 1.5 s idle. Offer an option to hide GNOME's own centred input-source switcher popup.
+- **Blockers / risks:**
+  - Apps that don't use IBus or text-input-v3 give no caret: some Electron builds without
+    `--enable-wayland-ime`, and games. In those, show it near the pointer, or not at all.
+  - `_panelService` and `_cursorRect` are private.
+  - IBus must be running (it is on Fedora Workstation).
+- **Linux equivalents today:** none on GNOME (only the panel's input-source indicator and the
+  password-field Caps Lock warning). KDE has no caret badge either.
+- **Kiwi status:** none (`keyboardIndicator.js` is being dropped; it was a panel indicator).
+- **Recommendation:** **Port (P2), effort S–M.** Unique, noticeable and Wayland-safe.
+
+### Presenter Overlay
+- **Introduced / changed:** Sonoma 14.0 (Apple silicon, Apple camera or Continuity Camera; any
+  video app using the system camera).
+- **What it is:** while sharing a screen or window in a call, two modes from the Video and Screen
+  Sharing menu:
+  - **Small:** your cut-out head floats in a draggable bubble over the shared content. What you see
+    is what others see; placing the bubble beside the window extends the canvas.
+  - **Large:** the shared content becomes a screen behind you, newscaster style. Its size is
+    adjustable within limits.
+  - It uses on-device segmentation (the Neural Engine).
+- **Caveats (on macOS):** Apple silicon only. Intel Macs and generic USB webcams on some models
+  don't get it. Gimmicky for some.
+- **Port to GNOME 50:**
+  - Composing camera and screen into one stream is a **PipeWire / video pipeline** job, not a
+    compositor-UI job. The Shell's screencast and portal paths have no compositing hooks for
+    extensions.
+  - A Linux equivalent would be an OBS-like virtual camera (OBS + background removal) that apps
+    pick as their camera.
+- **Blockers / risks:**
+  - The ScreenCast portal hands raw streams to apps, so Kiwi can't inject an overlay.
+  - Segmentation models are heavy.
+- **Linux equivalents today:** OBS Studio (+ obs-backgroundremoval, Virtual Camera), Webcamoid.
+- **Kiwi status:** none.
+- **Recommendation:** **Skip, effort XL.**
+
+### Video Reactions (gesture-triggered effects)
+- **Introduced / changed:** Sonoma 14.0 (Apple silicon or Continuity Camera; works in FaceTime,
+  Zoom, Teams and others through the system camera pipeline).
+- **What it is:** eight 3D effects rendered into the camera feed, triggered from the Video
+  menu-bar item or **hand gestures**:
+  - one thumb up → thumbs-up bubble;
+  - one thumb down → thumbs-down bubble;
+  - two thumbs up → fireworks;
+  - two thumbs down → rain;
+  - one-hand peace sign → balloons;
+  - two-hand peace signs → confetti;
+  - two-hand heart → hearts;
+  - two-hand rock-on → lasers.
+- **Caveats (on macOS):**
+  - Accidental triggers in serious meetings; users had to find the "Reactions" toggle in the Video
+    menu.
+  - Effects appear in other apps unexpectedly, unless turned off per app.
+  - "Goofy but cute" (Ars).
+- **Port to GNOME 50:** same as Presenter Overlay: a camera-pipeline feature. No Shell hook.
+- **Blockers / risks:** needs a virtual camera and gesture recognition.
+- **Linux equivalents today:** none built in (OBS plugins at most).
+- **Kiwi status:** none.
+- **Recommendation:** **Skip, effort XL.**
+
+### The Video menu-bar item (camera preview and effects)
+- **Introduced / changed:** Sonoma 14.0. In Ventura the effects were in Control Center → Video
+  Effects. The Sonoma item appears while an app uses the camera.
+- **What it is:**
+  - A green camera icon in the menu bar while the camera is in use.
+  - **Its menu:** a **live self-view preview**, per-app toggles for Portrait (with an intensity
+    slider), Studio Light, Center Stage and Reactions, plus Presenter Overlay. Microphone modes sit
+    next to it.
+  - It is the system-wide control surface for camera effects in every app.
+- **Caveats (on macOS):** the effects depend on hardware. The preview duplicates the in-app view.
+- **Port to GNOME 50:**
+  - Shell 50 already shows a **camera-in-use indicator** (`js/ui/status/camera.js`) driven by
+    PipeWire camera nodes.
+  - Kiwi can restyle it into a menu-bar item or notch live activity that lists *which apps* use the
+    camera (and the microphone, from the existing privacy indicators). A self-view preview would
+    require Kiwi itself to open the camera through the Camera portal or PipeWire, which is
+    privacy-hostile and complex, so skip that part. Effects: none.
+- **Blockers / risks:**
+  - Opening the camera from the Shell is a privacy and EGO red flag.
+  - PipeWire node metadata for the app name is not always set.
+- **Linux equivalents today:** the GNOME Shell camera, mic and screen-share privacy indicators.
+- **Kiwi status:** none.
+- **Recommendation:** **Port (P3), effort S**, for the indicator restyle and the app list only.
+
+### Window and app sharing from the green button (new screen-sharing picker)
+- **Introduced / changed:** Sonoma 14.0 (ScreenCaptureKit picker).
+- **What it is:**
+  - During a call, hovering the **green button** offers **"Share on <app>"**, which shares that
+    window directly.
+  - A system **Screen Sharing menu-bar item** lists what is shared and lets you add, remove or
+    switch windows or apps. Apps that adopt the system picker get this for free.
+  - The shared window is marked in its corner.
+  - It also allows remote control requests.
+- **Caveats (on macOS):** apps must adopt the new picker. Zoom and Teams took time.
+- **Port to GNOME 50:**
+  - Screen sharing goes through **xdg-desktop-portal ScreenCast**, and the picker is
+    `xdg-desktop-portal-gnome`'s dialog. The Shell's `ScreenSharingIndicator` (`status/remoteAccess.js`)
+    shows when sharing is active.
+  - Kiwi can:
+    1. restyle the indicator as a notch live activity ("Sharing <window>", with Stop);
+    2. mark shared windows with an outline. The shared window id is not exposed to extensions, so
+       this part is mostly blocked.
+  - "Share this window" from the traffic lights would need a portal API to pre-select a source,
+    which does not exist.
+- **Blockers / risks:** the portal decides. There is no Shell API to start sharing a chosen window
+  into an app's request.
+- **Linux equivalents today:** the portal picker plus the Shell's sharing indicator.
+- **Kiwi status:** none.
+- **Recommendation:** **Later (P3), effort S**, for the indicator only.
+
+### Screen Sharing app (High Performance mode)
+- **Introduced / changed:** Sonoma 14.0.
+- **What it is:**
+  - Screen Sharing becomes a real app in Utilities, with a list of recent Macs, groups, and
+    blocking.
+  - **High Performance mode** (Apple silicon to Apple silicon, fast networks): low latency, HDR, up
+    to two **virtual displays**, and **Dynamic Resolution**.
+  - Each remote display can open in its own window.
+  - It still speaks VNC to other systems.
+- **Caveats (on macOS):** Dynamic Resolution is buggy or limited. Lag with large virtual displays.
+  "Nowhere near" RDP (Ars).
+- **Port to GNOME 50:** already done upstream. **GNOME Remote Desktop** (RDP) has hardware
+  encoding (Vulkan, VA-API), HiDPI, camera redirection and headless sessions (GNOME 50), and
+  extended virtual monitors (GNOME 49). Clients: GNOME Connections, Remmina.
+- **Blockers / risks:** n/a.
+- **Linux equivalents today:** GNOME Remote Desktop, Connections, Remmina, RustDesk.
+- **Kiwi status:** none.
+- **Recommendation:** **Skip, effort XL.** GNOME has it.
+
+### Game Mode
+- **Introduced / changed:** Sonoma 14.0 (Apple silicon; the game must use macOS full screen).
+  Sequoia and later folded it into the Game Overlay.
+- **What it is:**
+  - Game Mode **turns on automatically when a game goes full screen** and off when it quits. There
+    is no global switch.
+  - **What it changes:**
+    - the game gets top CPU and GPU priority and background tasks are throttled;
+    - the **Bluetooth sampling rate doubles**, lowering latency for AirPods and controllers.
+  - **The menu-bar item.** A **Game menu-bar item** appears while Game Mode is active. "Turn Game
+    Mode Off" from it is remembered for that game.
+- **Caveats (on macOS):** no visible input-lag gain in Ars's test, but clear audio-latency gains.
+  It only works for full-screen games.
+- **Port to GNOME 50:**
+  - **Feral GameMode** (`gamemoded`, D-Bus `com.feralinteractive.GameMode`) provides the CPU
+    governor, ionice and GPU tweaks. Games or launchers (Steam, Lutris) usually opt in, but the
+    D-Bus API also has **`RegisterGameByPID(callerPid, gamePid)`**.
+  - **What Kiwi can do:**
+    - when a window goes fullscreen (`notify::fullscreen`) and its app's `.desktop` has
+      `Categories=Game` (or it is a Steam/Proton `steam_app_*` window), register its
+      `get_pid()` with gamemoded and unregister when it closes or leaves fullscreen;
+    - show a **Game** menu-bar item or notch activity with "Turn Game Mode Off for <game>"
+      (remembered in GSettings);
+    - optionally turn on Do Not Disturb and the `performance` power profile
+      (`net.hadess.PowerProfiles`).
+  - The Bluetooth latency part is not reachable. Linux uses the controller's or the headset's own
+    low-latency codecs.
+- **Blockers / risks:**
+  - gamemoded may not be installed (Fedora ships the `gamemode` package but not by default).
+  - Flatpak games' PIDs are in a sandbox; GameMode supports it via its portal.
+  - Steam may already register the game, so check `ClientCount` / `QueryStatusByPID` to avoid
+    double counting.
+- **Linux equivalents today:** Feral GameMode (plus the "GameMode Shell Extension" indicator),
+  gamescope, power-profiles-daemon.
+- **Kiwi status:** none.
+- **Recommendation:** **Later (P3), effort S.** Cheap, and it ties into the fullscreen rules
+  (§4.2).
+
+### Game Porting Toolkit
+- **Introduced / changed:** Sonoma 14.0 (a developer tool: Wine + D3DMetal).
+- **What it is:** a translation layer that lets developers evaluate Windows DirectX games on Apple
+  silicon, used by end users through wrappers such as Whisky.
+- **Caveats (on macOS):** not meant for distribution; no AVX under Rosetta.
+- **Port to GNOME 50:** n/a. Linux already has Proton and Wine with DXVK and VKD3D.
+- **Blockers / risks:** n/a.
+- **Linux equivalents today:** Proton (Steam), Wine, Bottles, Lutris, Heroic.
+- **Kiwi status:** none.
+- **Recommendation:** **Skip.**
+
+### PDF AutoFill (Preview)
+- **Introduced / changed:** Sonoma 14.0. "Enhanced AutoFill" needs **14.2+**.
+- **What it is:**
+  - Preview detects form fields, **even in flat PDFs without real form widgets**, using on-device
+    recognition.
+  - An **AutoFill Form** button above the PDF, or clicking a field, fills in your name, address,
+    phone and email from your **My Card** in Contacts. "Choose Other" uses another contact.
+  - Signatures can be inserted (from trackpad or camera).
+  - Mail suggests smart recipients for attachments.
+- **Caveats (on macOS):** only some PDFs; recognition is hit or miss on complex layouts.
+- **Port to GNOME 50:**
+  - App territory. GNOME 50's **Papers** (Document Viewer) has forms and a rebuilt annotation tool,
+    but no AutoFill.
+  - The only desktop-level angle is Kiwi's clipboard: a "Quick Paste" set of the user's contact
+    details (name, address) as pinned clipboard entries. That stays opt-in for privacy.
+- **Blockers / risks:** needs the app. Field detection on flat PDFs needs ML.
+- **Linux equivalents today:** Papers (forms, annotations), Okular, Xournal++ (writing on PDFs),
+  LibreOffice Draw.
+- **Kiwi status:** none (clipboard pins exist in Quick Paste).
+- **Recommendation:** **Skip, effort L.** At most, pinned "My details" snippets in Quick Paste
+  (P3, S).
+
+### Shared password and passkey groups
+- **Introduced / changed:** Sonoma 14.0 (iOS 17). Later releases moved them into the Passwords app.
+- **What it is:**
+  - In Settings → Passwords, you create a **group** and invite contacts. Each member chooses which
+    of their passwords and passkeys to share, and every member can add and edit. It is end-to-end
+    encrypted through iCloud Keychain.
+  - It needs all devices on Sonoma or iOS 17.
+  - The iCloud Passwords extension for Chrome and Edge now also works on macOS.
+- **Caveats (on macOS):** contacts-only, Apple devices only, and the old-device warnings.
+- **Port to GNOME 50:** no system password manager service beyond the Secret Service keyring
+  (GNOME Keyring, KeePassXC), which has no sharing.
+- **Blockers / risks:** n/a for a Shell extension.
+- **Linux equivalents today:** Bitwarden Organizations, 1Password shared vaults, KeePassXC with a
+  synced database.
+- **Kiwi status:** none.
+- **Recommendation:** **Skip, effort XL.**
+
+### One-time codes from Mail and auto-delete of used codes
+- **Introduced / changed:** Sonoma 14.0.
+- **What it is:**
+  - Safari's verification-code AutoFill, which already read Messages, now also reads codes arriving
+    in **Mail**.
+  - Optionally, used SMS and Mail codes are **deleted after insertion** (Passwords → Password
+    Options → "Clean Up Automatically").
+- **Caveats (on macOS):** Safari only; it encourages weaker SMS 2FA.
+- **Port to GNOME 50:**
+  - Kiwi could watch **notification banners** (the notch already sees them) for code patterns
+    (`\b\d{6}\b` with a "code" keyword), offer "Copy code" on the banner, and put the code in the
+    clipboard with a short expiry.
+  - It must be opt-in. Clipboard rules apply (no third party, declared in metadata), and Kiwi must
+    not store codes in history.
+- **Blockers / risks:**
+  - Privacy: notification content is sensitive. Keep it on-device and opt-in.
+  - GSConnect-mirrored SMS notifications are the main source on Linux.
+- **Linux equivalents today:** none built in. GSConnect shows SMS notifications.
+- **Kiwi status:** none.
+- **Recommendation:** **Later (P3), effort S** (a "copy code" action on notch banners).
+
+### Autocorrect, inline predictions and dictation updates
+- **Introduced / changed:** Sonoma 14.0.
+- **What it is:**
+  - A transformer-model autocorrect. Corrected words are briefly underlined, and a click reverts
+    them.
+  - **Inline predictive text** in grey that Tab or Space accepts.
+  - Spelling and grammar suggestions on click even with autocorrect off.
+  - Emoji suggestions from the Globe key.
+  - It learns profanity.
+  - Dictation mixes typing and speech.
+- **Caveats (on macOS):** some find the inline predictions distracting. They are on by default.
+- **Port to GNOME 50:**
+  - Input-method territory. **IBus Typing Booster** gives completions and emoji. GNOME Shell shows
+    IBus candidates in `ibusCandidatePopup`, which Kiwi could restyle in faux glass.
+  - Inline (preedit) predictions depend on the engine and the app's text-input support.
+- **Blockers / risks:** needs an IBus engine. A Shell extension can't do it itself.
+- **Linux equivalents today:** IBus Typing Booster, Fcitx5 + plugins, Speech Note / Nerd
+  Dictation.
+- **Kiwi status:** none.
+- **Recommendation:** **Later (P3), effort S**, for restyling the IBus candidate popup only.
+
+### Personal Voice and Live Speech
+- **Introduced / changed:** Sonoma 14.0 (accessibility; English).
+- **What it is:**
+  - **Personal Voice:** you record 150 phrases (about 15 minutes) and the Mac trains a voice
+    on-device overnight (≈ 6.5 h on an M2). The voice syncs through iCloud.
+  - **Live Speech:** a floating text field speaks typed text in calls and FaceTime, in a system
+    voice or your Personal Voice.
+- **Caveats (on macOS):** the voice is flat and uncanny (Ars). Training is long.
+- **Port to GNOME 50:** not Shell work. Text-to-speech on Linux is Speech Dispatcher, Piper or
+  eSpeak; voice cloning lives in third-party tools.
+- **Blockers / risks:** n/a.
+- **Linux equivalents today:** Spiel and Piper voices, Orca, Speech Note.
+- **Kiwi status:** none.
+- **Recommendation:** **Skip.**
+
+### Pause animated images (auto-play animated images setting)
+- **Introduced / changed:** Sonoma 14.0. The setting is Accessibility → Display → "Auto-play
+  animated images".
+- **What it is:** GIFs and animated images in WebKit-based apps (Safari, Mail, Messages) stop
+  auto-playing. You click to play.
+- **Caveats (on macOS):** Chromium and Electron apps ignore it.
+- **Port to GNOME 50:**
+  - A system preference would be honoured only by apps that read it.
+  - Kiwi's own UI (the notch, widgets, Spotlight previews) should honour GNOME 50's **Reduced
+    Motion** setting and `enable-animations` for any animated content it shows.
+- **Blockers / risks:** app cooperation.
+- **Linux equivalents today:** GNOME 50 Reduced Motion (system animations); per-browser settings.
+- **Kiwi status:** partial (motion settings planned in `core/motion.js`).
+- **Recommendation:** **Port (P2), effort S**, only as "Kiwi honours reduced motion everywhere".
+
+### Menu-bar auto-hide options (Always / On Desktop Only / In Full Screen Only / Never)
+- **Introduced / changed:** Sonoma 14.0 moved "Automatically hide and show the menu bar" from
+  Desktop & Dock to Control Center settings and made it a four-choice pop-up. The default is "In
+  Full Screen Only". "Recent documents, applications and servers" moved there too.
+- **What it is:**
+  - **Always:** the menu bar always auto-hides.
+  - **On Desktop Only:** it hides only when no full-screen app is up.
+  - **In Full Screen Only:** the classic behaviour.
+  - **Never:** it stays even in full screen; some full-screen apps then show a black bar.
+- **Caveats (on macOS):** the setting moved to an unexpected pane, and "Never" causes the full-screen
+  black bar.
+- **Port to GNOME 50:**
+  - The owner **removed Kiwi's auto-hide top bar**, because the bar houses the notch (see
+    `docs/features/autohide-top-bar.md`).
+  - Only the **"In Full Screen Only"** behaviour stays relevant. The overhaul's conflict rules
+    already say fullscreen windows hide the menu bar and dock, with the notch on hover (§4.2).
+    Keep exactly that, with a reveal at the top edge.
+- **Blockers / risks:** Shell's fullscreen tracking (`Main.layoutManager` `_updateVisibility`,
+  `primaryMonitor.inFullscreen`) is private-ish. Use `global.display` `in-fullscreen-changed`.
+- **Linux equivalents today:** the stock Shell hides the top bar for fullscreen windows; Just
+  Perfection and Hide Top Bar extensions.
+- **Kiwi status:** partial (fullscreen rule planned; auto-hide removed by decision).
+- **Recommendation:** **Port (P1), effort S**, for the fullscreen-only reveal. Don't bring back the
+  full auto-hide.
+
+### Safari 17 profiles and locked private browsing
+- **Introduced / changed:** Sonoma 14.0 (Safari 17; profiles also on Ventura and Monterey, but the
+  private lock is off by default there).
+- **What it is:**
+  - **Profiles:** separate history, cookies, extensions, Tab Groups and Favorites, each with an icon
+    and colour. You switch them in the window, or right-click the Dock icon → "New <Profile>
+    Window".
+  - **Private windows lock** after inactivity, sleep or lock, and unlock with Touch ID or the
+    password.
+  - **Advanced tracking and fingerprinting protection**, and link tracking-parameter removal.
+  - Also new: JPEG XL and HEIC support, and favicons in the Favorites bar.
+- **Caveats (on macOS):** profiles can't use different iCloud accounts. Web apps don't support
+  extensions.
+- **Port to GNOME 50:**
+  - Browser territory. The desktop-level piece is the dock: right-click menus should list an app's
+    `.desktop` **Actions** (Firefox's "New Private Window", Chrome profile actions), which the
+    overhaul's dock menu (§5.2) should include.
+- **Blockers / risks:** n/a.
+- **Linux equivalents today:** Firefox and Chrome profiles; Firefox's private-window lock does not
+  exist.
+- **Kiwi status:** none (the dock menu is planned).
+- **Recommendation:** **Skip** for the browser. Desktop actions in the dock menu go into §5.2 (S).
+
+### Sonoma's bundled-app changes that touch the desktop
+- **Introduced / changed:** Sonoma 14.0–14.x.
+- **What it is:**
+  - **Notes:** inline full-width PDFs and scans, **linked notes** (type `>>`), block quotes and a
+    monostyle format.
+  - **Reminders:** **grocery lists** that auto-sort into sections, sections, and a column (kanban)
+    view.
+  - **Messages:** stickers from any photo (Live Stickers), search filters, swipe to reply, 2× audio
+    playback, auto-delete of verification codes.
+  - **Photos:** Sync Now, pets in People & Pets, editable Memories.
+  - **Weather:** moon, wind map, averages.
+  - **Home:** an Energy (grid forecast) tab.
+  - **Clock:** multiple timers (shaky at launch).
+  - **Freeform:** a share widget.
+  - **Siri:** just say "Siri" (Apple silicon with AirPods Pro 2).
+  - **Contacts:** pronouns.
+  - **Privacy:** write-only Calendar access, a per-photo picker, app data-container access prompts,
+    and Sensitive Content Warning for AirDrop, Messages and FaceTime.
+  - **Accessibility:** hearing-aid pairing, and text-size control across apps.
+- **Caveats (on macOS):** many features "coming later this year" at launch (Messages). Some need
+  Apple silicon.
+- **Port to GNOME 50:** app territory. The desktop-relevant one is **Clock's multiple timers**,
+  which Kiwi's notch timers (§5.6) should support from day one, as several concurrent live
+  activities.
+- **Blockers / risks:** n/a.
+- **Linux equivalents today:** GNOME Notes alternatives (Folio, Notesnook), Errands and Endeavour,
+  GNOME Clocks (multiple timers), Fractal.
+- **Kiwi status:** none.
+- **Recommendation:** **Skip** for the apps. Concurrent timers go into the notch spec (S).
+
+---
+
+## Summary table
+
+| Feature | Release | Recommendation | Effort | Main blocker |
+|---|---|---|---|---|
+| Stage Manager: stage + strip core | Ventura | Port (P1 core) | XL | No Mutter tiling API; transients and portal dialogs; focus handling |
+| Stage Manager: recent-apps strip | Ventura | Port (P1 core) | L | Minimize interception races; edge reveal on multi-monitor |
+| Stage Manager: sets | Ventura | Port (P1 core) | L | No stable window identity across app restarts (persistence) |
+| Stage Manager: All at Once / One at a Time | Ventura | Port (P1 core) | S | Classifying dialogs, splash and transient windows |
+| Stage Manager: desktop items, widgets and wallpaper clicks | Ventura, Sonoma | Port (P1 core) | S | `_bgManagers` is private; DING takes desktop clicks |
+| Stage Manager: Dock, switcher, Mission Control, Spaces, displays | Ventura | Port (P1 core) | M | Shell paths that activate windows behind Kiwi's back |
+| Stage Manager: toggles, shortcuts, gestures | Ventura | Port (P1 core) | S | Keybinding conflicts; EGO review of a D-Bus API |
+| Stage Manager: motion | Ventura | Port (P1 core) | M | Easing live window actors stutters (fly clones instead) |
+| System Settings redesign | Ventura, Sonoma | Port (P1), as Kiwi prefs pattern | S | None (prefs must stay Gtk/Adw-only) |
+| About This Mac | Ventura | Port (P1) | S | Serial and model picture need root or a model map |
+| Continuity Camera and Desk View | Ventura | Skip | XL | Proprietary iPhone protocol; effects need a PipeWire filter |
+| Spotlight: new design and rich results | Ventura | Port (P2), image search only | M | No OCR index; web results are a privacy issue |
+| Quick Look in Spotlight | Ventura | Port (P2) | S | Modal grab hand-off to Sushi; Sushi may be missing |
+| Spotlight Quick Actions | Ventura | Port (P2) | M | Clocks has no timer API (use Kiwi's own timers) |
+| Passkeys | Ventura | Skip | XL | No Linux platform-authenticator API |
+| Mail improvements | Ventura | Skip | L | App territory |
+| Clock app | Ventura | Skip (use GNOME Clocks) | S | Clocks has no D-Bus for timers or alarms |
+| Weather app | Ventura | Skip (reuse Shell `WeatherClient`) | S | Needs GNOME Weather for location |
+| Freeform | Ventura 13.1 | Skip | XL | App territory |
+| Live Captions and Type to Speak | Ventura | Later (P3), launcher tile | S | ASR can't run in the compositor |
+| Live Text video, Visual Look Up, subject lift | Ventura | Later (P3), OCR from screenshots | M | Wayland pixel access only via the Shell screenshot UI |
+| Share sheet, Print, Font Book | Ventura | Skip | L | Toolkit and portal dialogs, not the Shell |
+| Focus filters | Ventura | Later (P3), Focus modes | M | Patching MessageTray shared with the notch |
+| Login Items and background items | Ventura | Port (P2) | S | Autostart vs portal vs systemd are separate worlds |
+| Security changes (Lockdown, RSR, USB, Gatekeeper) | Ventura, Sonoma | Skip | L | System or security scope |
+| Game controllers and Metal 3 | Ventura | Skip | L | No gamepad API in Shell |
+| Copyable Wi-Fi passwords | Ventura | Later (P3) | S | Secret handling and clipboard rules |
+| Ventura bundled-app changes | Ventura | Skip ("Settings…" naming goes into §5.1) | S | App territory |
+| Desktop widgets: placement and layout | Sonoma | Port (P2) | L | Private `_backgroundGroup`; DING stacking; performance |
+| Widget gallery and editing | Sonoma | Port (P2) | M | Private background-menu internals; DnD from a modal |
+| Widget dimming and visibility settings | Sonoma | Port (P2) | S | Offscreen cost of `DesaturateEffect` |
+| Interactive widgets | Sonoma | Port (P2) | M | Async data sources; no third-party widget protocol |
+| iPhone widgets | Sonoma | Skip (GSConnect phone widget later) | XL | Proprietary Continuity |
+| Notification Center widgets | Sonoma | Port (P2) | M | Shared model between notch, calendar and desktop owners |
+| New widget kinds (Batteries, Photos, Shortcuts…) | Sonoma | Port (P2) / Later (P3) | M | EDS contacts and Home credentials are sensitive |
+| Click wallpaper to reveal desktop | Sonoma | Port (P1) | M | Slivers must not take input; DING; workspace switch |
+| Aerial screen savers | Sonoma | Later (P3) | L | No screen saver in GNOME; lock screen covers windows; licences |
+| Aerial live wallpapers | Sonoma | Later (P3) | L | Video below windows needs a helper plus actor hacks |
+| Lock screen and login window | Sonoma | Port (P3), lock screen only | M | `unlock-dialog` EGO justification; GDM unreachable |
+| Web apps in the Dock | Sonoma | Port (P1) | S | Matching PWA app_ids; Firefox has none |
+| Text-cursor indicators (Caps Lock, input source) | Sonoma | Port (P2) | S–M | Private IBus panel service; non-IME apps give no caret |
+| Presenter Overlay | Sonoma | Skip | XL | Camera pipeline; no compositor hook in portals |
+| Video Reactions | Sonoma | Skip | XL | Camera pipeline and gesture ML |
+| Video menu-bar item | Sonoma | Port (P3), indicator only | S | Opening the camera from the Shell is a privacy flag |
+| Window sharing from the green button | Sonoma | Later (P3), indicator only | S | The portal owns source choice |
+| Screen Sharing app, High Performance | Sonoma | Skip (GNOME Remote Desktop) | XL | Already upstream |
+| Game Mode | Sonoma | Later (P3) | S | gamemoded optional; Bluetooth latency unreachable |
+| Game Porting Toolkit | Sonoma | Skip | n/a | Linux already has Proton and Wine |
+| PDF AutoFill | Sonoma 14.2 | Skip (Quick Paste "My details" later) | L | App territory; ML field detection |
+| Shared password groups | Sonoma | Skip | XL | No shared system vault |
+| One-time codes from Mail | Sonoma | Later (P3) | S | Notification privacy |
+| Autocorrect and inline predictions | Sonoma | Later (P3), restyle IBus popup | S | Needs an IBus engine |
+| Personal Voice and Live Speech | Sonoma | Skip | L | Not Shell work |
+| Pause animated images | Sonoma | Port (P2), reduced motion in Kiwi | S | App cooperation for anything else |
+| Menu-bar auto-hide options | Sonoma | Port (P1), fullscreen-only | S | Auto-hide removed by owner decision |
+| Safari 17 profiles and private lock | Sonoma | Skip (desktop actions in dock menu) | S | Browser territory |
+| Sonoma bundled-app changes | Sonoma | Skip (concurrent notch timers) | S | App territory |
+
+**Count:** 58 feature sections (31 Ventura-era including the Stage Manager group, 27 Sonoma-era),
+plus one non-feature "lessons" section for Stage Manager v3.
+
+**Top port candidates for Kiwi (in order):**
+1. **Stage Manager v3**: core, strip, sets and integration.
+2. **Click wallpaper to reveal desktop**, shared with Show Desktop, defaulting to "Only in Stage
+   Manager".
+3. **Desktop widget layer**, with dimming and the gallery.
+4. **Interactive built-in widgets** (Clock, Calendar, Weather, Media, Batteries, Toggles), sharing
+   one model with the notch and the calendar card.
+5. **Quick Look in Spotlight** through Sushi.
+6. **Text-cursor Caps Lock and input-source indicator.**
+7. **Spotlight Quick Actions**, with Kiwi timers as notch live activities.
+8. **About This PC**, and **web apps handled correctly by the dock**.
+
+**Notable blockers:**
+- Mutter has no public tiling API.
+- Several hooks Kiwi needs are private: `_bgManagers`, `_backgroundGroup`, the IBus
+  `_panelService`, and `UnlockDialog` internals.
+- Wayland and portals own screen sharing and the camera, so Presenter Overlay, Reactions and
+  window-share pre-selection are impossible.
+- GNOME has no screen saver, and the lock screen covers windows (aerials).
+- GDM can't load user extensions.
+- iPhone and Continuity features are proprietary.
+- EGO review sensitivity for `unlock-dialog`, helper processes, D-Bus APIs and clipboard or
+  notification content.
+
+---
+
+## Sources
+
+**Apple**
+- Apple Newsroom: macOS Ventura is now available (Oct 2022): https://www.apple.com/newsroom/2022/10/macos-ventura-is-now-available/
+- Apple Newsroom: macOS Sonoma brings new capabilities (WWDC, June 2023): https://www.apple.com/newsroom/2023/06/macos-sonoma-brings-new-capabilities-for-elevating-productivity-and-creativity/
+- Apple Newsroom: macOS Sonoma is available today (Sept 2023): https://www.apple.com/newsroom/2023/09/macos-sonoma-is-available-today/
+- Apple Support, Organize your Mac desktop with Stage Manager: https://support.apple.com/guide/mac-help/use-stage-manager-mchl534ba392/mac
+- Apple Support, Add and customize widgets on Mac: https://support.apple.com/guide/mac-help/add-and-customize-widgets-mchl52be5da5/mac
+- Apple Support, Get captions of spoken and computer audio (Live Captions): https://support.apple.com/guide/mac-help/use-live-captions-mchldd11f4fd/mac
+- Apple Support, Use Game Mode: https://support.apple.com/en-us/105118
+- Apple Support, Fill out and sign PDF forms in Preview: https://support.apple.com/guide/preview/prvw35725/mac
+- Apple Support, Continuity Camera: https://support.apple.com/en-us/102546
+
+**Reviews and analysis**
+- Ars Technica, macOS 13 Ventura review (Andrew Cunningham): https://arstechnica.com/gadgets/2022/10/macos-13-ventura-the-ars-technica-review/
+- Ars Technica, macOS 14 Sonoma review: https://arstechnica.com/gadgets/2023/09/macos-14-sonoma-the-ars-technica-review/
+- MacStories, macOS Ventura review, Stage Manager page (John Voorhees): https://www.macstories.net/stories/macos-ventura-the-macstories-review/2/
+- MacStories, macOS Sonoma review: https://www.macstories.net/stories/macos-sonoma-the-macstories-review/
+- Michael Tsai, Stage Manager in macOS 13.0 (roundup incl. Jason Snell, David Pierce, Howard Oakley): https://mjtsai.com/blog/2022/10/25/stage-manager-in-macos-13-0/
+- Tao of Mac, Stage Manager Should just Exit, Stage Left (Rui Carmo): https://taoofmac.com/space/blog/2023/05/20/1130
+- Eclectic Light, Stage Manager for the unimpressed 1: https://eclecticlight.co/2023/01/11/stage-manager-for-the-unimpressed-1-getting-started/
+- Eclectic Light, Stage Manager for the unimpressed 2: https://eclecticlight.co/2023/01/13/stage-manager-for-the-unimpressed-2-workflow-strategies/
+- Eclectic Light, Stage Manager for the unimpressed 3: https://eclecticlight.co/2023/01/17/stage-manager-for-the-unimpressed-3-apps-and-windows/
+- Eclectic Light, How Stage Manager works in the log: https://eclecticlight.co/2023/01/19/how-stage-manager-works-in-the-log/
+- Eclectic Light, Curious bugs in Help Viewer and Stage Manager: https://eclecticlight.co/2023/01/25/curious-bugs-in-help-viewer-and-stage-manager/
+- Eclectic Light, Red menu bar in Sonoma: https://eclecticlight.co/2023/11/24/red-menu-bar-in-sonoma/
+- MacMost, The Comprehensive Guide To Mac Stage Manager: https://macmost.com/the-comprehensive-guide-to-mac-stage-manager.html
+- MacMost, 19 Tips For Using Desktop Widgets: https://macmost.com/19-tips-for-using-desktop-widgets-on-your-mac.html
+- MacMost, Turning Off the Caps Lock and Other Text Cursor Indicators: https://macmost.com/turning-off-the-caps-lock-and-other-text-cursor-indicators-on-your-mac.html
+- MacMost, 10 Useful Spotlight Actions: https://macmost.com/10-useful-spotlight-actions.html
+- Popular Science, Stop macOS Sonoma from hiding your windows: https://www.popsci.com/diy/macos-sonoma-hiding-windows/
+- Intego, How to use desktop widgets on macOS Sonoma: https://www.intego.com/mac-security-blog/how-to-use-desktop-widgets-on-macos-sonoma/
+- Macworld, How to add widgets to the desktop: https://www.macworld.com/article/1981562/how-to-add-widgets-desktop-macos-sonoma.html
+- 9to5Mac, macOS Sonoma lock screen wallpaper: https://9to5mac.com/2023/06/05/macos-sonoma-new-lock-screen-wallpaper/
+- Michael Tsai, Sonoma wallpapers block Screen Sharing login: https://mjtsai.com/blog/2023/10/16/sonoma-wallpapers-block-screen-sharing-login
+- OWC, How to hide the menu bar in Ventura and Sonoma: https://eshop.macsales.com/blog/86298-how-to-hide-the-menu-bar-in-macos-ventura-and-sonoma/
+- macos-defaults, toggle language indicator: https://macos-defaults.netlify.app/keyboard/toggle-language-indicator.html
+- MacRumors forum, Stage Manager complaints: https://forums.macrumors.com/threads/did-they-fix-stage-manager-in-os-ventura-yet.2358506
+- Apple Community, Stage Manager bugs thread: https://discussions.apple.com/thread/254657679
+- Wikipedia, macOS Ventura: https://en.wikipedia.org/wiki/MacOS_Ventura
+- Wikipedia, macOS Sonoma: https://en.wikipedia.org/wiki/MacOS_Sonoma
+
+**GNOME / Linux**
+- GNOME 50 release notes: https://release.gnome.org/50/
+- GNOME 49 release notes: https://release.gnome.org/49/
+- GNOME Shell 50 source (`js/ui/layout.js`, `backgroundMenu.js`, `misc/inputMethod.js`, `ibusCandidatePopup.js`, `focusCaretTracker.js`, `misc/weather.js`, `dateMenu.js`, `status/camera.js`, `status/backgroundApps.js`, `status/remoteAccess.js`, `shellEntry.js`): https://gitlab.gnome.org/GNOME/gnome-shell
+- Feral GameMode (D-Bus API incl. RegisterGameByPID): https://github.com/FeralInteractive/gamemode
+- Hanabi video wallpaper extension: https://github.com/jeffshee/gnome-ext-hanabi
+- Desktop Widgets (Desktop Clock) extension: https://extensions.gnome.org/extension/5156/desktop-clock/
+- Sushi (GNOME previewer, org.gnome.NautilusPreviewer): https://gitlab.gnome.org/GNOME/sushi
+- Live Captions for Linux: https://github.com/abb128/LiveCaptions
+- xdg-desktop-portal DynamicLauncher (web apps): https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.DynamicLauncher.html
