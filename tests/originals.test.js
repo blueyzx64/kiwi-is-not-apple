@@ -60,6 +60,23 @@ test('a user change while owned becomes the new original', () => {
     owner.release();
     eq(wm.values['num-workspaces'], 9);
 });
+test('yieldToUser: a user change while owned stands, and Kiwi lets go', () => {
+    const k = kiwi();
+    const iface = fake('org.gnome.desktop.interface', { 'color-scheme': 'default' });
+    const store = new OriginalsStore(k);
+    let told = 0;
+    const owner = new SettingOwner(store, iface, 'color-scheme', {
+        type: 's', value: 'prefer-dark', yieldToUser: true, onOriginalChanged: () => told++,
+    });
+    owner.sync(true);
+    eq(iface.values['color-scheme'], 'prefer-dark');
+    iface.set_string('color-scheme', 'prefer-light');
+    eq(iface.values['color-scheme'], 'prefer-light');
+    eq([owner.owning, told, store.ids(), iface.nHandlers], [false, 1, [], 0]);
+    owner.release();
+    eq(iface.values['color-scheme'], 'prefer-light', 'release after yielding writes nothing');
+});
+
 test('two owners of different keys keep each other\'s entries', () => {
     const store = new OriginalsStore(kiwi());
     const a = fake('s.a', { k: 'one' });

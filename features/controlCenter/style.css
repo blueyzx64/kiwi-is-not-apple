@@ -482,3 +482,122 @@
     -barlevel-background-color: rgba(0, 0, 0, 0.12);
     -barlevel-active-background-color: #ffffff;
 }
+
+/* ---- glass (.kiwi-cc-glass while Liquid Glass styles the menus) ----
+   The panel itself is Kiwi glass (lib/glass.js on the menu box). Modules are lighter glass
+   platters on it, with the same 1px top rim as every glass surface; the classes lib/glass.js
+   puts on the box (.kiwi-glass-borders, .kiwi-glass-contrast) outline them too. */
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .quick-toggle,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .quick-toggle:checked,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .quick-toggle-has-menu,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .quick-slider,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .kiwi-cc-caption,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .kiwi-cc-module,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .kiwi-cc-now-playing {
+    background-color: rgba(255, 255, 255, 0.09);
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.07);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-toggle,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-toggle:checked,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-toggle-has-menu,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-slider,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .kiwi-cc-caption,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .kiwi-cc-module,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .kiwi-cc-now-playing {
+    background-color: rgba(0, 0, 0, 0.05);
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.7);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .quick-toggle:hover,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .quick-toggle:checked:hover {
+    background-color: rgba(255, 255, 255, 0.14);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .quick-toggle:active,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .quick-toggle:checked:active {
+    background-color: rgba(255, 255, 255, 0.19);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-toggle:hover,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-toggle:checked:hover {
+    background-color: rgba(0, 0, 0, 0.09);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-toggle:active,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-toggle:checked:active {
+    background-color: rgba(0, 0, 0, 0.13);
+}
+
+/* Inside a menu toggle the outer box is the platter: its halves stay flat */
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .quick-toggle-has-menu .quick-toggle,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .quick-toggle-has-menu .quick-toggle:checked,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .quick-toggle-has-menu .quick-toggle-menu-button {
+    background-color: transparent;
+    box-shadow: none;
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .quick-toggle-has-menu .quick-toggle:hover,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass .quick-toggle-has-menu .quick-toggle-menu-button:hover {
+    background-color: rgba(255, 255, 255, 0.07);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-toggle-has-menu .quick-toggle:hover,
+.quick-settings.kiwi-cc-calm.kiwi-cc-glass.kiwi-cc-light .quick-toggle-has-menu .quick-toggle-menu-button:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Increase Contrast, light: the white slider fill would vanish on the white panel */
+.quick-settings.kiwi-cc-calm.kiwi-cc-light.kiwi-glass-contrast .quick-slider .slider {
+    -barlevel-background-color: rgba(0, 0, 0, 0.2);
+    -barlevel-active-background-color: rgba(0, 0, 0, 0.7);
+}
+
+/* Show Borders and Increase Contrast: every platter outlined, joined modules keep one line */
+.quick-settings.kiwi-cc-calm.kiwi-glass-borders .quick-toggle,
+.quick-settings.kiwi-cc-calm.kiwi-glass-borders .quick-toggle-has-menu,
+.quick-settings.kiwi-cc-calm.kiwi-glass-borders .quick-slider,
+.quick-settings.kiwi-cc-calm.kiwi-glass-borders .kiwi-cc-caption,
+.quick-settings.kiwi-cc-calm.kiwi-glass-borders .kiwi-cc-module,
+.quick-settings.kiwi-cc-calm.kiwi-glass-borders .kiwi-cc-now-playing {
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-glass-contrast .quick-toggle,
+.quick-settings.kiwi-cc-calm.kiwi-glass-contrast .quick-toggle-has-menu,
+.quick-settings.kiwi-cc-calm.kiwi-glass-contrast .quick-slider,
+.quick-settings.kiwi-cc-calm.kiwi-glass-contrast .kiwi-cc-caption,
+.quick-settings.kiwi-cc-calm.kiwi-glass-contrast .kiwi-cc-module,
+.quick-settings.kiwi-cc-calm.kiwi-glass-contrast .kiwi-cc-now-playing {
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: none;
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light.kiwi-glass-borders .quick-toggle,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light.kiwi-glass-borders .quick-toggle-has-menu,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light.kiwi-glass-borders .quick-slider,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light.kiwi-glass-borders .kiwi-cc-caption,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light.kiwi-glass-borders .kiwi-cc-module,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light.kiwi-glass-borders .kiwi-cc-now-playing {
+    border-color: rgba(0, 0, 0, 0.3);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light.kiwi-glass-contrast .quick-toggle,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light.kiwi-glass-contrast .quick-toggle-has-menu,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light.kiwi-glass-contrast .quick-slider,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light.kiwi-glass-contrast .kiwi-cc-caption,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light.kiwi-glass-contrast .kiwi-cc-module,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light.kiwi-glass-contrast .kiwi-cc-now-playing {
+    border-color: rgba(0, 0, 0, 0.6);
+}
+
+/* Inside a menu toggle only the outer box is outlined */
+.quick-settings.kiwi-cc-calm.kiwi-glass-borders .quick-toggle-has-menu .quick-toggle,
+.quick-settings.kiwi-cc-calm.kiwi-glass-contrast .quick-toggle-has-menu .quick-toggle {
+    border-width: 0;
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-glass-borders .kiwi-cc-item.kiwi-cc-join-next,
+.quick-settings.kiwi-cc-calm.kiwi-glass-contrast .kiwi-cc-item.kiwi-cc-join-next {
+    border-bottom-width: 0;
+}
