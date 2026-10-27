@@ -25,8 +25,8 @@
 ## Helper tasks (haiku)
 | ID | Task | Status |
 |---|---|---|
-| H1 | Unit-test hardening: core/events + core/layout models | started |
-| H2 | Unit-test hardening: core/desktop + core/motion models | queued |
+| H1 | Unit-test hardening: core/events + core/layout models | merged |
+| H2 | Unit-test hardening: core/desktop + core/motion models | started |
 | H3 | Unit-test hardening: core/originals (incl. ListMembersOwner, crash restore) | queued |
 | H4 | Verify on GNOME 50 source: the reduced-motion key and the notification-grouping API | queued |
 | H5 | Verify: Input Capture portal, localsearch xattr tags, Clocks timer D-Bus, Night Light location keys | queued |
