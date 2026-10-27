@@ -1,5 +1,5 @@
 ## Status
-working (worktree /home/user/kiwi-r2-dock, branch v3/r2-dock, uncommitted edits)
+done: v3/r2-dock committed
 ## Plan
 1 dock band clip; 2 genie frames audit (SM off/on, bottom/left/right); 3 maximized dock visibility
 ## Progress log
@@ -10,3 +10,6 @@ working (worktree /home/user/kiwi-r2-dock, branch v3/r2-dock, uncommitted edits)
 - Harness default turns Stage Manager on; minimize target then is the SM strip.
 ## Handoff
 Review run2 shots, fix genie if wrong, check maximize, make check, commit.
+- Genie fixed (strips on a container+clone). perf: genie p95 25.4ms 0 jumps/reversals/flickers vs overview baseline p95 36.2; scale p95 31. Final run 0 Kiwi errors.
+- Maximize (super+Up): dock stays, window ends at dock top (frame 0,32,1280,694; band y=726). Dock code has no intellihide. Likely owner case = green button = full screen (windowControls default 'fullscreen') -> trackFullscreen hides top bar AND dock. Shared cause with R2B.
+- Stage Manager on: minimize goes to SM strip with no Genie run (SM path).
