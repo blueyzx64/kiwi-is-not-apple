@@ -2,7 +2,7 @@
 import {
     GMenuStore, gmenuToMenus, dbusmenuToMenus, dbusmenuShortcut, dbusmenuSubmenuIds, stripMnemonic,
     nativeMenuId, applyMenubar, atspiToMenus, atspiPopoverItems, findPrimaryMenuButton, findRole,
-    hasState, ROLE, STATE, MAX_ITEMS, gmenuActionNames,
+    hasState, ROLE, STATE, MAX_ITEMS, atspiAccel, labelTarget, gmenuActionNames,
 } from '../core/appMenus/nativeModel.js';
 import { buildMenus, searchMenus, wellKnownNames, MAX_DESCRIBE_ALL } from '../core/appMenus/model.js';
 import { xidFromDescription } from '../lib/compatModel.js';
@@ -201,6 +201,21 @@ test('atspi: primary menu button and popover items', () => {
     const items = atspiPopoverItems(pop);
     eq(labels(items), ['New Window', '-', 'Keyboard Shortcuts']);
     eq(items[0].command.path, ['New Window']);
+});
+
+test('atspi: GTK 4 items take label from the label node and the shortcut from the key binding', () => {
+    const pop = { role: ROLE.MENU, name: 'Main Menu', children: [
+        { role: ROLE.MENU_ITEM, name: '', label: 'New Window', keyBinding: 'N;;Control+N', ref: '/1', states: st(STATE.SENSITIVE), children: [] },
+        { role: ROLE.RADIO_MENU_ITEM, name: '', label: 'Basic', keyBinding: 'B;;', ref: '/2', states: st(STATE.SENSITIVE, STATE.CHECKED), children: [] },
+    ] };
+    const items = atspiPopoverItems(pop);
+    eq(labels(items), ['New Window', 'Basic']);
+    eq([items[0].accel, items[1].accel, items[1].checked, items[1].radio], ['<Control>n', null, true, true]);
+    eq(atspiAccel('S;;Shift+Control+S'), '<Shift><Control>s');
+    eq(atspiAccel('x;;Control+?'), '<Control>question');
+    eq(atspiAccel('x;;F11'), 'F11');
+    eq(labelTarget([[1, [[':1.2', '/a']]], [2, [[':1.2', '/b']]]]), [':1.2', '/b']);
+    eq(labelTarget([]), null);
 });
 
 // Bounds (reviewer R3): huge exports never build unbounded menus
