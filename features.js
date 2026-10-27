@@ -181,6 +181,8 @@ export const FEATURES = [
         // Stage Manager wins over fullscreen-to-its-own-Space; its saved value is kept
         id: 'stage-manager', setting: 'stage-manager',
         conflictsWith: ['move-window-to-new-workspace'],
+        // How entries are grouped is the shape of the whole state: rebuilt from scratch
+        restartOn: ['stage-manager-group-by-app'],
         load: async () => (await import('./features/stageManager/index.js')).StageManager,
     },
     {

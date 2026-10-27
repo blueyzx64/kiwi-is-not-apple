@@ -77,6 +77,13 @@ export function buildPrefs({ settings, window, extension }) {
     connect('stage-manager-side', syncSide);
     strip.add(side);
 
+    const recentApps = new Adw.SwitchRow({
+        title: _('Show recent apps'),
+        subtitle: _('Off: the strip stays hidden until you push the pointer against the screen edge'),
+    });
+    settings.bind('stage-manager-show-recent', recentApps, 'active', Gio.SettingsBindFlags.DEFAULT);
+    strip.add(recentApps);
+
     const autohide = new Adw.SwitchRow({
         title: _('Hide recent apps under windows'),
         subtitle: _('The strip steps aside while a window overlaps it; push the screen edge to bring it back'),
@@ -110,12 +117,37 @@ export function buildPrefs({ settings, window, extension }) {
     settings.bind('stage-manager-recent-count', recent, 'value', Gio.SettingsBindFlags.DEFAULT);
     strip.add(recent);
 
-    const tilt = new Adw.SpinRow({
-        title: _('Tilt'),
-        subtitle: _('Degrees the windows in the strip turn toward the stage'),
-        adjustment: new Gtk.Adjustment({ lower: 0, upper: 40, step_increment: 2, page_increment: 6 }),
+    // Tilt on/off is the degrees key at 0 or not; the last angle is kept for "on"
+    const tiltOn = new Adw.SwitchRow({
+        title: _('Tilt the windows'),
+        subtitle: _('The windows in the strip turn toward the stage, as on macOS'),
     });
-    settings.bind('stage-manager-tilt', tilt, 'value', Gio.SettingsBindFlags.DEFAULT);
+    const tilt = new Adw.SpinRow({
+        title: _('Tilt angle'),
+        subtitle: _('Degrees'),
+        adjustment: new Gtk.Adjustment({ lower: 2, upper: 40, step_increment: 2, page_increment: 6 }),
+    });
+    let lastTilt = settings.get_int('stage-manager-tilt') || 22;
+    const syncTilt = () => {
+        const deg = settings.get_int('stage-manager-tilt');
+        if (deg > 0)
+            lastTilt = deg;
+        tiltOn.active = deg > 0;
+        tilt.sensitive = deg > 0;
+        tilt.value = lastTilt;
+    };
+    syncTilt();
+    tiltOn.connect('notify::active', () => {
+        const want = tiltOn.active ? lastTilt : 0;
+        if (settings.get_int('stage-manager-tilt') !== want)
+            settings.set_int('stage-manager-tilt', want);
+    });
+    tilt.connect('notify::value', () => {
+        if (tiltOn.active && settings.get_int('stage-manager-tilt') !== tilt.value)
+            settings.set_int('stage-manager-tilt', tilt.value);
+    });
+    connect('stage-manager-tilt', syncTilt);
+    strip.add(tiltOn);
     strip.add(tilt);
 
     const speed = new Adw.SpinRow({
@@ -130,7 +162,7 @@ export function buildPrefs({ settings, window, extension }) {
     // Window sets and the desktop
     const sets = new Adw.PreferencesGroup({
         title: _('Sets'),
-        description: _('Drag an app from the strip onto the stage, or Shift-click it, to use it with the windows already there. Drop it on the left or right side to place them side by side. Drag a window back to the strip to take it out.'),
+        description: _('Drag an app from the strip onto the stage, or Shift-click it, to use it with the windows already there. Drag a window onto the strip to take it out. Alt-click an app in the dock or the app grid to open it into the current stage.'),
     });
     sets.add(_choiceRow(settings, connect, 'stage-manager-new-windows', _('New windows'),
         _('What a newly opened app window does'),
@@ -145,10 +177,31 @@ export function buildPrefs({ settings, window, extension }) {
     settings.bind('stage-manager-wallpaper-click', wallpaper, 'active', Gio.SettingsBindFlags.DEFAULT);
     sets.add(wallpaper);
 
+    const keys = new Adw.PreferencesGroup({
+        title: _('Keyboard'),
+        description: _('Every set operation has a shortcut. They work while Stage Manager is on.'),
+    });
+    keys.add(shortcutRow(settings, _, {
+        key: 'stage-manager-next-shortcut', title: _('Next set'), example: '<Super><Alt>Page_Down',
+    }));
+    keys.add(shortcutRow(settings, _, {
+        key: 'stage-manager-previous-shortcut', title: _('Previous set'), example: '<Super><Alt>Page_Up',
+    }));
+    const slots = new Adw.ExpanderRow({ title: _('Strip entries 1 to 6'), subtitle: _('Super+Alt+1 to 6') });
+    for (let n = 1; n <= 6; n++) {
+        slots.add_row(shortcutRow(settings, _, {
+            key: `stage-manager-slot-${n}-shortcut`,
+            // TRANSLATORS: %d is a position in the Stage Manager strip, counted from the top
+            title: _('Entry %d').replace('%d', String(n)), example: `<Super><Alt>${n}`,
+        }));
+    }
+    keys.add(slots);
+
     // Dim the options while the strip is off
     const sync = () => {
         strip.sensitive = settings.get_boolean('stage-manager');
         sets.sensitive = strip.sensitive;
+        keys.sensitive = strip.sensitive;
     };
     sync();
     connect('stage-manager', sync);
@@ -170,5 +223,5 @@ export function buildPrefs({ settings, window, extension }) {
     for (const key of ['stage-manager', 'move-window-to-new-workspace'])
         connect(key, syncPaused);
 
-    return [main, paused, strip, sets];
+    return [main, paused, strip, sets, keys];
 }
