@@ -8,7 +8,7 @@
 | L2 | sonnet | P2 System surfaces: Tahoe volume/brightness OSD under the menu bar, centred dialogs, colour filters | kiwi-l2 / v3/l2-surfaces | | started |
 | L3 | sonnet | P2 Screenshot toolbar (Shift+Super+3/4/5) + floating thumbnail | kiwi-l3 / v3/l3-screenshot | | started |
 | L4 | sonnet | P2 Input: Caps Lock / input-source badge, emoji popover, icon styles (dark/tinted) | kiwi-l4 / v3/l4-input | | started |
-| L5 | sonnet | P3 Mission Control + App Exposé + start-on-desktop | kiwi-l5 / v3/l5-mission | | started |
+| L5 | sonnet | P3 Mission Control + App Exposé + start-on-desktop | kiwi-l5 / v3/l5-mission | | merged |
 | L6 | sonnet | P3 App switcher (Super+Tab, Super+`) + trackpad gestures + hot corners | kiwi-l6 / v3/l6 | | merged |
 | L7 | sonnet | P3 Launchpad (folders, jiggle delete with installer/Flatpak rules) + click-wallpaper/Show Desktop wiring + full screen Split View | kiwi-l7 / v3/l7-launchpad | | merged |
 | L8 | sonnet | P4 Stage Manager v3 rebuild on core (sets, strip, other-side rule with dock, scenario + fuzz suites) | kiwi-l8 / v3/l8-stage | | started |
@@ -77,3 +77,5 @@ Deploy conservatively, sized to the scope and type of work. Resume in waves of a
 - L7 → merged (Launchpad with folders and jiggle delete for Flatpak/Installer apps only, a dock tile, click-wallpaper key, Split View). The conflicts with L1 in dock/model, dock/index, events and code-map were combined by the orchestrator. Follow-ups: once P1-windows merges, its green menu emits `split-view-requested` and Split View's own hover menu goes. With DING running, wallpaper clicks are never taken. Split View has no divider.
 - FX2 → merged (R3 #4–6, #12, #16, #17; wallpaper decode for the menu bar runs in a helper process `features/menuBar/wallpaperProbe.js`; default focus shortcut is Ctrl+F2; XML slide support `xmlSlideAt`). Left: R3 #14 and #13 (design). The unsafe `%s` replace at core/appMenus/model.js:183 → L12. The decode in lib/wallpaperTint.js `decodeWallpaper` (shared with Launchpad) is still in-process → FX3.
 - FX3 started (R2 fixes): worktree kiwi-fix-glass, branch v3/fix-glass.
+- L5 → merged (Mission Control on the overview: Spaces bar with +/×/reorder, App Exposé with minimized strip, F3/Ctrl+Up/Ctrl+Down, start on desktop, static Spaces via originals; API `ctx.features.instance('mission-control')`). The conflicts with L1/L7 in dock, schema, tests and code-map were combined by the orchestrator. Limits: no per-display Spaces; you reorder by dragging the label.
+- Resumed L4 (cap 5: P1-windows, L2, L3, FX3, L4).
