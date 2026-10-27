@@ -1427,6 +1427,63 @@
     -barlevel-active-background-color: rgba(0, 0, 0, 0.7);
 }
 
+/* ==== features/dialogs/style.css ==== */
+
+/* feature: dialogs */
+/* The Shell's modal dialogs as macOS alerts. lib/glass.js gives the card its fill and rim
+   (surface 'overlays'); with glass off the stock card colour stays. */
+.modal-dialog.kiwi-dialog {
+  border-radius: 20px;
+  padding: 22px 22px 18px;
+  spacing: 14px;
+  box-shadow: none;
+}
+
+.kiwi-dialog-shadow {
+  background-color: transparent;
+  border-radius: 20px;
+}
+
+.kiwi-dialog .modal-dialog-content-box {
+  padding-top: 0;
+  spacing: 12px;
+}
+
+.kiwi-dialog-icon {
+  margin-bottom: 2px;
+}
+
+.kiwi-dialog .message-dialog-title {
+  font-size: 15px;
+  font-weight: bold;
+}
+
+.kiwi-dialog .message-dialog-description {
+  font-size: 13px;
+}
+
+.kiwi-dialog .modal-dialog-button-box {
+  padding-top: 4px;
+}
+
+.kiwi-dialog .modal-dialog-button-box .modal-dialog-button {
+  font-weight: normal;
+  min-width: 76px;
+  padding: 6px 16px;
+  border-radius: 8px;
+}
+
+.kiwi-dialog .modal-dialog-button-box .modal-dialog-button:default {
+  color: -st-accent-fg-color;
+  background-color: -st-accent-color;
+}
+
+.kiwi-dialog .modal-dialog-button-box .modal-dialog-button:default:hover,
+.kiwi-dialog .modal-dialog-button-box .modal-dialog-button:default:focus {
+  color: -st-accent-fg-color;
+  background-color: st-lighten(-st-accent-color, 8%);
+}
+
 /* ==== features/dock/style.css ==== */
 
 /* feature: dock */
@@ -2241,6 +2298,53 @@
 .kiwi-notch-clip-text {
     font-size: 14px;
     color: #ffffff;
+}
+
+/* ==== features/osd/style.css ==== */
+
+/* feature: osd */
+/* The Tahoe volume / brightness pill. Its fill comes from lib/glass.js (surface 'overlays');
+   with glass off it keeps the solid look below. The root behind it is the shadow host. */
+.kiwi-osd-shadow {
+  background-color: transparent;
+  border-radius: 18px;
+}
+
+.kiwi-osd-pill {
+  border-radius: 18px;
+  padding: 0 14px;
+  spacing: 12px;
+  background-color: rgba(36, 36, 40, 0.94);
+}
+
+.kiwi-osd-column {
+  spacing: 6px;
+}
+
+.kiwi-osd-caption {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.kiwi-osd-track {
+  height: 6px;
+  border-radius: 3px;
+  background-color: rgba(128, 128, 128, 0.35);
+}
+
+.kiwi-osd-fill {
+  height: 6px;
+  border-radius: 3px;
+  background-color: #ffffff;
+}
+
+.kiwi-glass-light .kiwi-osd-fill {
+  background-color: #1d1d1f;
+}
+
+.kiwi-osd-muted .kiwi-osd-caption,
+.kiwi-osd-muted .kiwi-osd-icon {
+  color: rgba(128, 128, 128, 1);
 }
 
 /* ==== features/spotlight/style.css ==== */

@@ -154,4 +154,21 @@ export const FEATURES = [
         id: 'notch', setting: 'notch',
         load: async () => (await import('./features/notch/index.js')).NotchFeature,
     },
+    {
+        // The Tahoe volume / brightness pill under the menu bar: a sink of core/osd.js, which
+        // routes each change to the notch or here (osd-location). Off with 'system'.
+        id: 'osd', when: ctx => ctx.settings.get_string('osd-location') !== 'system',
+        keys: ['osd-location'],
+        load: async () => (await import('./features/osd/index.js')).OsdPill,
+    },
+    {
+        // macOS-style glass alerts: the Shell's modal dialogs restyled (theme only)
+        id: 'dialogs', setting: 'dialogs-glass',
+        load: async () => (await import('./features/dialogs/index.js')).Dialogs,
+    },
+    {
+        // Accessibility colour filters on the whole screen (one shader effect on the stage)
+        id: 'color-filters', setting: 'color-filter',
+        load: async () => (await import('./features/colorFilters/index.js')).ColorFilters,
+    },
 ];

@@ -1,0 +1,54 @@
+/* feature: dialogs */
+/* The Shell's modal dialogs as macOS alerts. lib/glass.js gives the card its fill and rim
+   (surface 'overlays'); with glass off the stock card colour stays. */
+.modal-dialog.kiwi-dialog {
+  border-radius: 20px;
+  padding: 22px 22px 18px;
+  spacing: 14px;
+  box-shadow: none;
+}
+
+.kiwi-dialog-shadow {
+  background-color: transparent;
+  border-radius: 20px;
+}
+
+.kiwi-dialog .modal-dialog-content-box {
+  padding-top: 0;
+  spacing: 12px;
+}
+
+.kiwi-dialog-icon {
+  margin-bottom: 2px;
+}
+
+.kiwi-dialog .message-dialog-title {
+  font-size: 15px;
+  font-weight: bold;
+}
+
+.kiwi-dialog .message-dialog-description {
+  font-size: 13px;
+}
+
+.kiwi-dialog .modal-dialog-button-box {
+  padding-top: 4px;
+}
+
+.kiwi-dialog .modal-dialog-button-box .modal-dialog-button {
+  font-weight: normal;
+  min-width: 76px;
+  padding: 6px 16px;
+  border-radius: 8px;
+}
+
+.kiwi-dialog .modal-dialog-button-box .modal-dialog-button:default {
+  color: -st-accent-fg-color;
+  background-color: -st-accent-color;
+}
+
+.kiwi-dialog .modal-dialog-button-box .modal-dialog-button:default:hover,
+.kiwi-dialog .modal-dialog-button-box .modal-dialog-button:default:focus {
+  color: -st-accent-fg-color;
+  background-color: st-lighten(-st-accent-color, 8%);
+}
