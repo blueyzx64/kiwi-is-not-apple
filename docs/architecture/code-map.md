@@ -71,6 +71,7 @@ prefs.js metadata.json stylesheet.css schemas/ po/`). `make pack-check` verifies
 | `osd` | `core/osd.js` OsdRouter (`setSink(cleanup, 'notch'\|'pill', fn)`) |
 | `originals` | `core/originals.js` OriginalsStore (give it to a `SettingOwner`) |
 | `timers` | `core/timers.js` TimerService (`startTimer({seconds, label})`, `pause/resume/cancel(id)`, `list()`, `remaining(t)`) |
+| `installer` | `core/installer.js` InstallerClient for the owner's installer (`acquire(cleanup)`; idle until then) |
 
 ## 3. core/
 
@@ -90,6 +91,7 @@ prefs.js metadata.json stylesheet.css schemas/ po/`). `make pack-check` verifies
 | `windowState.js` | why a window is not in its normal place (`staged`, ...) | `WindowState.set/has/list/watch`, `interceptMinimize`, `setStageActive` |
 | `notificationRouter.js` | banners to the notch or stock, shared `{count, dnd}`, banner filters (Focus), the history | `setBannerSink`, `setBannerFilter`, `pinBanners`, `connect`, `watchHistory`, `sources`, `appIdOf`, `state`, `setDnd` |
 | `mprisWatcher.js` | one MPRIS source for the extension | `MprisWatcher.acquire(cleanup, gettext)` |
+| `installerModel.js` / `installer.js` | the Installer1 contract as data (`INSTALLER1_XML`, kept equal to `installer-dbus-contract.md` by a test) and its client: availability (running / activatable / incompatible / absent), calls with timeouts, signals as events, a `ProgressBook` | `acquire`, `available`, `listApps`, `ownsDesktopId`, `open(path)`, `uninstall(appId)` -> outcome, `progress`; events `installer-*` |
 | `widgets/` | the one widget model for the desktop layer, Notification Center and notch: pure `model.js` (sizes, grid, snapping, layout JSON, `ProviderPool`, `WidgetRegistry`), `data.js` (pure data shaping), `view.js` (the glass card), `providers/` (time, calendar, weather, batteries, media, system; lazy and shared), `kinds/` (the built-in widgets) | `Widgets.acquire(cleanup, gettext)` -> `host.registry`, `host.createView(kind, {size, config, scale}, owner)` -> `view.actor`, `setActive(bool)`, `activate()`, `menuItems()` |
 | `osdModel.js` / `osd.js` | the one interception of the Shell OSD (`_showOsdWindow`): classifies volume / brightness / keyboard backlight and routes each change to ONE sink from `osd-location` (notch while it runs, else the menu-bar pill; 'system' = stock); other OSDs and other monitors stay stock | `classifyOsd`, `route`; `OsdRouter.start(cleanup)`, `setSink(owner, name, fn)` |
 | `appMenus/` | the focused app's menus (ctx.appMenus): pure `model.js` (generic menus, well-known GTK actions, Help search, ⌘ shortcut labels), `gtkActions.js` (org.gtk.Actions provider), `commands.js` (generic commands), `service.js` (providers, cache, activation); P6 menu bar providers: pure `nativeModel.js` (GMenu store, DBusMenu layout, AT-SPI nodes, `applyMenubar`), `gtkMenus.js` (org.gtk.Menus exported menu bar), `dbusMenu.js` (com.canonical.AppMenu.Registrar + com.canonical.dbusmenu, Xwayland apps by X11 id), `atspi.js` (experimental: async a11y-bus reads, libadwaita primary menu off-sight) | `acquire(owner)`, `targetFor(win)`, `peek/results(target)`, `build(target, results, opts)`, `activate(target, command)`, `registerProvider(owner, provider)`, `onChanged(owner, fn)` |
@@ -102,7 +104,8 @@ Events (`EVENTS` in `core/events.js`): `window-added`, `window-changed`, `window
 window manager; the menu bar runs a fallback when nobody listens), `launchpad-requested` (dock tile,
 pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view-changed` (Split View), `recording-started` /
 `recording-stopped` (screenshots; for the notch's recording live activity), `timers-changed`,
-`timer-finished` (core/timers).
+`timer-finished` (core/timers), `installer-availability-changed`,
+`installer-progress`, `installer-apps-changed`, `installer-uninstall-finished` (core/installer).
 
 ## 4. lib/
 
@@ -161,6 +164,7 @@ pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view
 | `switcher/` | `app-switcher` | Cmd-Tab panel on Super+Tab (`popup.js`, a SwitcherPopup subclass) and Super+` window cycling; own handlers for `switch-applications`/`switch-group`, the Shell's given back on disable |
 | `gestures/` | `gestures` | touchpad router (`captured-event::touchpad` on the stage): 4-finger down App Exposé, pinch Launchpad, spread Show Desktop; GNOME's swipes held back only when turned off |
 | `hotCorners/` | `hot-corners` | four corners per monitor (PressureBarrier + Meta.Barrier), optional modifier; off while every corner is 'none' |
+| `onboarding/` | `onboarding` | the Setup Assistant: declarative `STEPS` and the offer rules (`model.js`), the Shell trigger that opens prefs once (`index.js`), the About row (`prefs.js`); the UI is `prefs/setupAssistant.js` ([onboarding.md](onboarding.md)) |
 | `appearance/` | `appearance`, `popup-menu-styling` | Auto Light/Dark (owns `color-scheme` through core/originals), accent (`accent-color`) and highlight colours (`scheme.js`, `model.js`); accent menus (`index.js`; the GTK app fixes are in `gtk-theme`) |
 | `osd/` | `osd` | the Tahoe volume / brightness / keyboard backlight pill under the Control Center button (glass, core/motion), a `ctx.osd` sink; output name and mute from the Shell's Gvc mixer |
 | `dialogs/` | `dialogs` | the Shell's modal dialogs (auth, end session, Run, others) as glass alerts: icon on top, natural-width buttons at the right, accent default; `ModalDialog.prototype.open` injection, undone on close and disable |
@@ -175,7 +179,7 @@ mirrors over `button-layout`; `control-center` beats `dnd-button`; `stage-manage
 `prefs.js` builds the window from `prefs/pages/index.js` `SECTIONS`; `prefs/window.js` is the
 sidebar (sections, search across every row, narrow-window collapse); `prefs/widgets.js` the
 shared rows; each page module composes `features/<name>/prefs.js` `buildPrefs()` groups.
-Order: General | Menu Bar, Dock, Windows, Stage Manager | Notch, Spotlight, Control Center,
+Order: General, Login Items (`loginItems.js`, model `lib/loginItemsModel.js`) | Menu Bar, Dock, Windows, Stage Manager | Notch, Spotlight, Control Center,
 Clipboard | Appearance | About.
 
 ## 7. Settings

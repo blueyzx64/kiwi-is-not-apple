@@ -22,15 +22,13 @@ import { CleanupRegistry } from '../../lib/disposables.js';
 import { DesktopAppInfo } from '../../lib/compat.js';
 import { Glass } from '../../lib/glass.js';
 import { ModalSurface } from '../../lib/modalSurface.js';
+import { INSTALLER_DESKTOP_ID as INSTALLER_ID } from '../../core/installerModel.js';
 import { DockItem } from './items.js';
 import { FAN_MAX, STACK_PAGE, downloadEntry, downloadFinished, fanLayout, isHorizontal, isPartialWrite, sortDownloads, stackView } from './model.js';
 
 Gio._promisify(Gio.File.prototype, 'enumerate_children_async', 'enumerate_children_finish');
 Gio._promisify(Gio.FileEnumerator.prototype, 'next_files_async', 'next_files_finish');
 Gio._promisify(Gio.FileEnumerator.prototype, 'close_async', 'close_finish');
-
-/** The owner's installer (P7); "Open with Installer" shows only when it is installed. */
-export const INSTALLER_ID = 'io.github.blueyzx64.Installer.desktop';
 
 const ATTRIBUTES = ['standard::name', 'standard::display-name', 'standard::is-hidden', 'standard::is-backup',
     'standard::icon', 'standard::content-type', 'time::modified', 'time::changed', 'time::created',
@@ -491,20 +489,23 @@ class StackPopup {
 }
 
 /**
- * "Open with Installer" applies when the installer is installed and is not already what opens
- * this kind of file.
+ * "Open with Installer" for a package of this type: offered when the installer is there (its
+ * Installer1 API, or its desktop file) and is not already the default handler (then Open does
+ * it). `api` says whether to call Installer1.Open; `info` is the desktop file to launch.
  *
- * @returns {?Gio.DesktopAppInfo}
+ * @param {?string} contentType
+ * @param {boolean} apiAvailable core/installer.js `available`
+ * @returns {?{api: boolean, info: ?Gio.DesktopAppInfo}}
  */
-export function installerFor(contentType) {
-    let installer = null;
+export function installerFor(contentType, apiAvailable) {
+    let info = null;
     try {
-        installer = DesktopAppInfo.new(INSTALLER_ID);
+        info = DesktopAppInfo.new(INSTALLER_ID);
     } catch (_e) {
-        return null;
+        info = null;
     }
-    if (!installer)
+    if (!info && !apiAvailable)
         return null;
     const current = contentType ? Gio.AppInfo.get_default_for_type(contentType, false) : null;
-    return current?.get_id() === INSTALLER_ID ? null : installer;
+    return current?.get_id() === INSTALLER_ID ? null : { api: apiAvailable, info };
 }

@@ -7,11 +7,12 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Gtk from 'gi://Gtk';
 
-import { linkRow } from '../widgets.js';
+import * as onboardingPrefs from '../../features/onboarding/prefs.js';
+import { addFeatureGroups, linkRow } from '../widgets.js';
 
 export const PAGE = { id: 'about', icon: 'help-about-symbolic' };
 
-export function build({ extension, window, _, breakpoints, title: extensionTitle }) {
+export function build({ settings, extension, window, _, breakpoints, title: extensionTitle }) {
     const page = new Adw.PreferencesPage({ title: _('About'), icon_name: PAGE.icon });
 
     // Header group with centered logo, title, author, and version
@@ -69,6 +70,7 @@ export function build({ extension, window, _, breakpoints, title: extensionTitle
 
     headerGroup.add(headerBox);
     page.add(headerGroup);
+    addFeatureGroups(page, onboardingPrefs, { extension, window, _, settings });
 
     // Content group with two columns: links (left) and QR + coffee (right)
     // Uses a horizontal Box that flips to vertical via Adw.Breakpoint when narrow.

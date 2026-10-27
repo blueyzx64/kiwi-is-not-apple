@@ -27,6 +27,8 @@ import { ExtensionPreferences, gettext as _ } from 'resource:///org/gnome/Shell/
 
 import { buildNavigation } from './prefs/window.js';
 import { SECTIONS } from './prefs/pages/index.js';
+import { presentAssistant } from './prefs/setupAssistant.js';
+import { ONBOARDING_KEY, shouldPresent } from './features/onboarding/model.js';
 
 export default class KiwiPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
@@ -54,5 +56,13 @@ export default class KiwiPreferences extends ExtensionPreferences {
             pages: section.pages.map(mod => mod.build(args)),
         }));
         buildNavigation(window, { sections, pageBreakpoints: breakpoints, title, _ });
+
+        // The Shell opened the preferences for the first-run Setup Assistant
+        if (shouldPresent(settings.get_string(ONBOARDING_KEY))) {
+            const id = window.connect('map', () => {
+                window.disconnect(id);
+                presentAssistant(args);
+            });
+        }
     }
 }

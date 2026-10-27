@@ -22,6 +22,19 @@
         <description>Internal. The text of saved-originals when it could not be parsed, kept so a damaged store is never silently lost. Do not edit.</description>
       </key>
 
+      <!-- Setup Assistant (features/onboarding) -->
+      <key name="onboarding" type="s">
+        <choices>
+          <choice value="new"/>
+          <choice value="requested"/>
+          <choice value="shown"/>
+          <choice value="done"/>
+        </choices>
+        <default>'new'</default>
+        <summary>Setup Assistant state (internal)</summary>
+        <description>Internal. "new": the Setup Assistant was never offered; Kiwi opens it once, after the session has started. "requested": Kiwi opened the preferences for it. "shown": it is up. "done": finished or skipped. Run it again from Kiwi Settings > About.</description>
+      </key>
+
       <!-- Menu bar (features/menuBar, features/calendar) -->
       <key name="menubar-show-activities" type="b">
         <default>false</default>

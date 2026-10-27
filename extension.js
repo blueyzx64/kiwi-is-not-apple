@@ -32,6 +32,7 @@ import { LayoutService } from './core/layout.js';
 import { Motion } from './core/motion.js';
 import { TimerService } from './core/timers.js';
 import { AppMenuService } from './core/appMenus/service.js';
+import { InstallerClient } from './core/installer.js';
 import { OsdRouter } from './core/osd.js';
 import { OriginalsStore, STORE_BACKUP_KEY, STORE_KEY, restoreStale } from './core/originals.js';
 import { FEATURES } from './features.js';
@@ -53,7 +54,7 @@ const openSettings = schemaId =>
  *   extension, settings (Kiwi's Gio.Settings), gettext, features ({instance(id)}),
  *   events (core/events.js), desktop (core/desktop.js), layout (core/layout.js),
  *   motion (core/motion.js), osd (core/osd.js), originals (core/originals.js), appMenus (core/appMenus/service.js),
- *   timers (core/timers.js)
+ *   timers (core/timers.js), installer (core/installer.js)
  */
 // The Shell disables every extension while the screen is locked and enables it again at unlock
 // (Kiwi has no 'unlock-dialog' session mode: its UI has no place on the lock screen). The GNOME
@@ -102,6 +103,8 @@ export default class KiwiExtension extends Extension {
         this._appMenus = new AppMenuService({ events: this._events, desktop: this._desktop, layout: this._layout });
         this._osd = new OsdRouter(this._settings);
         this._osd.start(this._cleanup);
+        // Idle until a feature acquires it (no bus traffic for an unused installer)
+        this._installer = new InstallerClient(this._events);
 
         this._features = new FeatureRegistry(CleanupRegistry, {
             onChange: (id, active) => this._events?.emit('feature-changed', { id, active }),
@@ -136,6 +139,7 @@ export default class KiwiExtension extends Extension {
             originals: this._originals,
             timers: this._timers,
             appMenus: this._appMenus,
+            installer: this._installer,
         });
 
         // After the dock took its entry (it does so from an idle queued before this one)
@@ -167,11 +171,13 @@ export default class KiwiExtension extends Extension {
         this._features = null;
         this._timers?.stop();
         this._appMenus?.stop();
+        this._installer?.stop();
         this._motion?.stop();
         this._layout?.stop();
         this._desktop?.stop();
         this._events?.clear();
         this._appMenus = this._motion = this._layout = this._desktop = this._events = this._osd = this._timers = null;
+        this._installer = null;
         this._originals = null;
         IconStyle.configure(null);
         Glass.configure(null);

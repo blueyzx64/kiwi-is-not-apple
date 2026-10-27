@@ -284,4 +284,10 @@ export const FEATURES = [
         id: 'desktop-widgets', setting: 'widgets',
         load: async () => (await import('./features/widgets/index.js')).DesktopWidgets,
     },
+    {
+        // The Setup Assistant, offered once (features/onboarding/model.js): runs only while
+        // it has never been offered, opens the preferences, then stops
+        id: 'onboarding', when: ctx => ctx.settings.get_string('onboarding') === 'new',
+        load: async () => (await import('./features/onboarding/index.js')).Onboarding,
+    },
 ];

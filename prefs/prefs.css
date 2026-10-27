@@ -31,3 +31,31 @@
     font-size: 0.85em;
     font-weight: 700;
 }
+
+/* Setup Assistant (features/onboarding/assistant.js): accent swatches like macOS Appearance */
+.kiwi-accent-swatch {
+    min-width: 22px;
+    min-height: 22px;
+    padding: 0;
+    border-radius: 999px;
+    border: 1px solid alpha(black, 0.18);
+}
+
+.kiwi-accent-swatch:checked {
+    outline: 2px solid alpha(currentColor, 0.55);
+    outline-offset: 2px;
+}
+
+.kiwi-accent-multicolor { background: linear-gradient(135deg, #ff5257, #ffc600 33%, #62ba46 55%, #007aff 78%, #a550a7); }
+.kiwi-accent-blue { background: #007aff; }
+.kiwi-accent-purple { background: #a550a7; }
+.kiwi-accent-pink { background: #f74f9e; }
+.kiwi-accent-red { background: #ff5257; }
+.kiwi-accent-orange { background: #f7821b; }
+.kiwi-accent-yellow { background: #ffc600; }
+.kiwi-accent-green { background: #62ba46; }
+.kiwi-accent-graphite { background: #8c8c8c; }
+
+.kiwi-setup-icon {
+    color: @accent_color;
+}

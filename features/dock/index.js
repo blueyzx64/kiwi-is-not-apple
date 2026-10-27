@@ -89,6 +89,8 @@ export class Dock {
         this.config = readConfig(this._ks);
         this.metrics = dockMetrics(this.config.iconSize);
         this._desktop = ctx.desktop.acquire(cleanup);
+        // The owner's installer (P7): "Open with Installer" calls its Installer1.Open
+        this._installer = ctx.installer.acquire(cleanup);
         this._layout = ctx.layout.acquire(cleanup);
         this._appSystem = Shell.AppSystem.get_default();
         this._tracker = Shell.WindowTracker.get_default();
@@ -811,10 +813,10 @@ export class Dock {
             this.openUri(f.file.get_uri());
             stack.closePopup();
         });
-        const installer = f.entry.badge ? installerFor(f.contentType) : null;
+        const installer = f.entry.badge ? installerFor(f.contentType, this._installer.available) : null;
         if (installer) {
             menu.addAction(_('Open with Installer'), () => {
-                installer.launch([f.file], global.create_app_launch_context(0, -1));
+                this._openWithInstaller(installer, f.file);
                 stack.closePopup();
             });
         }
@@ -834,6 +836,20 @@ export class Dock {
                 .catch(e => console.error('[Kiwi] dock: could not move to the trash:', e));
         });
         menu.popup();
+    }
+
+    // Installer1.Open when the installer's API is there (one running instance takes the
+    // file), else its desktop file
+    _openWithInstaller(installer, file) {
+        const launch = () => installer.info?.launch([file], global.create_app_launch_context(0, -1));
+        if (!installer.api || !file.get_path()) {
+            launch();
+            return;
+        }
+        this._installer.open(file.get_path()).catch(e => {
+            console.warn('[Kiwi] dock: the installer did not open the file, launching it instead:', e.message);
+            launch();
+        });
     }
 
     // ---- drag and drop -------------------------------------------------------------------------
