@@ -79,11 +79,6 @@ export const EVENTS = Object.freeze({
     // features/lowPower: Low Power Mode started or stopped applying, the power source changed,
     // or the daemon or the battery was found
     'low-power-changed': { active: 'boolean' },
-    // core/installer.js (the owner's installer, Installer1; P7)
-    'installer-availability-changed': { availability: "'running' | 'activatable' | 'incompatible' | 'absent'" },
-    'installer-progress': { operations: 'object[] in flight', fraction: 'number 0..1 | null' },
-    'installer-apps-changed': {},
-    'installer-uninstall-finished': { appId: 'string', outcome: "'removed' | 'cancelled' | 'failed'", code: 'string' },
 });
 
 export class EventHub {

@@ -841,9 +841,7 @@ export class LaunchpadView {
         }));
         const body = new St.Label({
             style_class: 'kiwi-launchpad-alert-body', x_align: Clutter.ActorAlign.CENTER,
-            text: rule.backend === 'flatpak'
-                ? _('GNOME Software will remove this app. You can install it again from GNOME Software.')
-                : _('The Installer will move this app to the Trash.'),
+            text: _('GNOME Software will remove this app. You can install it again from GNOME Software.'),
         });
         body.clutter_text.line_wrap = true;
         body.clutter_text.x_align = Clutter.ActorAlign.CENTER;

@@ -43,12 +43,7 @@ export class Launchpad {
         this._ks = new KiwiSettings(ctx.settings);
         this._ks.attach(cleanup);
         this.store = new LaunchpadStore(cleanup, { gettext: this.gettext, onChanged: () => this.view?.refresh() });
-        this.uninstall = new UninstallService(cleanup, {
-            onFinished: (appId, outcome) => {
-                if (outcome === 'removed')
-                    this.view?.poof(appId);
-            },
-        });
+        this.uninstall = new UninstallService(cleanup);
 
         ctx.events.on('launchpad-requested', () => this.toggle(), cleanup);
 
@@ -119,11 +114,9 @@ export class Launchpad {
             view.close();
     }
 
-    /** Before jiggle mode shows its ⓧ: which back ends are on the bus, and what the Installer owns. */
+    /** Before jiggle mode shows its ⓧ: whether GNOME Software is on the bus. */
     async probeUninstall() {
-        const caps = await this.uninstall.probe();
-        if (caps.installer && this.canDelete)
-            await this.uninstall.learnOwners(this.store.apps().map(a => this.store.app(a.id)).filter(Boolean));
+        await this.uninstall.probe();
     }
 
     /** The user confirmed the alert: ask the app's owner to remove it. */

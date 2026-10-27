@@ -356,23 +356,14 @@ export function flatpakAppId({ desktopId, path, xFlatpak }) {
 /**
  * Who can remove an app, the Linux version of macOS's "only App Store apps get an ⓧ"
  * (research installer-and-app-lifecycle §4.3):
- *   1. installer-owned (X-Installer-Managed=true, or the installer's OwnsDesktopId says so)
- *      -> the installer's Uninstall, when the installer is on the bus;
- *   2. a Flatpak app -> GNOME Software's `uninstall` action, when GNOME Software is activatable;
- *   3. anything else -> no ⓧ (system apps such as Files and Settings stay protected).
+ *   1. a Flatpak app -> GNOME Software's `uninstall` action, when GNOME Software is activatable;
+ *   2. anything else -> no ⓧ (system apps such as Files and Settings stay protected).
  *
- * @param {{desktopId: string, flatpakId: ?string, installerManaged: boolean,
- *          installerOwned: ?{owned: boolean, appId: string}}} app
- * @param {{installer: boolean, software: boolean}} caps which back ends are reachable
- * @returns {?{backend: 'installer'|'flatpak', appId: string}}
+ * @param {{desktopId: string, flatpakId: ?string}} app
+ * @param {{software: boolean}} caps which back ends are reachable
+ * @returns {?{backend: 'flatpak', appId: string}}
  */
 export function uninstallRule(app, caps) {
-    if (caps.installer) {
-        if (app.installerOwned?.owned && app.installerOwned.appId)
-            return { backend: 'installer', appId: app.installerOwned.appId };
-        if (app.installerManaged)
-            return { backend: 'installer', appId: String(app.desktopId).replace(/\.desktop$/, '') };
-    }
     if (caps.software && app.flatpakId)
         return { backend: 'flatpak', appId: app.flatpakId };
     return null;

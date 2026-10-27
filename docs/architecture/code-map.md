@@ -71,7 +71,6 @@ prefs.js metadata.json stylesheet.css schemas/ po/`). `make pack-check` verifies
 | `osd` | `core/osd.js` OsdRouter (`setSink(cleanup, 'notch'\|'pill', fn)`) |
 | `originals` | `core/originals.js` OriginalsStore (give it to a `SettingOwner`) |
 | `timers` | `core/timers.js` TimerService (`startTimer({seconds, label})`, `pause/resume/cancel(id)`, `list()`, `remaining(t)`) |
-| `installer` | `core/installer.js` InstallerClient for the owner's installer (`acquire(cleanup)`; idle until then) |
 
 ## 3. core/
 
@@ -91,7 +90,6 @@ prefs.js metadata.json stylesheet.css schemas/ po/`). `make pack-check` verifies
 | `windowState.js` | why a window is not in its normal place (`staged`, ...) | `WindowState.set/has/list/watch`, `interceptMinimize`, `setStageActive` |
 | `notificationRouter.js` | banners to the notch or stock, shared `{count, dnd}`, banner filters (Focus), the history | `setBannerSink`, `setBannerFilter`, `pinBanners`, `connect`, `watchHistory`, `sources`, `appIdOf`, `state`, `setDnd` |
 | `mprisWatcher.js` | one MPRIS source for the extension | `MprisWatcher.acquire(cleanup, gettext)` |
-| `installerModel.js` / `installer.js` | the Installer1 contract as data (`INSTALLER1_XML`, kept equal to `installer-dbus-contract.md` by a test) and its client: availability (running / activatable / incompatible / absent), calls with timeouts, signals as events, a `ProgressBook` | `acquire`, `available`, `listApps`, `ownsDesktopId`, `open(path)`, `uninstall(appId)` -> outcome, `progress`; events `installer-*` |
 | `widgets/` | the one widget model for the desktop layer, Notification Center and notch: pure `model.js` (sizes, grid, snapping, layout JSON, `ProviderPool`, `WidgetRegistry`), `data.js` (pure data shaping), `view.js` (the glass card), `providers/` (time, calendar, weather, batteries, media, system; lazy and shared), `kinds/` (the built-in widgets) | `Widgets.acquire(cleanup, gettext)` -> `host.registry`, `host.createView(kind, {size, config, scale}, owner)` -> `view.actor`, `setActive(bool)`, `activate()`, `menuItems()` |
 | `osdModel.js` / `osd.js` | the one interception of the Shell OSD (`_showOsdWindow`): classifies volume / brightness / keyboard backlight and routes each change to ONE sink from `osd-location` (notch while it runs, else the menu-bar pill; 'system' = stock); other OSDs and other monitors stay stock | `classifyOsd`, `route`; `OsdRouter.start(cleanup)`, `setSink(owner, name, fn)` |
 | `appMenus/` | the focused app's menus (ctx.appMenus): pure `model.js` (generic menus, well-known GTK actions, Help search, ⌘ shortcut labels), `gtkActions.js` (org.gtk.Actions provider), `commands.js` (generic commands), `service.js` (providers, cache, activation); P6 menu bar providers: pure `nativeModel.js` (GMenu store, DBusMenu layout, AT-SPI nodes, `applyMenubar`), `gtkMenus.js` (org.gtk.Menus exported menu bar), `dbusMenu.js` (com.canonical.AppMenu.Registrar + com.canonical.dbusmenu, Xwayland apps by X11 id), `atspi.js` (experimental: async a11y-bus reads, libadwaita primary menu off-sight) | `acquire(owner)`, `targetFor(win)`, `peek/results(target)`, `build(target, results, opts)`, `activate(target, command)`, `registerProvider(owner, provider)`, `onChanged(owner, fn)` |
@@ -104,8 +102,7 @@ Events (`EVENTS` in `core/events.js`): `window-added`, `window-changed`, `window
 window manager; the menu bar runs a fallback when nobody listens), `launchpad-requested` (dock tile,
 pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view-changed` (Split View), `recording-started` /
 `recording-stopped` (screenshots; for the notch's recording live activity), `timers-changed`,
-`timer-finished` (core/timers), `installer-availability-changed`,
-`installer-progress`, `installer-apps-changed`, `installer-uninstall-finished` (core/installer).
+`timer-finished` (core/timers).
 
 ## 4. lib/
 
@@ -146,7 +143,7 @@ pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view
 | `clipboard/` | `clipboard-history` | history, popover, Quick Paste |
 | `stageManager/` | `stage-manager`, `stage-manager-shortcut` | v3 (P4): `model.js` pure `StageMachine` (events in, effects out: stage, entries, strip order per workspace, desktop); `geometry.js` strip maths; `index.js` adapter on core/desktop, core/layout claim `stage-strip` (opposite a side dock), core/motion; `view.js` strip, drop target and flight layer in one container; `flights.js`; `windows.js` hide by opacity+pick. Public: `toggleDesktop()`, `isDesktopShown`, `openIntoStage(appId)` |
 | `showDesktop/` | `show-desktop` | top-bar button, Super+D, click on empty wallpaper (`click-wallpaper-reveals-desktop`: always / stage-manager / never); delegates to Stage Manager |
-| `launchpad/` | `launchpad` | macOS 11–15 Launchpad: full-screen grid (`view.js`), GNOME's app folders and app-picker-layout as data (`store.js`), jiggle mode ⓧ through GNOME Software or the Installer (`uninstall.js`); opened by `launchpad-requested`, Super+A / F4 (takes them from GNOME's toggle-application-view through core/originals) |
+| `launchpad/` | `launchpad` | macOS 11–15 Launchpad: full-screen grid (`view.js`), GNOME's app folders and app-picker-layout as data (`store.js`), jiggle mode ⓧ through GNOME Software, Flatpak apps only (`uninstall.js`); opened by `launchpad-requested`, Super+A / F4 (takes them from GNOME's toggle-application-view through core/originals) |
 | `widgets/` | `desktop-widgets` | Sonoma desktop widgets: a layer per monitor above the wallpaper (and DING), drag to place, right-click size/remove, gallery (`gallery.js`), dimming, "Edit Widgets…" in the wallpaper menu; `editWidgets()` for the Notification Center |
 | `roundedCorners/` | `rounded-corners` | shader effect per window |
 | `liquidGlass/` | `liquid-glass` | attaches `lib/glass.js` to the panel, Control Center and calendar menus; the glass prefs |

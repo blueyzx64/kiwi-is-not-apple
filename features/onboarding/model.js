@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Kiwi's Setup Assistant (overhaul plan §9, research installer-and-app-lifecycle.md §4.4 option
-// A): a declarative list of steps, rendered once in the preferences window, and the rules for
+// Kiwi's Setup Assistant (overhaul plan §9, research installer-and-app-lifecycle.md §4.4): a declarative list of steps, rendered once in the preferences window, and the rules for
 // when the Shell offers it.
 //
 // Lifecycle of the `onboarding` key:
