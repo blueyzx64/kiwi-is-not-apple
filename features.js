@@ -156,6 +156,7 @@ export const FEATURES = [
     {
         // Shift+Super+3/4/5, the toolbar and the floating thumbnail, on GNOME's own screenshot UI
         id: 'screenshots', setting: 'screenshots',
+        restartOn: ['screenshots-shortcut-screen', 'screenshots-shortcut-selection', 'screenshots-shortcut-toolbar'],
         load: async () => (await import('./features/screenshots/index.js')).Screenshots,
     },
 ];
