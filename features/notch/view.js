@@ -86,6 +86,7 @@ export class NotchView {
         this._ears = null;
         this._pinned = false;        // a clicked (pinned) dashboard is open
         this._captureId = 0;         // stage 'captured-event' while pinned
+        this._focusId = 0;           // display 'notify::focus-window' while pinned
         this._focusedWindow = null;  // the window that had the input focus when it opened
         this._pressOnSurface = false;
         this._hoverIntent = { enabled: true, delayMs: 300 };
@@ -222,6 +223,12 @@ export class NotchView {
         if (this._captureId || this._destroyed)
             return;
         this._captureId = global.stage.connect('captured-event', (_s, event) => this._onCaptured(event));
+        // A press on a window never reaches the stage (the compositor hands it to the client),
+        // but the window takes the focus: that is the outside click
+        this._focusId = global.display.connect('notify::focus-window', () => {
+            if (global.display.focus_window)
+                this._h.onCollapse?.();
+        });
         // The keyboard goes to the island (like a panel menu, minus the grab): the window gives
         // up the input focus and gets it back when the dashboard closes, unless another one
         // was focused meanwhile
@@ -235,6 +242,8 @@ export class NotchView {
             return;
         global.stage.disconnect(this._captureId);
         this._captureId = 0;
+        global.display.disconnect(this._focusId);
+        this._focusId = 0;
         const window = this._focusedWindow;
         this._focusedWindow = null;
         if (window && !this._destroyed && !global.display.focus_window)
@@ -621,6 +630,9 @@ export class NotchView {
             this._signature = null;
             actor = new St.Widget();
         }
+        // Fades paint each child with the body's opacity instead of drawing the whole body into
+        // an offscreen buffer first (a costly first frame); the children do not overlap
+        actor.offscreen_redirect = 0;
         cached?.actor.destroy();
         const entry = { tab, actor, sig, live };
         dash.bodies.set(tab, entry);
@@ -710,6 +722,9 @@ export class NotchView {
     // Runs every function in `fns` now and then every `ms` (default a second) while `page` is
     // on screen.
     _startLive(page, fns, ms = LIVE_TICK_MS) {
+        if (this._liveTimer)
+            this._cleanup.release(this._liveTimer);
+        this._liveTimer = 0;
         if (!fns.length)
             return;
         const run = () => fns.forEach(fn => {
