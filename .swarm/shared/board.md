@@ -4,7 +4,7 @@
 |---|---|---|---|---|---|
 | P1-menubar | (earlier agent) | Menu bar, logo menu, app menu P1 | kiwi-v3-menubar / v3/p1-menubar | | merged |
 | P1-windows | (earlier agent) | Tiling, green menu, Hide | kiwi-v3-windows / v3/p1-windows | | running |
-| L1 | sonnet | P2 Dock motion & extras: Genie/Scale minimize, bounce, magnification, LauncherEntry badges, grey background-app dots, folder Stacks | kiwi-l1 / v3/l1-dock-motion | dock merged | started |
+| L1 | sonnet | P2 Dock motion & extras: Genie/Scale minimize, bounce, magnification, LauncherEntry badges, grey background-app dots, folder Stacks | kiwi-l1 / v3/l1 | dock merged | merged |
 | L2 | sonnet | P2 System surfaces: Tahoe volume/brightness OSD under the menu bar, centred dialogs, colour filters | kiwi-l2 / v3/l2-surfaces | | started |
 | L3 | sonnet | P2 Screenshot toolbar (Shift+Super+3/4/5) + floating thumbnail | kiwi-l3 / v3/l3-screenshot | | started |
 | L4 | sonnet | P2 Input: Caps Lock / input-source badge, emoji popover, icon styles (dark/tinted) | kiwi-l4 / v3/l4-input | | started |
@@ -71,3 +71,4 @@ Deploy conservatively, sized to the scope and type of work. Resume in waves of a
 - S2 F2: both docks run when DtD is enabled live (originals.js:347 `_strip` is synchronous, so strip from idle or yield). F3: theme outer shadow on glass menus (explicit `box-shadow:none`). F4: no session-modes, so lock/unlock flips settings and flashes DtD (keep the holds while locked). F5: the stack freezes on big folders (lazy rows, debounce, ignore .part). F6: menu-bar glass contrast 3.92:1 on white (tint floor).
 - S3 F7 (autostart through a dangling symlink), F8 (trash.js:89 after destroy), F10 (web-app minimize target), F11 (click on a focused app unminimizes). F9 is fixed by FX1. F12 is unconfirmed, so skip it.
 - ccr@a175d6a after the L6 and FX1 merges: run-f44.sh 20 gave 0 Kiwi errors and 8/8 probes PASS (/tmp/x2/runs/20261027-150204-kiwi-is-not-apple-f44d).
+- L1 → merged (Genie/Scale `minimize-effect`, magnification, bounce, LauncherEntry badges, background-app dots, folder Stacks; core `ctx.motion.tween`). Note for L8: Stage Manager flags windows, so they get GNOME's own minimize effect. L8 must call minimizeEffect `setTargetProvider(owner, fn(win)->{rect,edge})` so Genie targets the strip. Perf note: magnification costs 15.8 ms/frame in software rendering because the dock re-lays out and redraws its glass on every pointer move (R4 to check on hardware).
