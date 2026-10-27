@@ -21,7 +21,7 @@ function spinRow(settings, { key, title, subtitle, lower, upper, step }) {
 
 /** A slider bound to an integer key, with the values at both ends as marks. */
 function scaleRow(settings, { key, title, subtitle, lower, upper, labels }) {
-    const row = new Adw.ActionRow({ title, subtitle });
+    const row = new Adw.ActionRow({ title, subtitle: subtitle ?? '' });
     const scale = new Gtk.Scale({
         adjustment: new Gtk.Adjustment({ lower, upper, step_increment: 4, page_increment: 16 }),
         draw_value: false, hexpand: true, valign: Gtk.Align.CENTER, width_request: 220,

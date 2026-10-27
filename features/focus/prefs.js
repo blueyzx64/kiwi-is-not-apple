@@ -72,7 +72,7 @@ export function buildPrefs({ settings, _ }) {
         return row;
     };
     const removable = (title, subtitle, onRemove) => {
-        const row = new Adw.ActionRow({ title, subtitle });
+        const row = new Adw.ActionRow({ title, subtitle: subtitle ?? '' });
         const remove = new Gtk.Button({ icon_name: 'list-remove-symbolic', valign: Gtk.Align.CENTER, tooltip_text: _('Remove') });
         remove.add_css_class('flat');
         remove.connect('clicked', onRemove);

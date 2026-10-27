@@ -187,3 +187,24 @@ No more installer work: no new pieces (Trash-drag uninstall, fly-to-dock, update
     - SM with 6 windows (sm-01-six.png) is correct apart from the opaque strip panel;
     - the green menu (w-05) has the ghost shadow box at its left and bottom;
     - the Split View picker (w5-03) is fine.
+
+## Fix round after verification (started)
+- FX6 menus/glass (kiwi-fx6-menus): green-menu stuck modal (S1), ghost rect behind glass menus, Ctrl+F2 in full screen, dialogs in light mode, logo contrast, CC stray circle and Wi-Fi glyph, menu-bar warnings.
+- FX7 windows (kiwi-fx7-windows): tile-drag Esc, Hide activate, colour-filter black wallpaper, SM first-frame jump, strip x=0, Split View exit size, outline in light mode, minimizeEffect handler ids, SM strip panel look.
+- FX8 dock/Launchpad/MC (kiwi-fx8-dock): magnify destroyed actor, Launchpad stalls, folder drag, folder and jiggle verification, stack and auto-hide first frames, icon styles on tiles, badges, MC Space labels, F3 from Launchpad, wallpaper in Space thumbnails.
+- FX9 notch/NC/widgets (kiwi-fx9-notch): pinned dashboard grab, tab-switch hitch, gallery layout, NC widget slot, notch providers via Widgets.acquire, hide banners while NC is open, live tick, allocation warnings, Now tab balance.
+- V6 still running; its findings get their own fixer.
+- V6 (Spotlight, screenshots, input, glass, onboarding):
+  - **S1:** the Dock, Mission Control and Colour Filters prefs pages failed to build (subtitle undefined). FIXED by the orchestrator (`subtitle ?? ''` in 8 row helpers).
+  - S2:
+    - The stock "Screenshot captured" banner still shows beside the thumbnail (screenshots/index.js:428-441) → FX10.
+    - The QS menu shadow has a hard cut 42 px below the menu → FX6.
+  - S3 → FX10:
+    - the toolbar overlaps the dock;
+    - the Spotlight list height snaps while typing (animate it) and typing p95 89 ms;
+    - no empty state for "/files" with no hits;
+    - identical icons for menu-item rows;
+    - the Setup Assistant icons are tiny and faint;
+    - the screenshot toolbar's first frame takes 183 ms.
+  - Wallpaper ".jxl too large (0x0)" → FX6 (wallpaperProbe). The notch/view.js:92 disposed actor in motion → FX9.
+  - Everything else passes: Spotlight open has 0 jitter (H13's jump not reproduced), emoji keeps the clipboard, and the tint runs off-process.

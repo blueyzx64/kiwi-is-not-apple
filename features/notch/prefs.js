@@ -26,7 +26,7 @@ export function buildPrefs({ settings, extension }) {
     group.add(master);
 
     const part = (title, subtitle, key) => {
-        const row = new Adw.SwitchRow({ title, subtitle });
+        const row = new Adw.SwitchRow({ title, subtitle: subtitle ?? '' });
         settings.bind(key, row, 'active', Gio.SettingsBindFlags.DEFAULT);
         group.add(row);
         return row;
@@ -59,7 +59,7 @@ export function buildPrefs({ settings, extension }) {
         description: _('What the notch shows while it happens. The most important one takes the pill; the rest are listed in the Now tab.'),
     });
     const actRow = (title, subtitle, key) => {
-        const row = new Adw.SwitchRow({ title, subtitle });
+        const row = new Adw.SwitchRow({ title, subtitle: subtitle ?? '' });
         settings.bind(key, row, 'active', Gio.SettingsBindFlags.DEFAULT);
         acts.add(row);
         return row;
