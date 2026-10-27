@@ -187,3 +187,10 @@ No more installer work: no new pieces (Trash-drag uninstall, fly-to-dock, update
     - SM with 6 windows (sm-01-six.png) is correct apart from the opaque strip panel;
     - the green menu (w-05) has the ghost shadow box at its left and bottom;
     - the Split View picker (w5-03) is fine.
+
+## Fix round after verification (started)
+- FX6 menus/glass (kiwi-fx6-menus): green-menu stuck modal (S1), ghost rect behind glass menus, Ctrl+F2 in full screen, dialogs in light mode, logo contrast, CC stray circle and Wi-Fi glyph, menu-bar warnings.
+- FX7 windows (kiwi-fx7-windows): tile-drag Esc, Hide activate, colour-filter black wallpaper, SM first-frame jump, strip x=0, Split View exit size, outline in light mode, minimizeEffect handler ids, SM strip panel look.
+- FX8 dock/Launchpad/MC (kiwi-fx8-dock): magnify destroyed actor, Launchpad stalls, folder drag, folder and jiggle verification, stack and auto-hide first frames, icon styles on tiles, badges, MC Space labels, F3 from Launchpad, wallpaper in Space thumbnails.
+- FX9 notch/NC/widgets (kiwi-fx9-notch): pinned dashboard grab, tab-switch hitch, gallery layout, NC widget slot, notch providers via Widgets.acquire, hide banners while NC is open, live tick, allocation warnings, Now tab balance.
+- V6 still running; its findings get their own fixer.
