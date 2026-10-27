@@ -90,7 +90,7 @@ export default [
     },
     {
         // Pure models and core logic run under plain `gjs -m` in tests: no Shell, no GTK
-        files: ['core/*Model.js', 'core/events.js', 'core/originals.js', 'features/**/model.js',
+        files: ['core/*Model.js', 'core/**/model.js', 'core/events.js', 'core/originals.js', 'features/**/model.js',
             'lib/*Model.js', 'lib/featureRegistry.js', 'lib/settings.js', 'lib/jobQueue.js',
             'lib/migrations.js', 'lib/cleanup/*Model.js'],
         rules: {

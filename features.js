@@ -32,7 +32,8 @@ export const FEATURES = [
         load: async () => (await import('./features/windowControls/gtkTheme.js')).GtkTheme,
     },
     {
-        // Menu bar policy (the Activities button); the full menu bar arrives in phase 1
+        // The macOS menu bar: logo menu, app name and menus (core/appMenus), transparent
+        // adaptive look, full-screen reveal, privacy dots; each part has its own key
         id: 'menu-bar',
         load: async () => (await import('./features/menuBar/index.js')).MenuBar,
     },

@@ -368,9 +368,9 @@ export class WindowControlsFeature {
             parseButtonLayout(this._layoutOwner?.original ?? this._wm.get_string('button-layout')));
         this._indicator.setOrder(layout.buttons);
 
-        // Left: just before the app icon + name. Right: the last slot of the panel.
+        // Left: just before the menu bar's app name and menus. Right: the last slot of the panel.
         const spec = layout.side === 'left'
-            ? { box: 'left', anchor: { before: ['window-title'], fallback: 'last' } }
+            ? { box: 'left', anchor: { before: ['kiwi-menubar-apps'], fallback: 'last' } }
             : { box: 'right', anchor: { last: true } };
         if (initial || !this._slot) {
             this._slot = PanelLayout.claim(this._cleanup, {
