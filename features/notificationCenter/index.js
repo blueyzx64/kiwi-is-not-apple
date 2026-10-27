@@ -35,7 +35,8 @@ import { KiwiSettings } from '../../lib/settings.js';
 import { groupByApp, orderWidgets, pruneExpanded } from './model.js';
 import { buildDateWidget, buildNotifications, buildWidgets } from './view.js';
 
-const WIDTH = 380;
+// Wide enough for a Medium widget (364) between the column's 12 px paddings
+const WIDTH = 392;
 // The widgets area, row by row: two Small widgets or one Medium fill the column's width
 const WIDGET_ROWS = Object.freeze([
     [['weather', 'small'], ['batteries', 'small']],

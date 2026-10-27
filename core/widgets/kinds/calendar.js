@@ -12,7 +12,7 @@ const fmtTime = d => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digi
 
 function eventRow(e, _) {
     const row = box('kiwi-widget-event', false, { x_expand: true });
-    row.add_child(new St.Widget({ style_class: 'kiwi-widget-event-bar', y_expand: true }));
+    row.add_child(new St.Widget({ style_class: 'kiwi-widget-event-bar' }));
     const text = box('kiwi-widget-column', true, { x_expand: true });
     text.add_child(label(e.summary || _('Untitled'), 'kiwi-widget-body kiwi-widget-strong'));
     const when = e.allDay ? _('All day')
@@ -37,11 +37,14 @@ export default {
         const main = box('kiwi-widget-row', false, { x_expand: true, y_expand: !large });
         root.add_child(main);
 
+        // Small and medium: the weekday in red over the big day number, as macOS shows it.
+        // Large: the month's name in red over the month's grid.
         const dateCol = box('kiwi-widget-column kiwi-widget-date', true);
-        const weekday = label('', 'kiwi-widget-caption kiwi-widget-accent kiwi-widget-strong');
-        const day = label('', 'kiwi-widget-hero');
+        const weekday = label('', 'kiwi-widget-caps kiwi-widget-accent');
+        const day = label('', 'kiwi-widget-day');
         dateCol.add_child(weekday);
-        dateCol.add_child(day);
+        if (!large)
+            dateCol.add_child(day);
         main.add_child(dateCol);
 
         let grid = null;
@@ -51,7 +54,8 @@ export default {
                 layout_manager: new Clutter.GridLayout({ column_homogeneous: true, row_homogeneous: true }),
                 x_expand: true,
             });
-            main.add_child(grid);
+            dateCol.x_expand = true;
+            dateCol.add_child(grid);
         }
 
         const list = box('kiwi-widget-events', true, { x_expand: true, y_expand: true });
@@ -64,7 +68,7 @@ export default {
         } else {
             root.add_child(list);
         }
-        const limit = { small: 1, medium: 3, large: 4 }[view.size];
+        const limit = { small: 1, medium: 3, large: 2 }[view.size];
         let monthKey = '';
 
         const fillMonth = now => {
@@ -88,7 +92,8 @@ export default {
         return {
             update(d) {
                 const now = d?.now ?? new Date();
-                weekday.text = now.toLocaleDateString([], { weekday: 'long' }).toUpperCase();
+                weekday.text = (large ? now.toLocaleDateString([], { month: 'long' })
+                    : now.toLocaleDateString([], { weekday: 'long' })).toUpperCase();
                 day.text = String(now.getDate());
                 fillMonth(now);
                 list.destroy_all_children();

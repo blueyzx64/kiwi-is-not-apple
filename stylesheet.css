@@ -1653,6 +1653,89 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
     color: #28a745;
 }
 
+/* ==== features/desktopIcons/style.css ==== */
+
+/* feature: desktop-icons */
+/* Sizes that depend on the icon size and the UI scale (the cell, the picture, the label's width
+   and line count) are set inline by tile.js from model.js metricsFor. */
+.kiwi-di-layer {
+  background-color: transparent;
+}
+
+.kiwi-di-picture {
+  padding: 0;
+}
+
+.kiwi-di-icon {
+  color: #ffffff;
+  icon-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.kiwi-di-label-box {
+  padding-top: 2px;
+}
+
+/* The name: white with a soft dark shadow, readable on any wallpaper */
+.kiwi-di-label {
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+  padding: 1px 6px;
+  border-radius: 6px;
+}
+
+/* Selected: a soft square behind the picture, a rounded highlight behind the name. Grey while
+   a window has the focus, the accent colour while the desktop does */
+.kiwi-di-selected .kiwi-di-picture {
+  background-color: rgba(255, 255, 255, 0.22);
+}
+
+.kiwi-di-selected .kiwi-di-label {
+  background-color: rgba(120, 120, 128, 0.7);
+  text-shadow: none;
+}
+
+.kiwi-di-selected.kiwi-di-active .kiwi-di-label {
+  background-color: -st-accent-color;
+  color: -st-accent-fg-color;
+}
+
+/* The keyboard's place, shown only after a key was used */
+.kiwi-di-focused .kiwi-di-picture {
+  box-shadow: inset 0 0 0 2px -st-accent-color;
+}
+
+.kiwi-di-dragging .kiwi-di-icon {
+  icon-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+}
+
+.kiwi-di-band {
+  background-color: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 2px;
+}
+
+/* Rename: the name becomes a field in place */
+.kiwi-di-rename {
+  background-color: rgba(255, 255, 255, 0.96);
+  color: #1d1d1f;
+  caret-color: #1d1d1f;
+  selection-background-color: -st-accent-color;
+  selected-color: -st-accent-fg-color;
+  font-size: 12px;
+  text-align: center;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0 0 2px -st-accent-color;
+}
+
+.kiwi-di-rename:error {
+  box-shadow: 0 0 0 2px #ff453a;
+}
+
 /* ==== features/dialogs/style.css ==== */
 
 /* feature: dialogs */
@@ -4279,6 +4362,8 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
   color: #1d1d1f;
 }
 
+/* Type follows macOS: 13 for names and body, 12 and 11 for captions, thin 44 for the big
+   number. Weights: 300 hero, 600 titles. Sizes are px; the card's own padding is inline. */
 .kiwi-widget-content {
   spacing: 4px;
 }
@@ -4292,21 +4377,47 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
 }
 
 .kiwi-widget-hero {
-  font-size: 2.4em;
+  font-size: 44px;
+  font-weight: 300;
+}
+
+.kiwi-widget-clock-digital {
+  font-size: 40px;
+  font-weight: 300;
+}
+
+.kiwi-widget-day {
+  font-size: 54px;
+  font-weight: 300;
+}
+
+.kiwi-widget-headline {
+  font-size: 15px;
   font-weight: 600;
 }
 
-.kiwi-widget-medium .kiwi-widget-hero,
-.kiwi-widget-large .kiwi-widget-hero {
-  font-size: 2.1em;
+.kiwi-widget-title {
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .kiwi-widget-body {
-  font-size: 1em;
+  font-size: 13px;
 }
 
 .kiwi-widget-caption {
-  font-size: 0.85em;
+  font-size: 12px;
+}
+
+.kiwi-widget-footnote {
+  font-size: 11px;
+}
+
+/* The weekday or month over the date: small, bold, capitals */
+.kiwi-widget-caps {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
 }
 
 .kiwi-widget-strong {
@@ -4339,6 +4450,10 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
   min-width: 90px;
 }
 
+.kiwi-widget-medium .kiwi-widget-date {
+  min-width: 120px;
+}
+
 .kiwi-widget-events {
   spacing: 6px;
 }
@@ -4358,16 +4473,16 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
 }
 
 .kiwi-widget-month-head {
-  font-size: 0.75em;
+  font-size: 11px;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.62);
 }
 
 .kiwi-widget-month-day {
-  font-size: 0.8em;
-  min-width: 22px;
-  padding: 2px 0;
-  border-radius: 11px;
+  font-size: 12px;
+  min-width: 26px;
+  padding: 3px 0;
+  border-radius: 13px;
   text-align: center;
 }
 
@@ -4378,9 +4493,13 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
 }
 
 /* Weather */
+.kiwi-widget-now {
+  spacing: 6px;
+}
+
 .kiwi-widget-forecast {
   spacing: 4px;
-  padding-top: 6px;
+  padding-top: 8px;
 }
 
 .kiwi-widget-hour {
@@ -4402,7 +4521,7 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
   spacing: 6px;
 }
 
-/* Now Playing: art concentric with the card (22 - 14 = 8 px) */
+/* Now Playing: art concentric with the card (24 - 16 = 8 px) */
 .kiwi-widget-artwork {
   border-radius: 8px;
   background-color: rgba(255, 255, 255, 0.12);
@@ -4458,7 +4577,7 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
 
 /* The snap target while dragging */
 .kiwi-widget-outline {
-  border-radius: 22px;
+  border-radius: 24px;
   border: 2px dashed rgba(255, 255, 255, 0.55);
   background-color: rgba(255, 255, 255, 0.08);
 }

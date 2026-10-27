@@ -7,7 +7,10 @@
 // cells (even units); holding Ctrl while dragging loosens the snap to every unit. A cell is
 // CELL px and cells are GAP px apart (design pixels; the caller passes the UI scale).
 //
-// Sizes follow Sonoma: small 1x1, medium 2x1, large 2x2 cells, extra-large 4x2 (desktop only).
+// Sizes follow macOS Sonoma and Sequoia: small 170x170, medium 364x170, large 364x382 and
+// extra-large 715x382 points. The grid is 170 points per cell with 24 between cells, so a
+// medium is exactly two smalls and the gap between them; large and extra-large are a little
+// taller and narrower than their two-row, four-column footprint (SIZE_PX says by how much).
 
 export const SIZE_ORDER = Object.freeze(['small', 'medium', 'large', 'extraLarge']);
 
@@ -19,8 +22,8 @@ export const SIZES = Object.freeze({
     extraLarge: Object.freeze({ cols: 4, rows: 2 }),
 });
 
-export const CELL = 160;
-export const GAP = 16;
+export const CELL = 170;
+export const GAP = 24;
 /** The distance of two neighbouring cells, in design px. */
 export const PITCH = CELL + GAP;
 /** Space kept from the edges of the area, in design px. */
@@ -28,6 +31,14 @@ export const MARGIN = 20;
 export const LAYOUT_VERSION = 1;
 
 const UNITS_PER_CELL = 2;
+
+/** The drawn size of each size class, in design px (macOS's own numbers). */
+export const SIZE_PX = Object.freeze({
+    small: Object.freeze({ width: 170, height: 170 }),
+    medium: Object.freeze({ width: 364, height: 170 }),
+    large: Object.freeze({ width: 364, height: 382 }),
+    extraLarge: Object.freeze({ width: 715, height: 382 }),
+});
 
 export const isSize = size => Object.prototype.hasOwnProperty.call(SIZES, size);
 
@@ -73,14 +84,21 @@ export function gridFor(area, scale = 1) {
     };
 }
 
-/** The pixel rectangle of an item. */
+/**
+ * The pixel rectangle of an item. A card that is narrower than its footprint (extra-large)
+ * sits against the footprint's right edge, where the widgets hang from.
+ */
 export function rectOf(item, grid) {
-    const { w, h } = sizeUnits(item.size);
+    const { w } = sizeUnits(item.size);
+    const scale = grid.cell / CELL;
+    const px = SIZE_PX[item.size];
+    const footW = (w / UNITS_PER_CELL) * (grid.cell + grid.gap) - grid.gap;
+    const width = px.width * scale;
     return {
-        x: grid.x + item.x * grid.unit,
+        x: grid.x + item.x * grid.unit + footW - width,
         y: grid.y + item.y * grid.unit,
-        width: (w / UNITS_PER_CELL) * (grid.cell + grid.gap) - grid.gap,
-        height: (h / UNITS_PER_CELL) * (grid.cell + grid.gap) - grid.gap,
+        width,
+        height: px.height * scale,
     };
 }
 

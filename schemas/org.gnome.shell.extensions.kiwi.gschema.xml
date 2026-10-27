@@ -960,6 +960,42 @@
         <description>automatic: monochrome and dimmed while an app window is in front, full colour when the desktop is. monochrome: always dimmed. full-color: never dimmed.</description>
       </key>
 
+      <!-- Desktop icons (features/desktopIcons) -->
+      <key name="desktop-icons" type="b">
+        <default>true</default>
+        <summary>Desktop icons</summary>
+        <description>Show the files and folders of your Desktop folder on the desktop, from the top-right corner as Finder does. Kiwi steps aside while the Desktop Icons NG extension (DING) is enabled.</description>
+      </key>
+      <key name="desktop-icons-size" type="i">
+        <range min="32" max="128"/>
+        <default>64</default>
+        <summary>Desktop icon size</summary>
+        <description>The size of the desktop icons in pixels, from 32 to 128. 64 is the macOS default.</description>
+      </key>
+      <key name="desktop-icons-show-drives" type="b">
+        <default>true</default>
+        <summary>Show mounted drives on the desktop</summary>
+        <description>Show USB sticks, memory cards, discs and other drives you mounted as icons on the desktop. Eject them from their right-click menu.</description>
+      </key>
+      <key name="desktop-icons-sort" type="s">
+        <choices>
+          <choice value="none"/>
+          <choice value="name"/>
+          <choice value="kind"/>
+          <choice value="date-modified"/>
+          <choice value="date-created"/>
+          <choice value="size"/>
+        </choices>
+        <default>'none'</default>
+        <summary>Sort desktop icons by</summary>
+        <description>none: icons stay where you put them and new ones take the next free place. The others arrange every icon in that order, from the top-right corner down and then to the left. Dragging an icon sets it back to none.</description>
+      </key>
+      <key name="desktop-icons-layout" type="s">
+        <default>''</default>
+        <summary>Desktop icon arrangement</summary>
+        <description>Where each desktop icon sits, as JSON (the file name and its column and row from the top-right corner). Empty means no icon has been placed yet. Written by Kiwi when you drag icons or new files arrive.</description>
+      </key>
+
       <!-- Screenshots (features/screenshots) -->
       <key name="screenshots" type="b">
         <default>true</default>
