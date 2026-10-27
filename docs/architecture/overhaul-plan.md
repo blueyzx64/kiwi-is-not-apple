@@ -337,7 +337,7 @@ The owner's rule: wherever Kiwi had overridden a default, use the **macOS defaul
 | 1 Full screen as its own Space | **On** (macOS), toggle. P0 keeps `move-window-to-new-workspace`, default true; P3 adds Split View. |
 | 2 Traffic lights in app titlebars | Top-bar controls stay on (owner's choice). When they're off, the apps' buttons default to the **macOS traffic-light style**, with GNOME style as the toggle; one GTK CSS set is kept for this. |
 | 3 Click wallpaper | **"Always"** (macOS default), with "Only in Stage Manager" as the toggle. |
-| 4 AI features | After P8 (outside "defaults"). |
+| 4 AI features | **Skipped** (owner, see §13). |
 | 5 Lock screen | After P8. |
 | 6 Notification Center | macOS model: clicking the clock opens the Notification Center column (it absorbs the calendar card). The notch keeps live banners and activities. |
 | 7 Hot corners | Kiwi hot corners, configurable. macOS default is no actions; GNOME's own hot corner stays off (owner's choice). |
