@@ -3,7 +3,7 @@
 //
 // One engine for every way in: dragging to the edges, corners and menu bar (drag.js), the
 // green-button menu of the top-bar controls and the menu bar's Window menu (the
-// 'tile-requested' event), and the Ctrl+Super shortcuts. The geometry is pure (model.js);
+// 'window-tile-requested' event), and the Ctrl+Super shortcuts. The geometry is pure (model.js);
 // this adapter only reads frames and calls move_resize_frame.
 //
 // Mutter has no public tiling API (meta_window_tile is not introspected), so Kiwi's tiles are
@@ -77,7 +77,7 @@ export class WindowTiling {
 
         new TileDrag(this._ctx, cleanup, ks, this._layout, this).enable();
 
-        events.on('tile-requested', ({ window, action }) => this.perform(window, action), cleanup);
+        events.on('window-tile-requested', ({ window, mode }) => this.perform(window, mode), cleanup);
         events.on('work-area-changed', ({ monitor }) => this._reflow(monitor), cleanup);
         ks.watch('windows-tile-margins', () => this._reflowAll());
 

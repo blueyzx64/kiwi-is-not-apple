@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The vocabulary of window tiling, shared by everything that asks for a tile: the zones (as
 // fractions of a work area), the multi-window arrangements and the action strings of the
-// 'tile-requested' event (core/events.js). The tiling engine (features/windows) acts on them;
+// 'window-tile-requested' event (core/events.js). The tiling engine (features/windows) acts on them;
 // the green-button menu (features/windowControls) and the menu bar's Window menu draw and
 // request them. Pure JS, no gi imports.
 
@@ -35,7 +35,7 @@ export const ARRANGEMENTS = Object.freeze({
 });
 
 /**
- * Parse a tiling action (the payload of the 'tile-requested' event, the green menu and the
+ * Parse a tiling action (the payload of the 'window-tile-requested' event, the green menu and the
  * shortcuts): a zone name, 'center', 'restore', or 'arrange-<arrangement>'.
  *
  * @param {string} action

@@ -67,6 +67,7 @@ prefs.js metadata.json stylesheet.css schemas/ po/`). `make pack-check` verifies
 | `desktop` | `core/desktop.js` DesktopService (`acquire(cleanup)` starts tracking) |
 | `layout` | `core/layout.js` LayoutService (`acquire(cleanup)`, `claim()`, `workArea()`) |
 | `motion` | `core/motion.js` Motion (`ease`, `spring`, `env`) |
+| `appMenus` | `core/appMenus/service.js` AppMenuService (menus of the focused app) |
 | `originals` | `core/originals.js` OriginalsStore (give it to a `SettingOwner`) |
 
 ## 3. core/
@@ -74,21 +75,24 @@ prefs.js metadata.json stylesheet.css schemas/ po/`). `make pack-check` verifies
 | File | Role | Main API |
 |---|---|---|
 | `events.js` | typed signal hub; events declared once in `EVENTS` | `on(name, fn, owner?)`, `once`, `emit(name, payload)`, `listenerCount`, `clear` |
-| `desktopModel.js` | pure desktop picture | `upsertWindow(id, fields)`, `removeWindow`, `window(id)`, `windows(filter)`, `apps(filter)`, `setFocus`, `focusedWindow`, `focusedApp`, `setWorkspaces`, `setMonitors`; `isHelperWindowInfo`, `isUserFacing` |
+| `desktopModel.js` | pure desktop picture | `upsertWindow(id, fields)`, `removeWindow`, `window(id)`, `windows(filter)`, `apps(filter)`, `setFocus`, `focusedWindow`, `focusedApp`, `setWorkspaces`, `setMonitors`; `isHelperWindowInfo`, `isUserFacing`, `appIdCandidates` (web-app ids for window-backed apps) |
 | `desktop.js` | feeds the model from Mutter; one tracker, ref-counted | `acquire(owner)`, `model`, `metaWindow(id)`, `tracking`, `stop()` |
 | `layoutModel.js` | edge claims -> rects and work area | `claim(spec)`, `update(id, fields)`, `release(id)`, `compute(index, monitorRect, {base, primary, strutsApplied})` |
-| `layout.js` | claims the menu bar itself; Mutter's work area as the base; chrome with struts for `actor` claims | `acquire(owner)`, `claim(owner, spec)` -> `{rect, update, release}`, `rect(id, monitor)`, `workArea(monitor)` |
+| `layout.js` | claims the menu bar itself; Mutter's work area as the base; an `actor` claim is chrome (hidden over full screen), with struts while its reserve is `strut` (`update({reserve})` switches live) | `acquire(owner)`, `claim(owner, spec)` -> `{rect, update, release}`, `rect(id, monitor)`, `workArea(monitor)` |
 | `motionModel.js` | durations, curves, springs; animations-off and reduced-motion rules | `DURATIONS`, `CURVES`, `SPRINGS`, `resolve(request, env)`, `splitProps`, `springAt`, `springDuration`, `springKeyframes` |
 | `motion.js` | applies them to actors; cancellable | `start/stop`, `env`, `duration(req)`, `ease(actor, props, req, owner)`, `spring(actor, prop, to, req, owner)` |
-| `originals.js` | the user's value of GNOME keys Kiwi owns (pure; the Shell side is a Gio.Settings) | `OriginalsStore`, `SettingOwner(store, settings, key, {type, transform/value, onOriginalChanged})` with `sync/reapply/release/original`, `restoreStale(store, openSettings)` |
+| `originals.js` | the user's value of GNOME keys Kiwi owns (pure; the Shell side is a Gio.Settings) | `OriginalsStore`, `SettingOwner(store, settings, key, {type, transform/value, onOriginalChanged})` with `sync/reapply/release/original`, `restoreStale(store, openSettings)`; `ListMembersOwner(store, settings, key, members)` takes only some members out of a string list (Dash to Dock from `enabled-extensions`) and adds back just those |
 | `panelLayout.js` (+`Model`) | who sits where in the top bar; hides stock items | `PanelLayout.claim(cleanup, {id, actor, box, anchor})`, `PanelLayout.hide(cleanup, role)` |
 | `windowState.js` | why a window is not in its normal place (`staged`, ...) | `WindowState.set/has/list/watch`, `interceptMinimize`, `setStageActive` |
 | `notificationRouter.js` | banners to the notch or stock, shared `{count, dnd}` | `setBannerSink`, `pinBanners`, `connect`, `state`, `setDnd` |
 | `mprisWatcher.js` | one MPRIS source for the extension | `MprisWatcher.acquire(cleanup, gettext)` |
+| `appMenus/` | the focused app's menus (ctx.appMenus): pure `model.js` (generic menus, well-known GTK actions, Help search, ⌘ shortcut labels), `gtkActions.js` (org.gtk.Actions provider), `commands.js` (generic commands), `service.js` (providers, cache, activation) | `acquire(owner)`, `targetFor(win)`, `peek/results(target)`, `build(target, results, opts)`, `activate(target, command)`, `registerProvider(owner, provider)` |
 
 Events (`EVENTS` in `core/events.js`): `window-added`, `window-changed`, `window-removed`,
 `window-focused`, `app-focused`, `workspaces-changed`, `monitors-changed`, `work-area-changed`,
-`motion-changed`, `feature-changed`, `minimize-requested`.
+`motion-changed`, `feature-changed`, `minimize-requested`, `notification-center-requested`
+(the clock), `app-hide-requested` and `window-tile-requested` (app-menu commands for the
+window manager; the menu bar runs a fallback when nobody listens).
 
 ## 4. lib/
 
@@ -114,7 +118,7 @@ Events (`EVENTS` in `core/events.js`): `window-added`, `window-changed`, `window
 | Folder | Registry ids (features.js) | Notes |
 |---|---|---|
 | `windowControls/` | `window-controls`, `app-buttons`, `gtk-theme` | traffic lights in the top bar (`index.js`), the apps' own buttons when off (`appButtons.js`), both owning `button-layout` through `buttonLayout.js` (a `SettingOwner`); GTK stylesheets in `gtk/` imported into the user's gtk.css by `gtkTheme.js` |
-| `menuBar/` | `menu-bar` | the Activities button policy now; the macOS menu bar in phase 1 |
+| `menuBar/` | `menu-bar` | the macOS menu bar: logo menu, app name and menus (core/appMenus), transparent adaptive bar, full-screen reveal, privacy dots, About This PC, Force Quit, clock hook, Activities policy |
 | `calendar/` | `calendar`, `quick-settings-notifications`, `dnd-button` | date menu on the right as a card; notification list in Quick Settings; Kiwi's Do Not Disturb (beaten by `control-center`) |
 | `controlCenter/` | `control-center` | Quick Settings restyled |
 | `notch/` | `notch` | banners, media, OSD, dashboard |
@@ -126,6 +130,7 @@ Events (`EVENTS` in `core/events.js`): `window-added`, `window-changed`, `window
 | `liquidGlass/` | `liquid-glass` | attaches `lib/glass.js` to the panel, Control Center and calendar menus; the glass prefs |
 | `shellBehaviour/` | `shell-behaviour` | swipes stop at workspaces; no hot corner |
 | `fullscreenSpace/` | `move-window-to-new-workspace` | full screen in its own Space (kept as in 2.x) |
+| `dock/` | `dock` | Kiwi's own dock: favourites, running and recent apps, minimized windows, Downloads stack (`stack.js`), Trash (`trash.js`), menus (`appMenu.js`), Open at Login (`autostart.js`); an edge claim in core/layout; keeps Dash to Dock off (`dashToDock.js`); `iconRect(appId)` / `minimizeTarget(win)` for Genie |
 | `appearance/` | `appearance`, `popup-menu-styling` | Auto Light/Dark (owns `color-scheme` through core/originals), accent (`accent-color`) and highlight colours (`scheme.js`, `model.js`); accent menus (`index.js`; the GTK app fixes are in `gtk-theme`) |
 
 Shared-resource rules (defined once in `features.js`): `window-controls`/`app-buttons` are

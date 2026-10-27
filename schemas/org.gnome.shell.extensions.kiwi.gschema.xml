@@ -21,7 +21,53 @@
       <key name="menubar-show-activities" type="b">
         <default>false</default>
         <summary>Show the Activities button</summary>
-        <description>Show GNOME's Activities button (the workspace pill) at the left of the menu bar. Off, as on macOS: the menu bar starts with the window controls and, later, the logo menu.</description>
+        <description>Show GNOME's Activities button (the workspace pill) at the left of the menu bar. Off, as on macOS: the menu bar starts with the logo menu.</description>
+      </key>
+      <key name="menubar-logo" type="s">
+        <choices><choice value="fedora"/><choice value="kiwi"/><choice value="none"/></choices>
+        <default>'fedora'</default>
+        <summary>Logo menu</summary>
+        <description>The logo at the left end of the menu bar, which opens the logo menu (About This PC, System Settings, Force Quit, Sleep, Restart, Shut Down, Lock Screen, Log Out). "fedora" shows the system's logo, "kiwi" Kiwi's, "none" removes the logo menu.</description>
+      </key>
+      <key name="menubar-app-menu" type="b">
+        <default>true</default>
+        <summary>App menus</summary>
+        <description>Show the focused app's name in bold and its menus (App, File, Edit, View, Window, Help) after the logo, as on macOS.</description>
+      </key>
+      <key name="menubar-transparent" type="b">
+        <default>true</default>
+        <summary>Transparent menu bar</summary>
+        <description>The menu bar is transparent over the wallpaper, and its text turns dark or light by the wallpaper's brightness under it. It turns solid when a window touches it or is maximized. Off shows the menu bar background all the time.</description>
+      </key>
+      <key name="menubar-fullscreen-visible" type="b">
+        <default>false</default>
+        <summary>Always show the menu bar in full screen</summary>
+        <description>Off, as on macOS: the menu bar hides over full-screen windows and slides in when the pointer touches the top edge. On keeps it shown.</description>
+      </key>
+      <key name="menubar-privacy-dots" type="b">
+        <default>true</default>
+        <summary>Privacy dots</summary>
+        <description>Show an orange dot while an app uses the microphone, a green one for the camera and a purple one while the screen is shared or recorded, in place of GNOME's privacy icons. Click a dot to see which app.</description>
+      </key>
+      <key name="menubar-command-glyphs" type="b">
+        <default>true</default>
+        <summary>Shortcut glyphs</summary>
+        <description>Write shortcuts in menus with macOS symbols (⌘ for Super, ⌃ Control, ⌥ Alt, ⇧ Shift). Off writes them in words (Super+H).</description>
+      </key>
+      <key name="menubar-clock-option-dnd" type="b">
+        <default>true</default>
+        <summary>Alt-click the clock for Do Not Disturb</summary>
+        <description>Alt-clicking the clock turns Do Not Disturb on or off, like Option-click on macOS.</description>
+      </key>
+      <key name="menubar-focus-shortcut" type="as">
+        <default>['F10']</default>
+        <summary>Focus the menu bar</summary>
+        <description>Opens the app menu so the menus can be used with the keyboard (Left and Right move between menus). Empty means no shortcut.</description>
+      </key>
+      <key name="menubar-force-quit-shortcut" type="as">
+        <default>['&lt;Super&gt;&lt;Alt&gt;Escape']</default>
+        <summary>Force Quit shortcut</summary>
+        <description>Opens the Force Quit Applications window. Empty means no shortcut.</description>
       </key>
       <key name="move-calendar-right" type="b">
         <default>true</default>
@@ -47,6 +93,76 @@
         <default>true</default>
         <summary>Custom Do Not Disturb Button</summary>
         <description>Replace the system Do Not Disturb quick settings button with Kiwi's custom implementation.</description>
+      </key>
+
+      <!-- Dock (features/dock) -->
+      <key name="dock" type="b">
+        <default>true</default>
+        <summary>Kiwi Dock</summary>
+        <description>Kiwi's own macOS-style dock: pinned apps (GNOME favourites), running and recent apps, a Downloads stack and the Trash. Dash to Dock is turned off while it runs and turned back on after.</description>
+      </key>
+      <key name="dock-position" type="s">
+        <choices>
+          <choice value="bottom"/>
+          <choice value="left"/>
+          <choice value="right"/>
+        </choices>
+        <default>'bottom'</default>
+        <summary>Dock position on screen</summary>
+        <description>The screen edge the dock sits on: bottom, left or right.</description>
+      </key>
+      <key name="dock-icon-size" type="i">
+        <range min="24" max="128"/>
+        <default>48</default>
+        <summary>Dock size</summary>
+        <description>Size of the dock's icons in pixels.</description>
+      </key>
+      <key name="dock-autohide" type="b">
+        <default>false</default>
+        <summary>Automatically hide and show the Dock</summary>
+        <description>Hide the dock until the pointer rests on, or pushes against, its screen edge. Windows may then use the whole screen.</description>
+      </key>
+      <key name="dock-autohide-delay" type="i">
+        <range min="0" max="2000"/>
+        <default>500</default>
+        <summary>Auto-hide reveal delay</summary>
+        <description>Milliseconds the pointer rests on the edge before the hidden dock shows. Pushing against the edge shows it at once.</description>
+      </key>
+      <key name="dock-show-recents" type="b">
+        <default>true</default>
+        <summary>Show suggested and recent apps in Dock</summary>
+        <description>Keep up to three recently used apps that are not pinned in their own section after the pinned apps.</description>
+      </key>
+      <key name="dock-recent-apps" type="as">
+        <default>[]</default>
+        <summary>Recent apps (internal)</summary>
+        <description>Internal. The recently used unpinned apps the dock shows, newest first. Written by the dock.</description>
+      </key>
+      <key name="dock-running-dots" type="b">
+        <default>true</default>
+        <summary>Show indicators for open applications</summary>
+        <description>A small dot under the icon of every running app.</description>
+      </key>
+      <key name="dock-minimize-to-app" type="b">
+        <default>false</default>
+        <summary>Minimize windows into application icon</summary>
+        <description>Minimized windows go into their app's icon. Off: each minimized window gets its own tile next to the Downloads stack.</description>
+      </key>
+      <key name="dock-downloads" type="b">
+        <default>true</default>
+        <summary>Downloads stack in the Dock</summary>
+        <description>Show the Downloads folder before the Trash; click it to see the newest files.</description>
+      </key>
+      <key name="dock-downloads-view" type="s">
+        <choices>
+          <choice value="automatic"/>
+          <choice value="fan"/>
+          <choice value="grid"/>
+          <choice value="list"/>
+        </choices>
+        <default>'automatic'</default>
+        <summary>Downloads stack view</summary>
+        <description>How the Downloads stack opens: automatic (a fan for a few files from a bottom dock, else a grid), fan, grid or list.</description>
       </key>
 
       <!-- Windows (features/windowControls, features/fullscreenSpace, features/roundedCorners) -->

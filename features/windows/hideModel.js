@@ -7,7 +7,7 @@
 // Windows are WindowInfo values of core/desktopModel.js ({id, appId, type, minimized, ...}).
 
 /** Hide requests ('app-hide-requested' payload `mode`). */
-export const HIDE_MODES = Object.freeze(['hide', 'others', 'show-all']);
+export const HIDE_MODES = Object.freeze(['hide', 'others', 'all']);
 
 const hideable = w => !!w && !w.minimized && !w.skipTaskbar && w.type === 'normal' && !!w.appId;
 

@@ -16,7 +16,7 @@
 // The green button (macOS): a click goes full screen (windows-green-click 'fullscreen', the
 // macOS default, in its own Space while that feature runs) or zooms ('zoom'); Alt-click does
 // the other one. Hovering over it or pressing and holding opens the Fill & Arrange menu
-// (greenMenu.js); its tiles go to the tiling engine through the 'tile-requested' event.
+// (greenMenu.js); its tiles go to the tiling engine through the 'window-tile-requested' event.
 //
 // Look (windows-traffic-style): 'glass' draws the macOS 27 glass beads in CSS (a gradient bead,
 // a catchlight, a rim, the glyphs on hover, a small press); 'flat' keeps the classic PNG set.
@@ -555,9 +555,9 @@ export class WindowControlsFeature {
             parseButtonLayout(this._layoutOwner?.original ?? this._wm.get_string('button-layout')));
         this._indicator.setOrder(layout.buttons);
 
-        // Left: just before the app icon + name. Right: the last slot of the panel.
+        // Left: just before the menu bar's app name and menus. Right: the last slot of the panel.
         const spec = layout.side === 'left'
-            ? { box: 'left', anchor: { before: ['window-title'], fallback: 'last' } }
+            ? { box: 'left', anchor: { before: ['kiwi-menubar-apps'], fallback: 'last' } }
             : { box: 'right', anchor: { last: true } };
         if (initial || !this._slot) {
             this._slot = PanelLayout.claim(this._cleanup, {
@@ -731,7 +731,7 @@ export class WindowControlsFeature {
             win.move_to_monitor(arg);
             break;
         default:
-            this._ctx.events.emit('tile-requested', { window: win, action });
+            this._ctx.events.emit('window-tile-requested', { window: win, mode: action });
         }
     }
 

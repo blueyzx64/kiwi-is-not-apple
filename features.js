@@ -15,6 +15,7 @@
 //   - The notch owns the centre of the top bar: the date menu moves right (calendar).
 //   - Tiling shortcuts: window-tiling binds only accelerators that no stock GNOME binding and no
 //     running Kiwi shortcut holds (Stage Manager's Ctrl+Super+Down wins while it runs).
+//   - Kiwi's dock owns the dock: Dash to Dock is kept off while it runs (core/originals).
 
 // ctx: see extension.js (settings, gettext, events, desktop, layout, motion, originals, ...)
 const bool = (ctx, key) => ctx.settings.get_boolean(key);
@@ -33,7 +34,8 @@ export const FEATURES = [
         load: async () => (await import('./features/windowControls/gtkTheme.js')).GtkTheme,
     },
     {
-        // Menu bar policy (the Activities button); the full menu bar arrives in phase 1
+        // The macOS menu bar: logo menu, app name and menus (core/appMenus), transparent
+        // adaptive look, full-screen reveal, privacy dots; each part has its own key
         id: 'menu-bar',
         load: async () => (await import('./features/menuBar/index.js')).MenuBar,
     },
@@ -77,7 +79,7 @@ export const FEATURES = [
     },
     {
         // Sequoia tiling: drag zones, the green-button menu's tiles, Ctrl+Super shortcuts.
-        // Owns org.gnome.mutter edge-tiling (off while it runs). Asked through 'tile-requested'.
+        // Owns org.gnome.mutter edge-tiling (off while it runs). Asked through 'window-tile-requested'.
         id: 'window-tiling', setting: 'windows-tiling',
         load: async () => (await import('./features/windows/index.js')).WindowTiling,
     },
@@ -138,6 +140,12 @@ export const FEATURES = [
         id: 'control-center', setting: 'control-center',
         conflictsWith: ['dnd-button'],
         load: async () => (await import('./features/controlCenter/index.js')).ControlCenter,
+    },
+    {
+        // Kiwi's own dock on the bottom (or a side) edge, claimed through core/layout. It takes
+        // Dash to Dock out of the enabled extensions while it runs and puts it back after.
+        id: 'dock', setting: 'dock',
+        load: async () => (await import('./features/dock/index.js')).Dock,
     },
     {
         // Stage Manager wins over fullscreen-to-its-own-Space; its saved value is kept

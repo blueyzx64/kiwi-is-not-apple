@@ -34,18 +34,21 @@ export const EVENTS = Object.freeze({
     'feature-changed': { id: 'string', active: 'boolean' },
     // Requests between features (the owner of the policy listens, see features.js)
     'minimize-requested': { window: 'Meta.Window', source: 'string' },
-    // Window tiling (features/windows): any feature asks; the tiling engine acts. `action` is a
-    // zone ('left', 'top-right', 'fill', ...), 'center', 'restore' or 'arrange-<name>'
-    // (features/windows/model.js parseAction). Ignored while window-tiling is off.
-    'tile-requested': { window: 'Meta.Window', action: 'string' },
-    // The tiling engine put a window in a tile (zone) or took it out (zone null)
-    'window-tiled': { window: 'Meta.Window', zone: 'string|null' },
-    // Hide / Hide Others / Show All (macOS App menu, Super+H): mode 'hide' hides `appId`,
-    // 'others' every app but `appId`, 'show-all' brings every hidden app back (appId unused).
-    // features/windows/hide.js acts; ignored while app-hide is off.
-    'app-hide-requested': { appId: 'string|null', mode: "'hide'|'others'|'show-all'" },
+    // The menu bar (features/menuBar): the clock was clicked. The Notification Center (P5)
+    // opens on it; until then the stock calendar card opens as well.
+    'notification-center-requested': { source: "string ('clock')" },
+    // Hide / Hide Others / Show All (App menu, Super+H): 'hide' hides `appId`, 'others' every
+    // app but `appId`, 'all' brings every hidden app back. features/windows/hide.js acts; with
+    // no listener the app menu runs a plain fallback itself (core/appMenus/commands.js).
+    'app-hide-requested': { appId: 'string|null', mode: "'hide' | 'others' | 'all'" },
     // An app was hidden (its windows minimized without effect, WindowState 'hidden') or shown
     'app-hidden': { appId: 'string', hidden: 'boolean' },
+    // Window tiling (features/windows acts; the green-button menu and the Window menu ask).
+    // `mode` is a tiling action of core/tileActions.js: a zone ('left', 'top-right', 'fill',
+    // ...), 'center', 'restore' or 'arrange-<name>'.
+    'window-tile-requested': { window: 'Meta.Window', mode: 'string' },
+    // The tiling engine put a window in a tile (zone) or took it out (zone null)
+    'window-tiled': { window: 'Meta.Window', zone: 'string|null' },
 });
 
 export class EventHub {

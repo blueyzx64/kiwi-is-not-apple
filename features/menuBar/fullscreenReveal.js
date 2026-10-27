@@ -1,0 +1,171 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// The menu bar in full screen (research BM "show menu bar in full screen", VS auto-hide
+// options): macOS hides it over a full-screen window and slides it in when the pointer
+// touches the top edge; "Always show the menu bar in full screen" keeps it.
+//
+//   hidden (default)  the Shell hides the bar (panelBox tracks full screen). A 1 px edge at
+//                     the top of the primary monitor, shown only then, reveals it on hover;
+//                     it slides away when the pointer leaves the bar and no menu is open.
+//   always            the panelBox stops tracking full screen while this runs.
+//
+// The notch lives inside the bar, so it reveals with it.
+//
+// Private Shell API: Main.layoutManager._trackedActors (the panelBox's trackFullscreen flag,
+// for "always"), _updateVisibility() to give the Shell its rule back. Same in 48-51.
+
+import Clutter from 'gi://Clutter';
+import St from 'gi://St';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+
+export class FullscreenReveal {
+    /**
+     * @param {object} ctx the feature ctx (motion)
+     * @param {CleanupRegistry} cleanup
+     * @param {{always: boolean}} opts
+     */
+    constructor(ctx, cleanup, { always }) {
+        this._ctx = ctx;
+        this._cleanup = cleanup;
+        this._always = always;
+        this._revealed = false;
+        this._edge = null;
+        this._anim = null;
+    }
+
+    /** True while the bar is slid in over a full-screen window (tests, the harness). */
+    get revealed() {
+        return this._revealed;
+    }
+
+    get edge() {
+        return this._edge;
+    }
+
+    start() {
+        if (this._always)
+            this._keepShown();
+        else
+            this._startEdge();
+    }
+
+    // ---- always shown -----------------------------------------------------------------------
+
+    _keepShown() {
+        const lm = Main.layoutManager;
+        const data = lm._trackedActors?.find(a => a.actor === lm.panelBox);
+        if (!data)
+            return;
+        data.trackFullscreen = false;
+        lm.panelBox.show();
+        this._cleanup.add(() => {
+            data.trackFullscreen = true;
+            lm._updateVisibility?.();
+        });
+    }
+
+    // ---- reveal on the top edge -------------------------------------------------------------
+
+    _startEdge() {
+        const lm = Main.layoutManager;
+        const cleanup = this._cleanup;
+        const edge = new St.Widget({ name: 'kiwi-menubar-reveal-edge', reactive: true, visible: false, height: 1 });
+        this._edge = edge;
+        lm.addTopChrome(edge);
+        cleanup.add(() => {
+            this._conceal(false);
+            lm.removeChrome(edge);
+            edge.destroy();
+            this._edge = null;
+        });
+        cleanup.connect(edge, 'enter-event', () => {
+            this.reveal();
+            return Clutter.EVENT_PROPAGATE;
+        });
+
+        // The panel (reactive, unlike its box) says when the pointer leaves the bar
+        const panel = Main.panel;
+        const hover = panel.track_hover;
+        panel.track_hover = true;
+        cleanup.add(() => (panel.track_hover = hover));
+        cleanup.connect(panel, 'notify::hover', () => this._maybeConceal());
+
+        const sync = () => this._sync();
+        cleanup.connect(global.display, 'in-fullscreen-changed', sync);
+        cleanup.connect(lm, 'monitors-changed', sync);
+        cleanup.connect(Main.overview, 'showing', sync);
+        cleanup.connect(Main.overview, 'hidden', sync);
+        this._sync();
+    }
+
+    _inFullscreen() {
+        return !!Main.layoutManager.primaryMonitor?.inFullscreen && !Main.overview.visible;
+    }
+
+    _sync() {
+        const monitor = Main.layoutManager.primaryMonitor;
+        if (!this._edge || !monitor)
+            return;
+        this._edge.set_position(monitor.x, monitor.y);
+        this._edge.width = monitor.width;
+        const full = this._inFullscreen();
+        if (!full && this._revealed)
+            this._conceal(false);
+        this._edge.visible = full && !this._revealed;
+    }
+
+    /** Slide the bar in over the full-screen window. */
+    reveal() {
+        if (this._revealed || !this._inFullscreen())
+            return;
+        const panelBox = Main.layoutManager.panelBox;
+        this._revealed = true;
+        this._edge.visible = false;
+        this._anim?.cancel();
+        panelBox.show();
+        panelBox.translation_y = -panelBox.height;
+        this._anim = this._ctx.motion.ease(panelBox, { translation_y: 0 },
+            { duration: 'short', curve: 'enter' }, this._cleanup);
+    }
+
+    _maybeConceal() {
+        if (!this._revealed || Main.panel.hover)
+            return;
+        const menu = Main.panel.menuManager.activeMenu;
+        if (menu) {
+            // Wait for the menu to close, then check the pointer again
+            const id = menu.connect('open-state-changed', (_m, open) => {
+                if (open)
+                    return;
+                menu.disconnect(id);
+                this._maybeConceal();
+            });
+            return;
+        }
+        this._conceal(true);
+    }
+
+    _conceal(animate) {
+        if (!this._revealed)
+            return;
+        this._revealed = false;
+        const panelBox = Main.layoutManager.panelBox;
+        this._anim?.cancel();
+        const done = () => {
+            // Revealed again before the slide-out finished: the reveal owns the bar now
+            if (this._revealed)
+                return;
+            panelBox.translation_y = 0;
+            // The Shell's rule again: hidden while the monitor is in full screen
+            if (this._inFullscreen())
+                panelBox.hide();
+            if (this._edge)
+                this._edge.visible = this._inFullscreen();
+        };
+        if (!animate) {
+            done();
+            return;
+        }
+        this._anim = this._ctx.motion.ease(panelBox, { translation_y: -panelBox.height },
+            { duration: 'short', curve: 'exit', onDone: done }, this._cleanup);
+    }
+}

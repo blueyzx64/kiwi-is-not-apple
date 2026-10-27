@@ -96,7 +96,7 @@ export class AppHide {
                 this.hide(appId);
             else if (mode === 'others')
                 this.hideOthers(appId);
-            else if (mode === 'show-all')
+            else if (mode === 'all')
                 this.showAll();
         }, cleanup);
         // Activating a hidden app brings all its hidden windows back

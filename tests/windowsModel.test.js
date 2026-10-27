@@ -43,7 +43,7 @@ test('parseAction rejects unknown actions', () => {
 test('every arrangement uses known zones', () =>
     eq(Object.values(ARRANGEMENTS).flat().every(z => z in ZONES), true));
 test('the tiling events are declared', () => {
-    eq(Object.keys(EVENTS['tile-requested']), ['window', 'action']);
+    eq(Object.keys(EVENTS['window-tile-requested']), ['window', 'mode']);
     eq(Object.keys(EVENTS['app-hide-requested']), ['appId', 'mode']);
     eq('window-tiled' in EVENTS && 'app-hidden' in EVENTS, true);
 });
@@ -257,7 +257,7 @@ test('hide picks the visible normal windows of the app', () =>
 test('hide others picks every other app, in MRU order', () =>
     eq([...planHide('others', 'ed', WINS)], [['files', [2]], ['calc', [4]]]));
 test('hide without an app does nothing', () => eq(planHide('hide', null, WINS).size, 0));
-test('hide modes', () => eq([...HIDE_MODES], ['hide', 'others', 'show-all']));
+test('hide modes', () => eq([...HIDE_MODES], ['hide', 'others', 'all']));
 test('HiddenApps: show gives back what was hidden, once', () => {
     const h = new HiddenApps();
     h.hide('ed', [1, 3]);

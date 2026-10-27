@@ -3,9 +3,10 @@
 //
 //   const layout = ctx.layout.acquire(cleanup);
 //   const dock = layout.claim(cleanup, { id: 'dock', edge: 'bottom', size: 72, reserve: 'strut',
-//       actor: dockActor });           // added as chrome that affects struts, removed on release
+//       actor: dockActor });           // added as chrome (struts with 'strut'), removed on release
 //   dock.rect();                       // where the dock goes on the primary monitor
 //   dock.update({ size: 64 });
+//   dock.update({ reserve: 'none' });  // auto-hide: the actor stays chrome, without struts
 //   layout.workArea(monitorIndex);     // what is left for windows, for every Kiwi placement
 //   ctx.events.on('work-area-changed', ({ monitor }) => ..., cleanup);
 //
@@ -23,6 +24,9 @@ import { CleanupRegistry } from '../lib/disposables.js';
 import { LayoutModel } from './layoutModel.js';
 
 export const MENU_BAR_CLAIM = 'menu-bar';
+
+// Chrome params of a claim's actor: hidden over full-screen windows; struts only for 'strut'
+const chromeParams = reserve => ({ affectsStruts: reserve === 'strut', trackFullscreen: true });
 
 export class LayoutService {
     /** @param {import('./events.js').EventHub} events */
@@ -67,8 +71,10 @@ export class LayoutService {
     }
 
     /**
-     * Claim an edge. See layoutModel.js for the spec; `actor` (optional, with reserve 'strut')
-     * is added to the Shell chrome with affectsStruts, so Mutter keeps windows off it.
+     * Claim an edge. See layoutModel.js for the spec. `actor` (optional) is added to the Shell
+     * chrome and hidden over full-screen windows; with reserve 'strut' it also affects struts,
+     * so Mutter keeps windows off it. The actor must cover the claim's rect, touching the edge
+     * (the Shell only makes struts from actors that touch a monitor edge).
      *
      * @param {{add: Function}} owner released when it is disposed
      * @param {object} spec
@@ -79,8 +85,8 @@ export class LayoutService {
             throw new Error('LayoutService: acquire() before claim()');
         const { actor = null, ...rest } = spec;
         this._model.claim(rest);
-        if (actor && rest.reserve === 'strut' && !this._actors.has(rest.id)) {
-            Main.layoutManager.addChrome(actor, { affectsStruts: true, trackFullscreen: true });
+        if (actor && !this._actors.has(rest.id)) {
+            Main.layoutManager.addChrome(actor, chromeParams(rest.reserve));
             this._actors.set(rest.id, actor);
             // Destroyed by its owner first: the Shell untracks it itself, so forget it here
             this._cleanup.connect(actor, 'destroy', () => {
@@ -94,8 +100,18 @@ export class LayoutService {
             id: rest.id,
             rect: (monitor = this.primaryIndex) => this.rect(rest.id, monitor),
             update: fields => {
-                if (!released && this._model.update(rest.id, fields))
-                    this._changed();
+                if (released)
+                    return;
+                const oldReserve = this._model.get(rest.id)?.reserve;
+                if (!this._model.update(rest.id, fields))
+                    return;
+                const tracked = this._actors.get(rest.id);
+                if (tracked && 'reserve' in fields && fields.reserve !== oldReserve) {
+                    // Struts on or off: re-track the same chrome actor with the new params
+                    Main.layoutManager.untrackChrome(tracked);
+                    Main.layoutManager.trackChrome(tracked, chromeParams(fields.reserve));
+                }
+                this._changed();
             },
             release: () => {
                 if (released)

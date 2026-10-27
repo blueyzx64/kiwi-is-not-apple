@@ -1,5 +1,5 @@
 // Run: gjs -m tests/desktopModel.test.js
-import { DesktopModel, isHelperWindowInfo, isUserFacing } from '../core/desktopModel.js';
+import { DesktopModel, isHelperWindowInfo, isUserFacing, appIdCandidates } from '../core/desktopModel.js';
 import { EventHub } from '../core/events.js';
 
 let failed = 0;
@@ -99,6 +99,22 @@ test('a focused window changing app re-announces the focused app', () => {
     m.upsertWindow(1, { appId: 'late.App' });
     eq(log.map(l => l[0]), ['window-changed', 'app-focused']);
     eq(m.focusedApp, 'late.App');
+});
+
+test('web-app ids: Chrome PWAs on Xwayland and Wayland', () => {
+    const id = 'abcdefghijklmnopabcdefghijklmnop';
+    eq(appIdCandidates(`crx_${id}`).ids[0], `chrome-${id}-Default.desktop`);
+    eq(appIdCandidates(`crx_${id}`).prefix, `chrome-${id}-`);
+    eq(appIdCandidates(`chrome-${id}-Profile_1`).ids[0], `chrome-${id}-Profile_1.desktop`);
+});
+test('web-app ids: GNOME Web apps, new and old spellings', () => {
+    eq(appIdCandidates('org.gnome.Epiphany.WebApp_1a2b').ids.slice(0, 3),
+        ['org.gnome.Epiphany.WebApp_1a2b.desktop', 'org.gnome.Epiphany.WebApp-1a2b.desktop', 'epiphany-1a2b.desktop']);
+    eq(appIdCandidates('epiphany-xyz').ids[0], 'org.gnome.Epiphany.WebApp_xyz.desktop');
+});
+test('web-app ids: plain classes, and nothing for an empty class', () => {
+    eq(appIdCandidates('Gimp').ids, ['Gimp.desktop', 'gimp.desktop']);
+    eq(appIdCandidates(null), { ids: [], prefix: null });
 });
 
 if (failed) {
