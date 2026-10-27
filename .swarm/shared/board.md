@@ -170,3 +170,4 @@ No more installer work: no new pieces (Trash-drag uninstall, fly-to-dock, update
   - Orchestrator review:
     - The OSD pill (o1-osd-volume.png) looks right.
     - CC: a stray empty circle left of the battery row; the Wi-Fi icon shows the disconnected glyph while connected to "Kiwi Home" (S3).
+- FX5 → merged: installer code removed (core/installer*, contract doc, mock, dock Open with Installer, Launchpad installer path, installer-* events). Real Shell run clean (/tmp/x2/runs/20261027-163344-kiwi-rm-installer-f44d).
