@@ -249,3 +249,4 @@ No more installer work: no new pieces (Trash-drag uninstall, fly-to-dock, update
     - CC rows are missing in this run (mocks not loaded?).
 - Orchestrator: the full-branch run after FX6 had 1 Kiwi error (dock magnify.resume on a destroyed frame during shutdown, an idle sync). FIXED (guard in `_sync` and `resume`); the re-run has 0 Kiwi errors and 8/8 (/tmp/x2/runs/20261027-172756-kiwi-is-not-apple-f44). Still in the log, for the next fixer: `-nan` translation-y at startup (source not found; FX6's fix didn't cover it); notch "no BlueZ" WARNING on every enable when BlueZ is absent (should be silent or debug).
 - Running: FX11 (a11y), R4 (final review).
+- Owner: FIX the AT-SPI ☰ menu. FX12 is working in kiwi-fx12-atspi / v3/fx12-atspi (open via Action, wait on events, read the popover and its submenus, close invisibly, activate via doAction; it decides the default from evidence).
