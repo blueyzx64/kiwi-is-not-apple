@@ -250,6 +250,9 @@ export class Dock {
     }
 
     _sync() {
+        // An idle sync queued before a Shell shutdown finds the dock's chrome already gone
+        if (!this._view?.alive)
+            return;
         const model = this._desktop.model;
         const withWindows = [...model.apps()];
         const live = new Set(withWindows);

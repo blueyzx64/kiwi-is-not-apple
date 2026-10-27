@@ -83,7 +83,8 @@ export class Magnifier {
 
     /** The items changed: read the rest layout again if the pointer is still over the dock. */
     resume() {
-        if (this._view.frame.hover)
+        // The queued sync can run while the Shell tears the chrome down (shutdown)
+        if (this._view.alive && this._view.frame.hover)
             this.setHovered(true);
     }
 
