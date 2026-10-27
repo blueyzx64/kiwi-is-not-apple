@@ -29,8 +29,8 @@
 | H2 | Unit-test hardening: core/desktop + core/motion models | merged |
 | H3 | Unit-test hardening: core/originals (incl. ListMembersOwner, crash restore) | merged |
 | H4 | Verify on GNOME 50 source: the reduced-motion key and the notification-grouping API | done (findings in v3-swarm.md) |
-| H5 | Verify: Input Capture portal, localsearch xattr tags, Clocks timer D-Bus, Night Light location keys | started |
-| H6 | SVG icon set for new features (symbolic, GNOME style): show-desktop, logo-kiwi, mission-control, launchpad, stage-manager, notification-center, widgets | queued |
+| H5 | Verify: Input Capture portal, localsearch xattr tags, Clocks timer D-Bus, Night Light location keys | done (findings in v3-swarm.md) |
+| H6 | SVG icon set for new features (symbolic, GNOME style): show-desktop, logo-kiwi, mission-control, launchpad, stage-manager, notification-center, widgets | started |
 | H7 | Accessibility audit: accessible names and keyboard focus for every new Kiwi actor (report only) | queued |
 | H8 | Prefs consistency audit: every schema key has a prefs row or is internal (report only) | queued |
 | H9 | Harness library: reusable scenario helpers (launch app, wait window, click actor, drag, shot) → /home/user/kiwi-swarm-tools/lib.sh | queued |

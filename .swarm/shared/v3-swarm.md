@@ -31,3 +31,8 @@ Never call any `mcp__claude-code-remote__*` tool (sessions, triggers, interrupts
   - Source signals: `notification-added`, `notification-removed`, `notification-request-banner`, `destroy`.
   - MessageTray signals: `source-added`, `source-removed`, `queue-changed`; `getSources()`.
   - Notification props: `urgency` (LOW 0, NORMAL 1, HIGH 2, CRITICAL 3), `isTransient`, `resident`, `acknowledged`, `for-feedback`. Actions come from `addAction(label, cb)`, with `action-added`/`action-removed` signals.
+- **Input Capture portal:** available on F44 (xdg-desktop-portal-gnome 50, org.gnome.Mutter.InputCapture over libei).
+- **localsearch 3.11:** does NOT index `user.xdg.tags`. Bus `org.freedesktop.LocalSearch3`; per-root SPARQL endpoint objects at `/org/freedesktop/LocalSearch3/<root>` (interface `org.freedesktop.Tracker3.Endpoint`).
+- **GNOME Clocks 50:** no D-Bus API for running timers. Kiwi keeps its own timer service in core (Spotlight, notch).
+- **Night Light location:** `org.gnome.settings-daemon.plugins.color night-light-last-coordinates` `(dd)`; the default `(91,181)` means unknown.
+- **Colour filters:** GNOME 50 has no greyscale or colour-blind keys (only magnifier-bound colour settings). Kiwi must apply its own effect on the stage.
