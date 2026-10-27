@@ -328,3 +328,25 @@ Where the research disagrees with an earlier owner choice, or forces a choice th
 | 12 | **Status items** | Not covered | GNOME has no StatusNotifierItem host; Kiwi must host one or defer to the AppIndicator extension ([UI](../research/macos/native-apps-and-system-ui.md#menu-bar-apple-menu-app-menus-status-items-multiple-displays-auto-hide)) | Defer to AppIndicator when it is enabled; otherwise Kiwi hosts the watcher (P6) | P6 |
 | 13 | **Real blur on GNOME 51** | Faux glass, no real blur | GNOME 51's Shell-only blur is a possible extra, never a requirement ([cookbook](../research/macos/2024-now-sequoia-tahoe.md#6-faux-liquid-glass-cookbook-no-blur)) | Keep "no blur" for this release; note as a 51 option | later |
 | 14 | **Installer target and licence** | Installer: Fedora 45 / GNOME 51 first, MIT placeholder | Kiwi supports Fedora 44 / GNOME 50 only; the licence is still a placeholder (R3, R9) | Make F44/GNOME 50 a first-class installer target; decide the licence before publishing | P7 |
+
+## 12. Resolutions (owner rule, 2026-10-27)
+The owner's rule: wherever Kiwi had overridden a default, use the **macOS default**, and keep every one **toggleable**. The owner's explicit choices still win: top-bar window controls, Super tap opening Spotlight, up-swipes reaching workspaces only, GNOME's hot corner off, top-only rounded corners.
+
+| §11 # | Resolution |
+|---|---|
+| 1 Full screen as its own Space | **On** (macOS), toggle. P0 keeps `move-window-to-new-workspace`, default true; P3 adds Split View. |
+| 2 Traffic lights in app titlebars | Top-bar controls stay on (owner's choice). When they're off, the apps' buttons default to the **macOS traffic-light style**, with GNOME style as the toggle; one GTK CSS set is kept for this. |
+| 3 Click wallpaper | **"Always"** (macOS default), with "Only in Stage Manager" as the toggle. |
+| 4 AI features | After P8 (outside "defaults"). |
+| 5 Lock screen | After P8. |
+| 6 Notification Center | macOS model: clicking the clock opens the Notification Center column (it absorbs the calendar card). The notch keeps live banners and activities. |
+| 7 Hot corners | Kiwi hot corners, configurable. macOS default is no actions; GNOME's own hot corner stays off (owner's choice). |
+| 8 Panel items inside new features | macOS defaults: battery icon without % (toggle), the input-source menu shown only with 2+ sources, no username in the menu bar. |
+| 9 Login | Start on the desktop (macOS); Mission Control does not open at login. |
+| 10 Launchpad | Keep Launchpad (folders, ordering, jiggle delete), not Tahoe's "Apps". |
+| 11 Desktop icons (DING) | If DING is present, wallpaper clicks are only taken on empty wallpaper; widgets sit above DING's window. |
+| 12 Status items | Kiwi hosts StatusNotifierItems itself (P6); it can defer to the AppIndicator extension if that is enabled. |
+| 13 Real blur | No (faux glass only, owner). |
+| 14 Installer target | Kiwi stays on F44/GNOME 50. The installer should add F44/GNOME 50 + dnf5daemon support before integration (P7). |
+
+Other macOS defaults that apply: dock magnification **off**, dock at the bottom, "minimize windows into application icon" **off**, Genie as the minimize effect, menu bar shown in full screen **off**, Stage Manager **off** by default (macOS ships it off; toggle in Control Center), Focus off.
