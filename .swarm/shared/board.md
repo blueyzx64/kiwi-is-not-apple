@@ -48,3 +48,10 @@ Concurrency cap: 20 agents at once (environment limit). H2–H12 are queued and 
 - F5 (H1): a layout claim with `stack:false` and `reserve:'soft'` doesn't shrink the work area (intended: soft means no strut).
 - A11y (H7): 30 violations (10 medium, 20 low); the list is in .swarm/agents/H7.md. Biggest: the modal overlay has no dialog role or name (lib/modalSurface.js:112); no keyboard entry to the notch; Spotlight rows have no role or focus; no keyboard context menu on dock files. Plan: a fixer pass after the P2–P6 leads merge, because many of these files are changing now.
 - Prefs (H8): all 97 live user keys have prefs rows, and no row points at a missing or deprecated key. Defaults match §12. `clipboard-recording` / `dock-recent-apps` Reset Everything fix → FX1. The accent default `multicolor` matches macOS's default ("Multicolor"). Click-wallpaper "Always / Only in Stage Manager" → L7 adds the key. The planned keys (hot corners, magnification, Genie, input-source, SNI, Focus) belong to L6, L1, L14 and L10.
+
+## Pacing (owner, 2026-10-27)
+Deploy conservatively, sized to the scope and type of work. Resume in waves of about 8, closest-to-done first; the rest wait in the queue.
+- Wave 1: P1-windows, FX1, FX2, L6, L7, L13, H9, R2
+- Wave 2: L1, L2, L3, L4, L5, L8
+- Wave 3: L9, L10, L11, L12, L14, L15
+- Reviewers R4 and R5 and helpers H10–H12 run only after waves land, on merged code.
