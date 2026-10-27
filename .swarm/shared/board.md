@@ -208,3 +208,9 @@ No more installer work: no new pieces (Trash-drag uninstall, fly-to-dock, update
     - the screenshot toolbar's first frame takes 183 ms.
   - Wallpaper ".jxl too large (0x0)" → FX6 (wallpaperProbe). The notch/view.js:92 disposed actor in motion → FX9.
   - Everything else passes: Spotlight open has 0 jitter (H13's jump not reproduced), emoji keeps the clipboard, and the tint runs off-process.
+- FX9 → merged:
+  - Fixed: the notch outside click (no modal); NC shows real widgets with Edit Widgets; banners are held while NC is open; the gallery tiles share a baseline (the orchestrator checked fx9-gallery.png: aligned, but the row scrolls horizontally with System cut at the edge, acceptable as a scroller); Now tab centring; disposed-actor criticals; the `insert_child_below` in menuBar/appMenuBar.js:378 (set_child_below_sibling; FX6 must keep it).
+  - STILL OPEN:
+    - tab-switch ~95 ms frame (bodies are prebuilt now; the cost is at animation start, cause unknown);
+    - "kiwi-notch needs an allocation" warnings (12, unchanged);
+    - the notch Widgets tab not yet on Widgets.acquire (needs its own change).
