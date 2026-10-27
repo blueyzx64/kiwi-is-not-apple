@@ -1,9 +1,7 @@
-# R2A fixer (round 2: window controls, drag to top bar)
+# R2A
 ## Status
-working (worktree /home/user/kiwi-r2-windows, branch v3/r2-windows)
-## Plan
-1 scope default maximized + SSD hiding; 2 side key window-controls-side (default right) + migration; 3 drag top-edge reliability; 4 layout picker popover under notch
-## Progress log
-- read code: windowControls, windows/drag.js, model.js
+done: v3/r2-windows (2 commits on 383ce32)
 ## Findings for orchestrator
-## Handoff
+- Root cause drag: TileDrag tracked the pointer via the window's position-changed; Mutter clamps the window under the bar so no event arrives at y<32 (+150ms dwell, release needed _shown). Now pointer watcher (16ms) + immediate top zones.
+- Harness: /tmp/x2/inner-real.sh uses --no-x11; copies in /tmp/r2a (run-f44-x.sh). Probe window-controls-left in inner-real.sh expects the old left default and now fails.
+- Not verified: SSD/X11 (rhythmbox X11 never mapped), green-menu hover open in fullscreen (button hover=false under virtual pointer).
