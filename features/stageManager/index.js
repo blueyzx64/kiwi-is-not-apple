@@ -811,7 +811,8 @@ export class StageManager {
             if (type !== Clutter.EventType.BUTTON_PRESS && type !== Clutter.EventType.BUTTON_RELEASE)
                 return Clutter.EVENT_PROPAGATE;
             if (event.get_button() !== Clutter.BUTTON_PRIMARY || Main.overview.visible || Main.modalCount > 0 ||
-                !this._ks.bool('stage-manager-wallpaper-click')) {
+                !this._ks.bool('stage-manager-wallpaper-click') ||
+                this._ks.string('click-wallpaper-reveals-desktop') === 'never') {
                 this._press = null;
                 return Clutter.EVENT_PROPAGATE;
             }

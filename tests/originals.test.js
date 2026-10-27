@@ -1,6 +1,6 @@
 // Run: gjs -m tests/originals.test.js
 // core/originals.js: the user's own value of every GNOME key Kiwi takes over, crash-safe.
-import { ListMembersOwner, OriginalsStore, SettingOwner, STORE_KEY, originalId, parseOriginalId, restoreStale, withMembers } from '../core/originals.js';
+import { ListMembersOwner, OriginalsStore, SettingOwner, STORE_BACKUP_KEY, STORE_KEY, originalId, parseOriginalId, restoreStale, withMembers } from '../core/originals.js';
 
 let failed = 0;
 function test(name, fn) {
@@ -42,11 +42,32 @@ test('take saves the original first, release writes it back and forgets it', () 
     const owner = new SettingOwner(store, mutter, 'edge-tiling', { type: 'b', value: false });
     owner.sync(true);
     eq(mutter.values['edge-tiling'], false);
-    eq(store.get('org.gnome.mutter::edge-tiling'), { type: 'b', value: true });
+    eq(store.get('org.gnome.mutter::edge-tiling'), { type: 'b', value: true, forced: false });
     owner.sync(false);
     eq(mutter.values['edge-tiling'], true);
     eq(k.values[STORE_KEY], '', 'an empty store is an empty key');
     eq(mutter.nHandlers, 0);
+});
+test('a lock (keepStored) leaves the key and the entry; the next owner continues from them', () => {
+    const k = kiwi();
+    const mutter = fake('org.gnome.mutter', { 'edge-tiling': true });
+    const list = fake('org.gnome.shell', { 'enabled-extensions': ['kiwi@kemma', 'dtd@x'] });
+    const a = new OriginalsStore(k);
+    const owner = new SettingOwner(a, mutter, 'edge-tiling', { type: 'b', value: false });
+    const members = new ListMembersOwner(a, list, 'enabled-extensions', ['dtd@x']);
+    owner.sync(true);
+    members.sync(true);
+    a.keepStored = true;
+    owner.release();
+    members.release();
+    eq(mutter.values['edge-tiling'], false, 'not given back');
+    eq(list.values['enabled-extensions'], ['kiwi@kemma'], 'Dash to Dock stays off');
+    const b = new OriginalsStore(k);
+    const again = new SettingOwner(b, mutter, 'edge-tiling', { type: 'b', value: false });
+    again.sync(true);
+    eq(again.original, true, 'the user value, not the forced one');
+    again.release();
+    eq(mutter.values['edge-tiling'], true);
 });
 test('a user change while owned becomes the new original', () => {
     const store = new OriginalsStore(kiwi());
@@ -168,6 +189,22 @@ test('members: re-added by the user while held is taken out again and returns on
     owner.release();
     eq(gs.values['enabled-extensions'], ['a', DTD]);
 });
+test('members: a change of the list is stripped only when defer runs it, and not after release', () => {
+    const queue = [];
+    const gs = shell(['kiwi@kemma']);
+    const owner = new ListMembersOwner(new OriginalsStore(kiwi()), gs, 'enabled-extensions', [DTD], { defer: fn => queue.push(fn) });
+    owner.sync(true);
+    gs.set_strv('enabled-extensions', ['kiwi@kemma', DTD]);
+    gs.set_strv('enabled-extensions', ['kiwi@kemma', DTD, 'a']);
+    eq(queue.length, 1, 'one strip per burst');
+    eq(gs.values['enabled-extensions'], ['kiwi@kemma', DTD, 'a'], 'untouched meanwhile');
+    queue.shift()();
+    eq(gs.values['enabled-extensions'], ['kiwi@kemma', 'a']);
+    gs.set_strv('enabled-extensions', ['kiwi@kemma', DTD]);
+    owner.release();
+    queue.shift()();
+    eq(gs.values['enabled-extensions'], ['kiwi@kemma', DTD], 'a strip queued before release does nothing');
+});
 test('members: absent member means no store entry and no write', () => {
     const k = kiwi();
     const gs = shell(['kiwi@kemma']);
@@ -225,7 +262,7 @@ test('double take: a second sync(true) does not save Kiwi\'s value as the origin
     const owner = new SettingOwner(store, wm, 'num-workspaces', { type: 'i', value: 1 });
     owner.sync(true);
     owner.sync(true);
-    eq(store.get('org.gnome.desktop.wm.preferences::num-workspaces'), { type: 'i', value: 4 });
+    eq(store.get('org.gnome.desktop.wm.preferences::num-workspaces'), { type: 'i', value: 4, forced: 1 });
     eq(wm.nHandlers, 1, 'one handler only');
     owner.release();
     eq(wm.values['num-workspaces'], 4);
@@ -341,8 +378,8 @@ test('types: an empty string original and an empty strv original are kept, not t
     const b = new SettingOwner(store, gs, 'as', { type: 'as', value: ['k'] });
     a.sync(true);
     b.sync(true);
-    eq(store.get('org.types::s'), { type: 's', value: '' });
-    eq(store.get('org.types::as'), { type: 'as', value: [] });
+    eq(store.get('org.types::s'), { type: 's', value: '', forced: 'on' });
+    eq(store.get('org.types::as'), { type: 'as', value: [], forced: ['k'] });
     a.release();
     b.release();
     eq([gs.values.s, gs.values.as], ['', []]);
@@ -458,6 +495,142 @@ test('members: the user re-adds the member first: it is taken out again and retu
     eq(gs.values['enabled-extensions'], ['kiwi@kemma'], 'taken out again while held');
     owner.release();
     eq(gs.values['enabled-extensions'], ['kiwi@kemma', DTD], 'no duplicate');
+});
+
+// ---- review R1 fixes (FX1) ----------------------------------------------------------------
+const WM = 'org.gnome.desktop.wm.preferences';
+// What the next session sees: the same stored text, none of the dead session's handlers
+const afterCrash = k => fake('org.gnome.shell.extensions.kiwi', { [STORE_KEY]: k.values[STORE_KEY] });
+const entryOf = (k, id) => JSON.parse(k.values[STORE_KEY] || '{}')[id];
+
+test('F1: the store wiped while Kiwi owns the key: release still gives the user value back', () => {
+    const k = kiwi();
+    const wm = fake(WM, { 'button-layout': 'appmenu:close' });
+    const owner = new SettingOwner(new OriginalsStore(k), wm, 'button-layout', { type: 's', value: 'appmenu:' });
+    owner.sync(true);
+    k.set_string(STORE_KEY, '');            // gsettings reset-recursively
+    owner.release();
+    eq(wm.values['button-layout'], 'appmenu:close');
+});
+test('F1: the store wiped while Kiwi owns the key is written again at once', () => {
+    const k = kiwi();
+    const wm = fake(WM, { 'button-layout': 'appmenu:close' });
+    const owner = new SettingOwner(new OriginalsStore(k), wm, 'button-layout', { type: 's', value: 'appmenu:' });
+    owner.sync(true);
+    k.set_string(STORE_KEY, '');
+    eq(entryOf(k, `${WM}::button-layout`)?.value, 'appmenu:close', 'entry back, so a crash now is safe');
+    owner.release();
+    eq(k.values[STORE_KEY], '');
+    eq(k.nHandlers, 0, 'the store watch is gone');
+});
+test('F1: a wiped list-members entry is written again and still returns on release', () => {
+    const k = kiwi();
+    const gs = shell(['kiwi@kemma', DTD]);
+    const owner = new ListMembersOwner(new OriginalsStore(k), gs, 'enabled-extensions', [DTD]);
+    owner.sync(true);
+    k.set_string(STORE_KEY, '');
+    eq(entryOf(k, 'org.gnome.shell::enabled-extensions')?.value, [DTD]);
+    k.set_string(STORE_KEY, '');
+    owner.release();
+    eq(gs.values['enabled-extensions'], ['kiwi@kemma', DTD]);
+});
+test('F2: restoreStale leaves a value the user changed after the crash', () => {
+    const k = kiwi();
+    const wm = fake(WM, { 'button-layout': 'appmenu:close' });
+    new SettingOwner(new OriginalsStore(k), wm, 'button-layout', { type: 's', value: 'appmenu:' }).sync(true);
+    const next = fake(WM, { 'button-layout': 'USER-NEW' });     // the user chose this before Kiwi came back
+    const k2 = afterCrash(k);
+    eq(restoreStale(new OriginalsStore(k2), () => next), []);
+    eq(next.values['button-layout'], 'USER-NEW');
+    eq(k2.values[STORE_KEY], '', 'the stale entry is dropped');
+});
+test('F2: restoreStale still restores while the live value is the forced one', () => {
+    const k = kiwi();
+    const wm = fake(WM, { 'button-layout': 'appmenu:close' });
+    new SettingOwner(new OriginalsStore(k), wm, 'button-layout', { type: 's', value: 'appmenu:' }).sync(true);
+    const next = fake(WM, { 'button-layout': 'appmenu:' });
+    eq(restoreStale(new OriginalsStore(k), () => next), [`${WM}::button-layout`]);
+    eq(next.values['button-layout'], 'appmenu:close');
+});
+test('F3: members entries are left for the owner at startup, which adopts them without touching the list', () => {
+    const k = kiwi();
+    new ListMembersOwner(new OriginalsStore(k), shell(['kiwi@kemma', DTD]), 'enabled-extensions', [DTD]).sync(true);
+    // next login: the logged-out session never gave Dash to Dock back
+    const gs = shell(['kiwi@kemma']);
+    const store = new OriginalsStore(afterCrash(k));
+    eq(restoreStale(store, () => gs, { members: 'leave' }), []);
+    let writesToList = 0;
+    gs.connect('changed::enabled-extensions', () => writesToList++);
+    const owner = new ListMembersOwner(store, gs, 'enabled-extensions', [DTD]);
+    owner.sync(true);
+    eq([writesToList, owner.held], [0, [DTD]], 'the list was never written: no enable/disable cycle');
+    // an adopted entry is not restored by the second phase either
+    eq(restoreStale(store, () => gs, { members: 'only' }), []);
+    owner.release();
+    eq(gs.values['enabled-extensions'], ['kiwi@kemma', DTD]);
+});
+test('F3: a members entry no owner adopted is restored by the second phase', () => {
+    const k = kiwi();
+    new ListMembersOwner(new OriginalsStore(k), shell(['kiwi@kemma', DTD]), 'enabled-extensions', [DTD]).sync(true);
+    const gs = shell(['kiwi@kemma']);
+    const k2 = afterCrash(k);
+    const store = new OriginalsStore(k2);
+    eq(restoreStale(store, () => gs, { members: 'leave' }), []);
+    eq(restoreStale(store, () => gs, { members: 'only' }), ['org.gnome.shell::enabled-extensions']);
+    eq(gs.values['enabled-extensions'], ['kiwi@kemma', DTD]);
+    eq(k2.values[STORE_KEY], '');
+});
+test('F12: a key the user never set is reset, not written back as an explicit value', () => {
+    const k = kiwi();
+    const wm = fake(WM, { 'button-layout': 'appmenu:close' });
+    let resets = 0;
+    wm.get_user_value = () => null;
+    wm.reset = key => { resets++; wm.values[key] = 'appmenu:close'; };
+    const owner = new SettingOwner(new OriginalsStore(k), wm, 'button-layout', { type: 's', value: 'appmenu:' });
+    owner.sync(true);
+    eq(entryOf(k, `${WM}::button-layout`).user, false);
+    owner.release();
+    eq(resets, 1);
+    // and after a crash
+    owner.sync(true);
+    const next = fake(WM, { 'button-layout': 'appmenu:' });
+    let nextResets = 0;
+    next.get_user_value = () => null;
+    next.reset = () => { nextResets++; };
+    restoreStale(new OriginalsStore(k), () => next);
+    eq(nextResets, 1);
+});
+test('F12: a key the user set is written back as before', () => {
+    const wm = fake(WM, { 'button-layout': 'close:' });
+    wm.get_user_value = () => 'x';
+    wm.reset = () => { throw new Error('reset must not run'); };
+    const owner = new SettingOwner(new OriginalsStore(kiwi()), wm, 'button-layout', { type: 's', value: 'appmenu:' });
+    owner.sync(true);
+    owner.release();
+    eq(wm.values['button-layout'], 'close:');
+});
+test('F13: two owners of one key: the first release leaves Kiwi\'s value, the last gives the original back', () => {
+    const k = kiwi();
+    const wm = fake(WM, { 'button-layout': 'appmenu:close' });
+    const store = new OriginalsStore(k);
+    const a = new SettingOwner(store, wm, 'button-layout', { type: 's', value: 'appmenu:' });
+    const b = new SettingOwner(store, wm, 'button-layout', { type: 's', value: 'appmenu:' });
+    a.sync(true);
+    b.sync(true);
+    eq(b.original, 'appmenu:close', 'the second owner does not take Kiwi\'s value as the original');
+    a.release();
+    eq(wm.values['button-layout'], 'appmenu:', 'still owned by b');
+    b.release();
+    eq(wm.values['button-layout'], 'appmenu:close');
+    eq(k.values[STORE_KEY], '');
+});
+test('F14: a store that does not parse is backed up, and other entries are not silently wiped', () => {
+    const k = fake('kiwi', { [STORE_KEY]: '{"a::b": {"type":"s","value":"v"}  oops' });
+    const store = new OriginalsStore(k);
+    const wm = fake(WM, { 'button-layout': 'close:' });
+    new SettingOwner(store, wm, 'button-layout', { type: 's', value: 'appmenu:' }).sync(true);
+    eq(k.values[STORE_BACKUP_KEY], '{"a::b": {"type":"s","value":"v"}  oops');
+    eq(Object.keys(JSON.parse(k.values[STORE_KEY])), [`${WM}::button-layout`]);
 });
 
 if (failed) {

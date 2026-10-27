@@ -11,10 +11,13 @@
 //   kiwi-menubar-scrim                 a soft gradient for a mixed band (legibility)
 //
 // Wallpaper: the picture of org.gnome.desktop.background (picture-uri, or picture-uri-dark
-// in dark style; the first picture of an XML slideshow) is decoded once, asynchronously, at
-// a small size, and the band under the bar is measured (model.js wallpaperBand +
-// bandLuminance). The result is cached per picture and placement, and sampled again only
-// when the background settings, the style or the monitors change.
+// in dark style; the picture an XML day/night background shows now, measured again when it
+// changes) is decoded once, in a helper process (lib/wallpaperProbe.js, so a huge picture never
+// stalls the Shell), and the band under the bar is measured (model.js wallpaperBand +
+// bandLuminance). The text colour is judged on the worst part of the band (chooseText); a
+// band where neither colour is readable keeps the solid bar. The result is cached per picture
+// and placement, and sampled again only when the background settings, the style or the
+// monitors change.
 //
 // Windows: the bar is solid while a window on the active workspace of the primary monitor
 // touches the top of the work area or is maximized. Windows are checked when they appear,
@@ -22,10 +25,8 @@
 // progress is checked when the grab ends).
 //
 // Shell API: Main.panel, Main.layoutManager (primaryMonitor, panelBox, getWorkAreaForMonitor),
-// Main.overview, global.display grab-op-begin/end, GdkPixbuf.
+// Main.overview, global.display grab-op-begin/end, Gio.Subprocess.
 
-import GLib from 'gi://GLib';
-import GdkPixbuf from 'gi://GdkPixbuf';
 import Gio from 'gi://Gio';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
@@ -33,18 +34,14 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { WindowState } from '../../core/windowState.js';
 import { isUserFacing } from '../../core/desktopModel.js';
 import { Glass } from '../../lib/glass.js';
-import { isXmlBackground, parseHexColor, wallpaperSource, xmlFirstImage } from '../../lib/wallpaperModel.js';
-import { bandLuminance, barLook, chooseText, relativeLuminance, touchesBar, wallpaperBand } from './model.js';
-import { readText } from './systemInfo.js';
-
-Gio._promisify(Gio.File.prototype, 'read_async');
-Gio._promisify(GdkPixbuf.Pixbuf, 'new_from_stream_at_scale_async', 'new_from_stream_finish');
+import { measureBand, resolveWallpaper } from '../../lib/wallpaperDecode.js';
+import { parseHexColor, relativeLuminance, slideDelayMs, wallpaperSource } from '../../lib/wallpaperModel.js';
+import { barLook, chooseText, touchesBar } from './model.js';
 
 const CLASSES = Object.freeze({
     clear: 'kiwi-menubar-clear', light: 'kiwi-menubar-on-light', dark: 'kiwi-menubar-on-dark',
     scrim: 'kiwi-menubar-scrim',
 });
-const SAMPLE_WIDTH = 480;           // decode size of the wallpaper (px), enough for a band
 const BG_KEYS = ['picture-uri', 'picture-uri-dark', 'picture-options', 'primary-color'];
 
 export class AdaptiveBar {
@@ -52,8 +49,9 @@ export class AdaptiveBar {
         this._ctx = ctx;
         this._cleanup = cleanup;
         this._look = null;
-        this._text = null;           // {darkText, scrim} of the current wallpaper band
-        this._cache = new Map();     // picture key -> {mean, spread}
+        this._text = null;           // {darkText, scrim, solid} of the current wallpaper band
+        this._cache = new Map();     // picture key -> {mean, spread, low, high}
+        this._slideToken = 0;        // timer to the next picture of an XML background
         this._windowAtTop = false;
         this._grabbing = false;
         this._idleToken = 0;
@@ -65,7 +63,7 @@ export class AdaptiveBar {
         return this._look;
     }
 
-    /** {darkText, scrim} or null before the first sample (tests, the harness) */
+    /** {darkText, scrim, solid} or null before the first sample (tests, the harness) */
     get text() {
         return this._text;
     }
@@ -203,7 +201,7 @@ export class AdaptiveBar {
             solidOnly: this._opaque || !!St.Settings.get().high_contrast,
         });
         this._look = look;
-        const clear = look === 'clear' && !!this._text;
+        const clear = look === 'clear' && !!this._text && !this._text.solid;
         const set = (cls, on) => (on ? panel.add_style_class_name(cls) : panel.remove_style_class_name(cls));
         set(CLASSES.clear, clear);
         set(CLASSES.light, clear && this._text.darkText);
@@ -216,6 +214,8 @@ export class AdaptiveBar {
 
     async _sample() {
         this._cancellable.cancel();
+        this._cleanup.release(this._slideToken);
+        this._slideToken = 0;
         const cancellable = new Gio.Cancellable();
         this._cancellable = cancellable;
         const monitor = Main.layoutManager.primaryMonitor;
@@ -231,13 +231,25 @@ export class AdaptiveBar {
             colorScheme: this._iface.get_string('color-scheme'),
         });
         const band = Main.layoutManager.panelBox.height || Main.panel.height;
-        const key = `${source.uri ?? source.kind}|${option}|${monitor.width}x${monitor.height}|${band}`;
-        let stats = this._cache.get(key);
-        if (!stats) {
+        let stats = null;
+        if (source.kind === 'file') {
             try {
-                stats = source.kind === 'file'
-                    ? await this._measure(source.uri, option, monitor, band, cancellable)
-                    : null;
+                const slide = await resolveWallpaper(source.uri, cancellable);
+                const key = `${slide.uri}|${option}|${monitor.width}x${monitor.height}|${band}`;
+                stats = this._cache.get(key);
+                if (!stats) {
+                    stats = await measureBand(slide.uri, option, monitor, band, cancellable);
+                    if (cancellable.is_cancelled())
+                        return;
+                    this._cache.set(key, stats);
+                }
+                if (slide.until !== null) {
+                    // A day/night background: measure the next picture when it comes up
+                    this._slideToken = this._cleanup.timeout(slideDelayMs(slide.until), () => {
+                        this._slideToken = 0;
+                        this._sample();
+                    }, { name: 'menu bar wallpaper slide' });
+                }
             } catch (e) {
                 if (!e.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
                     console.warn(`[Kiwi] menu bar: cannot read the wallpaper ${source.uri}: ${e.message}`);
@@ -245,43 +257,15 @@ export class AdaptiveBar {
             }
             if (cancellable.is_cancelled())
                 return;
-            stats ??= this._colorStats(source.color);
-            this._cache.set(key, stats);
         }
-        this._text = chooseText(stats, this._text?.darkText ?? null);
+        this._text = chooseText(stats ?? this._colorStats(source.color), this._text?.darkText ?? null);
         this._apply();
     }
 
     // The background colour (picture-options 'none', bars, or no readable picture)
     _colorStats(color = null) {
         const [r, g, b] = color ?? parseHexColor(this._bg.get_string('primary-color')) ?? [0, 0, 0];
-        return { mean: relativeLuminance(r, g, b), spread: 0 };
-    }
-
-    async _measure(uri, option, monitor, band, cancellable) {
-        let file = Gio.File.new_for_uri(uri);
-        if (isXmlBackground(uri)) {
-            const path = xmlFirstImage(await readText(file.get_path(), cancellable));
-            if (!path)
-                return null;
-            file = GLib.path_is_absolute(path) ? Gio.File.new_for_path(path)
-                : file.get_parent().resolve_relative_path(path);
-        }
-        // Placements by ratio (zoom, stretched, scaled, spanned) read a small decode; centred
-        // and tiled pictures are placed by their real pixels, so they are decoded full size
-        const byRatio = option !== 'centered' && option !== 'wallpaper';
-        const stream = await file.read_async(GLib.PRIORITY_LOW, cancellable);
-        try {
-            const pixbuf = await GdkPixbuf.Pixbuf.new_from_stream_at_scale_async(stream,
-                byRatio ? SAMPLE_WIDTH : -1, -1, true, cancellable);
-            const rect = wallpaperBand({ width: pixbuf.get_width(), height: pixbuf.get_height() },
-                monitor, option, band);
-            if (!rect)
-                return null;
-            return bandLuminance(pixbuf.read_pixel_bytes().toArray(),
-                { rowstride: pixbuf.get_rowstride(), channels: pixbuf.get_n_channels() }, rect);
-        } finally {
-            stream.close_async(GLib.PRIORITY_LOW, null, null);
-        }
+        const mean = relativeLuminance(r, g, b);
+        return { mean, spread: 0, low: mean, high: mean };
     }
 }

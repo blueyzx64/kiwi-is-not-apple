@@ -35,8 +35,6 @@ export function buildPrefs({ settings, extension }) {
         _('Show banners in the notch instead of the standard banner'), 'notch-notifications');
     const activities = part(_('Live activities'),
         _('Replaces the top bar media button'), 'notch-live-activities');
-    const osd = part(_('Volume and brightness'),
-        _('Show the level in the notch instead of the standard pop-up'), 'notch-osd');
 
     const timeout = new Adw.SpinRow({
         title: _('Notification time (seconds)'),
@@ -49,7 +47,7 @@ export function buildPrefs({ settings, extension }) {
     const clipboard = part(_('Show clipboard in the dashboard'),
         _('Turn off to keep copied text off the screen while sharing it'), 'notch-show-clipboard');
 
-    const rows = [notifications, activities, osd, timeout, clipboard];
+    const rows = [notifications, activities, timeout, clipboard];
     const sync = () => rows.forEach(row => (row.sensitive = settings.get_boolean('notch')));
     const id = settings.connect('changed::notch', sync);
     sync();

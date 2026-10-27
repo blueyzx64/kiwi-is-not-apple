@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // gjs -m tests/wallpaperModel.test.js
 // lib/wallpaperModel.js: what to sample for the glass wallpaper tint, and the average.
-import { ColorCache, averageRgb, isXmlBackground, parseHexColor, wallpaperSource, xmlFirstImage }
+import { ColorCache, MAX_PROBE_PIXELS, averageRgb, slideDelayMs, withinProbeCap, isXmlBackground, parseHexColor, wallpaperSource, xmlFirstImage, xmlSlideAt }
     from '../lib/wallpaperModel.js';
 
 let failed = 0;
@@ -47,6 +47,35 @@ test('XML backgrounds: the first picture, plain or multi-size', () => {
     eq(xmlFirstImage('<background/>'), null);
 });
 
+// Fedora/GNOME day-night background: 10 h of day, 2 h of transition, 10 h of night, 2 h back
+const dayNight = `<background><starttime><year>2020</year><month>1</month><day>1</day>
+<hour>6</hour><minute>00</minute><second>00</second></starttime>
+<static><duration>36000.0</duration><file><size width="1920">/b/day.png</size></file></static>
+<transition type="overlay"><duration>7200.0</duration><from>/b/day.png</from><to>/b/night.png</to></transition>
+<static><duration>36000.0</duration><file>/b/night.png</file></static>
+<transition type="overlay"><duration>7200.0</duration><from>/b/night.png</from><to>/b/day.png</to></transition>
+</background>`;
+
+test('day/night XML: the picture for the current time, and when it changes', () => {
+    // 09:00 (winter, so a DST zone gives the same hours): 3 h into the day picture; 7 h of it left
+    eq(xmlSlideAt(dayNight, new Date(2026, 0, 3, 9, 0, 0)), { path: '/b/day.png', until: 7 * 3600 });
+    // 16:30: 10.5 h into the cycle, the first half of the transition (still day)
+    eq(xmlSlideAt(dayNight, new Date(2026, 0, 3, 16, 30, 0)).path, '/b/day.png');
+    // 17:30: past the middle of the transition: night
+    const late = xmlSlideAt(dayNight, new Date(2026, 0, 3, 17, 30, 0));
+    eq([late.path, late.until], ['/b/night.png', 30 * 60]);
+    // 23:00: the night picture (the old code always said day)
+    eq(xmlSlideAt(dayNight, new Date(2026, 0, 3, 23, 0, 0)).path, '/b/night.png');
+    // 05:30 the next morning: the transition back, second half: day (04:30 is still night)
+    eq(xmlSlideAt(dayNight, new Date(2026, 0, 4, 4, 30, 0)).path, '/b/night.png');
+    eq(xmlSlideAt(dayNight, new Date(2026, 0, 4, 5, 30, 0)).path, '/b/day.png');
+});
+
+test('XML without a start time or durations is its first picture', () => {
+    eq(xmlSlideAt('<background><static><file>/a/x.png</file></static></background>', new Date()), { path: '/a/x.png', until: null });
+    eq(xmlSlideAt('<background/>', new Date()), null);
+});
+
 test('average: RGB rows with padding, and alpha weighting', () => {
     // 2x2 RGB, rowstride 8 (2 bytes padding)
     const rgb = new Uint8Array([255, 0, 0, 0, 0, 255, 9, 9, 0, 255, 0, 255, 255, 255, 9, 9]);
@@ -64,6 +93,18 @@ test('cache keeps the most recent entries', () => {
     c.get('a');
     c.set('c', [3, 3, 3]);
     eq([c.get('a'), c.get('b'), c.get('c'), c.size], [[1, 1, 1], undefined, [3, 3, 3], 2]);
+});
+
+test('the probe refuses a picture over the size cap', () => {
+    eq(withinProbeCap(7680, 4320), true, '8K');
+    eq(withinProbeCap(14000, 14000), false, '196 MP');
+    eq(withinProbeCap(MAX_PROBE_PIXELS, 1), true, 'at the cap');
+    eq(withinProbeCap(0, 100), false, 'no size');
+});
+
+test('the next slide is waited for at least a second', () => {
+    eq(slideDelayMs(3600.2), 3600200);
+    eq(slideDelayMs(0.1), 1000);
 });
 
 if (failed) {

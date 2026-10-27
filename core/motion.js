@@ -5,6 +5,7 @@
 //       { duration: 'medium', curve: 'emphasized', onDone: finished => ... }, cleanup);
 //   anim.cancel();                      // stops where it is; onDone(false)
 //   ctx.motion.spring(actor, 'translation_y', 0, { spring: 'bouncy' }, cleanup);
+//   ctx.motion.tween(actor, { duration: 'extraLong', curve: 'linear' }, p => ..., cleanup);
 //   ctx.motion.env;                     // {reducedMotion, animations}
 //
 // Every animation goes through motionModel.resolve(), so animations-off and reduced motion
@@ -84,7 +85,10 @@ export class Motion {
      * @param {Clutter.Actor} actor
      * @param {object} props target values (GObject property names, e.g. scale_x)
      * @param {{duration?: number|string, curve?: string, spring?: string|object,
-     *   delay?: number, onDone?: (finished: boolean) => void}} [request]
+     *   delay?: number, repeat?: number, autoReverse?: boolean,
+     *   onDone?: (finished: boolean) => void}} [request] repeat: extra runs (-1 forever), with
+     *   autoReverse running every other one backwards (a wobble); a repeat that only moves is
+     *   dropped to its end value under reduced motion like any transform
      * @param {{add: Function, release?: Function}} [owner] cancels it on dispose
      * @returns {{cancel: Function, running: boolean}}
      */
@@ -127,9 +131,75 @@ export class Motion {
             ...animate,
             duration: plan.duration,
             delay: request.delay ?? 0,
+            repeatCount: request.repeat ?? 0,
+            autoReverse: !!request.autoReverse,
             mode: Clutter.AnimationMode[plan.mode],
             onStopped: isFinished => finish(isFinished),
         });
+        return handle;
+    }
+
+    /**
+     * Drive a progress from 0 to 1 (or 1 to 0 with `reverse`) for what is not an actor
+     * property: a mesh deform, a computed layout. `onFrame(progress)` runs once per frame and
+     * last with the end value. Animations off: onFrame(end) at once. Under reduced motion the
+     * duration is the short crossfade one; the caller (who reads `env`) draws a fade instead
+     * of movement.
+     *
+     * @param {Clutter.Actor} actor whose frame clock times it
+     * @param {{duration?: number|string, curve?: string, reverse?: boolean,
+     *   onDone?: (finished: boolean) => void}} request
+     * @param {(progress: number) => void} onFrame
+     * @param {{add: Function, release?: Function}} [owner]
+     * @returns {{cancel: Function, running: boolean}}
+     */
+    tween(actor, request, onFrame, owner = null) {
+        const plan = resolve(request, this._env);
+        const from = request.reverse ? 1 : 0;
+        const span = request.reverse ? -1 : 1;
+        if (plan.duration === 0) {
+            onFrame(from + span);
+            request.onDone?.(true);
+            return NOOP_HANDLE;
+        }
+        const timeline = new Clutter.Timeline({
+            actor,
+            duration: Math.round(plan.duration * (St.Settings.get().slow_down_factor || 1)),
+            progress_mode: Clutter.AnimationMode[plan.mode],
+        });
+        let running = true;
+        let token = 0;
+        const finish = finished => {
+            if (!running)
+                return;
+            running = false;
+            timeline.disconnect(frameId);
+            timeline.disconnect(doneId);
+            if (destroyId)
+                actor.disconnect(destroyId);
+            timeline.stop();
+            if (token)
+                owner?.release?.(token);
+            request.onDone?.(finished);
+        };
+        const frameId = timeline.connect('new-frame', () => onFrame(from + span * timeline.get_progress()));
+        const doneId = timeline.connect('completed', () => {
+            onFrame(from + span);
+            finish(true);
+        });
+        let destroyId = actor.connect('destroy', () => {
+            destroyId = 0;
+            finish(false);
+        });
+        const handle = {
+            cancel: () => finish(false),
+            get running() {
+                return running;
+            },
+        };
+        token = owner?.add(() => handle.cancel()) ?? 0;
+        onFrame(from);
+        timeline.start();
         return handle;
     }
 

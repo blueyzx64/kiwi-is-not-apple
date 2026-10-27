@@ -18,6 +18,8 @@ import Shell from 'gi://Shell';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
+import { WindowState } from '../../core/windowState.js';
+
 // Minimum number of workspaces to maintain (main + 1 empty)
 const MIN_WORKSPACES = 2;
 
@@ -662,6 +664,10 @@ class FullscreenWorkspaceManager {
     _onWindowFullscreenChanged(window) {
         if (window.is_fullscreen()) {
             this._scheduleIsolation(window);
+        } else if (WindowState.has(window, 'splitView')) {
+            // Split View took it out of full screen to tile it: it stays in its Space
+            this._cancelPendingIsolation(window);
+            this._keepInSpace(window);
         } else {
             this._cancelPendingIsolation(window);
             this._restoreWindowFromFullscreen(window);
@@ -897,6 +903,21 @@ class FullscreenWorkspaceManager {
                 win._kiwi_originalWorkspaceIndex -= 1;
             }
         }
+    }
+
+    /**
+     * A window left full screen but stays in its Space (Split View): forget the isolation
+     * without moving it. The Space keeps its windows; it is cleaned up once they are gone.
+     */
+    _keepInSpace(window) {
+        if (!window._kiwi_isolated)
+            return;
+        this._cancelPendingRestore(window);
+        const fullscreenWsIndex = window._kiwi_fullscreenWorkspaceIndex;
+        window._kiwi_isolated = false;
+        window._kiwi_fullscreenWorkspaceIndex = undefined;
+        if (fullscreenWsIndex !== undefined)
+            this._fullscreenWorkspaces.delete(fullscreenWsIndex);
     }
 
     /**
