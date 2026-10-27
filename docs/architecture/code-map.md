@@ -70,6 +70,7 @@ prefs.js metadata.json stylesheet.css schemas/ po/`). `make pack-check` verifies
 | `appMenus` | `core/appMenus/service.js` AppMenuService (menus of the focused app) |
 | `osd` | `core/osd.js` OsdRouter (`setSink(cleanup, 'notch'\|'pill', fn)`) |
 | `originals` | `core/originals.js` OriginalsStore (give it to a `SettingOwner`) |
+| `timers` | `core/timers.js` TimerService (`startTimer({seconds, label})`, `pause/resume/cancel(id)`, `list()`, `remaining(t)`) |
 
 ## 3. core/
 
@@ -91,6 +92,7 @@ prefs.js metadata.json stylesheet.css schemas/ po/`). `make pack-check` verifies
 | `mprisWatcher.js` | one MPRIS source for the extension | `MprisWatcher.acquire(cleanup, gettext)` |
 | `osdModel.js` / `osd.js` | the one interception of the Shell OSD (`_showOsdWindow`): classifies volume / brightness / keyboard backlight and routes each change to ONE sink from `osd-location` (notch while it runs, else the menu-bar pill; 'system' = stock); other OSDs and other monitors stay stock | `classifyOsd`, `route`; `OsdRouter.start(cleanup)`, `setSink(owner, name, fn)` |
 | `appMenus/` | the focused app's menus (ctx.appMenus): pure `model.js` (generic menus, well-known GTK actions, Help search, ⌘ shortcut labels), `gtkActions.js` (org.gtk.Actions provider), `commands.js` (generic commands), `service.js` (providers, cache, activation) | `acquire(owner)`, `targetFor(win)`, `peek/results(target)`, `build(target, results, opts)`, `activate(target, command)`, `registerProvider(owner, provider)` |
+| `timersModel.js` / `timers.js` | Kiwi's own countdown timers (wall clock, stored in `timers-state`, survive the lock screen); one alarm timeout, no tick | `ctx.timers.startTimer({seconds, label})` -> id, `pause`, `resume`, `cancel`, `list`, `remaining`; events `timers-changed`, `timer-finished` |
 
 Events (`EVENTS` in `core/events.js`): `window-added`, `window-changed`, `window-removed`,
 `window-focused`, `app-focused`, `workspaces-changed`, `monitors-changed`, `work-area-changed`,
@@ -98,7 +100,8 @@ Events (`EVENTS` in `core/events.js`): `window-added`, `window-changed`, `window
 (the clock), `app-hide-requested` and `window-tile-requested` (app-menu commands for the
 window manager; the menu bar runs a fallback when nobody listens), `launchpad-requested` (dock tile,
 pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view-changed` (Split View), `recording-started` /
-`recording-stopped` (screenshots; for the notch's recording live activity).
+`recording-stopped` (screenshots; for the notch's recording live activity), `timers-changed`,
+`timer-finished` (core/timers).
 
 ## 4. lib/
 
@@ -129,7 +132,7 @@ pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view
 | `menuBar/` | `menu-bar` | the macOS menu bar: logo menu, app name and menus (core/appMenus), transparent adaptive bar, full-screen reveal, privacy dots, About This PC, Force Quit, clock hook, Activities policy |
 | `calendar/` | `calendar`, `quick-settings-notifications`, `dnd-button` | date menu on the right as a card; notification list in Quick Settings; Kiwi's Do Not Disturb (beaten by `control-center`) |
 | `controlCenter/` | `control-center` | Quick Settings restyled |
-| `notch/` | `notch` | banners, media, OSD, dashboard |
+| `notch/` | `notch` | banners, live activities, OSD; hover/click opens Now / Tray / Widgets tabs. `stateMachine.js` (queue, shape, tabs) and `model.js` (activity priority, code detection, shelf, derivations) are pure; `sources/` feed activities (UPower, BlueZ, core timers, recording, calendar server, downloads, one-time codes, mic and weather); `shelf.js` + `drop.js` (files dropped from apps via the DND selection); `view.js`, `pills.js`, `tabs.js`, `ui.js` draw |
 | `spotlight/` | `spotlight` | Super tap, providers; Tahoe browse views (Super+1..4), "/" filters, Actions, Quick Keys, history, Quick Look, menu items (`queryModel.js`, `actionsModel.js`, `results.js`) |
 | `clipboard/` | `clipboard-history` | history, popover, Quick Paste |
 | `stageManager/` | `stage-manager`, `stage-manager-shortcut` | strip, sets, flights (rebuilt in phase 4) |

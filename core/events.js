@@ -30,6 +30,9 @@ export const EVENTS = Object.freeze({
     'work-area-changed': { monitor: 'number' },
     // core/motion.js (Motion)
     'motion-changed': { reducedMotion: 'boolean', animations: 'boolean' },
+    // core/timers.js (TimerService)
+    'timers-changed': { timers: 'object[] see core/timersModel.js' },
+    'timer-finished': { timer: 'object' },
     // lib/featureRegistry.js, through extension.js: a feature started or stopped
     'feature-changed': { id: 'string', active: 'boolean' },
     // features/screenshots: a screen recording started (kind 'screen' or 'area') or ended

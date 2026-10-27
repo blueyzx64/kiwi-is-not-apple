@@ -30,6 +30,7 @@ import { EventHub } from './core/events.js';
 import { DesktopService } from './core/desktop.js';
 import { LayoutService } from './core/layout.js';
 import { Motion } from './core/motion.js';
+import { TimerService } from './core/timers.js';
 import { AppMenuService } from './core/appMenus/service.js';
 import { OsdRouter } from './core/osd.js';
 import { OriginalsStore, STORE_BACKUP_KEY, STORE_KEY, restoreStale } from './core/originals.js';
@@ -38,7 +39,8 @@ import { FEATURES } from './features.js';
 // Keys Kiwi writes itself at run time. No `when` or restartOn reads them, and a write made
 // during a refresh would re-enter the registry, so they do not trigger a pass.
 const KEYS_THAT_NEVER_AFFECT_FEATURES = new Set(['clipboard-recording', 'migrations-done', STORE_KEY,
-    STORE_BACKUP_KEY, 'dock-recent-apps', 'screenshots-last-selection', 'emoji-recents', 'emoji-skin-tone']);
+    STORE_BACKUP_KEY, 'dock-recent-apps', 'screenshots-last-selection', 'emoji-recents', 'emoji-skin-tone',
+    'timers-state', 'notch-shelf']);
 
 // Schemas whose keys Kiwi may own through core/originals.js
 const openSettings = schemaId =>
@@ -50,7 +52,8 @@ const openSettings = schemaId =>
  * gets the same ctx:
  *   extension, settings (Kiwi's Gio.Settings), gettext, features ({instance(id)}),
  *   events (core/events.js), desktop (core/desktop.js), layout (core/layout.js),
- *   motion (core/motion.js), osd (core/osd.js), originals (core/originals.js), appMenus (core/appMenus/service.js)
+ *   motion (core/motion.js), osd (core/osd.js), originals (core/originals.js), appMenus (core/appMenus/service.js),
+ *   timers (core/timers.js)
  */
 // The Shell disables every extension while the screen is locked and enables it again at unlock
 // (Kiwi has no 'unlock-dialog' session mode: its UI has no place on the lock screen). The GNOME
@@ -94,6 +97,8 @@ export default class KiwiExtension extends Extension {
         this._layout = new LayoutService(this._events);
         this._motion = new Motion(this._events);
         this._motion.start();
+        this._timers = new TimerService(this._events, this._settings);
+        this._timers.start();
         this._appMenus = new AppMenuService({ events: this._events, desktop: this._desktop, layout: this._layout });
         this._osd = new OsdRouter(this._settings);
         this._osd.start(this._cleanup);
@@ -129,6 +134,7 @@ export default class KiwiExtension extends Extension {
             motion: this._motion,
             osd: this._osd,
             originals: this._originals,
+            timers: this._timers,
             appMenus: this._appMenus,
         });
 
@@ -159,12 +165,13 @@ export default class KiwiExtension extends Extension {
         this._cleanup = null;
         this._features?.stop();
         this._features = null;
+        this._timers?.stop();
         this._appMenus?.stop();
         this._motion?.stop();
         this._layout?.stop();
         this._desktop?.stop();
         this._events?.clear();
-        this._appMenus = this._motion = this._layout = this._desktop = this._events = this._osd = null;
+        this._appMenus = this._motion = this._layout = this._desktop = this._events = this._osd = this._timers = null;
         this._originals = null;
         IconStyle.configure(null);
         Glass.configure(null);
