@@ -258,3 +258,4 @@ No more installer work: no new pieces (Trash-drag uninstall, fly-to-dock, update
     - the Fedora logo falls back to the GNOME foot (no -symbolic icon in fedora-logos);
     - the glass shadow tail hard edge (St blur truncation).
   - S3 and tech debt → FX13: duplicate DBusMenu parser (menuBarItems is unbounded, can freeze), the isDark and clamp duplicates, magic timeouts (showDesktop:376, clipboard:483, stageManager/view.js:557), Split View `_settling` watchdog, `-nan` at start, the toolbar rect sized once, jagged SM thumbnails, the CC battery capsule, the notch BlueZ warning.
+- FX11 → merged: 24 of 28 H7 findings fixed (4 obsolete) plus about 40 sweep fixes; lib/a11y.js; Ctrl+Alt+Tab to the dock, notch, strip and top bar; keyboard-only run 38/38. Remaining: desktop widgets are pointer-only; Tab in Quick Paste and Emoji; text scaling unchecked.
