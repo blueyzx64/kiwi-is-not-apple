@@ -14,7 +14,12 @@
 // API for other features (ctx.features.instance('dock')):
 //   iconRect(appId)        where the app's icon is on screen (Genie, P2), or null
 //   minimizeTarget(win)    where a window minimizes to: its app icon, or the minimized-window
-//                          slot ("Minimize windows into application icon" off)
+//                          slot ("Minimize windows into application icon" off); the Genie and
+//                          Scale effects (features/minimizeEffect) fly there
+//
+// P2 extras: launch and attention bounce, magnification (magnify.js), LauncherEntry badges and
+// progress (lib/launcherEntry.js), grey dots for background apps (lib/backgroundApps.js), the
+// minimized window's thumbnail on its app icon, and folder Stacks beside Downloads.
 //
 // Shell API: ui/appFavorites.js (getAppFavorites; the private _addFavorite / _removeFavorite
 // skip the "pinned to the dash" notification, macOS has none), ui/layout.js PressureBarrier,
@@ -36,20 +41,29 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { KiwiSettings } from '../../lib/settings.js';
 import { WindowState } from '../../core/windowState.js';
+import { LauncherEntryWatcher } from '../../lib/launcherEntry.js';
+import { BackgroundApps } from '../../lib/backgroundApps.js';
 import {
-    Reveal, STACK_VIEWS, clickAction, dockItems, dockMetrics, isHorizontal, menuEntries,
-    pinPosition, pushRecent, readConfig, stableOrder,
+    Reveal, STACK_VIEWS, addFolder, bounceAgain, bounceSteps, clickAction, dockItems, dockMetrics,
+    folderDropAccepted, isHorizontal, menuEntries, pinPosition, pushRecent, readConfig, removeFolder,
+    stableOrder,
 } from './model.js';
 import { DockView } from './view.js';
+import { Magnifier } from './magnify.js';
 import { AppItem, SeparatorItem, WindowItem } from './items.js';
-import { DownloadsItem, installerFor } from './stack.js';
+import { DownloadsItem, FolderStackItem, downloadsDir, installerFor } from './stack.js';
 import { TrashItem } from './trash.js';
+import { LaunchpadItem } from './launchpad.js';
+import { MissionControlItem } from './missionControlItem.js';
 import { DockMenu, altHeld, fillAppMenu, isAltKey } from './appMenu.js';
 import { readAutostart, setAutostart } from './autostart.js';
 import { keepOtherDocksOff } from './dashToDock.js';
 
 const LAYOUT_KEYS = ['dock-position', 'dock-icon-size'];
-const CONTENT_KEYS = ['dock-show-recents', 'dock-running-dots', 'dock-minimize-to-app', 'dock-downloads'];
+const CONTENT_KEYS = ['dock-show-recents', 'dock-running-dots', 'dock-minimize-to-app', 'dock-downloads',
+    'dock-background-apps', 'dock-folders', 'dock-badges', 'dock-launchpad', 'launchpad',
+    'dock-mission-control'];
+const MOTION_KEYS = ['dock-magnification', 'dock-magnification-size', 'dock-launch-animation', 'dock-attention-bounce'];
 const HIDE_KEYS = ['dock-autohide', 'dock-autohide-delay'];
 // Pushing against the edge reveals an auto-hidden dock: the same pressure as the Shell's hot
 // corner (ui/layout.js HOT_CORNER_PRESSURE_THRESHOLD / _TIMEOUT)
@@ -88,6 +102,10 @@ export class Dock {
         this._menuOpen = 0;
         this._menuManager = new PopupMenu.PopupMenuManager(this);
         this._fileMenus = new WeakMap();   // stack row -> its menu owner
+        this._launching = new Set();          // app ids starting (shown and bouncing)
+        this._itemKey = '';
+        this._badges = new LauncherEntryWatcher(cleanup, appId => this._badgeChanged(appId));
+        this._background = new BackgroundApps(cleanup, () => this._queueSync());
 
         keepOtherDocksOff(ctx.originals, cleanup);
 
@@ -117,6 +135,9 @@ export class Dock {
         WindowState.watch(cleanup, () => this._queueSync());
         cleanup.connect(this._favorites, 'changed', () => this._queueSync());
         cleanup.connect(this._appSystem, 'installed-changed', () => this._queueSync());
+        cleanup.connect(this._appSystem, 'app-state-changed', (_s, app) => this._appStateChanged(app));
+        cleanup.connect(global.display, 'window-demands-attention', (_d, win) => this._attention(win));
+        cleanup.connect(global.display, 'window-marked-urgent', (_d, win) => this._attention(win));
         cleanup.connect(Main.overview, 'showing', () => this._syncOverview());
         cleanup.connect(Main.overview, 'hidden', () => this._syncOverview());
 
@@ -126,6 +147,10 @@ export class Dock {
             this._sync();
         });
         this._ks.watch(HIDE_KEYS, () => this._syncAutohide());
+        this._ks.watch(MOTION_KEYS, () => {
+            this.config = readConfig(this._ks);
+            this._magnifier?.setHovered(this._view.frame.hover);
+        });
         this._ks.watch('dock-downloads-view', () => {
             this.config = readConfig(this._ks);
         });
@@ -160,8 +185,9 @@ export class Dock {
     /** @returns {?{x,y,width,height}} where `win` (a Meta.Window) minimizes to */
     minimizeTarget(win) {
         if (this.config.minimizeToApp) {
-            const app = this._tracker.get_window_app(win);
-            return app ? this.iconRect(app.get_id()) : null;
+            // The model's app id: a web app's window maps to its installed app (core/desktop)
+            const appId = this._desktop.model.window(win.get_stable_sequence())?.appId;
+            return appId ? this.iconRect(appId) : null;
         }
         // The minimized-window tiles start right after the separator before the stack
         const sep = this._view.rectOf(this._view.item('separator-system'));
@@ -181,6 +207,8 @@ export class Dock {
 
     _build() {
         this._view.build();
+        this._itemKey = '';
+        this._magnifier = new Magnifier(this, this._view, this._view.buildCleanup);
         this._view.setEdgeActive(this.config.autohide);
         this._place();
         this._syncOverview();
@@ -223,7 +251,15 @@ export class Dock {
 
     _sync() {
         const model = this._desktop.model;
-        this._running = stableOrder(this._running, model.apps());
+        const withWindows = [...model.apps()];
+        const live = new Set(withWindows);
+        for (const id of this._launching) {
+            if (!live.has(id))
+                withWindows.push(id);
+        }
+        this._running = stableOrder(this._running, withWindows);
+        const background = this.config.backgroundApps
+            ? this._background.ids.filter(id => !live.has(id) && this._appSystem.lookup_app(id)) : [];
         const minimized = this.config.minimizeToApp ? [] : model.windows()
             .filter(w => w.minimized && !this._flagged(w.id)).map(w => w.id);
         this._minimized = stableOrder(this._minimized, minimized);
@@ -234,9 +270,35 @@ export class Dock {
             showRecents: this.config.showRecents,
             minimized: this._minimized,
             downloads: this.config.downloads,
+            background,
+            folders: this.config.folders,
+            launchpad: this.config.launchpad,
+            missionControl: this.config.missionControl,
         });
         this._view.setItems(items, spec => this._createItem(spec));
+        const key = items.map(i => i.id).join('\n');
+        if (key !== this._itemKey) {
+            this._itemKey = key;
+            this._magnifier.invalidate();
+        }
+        this._syncAppDecorations();
         this._queueGeometry();
+    }
+
+    // Badges and, with "Minimize windows into application icon", the newest minimized window
+    _syncAppDecorations() {
+        const model = this._desktop.model;
+        for (const item of this._view.items()) {
+            if (!(item instanceof AppItem))
+                continue;
+            item.setBadge(this.config.badges ? this._badges.get(item.id) : null);
+            let thumb = null;
+            if (this.config.minimizeToApp) {
+                const w = model.windows({ appId: item.id }).find(x => x.minimized && !this._flagged(x.id));
+                thumb = w ? this._desktop.metaWindow(w.id) : null;
+            }
+            item.setMinimizedThumb(thumb);
+        }
     }
 
     // Windows another feature has set aside (Stage Manager's stage, ...) get no tile
@@ -259,8 +321,16 @@ export class Dock {
         }
         case 'downloads':
             return new DownloadsItem(this, spec);
+        case 'folder': {
+            const dir = Gio.File.new_for_path(spec.path);
+            return new FolderStackItem(this, spec, dir, dir.get_basename());
+        }
         case 'trash':
             return new TrashItem(this, spec);
+        case 'launchpad':
+            return new LaunchpadItem(this, spec);
+        case 'mission-control':
+            return new MissionControlItem(this, spec);
         default:
             return null;
         }
@@ -313,7 +383,9 @@ export class Dock {
     }
 
     dockRelayout() {
-        this._queueGeometry();
+        // Magnification resizes the slab per pointer move: the targets follow when it settles
+        if (!this._magnifier?.active)
+            this._queueGeometry();
     }
 
     // ---- clicks ------------------------------------------------------------------------------
@@ -345,11 +417,22 @@ export class Dock {
     _launch(app) {
         this._noteRecent(app.get_id());
         app.activate();
+        this._launchBounce(app);
     }
 
     activateWindow(win) {
         if (win)
             Main.activateWindow(win);
+    }
+
+    /** The Launchpad tile was clicked. */
+    requestLaunchpad() {
+        this._ctx.events.emit('launchpad-requested', { source: 'dock' });
+    }
+
+    /** A file of Kiwi's icons/ folder, or null. */
+    iconFile(name) {
+        return this._ctx.extension?.dir?.get_child('icons').get_child(name) ?? null;
     }
 
     openUri(uri) {
@@ -373,12 +456,101 @@ export class Dock {
         }
     }
 
-    /** One spring of a tile away from the edge and back (a download finished). */
-    bounce(item) {
-        const lift = Math.round(this.metrics.tile * 0.45);
+    /**
+     * Bounce a tile away from the edge, again while `pending()` holds (model.bounceAgain).
+     * A bounce already running takes the new reason over. Reduced motion: no bounce.
+     *
+     * @param {object} item
+     * @param {'launch'|'attention'|'download'} reason
+     * @param {() => boolean} [pending]
+     */
+    bounce(item, reason, pending = () => false) {
+        const env = this.motion.env;
+        if (!item || !env.animations || env.reducedMotion)
+            return;
+        if (item.bounce) {
+            item.bounce.reason = reason;
+            item.bounce.pending = pending;
+            return;
+        }
+        const steps = bounceSteps(this.metrics.tile);
         const prop = this.horizontal ? 'translation_y' : 'translation_x';
-        item.content[prop] = this.horizontal ? -lift : this.position === 'left' ? lift : -lift;
-        this.motion.spring(item.content, prop, 0, { spring: 'bouncy' }, item.cleanup);
+        const lift = (this.position === 'left' ? 1 : -1) * steps.height;
+        const state = item.bounce = { reason, pending, done: 0 };
+        const end = () => {
+            item.bounce = null;
+            if (item.content.get_parent())
+                item.content[prop] = 0;
+        };
+        const up = () => this.motion.ease(item.content, { [prop]: lift },
+            { duration: steps.up, curve: 'standard', onDone: ok => (ok ? down() : end()) }, item.cleanup);
+        const down = () => this.motion.ease(item.content, { [prop]: 0 }, {
+            duration: steps.down, curve: 'exit',
+            onDone: ok => {
+                state.done++;
+                if (ok && bounceAgain(state.reason, state.done, state.pending()))
+                    up();
+                else
+                    end();
+            },
+        }, item.cleanup);
+        up();
+    }
+
+    // An app starting (from the dock or anywhere): its icon shows and bounces until a window
+    // appears (macOS "Animate opening applications")
+    _launchBounce(app) {
+        if (!this.config.launchBounce)
+            return;
+        const id = app.get_id();
+        if (app.get_n_windows() > 0 || this._launching.has(id))
+            return;
+        this._launching.add(id);
+        const pending = () => app.get_n_windows() === 0 && this._launching.has(id);
+        const start = () => {
+            const item = this._view.item(id);
+            if (item)
+                this.bounce(item, 'launch', pending);
+        };
+        // The item of an app that was not in the dock appears with the next sync
+        if (this._view.item(id))
+            start();
+        else
+            this._cleanup.idle(start, { name: 'dock launch bounce' });
+        this._queueSync();
+    }
+
+    _appStateChanged(app) {
+        const id = app.get_id();
+        if (app.state === Shell.AppState.STARTING) {
+            this._launchBounce(app);
+        } else if (this._launching.delete(id)) {
+            this._queueSync();
+        }
+    }
+
+    // A window asks for attention, or is urgent: its app bounces until it is focused
+    _attention(win) {
+        if (!this.config.attentionBounce || win.has_focus())
+            return;
+        const app = this._tracker.get_window_app(win);
+        const item = app ? this._view.item(app.get_id()) : null;
+        if (item instanceof AppItem) {
+            this.bounce(item, 'attention',
+                () => !win.has_focus() && (win.demands_attention || win.urgent));
+        }
+    }
+
+    _badgeChanged(appId) {
+        const item = this._view.item(appId);
+        if (!(item instanceof AppItem) || !this.config.badges)
+            return;
+        const entry = this._badges.get(appId);
+        item.setBadge(entry);
+        if (entry?.urgent && this.config.attentionBounce && this._desktop.model.focusedApp !== appId) {
+            this.bounce(item, 'attention', () =>
+                !!this._badges.get(appId)?.urgent && this._desktop.model.focusedApp !== appId);
+        }
     }
 
     // ---- hover and auto-hide -------------------------------------------------------------------
@@ -396,6 +568,7 @@ export class Dock {
     }
 
     dockHovered(hovered) {
+        this._magnifier?.setHovered(hovered && !this._menuOpen && !this._dragging);
         this._reveal.dock(hovered);
         this._queueSettle();
     }
@@ -494,6 +667,7 @@ export class Dock {
             this._menuOpen += open ? 1 : -1;
             if (open) {
                 this._view.hideLabel();
+                this._magnifier?.setHovered(false);
                 this.hold();
             } else {
                 this.unhold();
@@ -508,6 +682,11 @@ export class Dock {
         });
         owner.menu = menu;
         return menu;
+    }
+
+    /** The running Mission Control feature (App Exposé, the Mission Control tile), or null. */
+    missionControl() {
+        return this._ctx.features.instance('mission-control');
     }
 
     openAppMenu(item) {
@@ -528,6 +707,8 @@ export class Dock {
                 hasDesktopFile,
                 autostart,
                 alt: altHeld(),
+                background: !!item.spec.background,
+                showAllWindows: !!this.missionControl(),
             });
             const metaWindows = () => this._desktop.model.windows({ appId: id })
                 .map(w => this._desktop.metaWindow(w.id)).filter(Boolean);
@@ -540,7 +721,9 @@ export class Dock {
                 openAtLogin: on => setAutostart(id, info?.get_filename() ?? null, on)
                     .catch(e => console.error('[Kiwi] dock: Open at Login failed:', e)),
                 showInFiles: () => this._showInFiles(info?.get_filename()),
+                showAllWindows: () => this.missionControl()?.showAppExpose(id),
                 quit: () => app.request_quit(),
+                stopBackground: () => this._background.stop(app),
                 forceQuit: () => metaWindows().forEach(w => w.kill()),
             }, this.gettext);
         };
@@ -596,6 +779,14 @@ export class Dock {
         const menu = this._menuFor(item, item.actor);
         menu.removeAll();
         menu.addAction(_('Open in Files'), () => this.openUri(item.dir.get_uri()));
+        if (!item.isDownloads) {
+            menu.addAction(_('Remove from Dock'), () => {
+                this._ks.setStrv('dock-folders', removeFolder(this.config.folders, item.spec.path));
+                const r = this.rectOf(item);
+                if (r)
+                    this._view.poof(r.x + r.width / 2, r.y + r.height / 2);
+            });
+        }
         menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem(_('View content as')));
         const labels = { automatic: _('Automatic'), fan: _('Fan'), grid: _('Grid'), list: _('List') };
         for (const view of STACK_VIEWS) {
@@ -631,6 +822,12 @@ export class Dock {
             this._showInFiles(f.file.get_path());
             stack.closePopup();
         });
+        if (f.contentType === 'inode/directory') {
+            menu.addAction(_('Add to Dock'), () => {
+                this.addFolderStack(f.file.get_path());
+                stack.closePopup();
+            });
+        }
         menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         menu.addAction(_('Move to Trash'), () => {
             f.file.trash_async(GLib.PRIORITY_DEFAULT, null)
@@ -643,6 +840,7 @@ export class Dock {
 
     dragBegin(item) {
         this._dragging = item;
+        this._magnifier?.setHovered(false);
         this.hold();
         this._view.hideLabel();
         item.actor.hide();
@@ -683,7 +881,26 @@ export class Dock {
         return [...this._view.items()].filter(i => i instanceof AppItem && i.spec.section === 'pinned' && i.id !== id);
     }
 
+    /** Keep a folder in the dock as a stack (after Downloads). */
+    addFolderStack(path) {
+        const next = addFolder(this.config.folders, path, downloadsDir().get_path());
+        if (next !== this.config.folders)
+            this._ks.setStrv('dock-folders', next);
+    }
+
+    // Folders go on the right side of the dock: past the separator before the stacks
+    _folderDropOk(coord) {
+        const sep = this._view.item('separator-system')?.actor;
+        if (!sep)
+            return false;
+        return folderDropAccepted(coord, this.horizontal ? sep.x + sep.width : sep.y + sep.height);
+    }
+
     dragOverDock(source, coord) {
+        if (source?.kiwiFolder) {
+            this._view.hidePlaceholder();
+            return this._folderDropOk(coord) ? DND.DragMotionResult.COPY_DROP : DND.DragMotionResult.CONTINUE;
+        }
         const app = source?.app;
         if (!app || !this.canPin(app))
             return DND.DragMotionResult.CONTINUE;
@@ -694,6 +911,12 @@ export class Dock {
     }
 
     dropOnDock(source, coord) {
+        if (source?.kiwiFolder) {
+            if (!this._folderDropOk(coord))
+                return false;
+            this.addFolderStack(source.kiwiFolder);
+            return true;
+        }
         const app = source?.app;
         if (!app || !this.canPin(app))
             return false;

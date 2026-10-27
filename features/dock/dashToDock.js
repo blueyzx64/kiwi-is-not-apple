@@ -34,7 +34,25 @@ function rebasing() {
  * @returns {ListMembersOwner} its `held` lists the docks Kiwi turned off
  */
 export function keepOtherDocksOff(originals, cleanup) {
-    const owner = new ListMembersOwner(originals, global.settings, 'enabled-extensions', OTHER_DOCKS);
+    // The user enabling Dash to Dock (the Extensions app) writes the list while the Shell is
+    // still enabling it, asynchronously. Taking it out of the list meanwhile makes the Shell
+    // forget it, and the dock would run on beside Kiwi's. So the strip waits until the dock
+    // is active (the Shell has registered it by the next idle) and the Shell can disable it.
+    let waiting = null;
+    const activating = () => OTHER_DOCKS.some(uuid => Main.extensionManager.lookup(uuid)?.state === ExtensionState.ACTIVATING);
+    const defer = fn => {
+        if (activating())
+            waiting = fn;
+        else
+            cleanup.idle(fn, { name: 'dock: other docks off' });
+    };
+    cleanup.connect(Main.extensionManager, 'extension-state-changed', () => {
+        if (waiting && !activating()) {
+            cleanup.idle(waiting, { name: 'dock: other docks off' });
+            waiting = null;
+        }
+    });
+    const owner = new ListMembersOwner(originals, global.settings, 'enabled-extensions', OTHER_DOCKS, { defer });
     // From an idle, never inside enable(): the Shell reacts to the write at once, and its
     // re-base can disable Kiwi itself (see rebasing())
     cleanup.idle(() => owner.sync(true), { name: 'dock: other docks off' });

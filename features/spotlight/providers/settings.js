@@ -40,6 +40,11 @@ export class SettingsProvider {
         return this._items;
     }
 
+    /** Every row (the Actions view lists the Settings panels). */
+    all() {
+        return this._list();
+    }
+
     searchSync(query) {
         return rank(this._list(), query, MAX_RESULTS);
     }

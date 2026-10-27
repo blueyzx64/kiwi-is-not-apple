@@ -66,7 +66,9 @@ export async function processUserGtkFile(dirPath, managedBlock) {
             await fs.makeDirectory(dirPath);
         await fs.writeText(filePath, next);
     } catch (error) {
-        console.error(`[Kiwi] could not update ${filePath}: ${error}`);
+        // Not valid UTF-8: the user's file stays as it is (rewriting it would damage its text)
+        const log = error instanceof fs.NotUtf8Error ? console.warn : console.error;
+        log(`[Kiwi] could not update ${filePath}: ${error}`);
     }
 }
 
