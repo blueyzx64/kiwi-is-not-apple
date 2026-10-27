@@ -1,7 +1,7 @@
 # R2D: round 2 Stage Manager fixer (worktree /home/user/kiwi-r2-stage, branch v3/r2-stage)
 
 ## Status
-working (nothing edited yet; analysis done)
+done: v3/r2-stage (committed; final run-f44 20: 0 Kiwi errors, 8/8 probes)
 
 ## Plan
 1. Strip: drop recentCount cap (model, schema, prefs, index); geometry stripLayout scales to minScale then scrolls;
@@ -23,3 +23,6 @@ working (nothing edited yet; analysis done)
 
 ## Handoff
 Implement per Plan; then run harness (baseline vs after).
+
+- 2026-10-27: implemented all three fixes; before/after runs: strip 6 -> 13 slots + scroll (0 jumps, p95 21.5 ms); thumbnail PSNR vs Lanczos ref 17 -> 29 dB, Laplacian ratio 12 -> 1.25 (features/stageManager/thumbEffect.js, area-averaging Shell.GLSLEffect on clones, corners per tap); edge-drag tiles and stays on stage; keyboard resize (alt+F8) never drops. Synthetic pointer resize grab never started at window edge (unproven by pointer).
+- Findings: mutter ignores set_content_scaling_filters for window clones; roundedCorners/effect.js vfunc_pre_paint now returns false for clones (R2B: minimal edit). Overview clones lose app-extra corners.
