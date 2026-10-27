@@ -233,14 +233,13 @@ export class ClipboardPopover {
         return box;
     }
 
-    // ---- glass: a translucent fill on the rounded menu box itself (lib/glass.js) ----
+    // ---- glass: the rounded menu box, its BoxPointer bin carries the shadow (lib/glass.js) ----
 
     _attachGlass() {
-        const box = this._menu.box;
-        if (!box)
+        if (!this._menu.box)
             return;
         try {
-            this._glass = Glass.attach(box, { surface: 'overlays', role: 'large' });
+            this._glass = Glass.attachMenu(this._menu, { surface: 'overlays' });
         } catch (e) {
             console.warn(`[Kiwi] clipboard popover glass failed: ${e.message}`);
         }

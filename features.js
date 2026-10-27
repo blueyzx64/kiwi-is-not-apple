@@ -93,6 +93,12 @@ export const FEATURES = [
         load: async () => (await import('./features/spotlight/index.js')).SpotlightFeature,
     },
     {
+        // Auto Light/Dark, the accent and the highlight colour; each part has its own key and
+        // owns nothing while that key is at its default
+        id: 'appearance',
+        load: async () => (await import('./features/appearance/scheme.js')).Appearance,
+    },
+    {
         id: 'popup-menu-styling', setting: 'popup-menu-styling',
         load: async () => (await import('./features/appearance/index.js')).PopupMenuStyling,
     },

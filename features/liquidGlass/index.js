@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Liquid Glass: applies lib/glass.js to the shell surfaces the user picked.
+// Liquid Glass: applies lib/glass.js to the stock Shell surfaces Kiwi restyles.
 //
-// Glass is a translucent fill on the surface actor itself (no blur, no extra layer), so
-// every surface keeps its own rounded shape:
-// - panel   : the top bar.
-// - menus   : Control Center and the date/calendar menu. The fill goes on the menu box
-//             (.popup-menu-content), the rounded bubble; the BoxPointer around it stays
-//             untouched (an -arrow-background-color there draws a square backing).
-// - dock    : Kiwi's own dock attaches itself (phase 1).
-// - overlays: not attached here. Spotlight, Quick Paste, the clipboard popover and the
-//             Stage Manager strip attach themselves with Glass.attach(actor, {surface: 'overlays'}).
+// The look lives on the surface actor itself (lib/glass.js: classes and a fill fragment, no
+// blur, no extra layer), so every surface keeps its own rounded shape:
+// - panel   : the top bar (the menu bar feature may take it over).
+// - menus   : Control Center and the calendar card, through Glass.attachMenu(): the menu box
+//             is the glass, its BoxPointer bin carries the drop shadow.
+// - dock    : Kiwi's own dock attaches itself.
+// - overlays: not attached here. Spotlight and Quick Paste (lib/modalSurface.js), the
+//             clipboard popover and the Stage Manager floor attach themselves.
 //
 // Everything lives in the entry's CleanupRegistry; disable() has nothing left to do.
 
@@ -17,16 +16,6 @@ import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import { Glass } from '../../lib/glass.js';
-
-/** True when text on this actor is light, i.e. the glass behind it must be the dark one. */
-function _textIsLight(actor) {
-    try {
-        const c = actor.get_theme_node().get_foreground_color();
-        return (0.2126 * c.red + 0.7152 * c.green + 0.0722 * c.blue) / 255 > 0.5;
-    } catch (_e) {
-        return true;
-    }
-}
 
 export class LiquidGlass {
     constructor(ctx, cleanup) {
@@ -39,7 +28,7 @@ export class LiquidGlass {
     enable() {
         const cleanup = this._cleanup;
 
-        // Foreground colour of the theme decides dark or light glass
+        // The theme's text colour decides dark or light glass: re-read it on a theme change
         cleanup.connect(St.ThemeContext.get_for_stage(global.stage), 'changed', () => this._refreshAll());
         cleanup.add(() => this._detachAll());
 
@@ -78,11 +67,7 @@ export class LiquidGlass {
 
     _attachPanel() {
         const panel = Main.panel;
-        const handle = Glass.attach(panel, {
-            surface: 'panel',
-            layers: 'glass',
-            isDark: () => _textIsLight(panel),
-        });
+        const handle = Glass.attach(panel, { surface: 'panel' });
 
         const reg = this._cleanup;
         const sync = (inOverview = Main.overview.visible) => {
@@ -118,13 +103,8 @@ export class LiquidGlass {
         for (const menu of this._menuTargets()) {
             if (this._menus.has(menu))
                 continue;
-            // The rounded bubble is the menu box; its theme radius is kept as is
-            const box = menu.box;
-            const handle = Glass.attach(box, {
-                surface: 'menus',
-                role: 'large',
-                isDark: () => _textIsLight(box),
-            });
+            // The theme's text colour on the menu box picks dark or light glass (lib/glass.js)
+            const handle = Glass.attachMenu(menu);
             const state = { handle };
             // Menu destroyed under us: forget it (the handle dies with the box)
             state.destroyToken = this._cleanup.connect(menu, 'destroy', () => this._menus.delete(menu));
