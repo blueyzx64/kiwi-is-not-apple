@@ -5,7 +5,8 @@
 // One KiwiRoundedCornersEffect (effect.js) per window actor, added on enable and for every
 // window created later (display `window-created`). The effect is disabled, not removed, while
 // the window does not qualify (maximized, tiled, fullscreen, excluded app); see model.qualifies.
-// Geometry follows size-changed / position-changed and the maximize and fullscreen notifies.
+// Geometry follows size-changed; whether a window qualifies follows the maximize, fullscreen,
+// type and identity notifies.
 // Disable removes every effect and disconnects every signal (per-window owners plus the
 // feature's CleanupRegistry). Clones (overview, Stage Manager strip and flights) paint the
 // source actor's effects, so they get the corners with no extra work.
@@ -24,10 +25,12 @@ const TYPES = new Map([
     [Meta.WindowType.MODAL_DIALOG, 'modal-dialog'],
 ]);
 
+// What can change whether a window gets corners. A move never changes the frame inside its
+// actor, so position-changed (every frame of a drag) is not watched; a resize only moves the
+// corners (size-changed -> geometry only, no re-evaluation).
 const WINDOW_SIGNALS = [
-    'size-changed', 'position-changed', 'notify::maximized-horizontally',
-    'notify::maximized-vertically', 'notify::fullscreen', 'notify::window-type',
-    'notify::title', 'notify::wm-class', 'notify::gtk-application-id',
+    'notify::maximized-horizontally', 'notify::maximized-vertically', 'notify::fullscreen',
+    'notify::window-type', 'notify::title', 'notify::wm-class', 'notify::gtk-application-id',
 ];
 
 const SHELL_PID = new Gio.Credentials().get_unix_pid();
@@ -111,6 +114,7 @@ export class RoundedCorners {
         this._windows.set(actor, rec);
         for (const sig of WINDOW_SIGNALS)
             win.connectObject(sig, () => this._sync(actor), rec);
+        win.connectObject('size-changed', () => this._syncGeometry(rec), rec);
         actor.connectObject('destroy', () => this._untrack(actor, true), rec);
         this._sync(actor);
     }
@@ -159,10 +163,15 @@ export class RoundedCorners {
             return;
         const { win, effect } = rec;
         const on = qualifies(this._info(win), this._config);
-        if (on)
-            effect.setGeometry(frameInActor(win.get_frame_rect(), win.get_buffer_rect()),
-                this._config.radius, this._config.corners);
         if (effect.enabled !== on)
             effect.enabled = on;
+        this._syncGeometry(rec);
+    }
+
+    // Where the corners go: the frame inside the actor (shadows and CSD margins excluded)
+    _syncGeometry({ win, effect }) {
+        if (effect.enabled)
+            effect.setGeometry(frameInActor(win.get_frame_rect(), win.get_buffer_rect()),
+                this._config.radius, this._config.corners);
     }
 }

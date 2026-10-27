@@ -381,10 +381,13 @@ export class NotchView {
     }
 
     // Centred on the monitor, glued to its top edge
-    _geometry(w, h) {
+    // Centre the island at the top of its monitor. Called on every frame of the spring, so it
+    // sets the actor directly and allocates nothing.
+    _setGeometry(island, w, h) {
         const monitor = this._monitor();
         w = Math.round(w);
-        return { x: monitor.x + Math.round((monitor.width - w) / 2), y: monitor.y, width: w, height: Math.round(h) };
+        island.set_position(monitor.x + Math.round((monitor.width - w) / 2), monitor.y);
+        island.set_size(w, Math.round(h));
     }
 
     _place(size, animate) {
@@ -399,7 +402,7 @@ export class NotchView {
         island.remove_all_transitions();
         this._stopSpring();
         if (!animate || !this._motion() || !island.mapped) {
-            island.set(this._geometry(size.w, size.h));
+            this._setGeometry(island, size.w, size.h);
             return;
         }
         // A spring on a timeline (Clutter's easing modes have no spring). Each frame sets the
@@ -413,14 +416,14 @@ export class NotchView {
         this._timelineId = tl.connect('new-frame', () => {
             const elapsed = tl.get_elapsed_time();
             const k = elapsed >= settle ? 1 : spring(elapsed / 1000, params);
-            island.set(this._geometry(from.w + (size.w - from.w) * k, from.h + (size.h - from.h) * k));
+            this._setGeometry(island, from.w + (size.w - from.w) * k, from.h + (size.h - from.h) * k);
             if (elapsed >= settle)
                 this._stopSpring();
         });
         tl.connect('completed', () => {
             if (this._timeline === tl) {
                 this._stopSpring();
-                island.set(this._geometry(size.w, size.h));
+                this._setGeometry(island, size.w, size.h);
             }
         });
         tl.start();
