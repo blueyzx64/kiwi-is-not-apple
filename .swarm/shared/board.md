@@ -214,3 +214,10 @@ No more installer work: no new pieces (Trash-drag uninstall, fly-to-dock, update
     - tab-switch ~95 ms frame (bodies are prebuilt now; the cost is at animation start, cause unknown);
     - "kiwi-notch needs an allocation" warnings (12, unchanged);
     - the notch Widgets tab not yet on Widgets.acquire (needs its own change).
+- FX7 → merged:
+  - Esc during a tile drag cancels.
+  - Hide is not a bug (`app.activate()` from a script has no event time).
+  - Colour filter: the black wallpaper is FIXED by paint-volume opt-out plus one effect per uiGroup child; it costs nothing measurable.
+  - SM: first flight frame fixed, the strip reaches x=0, the panel is removed so thumbnails float (macOS), Split View exit restores the size.
+  - The outline follows the scheme. minimizeEffect blocks the exact stock handler ids.
+  - Limit: the GNOME 51 snippet shader path lacks the paint-volume override.
