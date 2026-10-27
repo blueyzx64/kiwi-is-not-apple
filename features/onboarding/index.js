@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Onboarding: the Shell's part of the Setup Assistant. While the `onboarding` key is 'new'
-// (features.js runs this only then), it waits until the session has started and is idle,
-// then opens Kiwi's preferences once with the key set to 'requested'; prefs.js presents the
-// assistant (prefs/setupAssistant.js). Not in a session other than the user's, and never over
+// (features.js runs this only then), once the session is idle it opens Kiwi's preferences
+// once with the key set to 'requested'; prefs.js presents the assistant
+// (prefs/setupAssistant.js). Not in a session other than the user's, and never over
 // the overview (GNOME starts in it) or another modal such as GNOME's welcome dialog: then it
 // asks again when the overview closes or a window gets the focus. Rules: model.js.
 //
-// Shell API: Main.layoutManager 'startup-complete' and its private _startingUp (checked on
-// GNOME 50; it is how ui/main.js itself tells), Main.overview 'hidden', global.display
-// notify::focus-window,
+// Shell API: Main.overview 'hidden', global.display notify::focus-window,
 // Main.sessionMode.currentMode, Main.modalCount, Extension.openPreferences().
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
@@ -23,11 +21,9 @@ export class Onboarding {
 
     enable() {
         this._waiting = this._queued = false;
-        const offer = () => this._cleanup.idle(() => this._offer(), { name: 'kiwi onboarding' });
-        if (Main.layoutManager._startingUp)
-            this._cleanup.connect(Main.layoutManager, 'startup-complete', offer);
-        else
-            offer();
+        // An idle after enable: at login the overview (or GNOME's welcome dialog) is up by then,
+        // so the offer waits for it (_askAgainLater)
+        this._cleanup.idle(() => this._offer(), { name: 'kiwi onboarding' });
     }
 
     disable() {

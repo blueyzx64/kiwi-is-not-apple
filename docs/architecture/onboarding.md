@@ -21,7 +21,7 @@ own AppKit-style skin when it is what installed Kiwi (research option B).
 ## Flow
 1. `onboarding` is `'new'` after the first enable. `features.js` runs the `onboarding` feature
    only then.
-2. After `startup-complete` and an idle, the feature asks `model.offerDecision`: only the normal
+2. After an idle, the feature asks `model.offerDecision`: only the normal
    user session (never `initial-setup`); while the overview (GNOME starts in it) or another
    modal (GNOME's welcome dialog) is up, it asks again when the overview closes or a window
    gets the focus. Then it sets `'requested'` and calls `openPreferences()`. If the prefs
