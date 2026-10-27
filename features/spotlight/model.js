@@ -5,16 +5,18 @@
 // Item shape (what providers return):
 //   { id, kind, title, subtitle?, group?, boost?, keywords?[], ...providerData }
 //   kind: 'app' | 'setting' | 'action' | 'file' | 'external' | 'clipboard' | 'calc' | 'web'
+//         | 'command' (a Kiwi action) | 'app-action' (a .desktop action) | 'menu' (an app menu item)
+//         | 'filter' (a "/" filter suggestion) | 'history' (a past query)
 //   External search-provider results other than Files set `group: 'other'`.
 
-export const GROUPS = ['top', 'apps', 'settings', 'documents', 'clipboard', 'calculator', 'other', 'web'];
+export const GROUPS = ['top', 'apps', 'actions', 'menu', 'settings', 'documents', 'clipboard', 'calculator', 'other', 'web'];
 
 /** Fixed order of the sections after the top hit. */
-export const GROUP_ORDER = ['apps', 'settings', 'documents', 'clipboard', 'calculator', 'other', 'web'];
+export const GROUP_ORDER = ['apps', 'actions', 'menu', 'settings', 'documents', 'clipboard', 'calculator', 'other', 'web'];
 
 /** Default row limits per section. */
 export const GROUP_LIMITS = {
-    top: 1, apps: 6, settings: 4, documents: 5, clipboard: 4, calculator: 1, other: 4, web: 1,
+    top: 1, apps: 6, actions: 4, menu: 4, settings: 4, documents: 5, clipboard: 4, calculator: 1, other: 4, web: 1,
 };
 
 // A weak match must not become the top hit.
@@ -147,6 +149,8 @@ export function groupOf(item) {
     switch (item.kind) {
     case 'app': return 'apps';
     case 'setting': case 'action': return 'settings';
+    case 'command': case 'app-action': return 'actions';
+    case 'menu': return 'menu';
     case 'clipboard': return 'clipboard';
     case 'calc': return 'calculator';
     case 'web': return 'web';
@@ -198,12 +202,23 @@ export function buildSections(byGroup, opts = {}) {
     return sections;
 }
 
-/** Empty query: recent apps and recent clipboard. */
+/**
+ * Empty query: recent results and searches (search history), the most used apps, and the
+ * recent clipboard (only when the caller passes it: it is off by default for privacy).
+ */
 export function buildEmptySections(recentApps, recentClips, opts = {}) {
-    const limits = { suggestions: 6, clipboard: 4, ...(opts.limits ?? {}) };
+    const limits = { recent: 4, history: 3, suggestions: 6, clipboard: 4, ...(opts.limits ?? {}) };
     const sections = [];
-    if (recentApps.length > 0)
-        sections.push({ id: 'suggestions', items: recentApps.slice(0, limits.suggestions) });
+    const recent = opts.recent ?? [];
+    const history = opts.history ?? [];
+    if (recent.length > 0)
+        sections.push({ id: 'recent', items: recent.slice(0, limits.recent) });
+    if (history.length > 0)
+        sections.push({ id: 'history', items: history.slice(0, limits.history) });
+    const recentIds = new Set(recent.map(r => r.id));
+    const apps = recentApps.filter(a => !recentIds.has(a.id));
+    if (apps.length > 0)
+        sections.push({ id: 'suggestions', items: apps.slice(0, limits.suggestions) });
     if (recentClips.length > 0)
         sections.push({ id: 'clipboard', items: recentClips.slice(0, limits.clipboard) });
     return sections;

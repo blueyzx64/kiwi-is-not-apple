@@ -20,7 +20,7 @@ import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as SystemActions from 'resource:///org/gnome/shell/misc/systemActions.js';
 
-import { parseOsRelease, parseRecentXbel } from './model.js';
+import { fillPlaceholders, parseOsRelease, parseRecentXbel } from './model.js';
 import { menuHeading, menuItem } from './menuItems.js';
 import { readText } from './systemInfo.js';
 
@@ -92,7 +92,7 @@ class KiwiLogoMenu extends PanelMenu.Button {
         const userName = GLib.get_real_name() || GLib.get_user_name();
         const session = [
             [add(_('Lock Screen'), () => sys.activateLockScreen(), { accel: accel('screensaver') }), 'can-lock-screen'],
-            [add(_('Log Out %s…').replace('%s', userName), () => sys.activateLogout(), { accel: accel('logout') }), 'can-logout'],
+            [add(fillPlaceholders(_('Log Out %s…'), userName), () => sys.activateLogout(), { accel: accel('logout') }), 'can-logout'],
         ];
         for (const [item, prop] of [...power, ...session]) {
             const sync = () => (item.visible = !!sys[prop.replace(/-(.)/g, (_m, c) => c.toUpperCase())]);
@@ -149,7 +149,7 @@ class KiwiLogoMenu extends PanelMenu.Button {
                             try {
                                 Gio.AppInfo.launch_default_for_uri_finish(res);
                             } catch (e) {
-                                Main.notifyError(_('Could not open %s').replace('%s', doc.name), e.message);
+                                Main.notifyError(fillPlaceholders(_('Could not open %s'), doc.name), e.message);
                             }
                         }),
                 }));

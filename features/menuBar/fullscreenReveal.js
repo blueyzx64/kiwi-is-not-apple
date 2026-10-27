@@ -30,6 +30,7 @@ export class FullscreenReveal {
         this._revealed = false;
         this._edge = null;
         this._anim = null;
+        this._menuWatch = 0;     // token of the one handler waiting for the open menu to close
     }
 
     /** True while the bar is slid in over a full-screen window (tests, the harness). */
@@ -115,7 +116,7 @@ export class FullscreenReveal {
 
     /** Slide the bar in over the full-screen window. */
     reveal() {
-        if (this._revealed || !this._inFullscreen())
+        if (this._revealed || !this._edge || !this._inFullscreen())
             return;
         const panelBox = Main.layoutManager.panelBox;
         this._revealed = true;
@@ -127,21 +128,32 @@ export class FullscreenReveal {
             { duration: 'short', curve: 'enter' }, this._cleanup);
     }
 
+    /** Slide the bar away again once no menu is open and the pointer is off it. */
+    concealWhenIdle() {
+        this._maybeConceal();
+    }
+
     _maybeConceal() {
         if (!this._revealed || Main.panel.hover)
             return;
         const menu = Main.panel.menuManager.activeMenu;
         if (menu) {
-            // Wait for the menu to close, then check the pointer again
-            const id = menu.connect('open-state-changed', (_m, open) => {
+            // Wait for the menu to close, then check the pointer again (one handler at a time)
+            this._unwatchMenu();
+            this._menuWatch = this._cleanup.connect(menu, 'open-state-changed', (_m, open) => {
                 if (open)
                     return;
-                menu.disconnect(id);
+                this._unwatchMenu();
                 this._maybeConceal();
             });
             return;
         }
         this._conceal(true);
+    }
+
+    _unwatchMenu() {
+        this._cleanup.release(this._menuWatch);
+        this._menuWatch = 0;
     }
 
     _conceal(animate) {
