@@ -34,6 +34,13 @@ export const EVENTS = Object.freeze({
     'feature-changed': { id: 'string', active: 'boolean' },
     // Requests between features (the owner of the policy listens, see features.js)
     'minimize-requested': { window: 'Meta.Window', source: 'string' },
+    // The menu bar (features/menuBar): the clock was clicked. The Notification Center (P5)
+    // opens on it; until then the stock calendar card opens as well.
+    'notification-center-requested': { source: "string ('clock')" },
+    // App-menu commands for the window manager (core/appMenus/commands.js). The owner of the
+    // policy listens; with no listener the app menu runs a plain fallback itself.
+    'app-hide-requested': { appId: 'string|null', mode: "'hide' | 'others' | 'all'" },
+    'window-tile-requested': { window: 'Meta.Window', mode: "'left' | 'right'" },
 });
 
 export class EventHub {

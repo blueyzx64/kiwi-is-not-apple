@@ -28,6 +28,7 @@ import { EventHub } from './core/events.js';
 import { DesktopService } from './core/desktop.js';
 import { LayoutService } from './core/layout.js';
 import { Motion } from './core/motion.js';
+import { AppMenuService } from './core/appMenus/service.js';
 import { OriginalsStore, STORE_KEY, restoreStale } from './core/originals.js';
 import { FEATURES } from './features.js';
 
@@ -45,7 +46,7 @@ const openSettings = schemaId =>
  * gets the same ctx:
  *   extension, settings (Kiwi's Gio.Settings), gettext, features ({instance(id)}),
  *   events (core/events.js), desktop (core/desktop.js), layout (core/layout.js),
- *   motion (core/motion.js), originals (core/originals.js)
+ *   motion (core/motion.js), originals (core/originals.js), appMenus (core/appMenus/service.js)
  */
 export default class KiwiExtension extends Extension {
     enable() {
@@ -70,6 +71,7 @@ export default class KiwiExtension extends Extension {
         this._layout = new LayoutService(this._events);
         this._motion = new Motion(this._events);
         this._motion.start();
+        this._appMenus = new AppMenuService({ events: this._events, desktop: this._desktop, layout: this._layout });
 
         this._features = new FeatureRegistry(CleanupRegistry, {
             onChange: (id, active) => this._events?.emit('feature-changed', { id, active }),
@@ -91,6 +93,7 @@ export default class KiwiExtension extends Extension {
             layout: this._layout,
             motion: this._motion,
             originals: this._originals,
+            appMenus: this._appMenus,
         });
 
         // What Kiwi 2.x left in the user's files for features v3 dropped: once, in the
@@ -106,11 +109,12 @@ export default class KiwiExtension extends Extension {
         this._cleanup = null;
         this._features?.stop();
         this._features = null;
+        this._appMenus?.stop();
         this._motion?.stop();
         this._layout?.stop();
         this._desktop?.stop();
         this._events?.clear();
-        this._motion = this._layout = this._desktop = this._events = null;
+        this._appMenus = this._motion = this._layout = this._desktop = this._events = null;
         this._originals = null;
         Glass.configure(null);
         this._settings = null;

@@ -22,11 +22,15 @@
 // do not push claimed actors out of place. It never destroys actors; the owner does.
 //
 // Claims in use and the order they give (left to right; foreign = stock or other extensions):
-//   left box :  [foreign...] [window-controls]
-//   right box:  [foreign...] [show-desktop] [clipboard] [quickSettings] [foreign...]
+//   left box :  [kiwi-menubar-logo] [foreign...] [window-controls] [kiwi-menubar-apps]
+//   right box:  [foreign...] [show-desktop] [clipboard] [kiwi-menubar-privacy] [quickSettings]
+//               [foreign...]
 //   (window-controls on the right instead: last slot of the right box)
 //   center box: notch placeholder
-// clipboard {before: quickSettings}; show-desktop {before: clipboard, quickSettings}.
+// clipboard {before: quickSettings}; show-desktop {before: clipboard, quickSettings};
+// kiwi-menubar-logo {first}; window-controls {before: kiwi-menubar-apps};
+// kiwi-menubar-apps {after: activities, kiwi-menubar-logo, window-controls};
+// kiwi-menubar-privacy {before: quickSettings}.
 //
 // Stock items the menu bar does not show are hidden here too, so one module knows what the
 // top bar holds:
