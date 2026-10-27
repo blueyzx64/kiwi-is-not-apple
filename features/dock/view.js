@@ -2,7 +2,8 @@
 // DockView: the dock's actors.
 //
 //   band     the edge claim's chrome actor (core/layout): exactly the claimed rect, touching
-//            the edge, so the Shell makes a strut from it; not reactive, clips what slides out
+//            the edge, so the Shell makes a strut from it; not reactive. It clips only while the
+//            frame is slid away (auto-hide); otherwise bounces and magnified icons draw above it
 //   edge     a thin reactive line on the screen edge: the auto-hide reveal zone
 //   frame    reactive, holds the pill plus the floating gap to the edge, so moving from the
 //            edge to the icons never leaves the dock (auto-hide hover)
@@ -43,7 +44,7 @@ export class DockView {
         this._slide = null;
         this.band = cleanup.actor(new St.Widget({
             name: 'kiwi-dock', style_class: 'kiwi-dock-band',
-            layout_manager: new Clutter.BinLayout(), reactive: false, clip_to_allocation: true,
+            layout_manager: new Clutter.BinLayout(), reactive: false, clip_to_allocation: false,
         }));
         this._label = cleanup.actor(new St.Label({ style_class: 'kiwi-dock-label', opacity: 0, visible: false }));
         Main.layoutManager.uiGroup.add_child(this._label);
@@ -251,8 +252,15 @@ export class DockView {
             translation_y: shown || position !== 'bottom' ? 0 : off,
         };
         this._slide?.cancel();
-        this._slide = this._host.motion.ease(this.frame, to,
-            { duration: 'medium', curve: shown ? 'emphasized' : 'exit' }, this._buildCleanup);
+        // What slides out of the band stays hidden; what is drawn above a resting dock is not cut
+        this.band.clip_to_allocation = true;
+        this._slide = this._host.motion.ease(this.frame, to, {
+            duration: 'medium', curve: shown ? 'emphasized' : 'exit',
+            onDone: ok => {
+                if (ok && shown && this.alive)
+                    this.band.clip_to_allocation = false;
+            },
+        }, this._buildCleanup);
     }
 
     get shown() {

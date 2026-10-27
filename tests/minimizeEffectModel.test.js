@@ -1,7 +1,7 @@
 // Run: gjs -m tests/minimizeEffectModel.test.js
 // features/minimizeEffect/model.js: the Genie mesh and the effect choice.
 import {
-    GENIE_TILES, chooseMode, genieFrame, genieOpacity, genieVertex, readConfig, scaleTarget,
+    chooseMode, genieFrame, genieOpacity, genieRow, genieVertex, readConfig, scaleTarget,
 } from '../features/minimizeEffect/model.js';
 
 let failed = 0;
@@ -17,6 +17,8 @@ function near(a, b, msg = '', tol = 0.5) {
         throw new Error(`${msg} expected ~${b}, got ${a}`);
 }
 
+// The mesh the tests sample: few points across the rows, many along the funnel
+const GENIE_TILES = Object.freeze({ across: 4, along: 40 });
 const ENV = { animations: true, reducedMotion: false };
 const base = { effect: 'genie', env: ENV, normal: true, flagged: false, hasTarget: true, monitorSized: false };
 const WIN = { x: 200, y: 100, width: 600, height: 400 };
@@ -129,6 +131,28 @@ test('bottom: the sides are smooth curves (second differences stay small)', () =
 test('a window lower than the icon is not pulled away from the dock', () => {
     const f = genieFrame('bottom', { x: 0, y: 0, width: 1280, height: 800 }, ICON);
     eq(f.reach, 0);
+});
+test('rows: ordered across the window and the curve carries on past its edges', () => {
+    const f = genieFrame('bottom', WIN, ICON);
+    const row = { s: 0, centre: 0, width: 0 };
+    for (const p of [0, 0.3, 0.6, 0.9, 1]) {
+        let last = -Infinity;
+        for (let i = -2; i <= 12; i++) {
+            const s = genieRow(f, i / 10, p, row).s;
+            if (s < last)
+                throw new Error(`rows fold at p=${p}, d=${i / 10}`);
+            last = s;
+        }
+    }
+    eq(f.winW, WIN.width);
+    eq(f.winH, WIN.height);
+});
+test('rows: the near edge of the window lands in the icon at the end', () => {
+    const f = genieFrame('bottom', WIN, ICON);
+    const row = genieRow(f, 1, 1, { s: 0, centre: 0, width: 0 });
+    near(row.s, ICON.y + ICON.height / 2, 'near edge s');
+    near(row.centre, ICON.x + ICON.width / 2, 'near edge centre');
+    near(row.width, ICON.width, 'near edge width');
 });
 test('opacity: solid, then gone at the end', () => {
     eq(genieOpacity(0), 255);
