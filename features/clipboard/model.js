@@ -679,19 +679,8 @@ export function orphanFiles(listed, history) {
 
 /* --------------------------------------------------------------- paste */
 
-const TERMINAL_HINTS = [
-    'gnome-terminal', 'kgx', 'org.gnome.console', 'org.gnome.terminal', 'ptyxis',
-    'org.gnome.ptyxis', 'tilix', 'kitty', 'alacritty', 'xterm', 'konsole', 'terminator',
-    'foot', 'wezterm', 'org.wezfurlong.wezterm', 'xfce4-terminal', 'urxvt', 'st-256color',
-    'guake', 'yakuake', 'terminology', 'cool-retro-term', 'blackbox', 'com.raggesilver.blackbox',
-    'contour', 'rio', 'ghostty', 'com.mitchellh.ghostty',
-];
-
-/** Which paste chord the previous focus wants: terminals use Ctrl+Shift+V. */
-export function pasteChordFor(wmClass) {
-    const k = appKey(wmClass);
-    return k && TERMINAL_HINTS.some(t => k === t || k.endsWith(`.${t}`)) ? 'ctrl-shift-v' : 'ctrl-v';
-}
+// Shared with every feature that types into a window (lib/pasteModel.js)
+export { pasteChordFor } from '../../lib/pasteModel.js';
 
 /* ---------------------------------------------------------------- view */
 

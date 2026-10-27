@@ -1,6 +1,6 @@
 // Run: gjs -m tests/showDesktopModel.test.js
 import {
-    PEEK, SPEEDS, chooseEdge, durationFor, edgeOffset, focusEnds, isMovable, planReveal,
+    PEEK, SPEEDS, wallpaperClickToggles, chooseEdge, durationFor, edgeOffset, focusEnds, isMovable, planReveal,
 } from '../features/showDesktop/model.js';
 
 let failed = 0;
@@ -118,6 +118,20 @@ test('durationFor: known speeds and fallback', () => {
     eq(durationFor('normal'), 300);
     eq(durationFor('warp'), 300);
     eq(durationFor(undefined), 300);
+});
+
+test('wallpaperClickToggles: always, only in Stage Manager, never', () => {
+    const t = (mode, stageActive = false, stageHandles = false, blocked = false) =>
+        wallpaperClickToggles({ mode, stageActive, stageHandles, blocked });
+    eq(t('always'), true);
+    eq(t('stage-manager'), false);
+    eq(t('never'), false);
+    eq(t('never', true, false), false);
+    eq(t('always', false, false, true), false);
+    // Stage Manager on: it answers when its own option is on, Show Desktop otherwise
+    eq(t('always', true, true), false);
+    eq(t('stage-manager', true, false), true);
+    eq(t('bogus'), false);
 });
 
 if (failed) {

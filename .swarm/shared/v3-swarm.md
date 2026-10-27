@@ -20,3 +20,19 @@
 
 ## Board
 Kept in `board.md` (orchestrator-owned): package → agent → branch → status.
+
+## Hard rule
+Never call any `mcp__claude-code-remote__*` tool (sessions, triggers, interrupts). They act outside this swarm.
+
+## Verified GNOME 50 facts (from H4, checked on Fedora 44's gnome-shell 50.x and the 50.0 tag)
+- **Reduced motion:** `org.gnome.desktop.a11y.interface reduced-motion` (enum `no-preference` | `reduce`). The Shell itself doesn't read it; it only uses `org.gnome.desktop.interface enable-animations` (St.Settings). Kiwi honours both via `core/motion` (`watchReducedMotion` in lib/compat.js).
+- **Notifications:**
+  - There is no NotificationGroup class. Grouping is one `MessageTray.Source` per app (notificationDaemon `_getSourceForApp`); the UI group is `NotificationMessageGroup` in messageList.js.
+  - Source signals: `notification-added`, `notification-removed`, `notification-request-banner`, `destroy`.
+  - MessageTray signals: `source-added`, `source-removed`, `queue-changed`; `getSources()`.
+  - Notification props: `urgency` (LOW 0, NORMAL 1, HIGH 2, CRITICAL 3), `isTransient`, `resident`, `acknowledged`, `for-feedback`. Actions come from `addAction(label, cb)`, with `action-added`/`action-removed` signals.
+- **Input Capture portal:** available on F44 (xdg-desktop-portal-gnome 50, org.gnome.Mutter.InputCapture over libei).
+- **localsearch 3.11:** does NOT index `user.xdg.tags`. Bus `org.freedesktop.LocalSearch3`; per-root SPARQL endpoint objects at `/org/freedesktop/LocalSearch3/<root>` (interface `org.freedesktop.Tracker3.Endpoint`).
+- **GNOME Clocks 50:** no D-Bus API for running timers. Kiwi keeps its own timer service in core (Spotlight, notch).
+- **Night Light location:** `org.gnome.settings-daemon.plugins.color night-light-last-coordinates` `(dd)`; the default `(91,181)` means unknown.
+- **Colour filters:** GNOME 50 has no greyscale or colour-blind keys (only magnifier-bound colour settings). Kiwi must apply its own effect on the stage.

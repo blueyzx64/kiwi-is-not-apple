@@ -23,7 +23,7 @@ import { DesktopAppInfo } from '../../lib/compat.js';
 import { Glass } from '../../lib/glass.js';
 import { ModalSurface } from '../../lib/modalSurface.js';
 import { DockItem } from './items.js';
-import { FAN_MAX, downloadEntry, downloadFinished, fanLayout, isHorizontal, sortDownloads, stackView } from './model.js';
+import { FAN_MAX, STACK_PAGE, downloadEntry, downloadFinished, fanLayout, isHorizontal, isPartialWrite, sortDownloads, stackView } from './model.js';
 
 Gio._promisify(Gio.File.prototype, 'enumerate_children_async', 'enumerate_children_finish');
 Gio._promisify(Gio.FileEnumerator.prototype, 'next_files_async', 'next_files_finish');
@@ -36,6 +36,7 @@ const ATTRIBUTES = ['standard::name', 'standard::display-name', 'standard::is-hi
     'standard::icon', 'standard::content-type', 'time::modified', 'time::changed', 'time::created',
     'thumbnail::path'].join(',');
 const BATCH = 64;
+const REFRESH_DELAY_MS = 500;   // events of one burst (a copy, an extraction) share one read
 const PILE = 3;               // files drawn in the dock tile
 const GRID_COLUMNS = 5;
 const GRID_ROWS_VISIBLE = 3;
@@ -51,13 +52,25 @@ export function downloadsDir() {
     return Gio.File.new_for_path(path);
 }
 
-export class DownloadsItem extends DockItem {
-    constructor(host, spec) {
-        super(host, spec, host.gettext('Downloads'));
-        this.dir = downloadsDir();
+/**
+ * A folder kept in the dock as a stack (macOS Stacks): the Downloads stack, or a folder the
+ * user dropped on the right side of the dock.
+ */
+export class FolderStackItem extends DockItem {
+    /**
+     * @param {object} host the Dock
+     * @param {object} spec {kind: 'downloads'|'folder', id, path?}
+     * @param {Gio.File} dir
+     * @param {string} name accessible name and hover label
+     */
+    constructor(host, spec, dir, name) {
+        super(host, spec, name);
+        this.dir = dir;
+        this.isDownloads = spec.kind === 'downloads';
         this.files = [];             // [{entry, file, gicon}] newest first
         this._reading = false;
         this._dirty = false;
+        this._refreshToken = 0;
         this._cancellable = new Gio.Cancellable();
         this.cleanup.add(() => this._cancellable.cancel());
         this._pile = new St.Widget({ layout_manager: new Clutter.BinLayout(), x_expand: true, y_expand: true });
@@ -66,7 +79,10 @@ export class DownloadsItem extends DockItem {
         this.cleanup.add(() => this.closePopup());
         try {
             const monitor = this.dir.monitor_directory(Gio.FileMonitorFlags.WATCH_MOVES, this._cancellable);
-            this.cleanup.connect(monitor, 'changed', () => this.refresh());
+            this.cleanup.connect(monitor, 'changed', (_m, file, _other, event) => {
+                if (!isPartialWrite(file.get_basename(), event === Gio.FileMonitorEvent.CHANGED))
+                    this._refreshSoon();
+            });
             this.cleanup.add(() => monitor.cancel());
         } catch (e) {
             console.warn('[Kiwi] dock: cannot watch Downloads:', e.message);
@@ -77,6 +93,16 @@ export class DownloadsItem extends DockItem {
 
     get iconActor() {
         return this._pile;
+    }
+
+    // The monitor fires per write and per file; one read follows a burst
+    _refreshSoon() {
+        if (this._refreshToken)
+            return;
+        this._refreshToken = this.cleanup.timeout(REFRESH_DELAY_MS, () => {
+            this._refreshToken = 0;
+            this.refresh();
+        }, { name: 'dock: stack refresh' });
     }
 
     /** Re-read the folder (one read at a time, one more if it changed meanwhile). */
@@ -136,8 +162,8 @@ export class DownloadsItem extends DockItem {
         const byName = new Map(found.map(f => [f.entry.name, f]));
         const before = this.files.map(f => f.entry);
         this.files = order.map(e => byName.get(e.name));
-        if (downloadFinished(before, order))
-            this._host.bounce(this);
+        if (this.isDownloads && downloadFinished(before, order))
+            this._host.bounce(this, 'download');
         this._drawPile();
     }
 
@@ -149,7 +175,7 @@ export class DownloadsItem extends DockItem {
         const top = this.files.filter(f => !f.entry.partial).slice(0, PILE).reverse();
         if (!top.length) {
             this._pile.add_child(new St.Icon({
-                icon_name: 'folder-download', icon_size: m.icon,
+                icon_name: this.isDownloads ? 'folder-download' : 'folder', icon_size: m.icon,
                 x_align: Clutter.ActorAlign.CENTER, y_align: Clutter.ActorAlign.CENTER,
             }));
             return;
@@ -194,6 +220,13 @@ export class DownloadsItem extends DockItem {
 
     get popupOpen() {
         return this._popup !== null;
+    }
+}
+
+/** The Downloads stack (XDG Downloads folder). */
+export class DownloadsItem extends FolderStackItem {
+    constructor(host, spec) {
+        super(host, spec, downloadsDir(), host.gettext('Downloads'));
     }
 }
 
@@ -295,6 +328,8 @@ class StackPopup {
         if (!f.entry.partial) {
             button._delegate = {
                 kiwiFile: f.file,
+                // A folder dropped on the right side of the dock becomes a stack
+                kiwiFolder: f.contentType === 'inode/directory' ? f.file.get_path() : null,
                 getDragActor: () => new St.Icon({ gicon: f.gicon, icon_size: iconSize }),
                 getDragActorSource: () => icon,
             };
@@ -377,11 +412,12 @@ class StackPopup {
 
         const scroll = new St.ScrollView({ style_class: 'kiwi-dock-stack-scroll', hscrollbar_policy: St.PolicyType.NEVER });
         const iconSize = view === 'grid' ? Math.round(m.icon * 1.1) : Math.round(m.icon * 0.6);
-        let body;
+        let body, fill;
         if (view === 'grid') {
             const layout = new Clutter.GridLayout({ orientation: Clutter.Orientation.HORIZONTAL, row_spacing: 6, column_spacing: 6 });
             body = new St.Widget({ layout_manager: layout, style_class: 'kiwi-dock-stack-grid' });
-            files.forEach((f, i) => {
+            fill = (from, to) => files.slice(from, to).forEach((f, k) => {
+                const i = from + k;
                 const button = this._fileButton(f, { iconSize, vertical: true });
                 // Name under the icon in a grid
                 const box = button.get_child();
@@ -390,7 +426,7 @@ class StackPopup {
             });
         } else {
             body = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, style_class: 'kiwi-dock-stack-list' });
-            files.forEach(f => {
+            fill = (from, to) => files.slice(from, to).forEach(f => {
                 const button = this._fileButton(f, { iconSize, vertical: false });
                 const box = button.get_child();
                 box.set_child_at_index(box.get_last_child(), 0);
@@ -400,8 +436,19 @@ class StackPopup {
                 body.add_child(button);
             });
         }
+        // A big folder builds a page of rows now and the next page when the list scrolls near
+        // its end (building every row at once froze the Shell for seconds)
+        let built = Math.min(files.length, STACK_PAGE);
+        fill(0, built);
+        const vadjustment = scroll.vadjustment;
+        this._cleanup.connect(vadjustment, 'notify::value', () => {
+            if (built < files.length && vadjustment.value + vadjustment.page_size * 2 >= vadjustment.upper) {
+                fill(built, Math.min(files.length, built + STACK_PAGE));
+                built = Math.min(files.length, built + STACK_PAGE);
+            }
+        });
         if (!files.length)
-            body = new St.Label({ style_class: 'kiwi-dock-stack-empty', text: _('No downloads') });
+            body = new St.Label({ style_class: 'kiwi-dock-stack-empty', text: this._stack.isDownloads ? _('No downloads') : _('Empty folder') });
         // A ScrollView needs a scrollable child: a box around the grid, list or note
         const content = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL });
         content.add_child(body);

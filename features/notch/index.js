@@ -1,24 +1,32 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Notification notch: a black pill in the centre of the top bar that grows to show
-// notifications, live activities (media) and volume / brightness confirmations, and opens a
-// small dashboard on click.
+// notifications, live activities and volume / brightness confirmations, and opens on hover or
+// click into three tabs: Now (media and activities), Tray (the file shelf) and Widgets.
 //
 // This file is the imperative shell. The decisions live in stateMachine.js (pure, tested);
 // the actors in view.js. What this file wires:
 //   - NotificationRouter.setBannerSink  stock banners go to the notch, history stays in the
 //                                       calendar menu (key notch-notifications)
 //   - MprisWatcher                      media live activity + dashboard (notch-live-activities)
-//   - Main.osdWindowManager._showOsdWindow  volume / brightness OSD (notch-osd)
+//   - ctx.osd sink 'notch'              volume / brightness / backlight OSD, when core/osd.js routes
+//                                       them here (osd-location 'notch', the default)
 //   - PanelLayout.claim 'notch'         room in the centre box
+//   - sources/*.js                      battery, headphones, timers (core/timers), recording,
+//                                       next event, downloads, one-time codes; each has its
+//                                       own registry and notch-activity-* key
+//   - Shelf                             the Tray tab's file links (notch-shelf)
 // Every part undoes itself through the CleanupRegistry; stock banners and OSD come back.
 
 import GLib from 'gi://GLib';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
 
+import St from 'gi://St';
+import Shell from 'gi://Shell';
+
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { KiwiSettings } from '../../lib/settings.js';
-import { canDivertOsd, setUnredirectAllowed, requeueBanner, kickTray } from '../../lib/compat.js';
+import { setUnredirectAllowed, requeueBanner, kickTray } from '../../lib/compat.js';
 import { PanelLayout } from '../../core/panelLayout.js';
 import { NotificationRouter } from '../../core/notificationRouter.js';
 import { MprisWatcher } from '../../core/mprisWatcher.js';
@@ -28,10 +36,32 @@ import {
 } from './stateMachine.js';
 import { seekTarget } from './dashboardModel.js';
 import { NotchView } from './view.js';
+import { Shelf } from './shelf.js';
+import { watchDrops } from './drop.js';
+import { dropZone } from './model.js';
+import { watchPower } from './sources/power.js';
+import { watchBluetooth } from './sources/bluetooth.js';
+import { watchTimers } from './sources/timers.js';
+import { watchRecording, stopRecording } from './sources/recording.js';
+import { watchCalendar } from './sources/calendar.js';
+import { watchDownloads } from './sources/downloads.js';
+import { watchCodes } from './sources/codes.js';
+import { watchWidgets } from './sources/widgets.js';
 
 const MEDIA_KEY = 'media';
 const HIGH_FACTOR = 1.6;     // high-urgency cards stay this much longer than normal ones
-const RECENT_LIMIT = 2;      // notifications listed in the dashboard
+const RECENT_LIMIT = 3;      // notifications listed in the Now tab
+
+// Live activity sources, each switched by its own key (and all by notch-live-activities)
+const SOURCES = Object.freeze([
+    ['battery', 'notch-activity-battery'],
+    ['bluetooth', 'notch-activity-bluetooth'],
+    ['timers', 'notch-activity-timers'],
+    ['recording', 'notch-activity-recording'],
+    ['calendar', 'notch-activity-calendar'],
+    ['downloads', 'notch-activity-downloads'],
+    ['codes', 'notch-copy-codes'],
+]);
 
 const nowMs = () => Math.floor(GLib.get_monotonic_time() / 1000);
 
@@ -57,7 +87,10 @@ export class NotchFeature {
         this._alive = false;
         this._overFullscreen = false;
         this._deadlineToken = 0;
-        this._parts = { sink: null, osd: null, media: null };
+        this._parts = { sink: null, media: null };
+        this._sources = new Map();   // source id -> CleanupRegistry
+        this._selected = null;       // the shelf item selected in the Tray tab
+        this._events = null;         // today's calendar events for the Widgets tab
         this._watch = null;
     }
 
@@ -79,6 +112,17 @@ export class NotchFeature {
 
         this._view = new NotchView(cleanup, {
             onClick: () => this._dispatch({ type: 'click' }),
+            onExpand: () => this._dispatch({ type: 'expand' }),
+            onTab: tab => this._dispatch({ type: 'tab', tab }),
+            onActivityAction: (activity, id) => this._activityAction(activity, id),
+            onShelf: (action, uri) => this._shelfAction(action, uri),
+            onTimerPreset: minutes => this._ctx.timers?.startTimer({ seconds: minutes * 60, label: this._ctx.gettext('Timer') }),
+            onToggleMic: () => this._widgets?.toggleMic(),
+            onOpenWeather: () => {
+                this._dispatch({ type: 'collapse' });
+                this._widgets?.openWeather();
+            },
+            onOpenCalendar: () => this._openApp(['org.gnome.Calendar.desktop']),
             onDismiss: () => this._dispatch({ type: 'dismiss' }),
             onHover: value => this._dispatch({ type: 'hover', value }),
             onAction: (id, index) => this._action(id, index),
@@ -95,7 +139,35 @@ export class NotchFeature {
             onOpenNotification: notification => this._openNotification(notification),
             onOpenList: () => this._openMessageList(),
             getPosition: () => this._bestPlayer()?.position ?? Promise.resolve(null),
-        }, gettext);
+        }, gettext, this._ctx.motion);
+        const syncHover = () => this._view.setHoverIntent({
+            enabled: ks.bool('notch-hover-expand'), delayMs: ks.int('notch-hover-delay'),
+        });
+        ks.watch(['notch-hover-expand', 'notch-hover-delay'], syncHover);
+        syncHover();
+
+        this._shelf = new Shelf(cleanup, ks, () => this._sync());
+        this._widgets = watchWidgets(cleanup, () => this._sync());
+        // Files dragged from apps onto the notch land on the shelf (drop.js explains how)
+        watchDrops(cleanup, {
+            zone: () => {
+                const a = this._view.actor;
+                const monitor = Main.layoutManager.primaryMonitor;
+                if (!monitor || !a.visible)
+                    return null;
+                const [x, y] = a.get_transformed_position();
+                return dropZone({ x, y, w: a.width, h: a.height }, monitor);
+            },
+            onOver: over => this._dispatch({ type: 'drag-over', value: over }),
+            onDrop: uris => {
+                this._shelf?.add(uris);
+                this._dispatch({ type: 'drag-over', value: false, dropped: true });
+            },
+        });
+        cleanup.add(() => {
+            this._widgets = null;
+            this._shelf = null;
+        });
 
         // Room in the centre of the bar so the clock and others keep clear of the pill
         PanelLayout.claim(cleanup, { id: 'notch', actor: this._view.placeholder, box: 'center' });
@@ -119,15 +191,20 @@ export class NotchFeature {
         // The three features can be switched one by one
         // Each part has its own registry, so switching one never touches the others.
         this._applySink();
-        this._applyOsd();
         this._applyMedia();
+        this._ctx.osd.setSink(cleanup, 'notch', osd => this._showOsd(osd));
         const part = (key, apply) => ks.watch(key, () => {
             apply();
             this._dispatch({ type: 'set', patch: {} });
         });
         part('notch-notifications', () => this._applySink());
-        part('notch-osd', () => this._applyOsd());
-        part('notch-live-activities', () => this._applyMedia());
+        part('notch-live-activities', () => {
+            this._applyMedia();
+            this._applySources();
+        });
+        for (const [, key] of SOURCES)
+            ks.watch(key, () => this._applySources());
+        this._applySources();
         // The timeout is read from settings on every event; nothing to rebuild.
         ks.watch('notch-timeout', () => this._dispatch({ type: 'set', patch: {} }));
 
@@ -139,17 +216,20 @@ export class NotchFeature {
     // Idempotent. Registered twice: last in enable() (runs first on a normal dispose) and first
     // (runs last), so a throw half-way through enable() still restores banners, OSD and holds.
     _teardown() {
-        if (!this._alive && !this._parts.sink && !this._parts.osd && !this._parts.media)
+        if (!this._alive && !this._parts.sink && !this._parts.media)
             return;
         // Collect sticky cards first, give the banners back to the stock tray, then queue
         // them there; queued while the sink still existed they would be diverted again.
         const critical = this._notifications ? this._criticalNotifications() : [];
         this._alive = false;
         this._deadlineToken = 0;
-        for (const key of ['sink', 'osd', 'media']) {
+        for (const key of ['sink', 'media']) {
             this._parts[key]?.dispose();
             this._parts[key] = null;
         }
+        for (const reg of this._sources.values())
+            reg.dispose();
+        this._sources.clear();
         this._requeue(critical);
         this._watch = null;
         if (this._overFullscreen)
@@ -169,7 +249,7 @@ export class NotchFeature {
         return {
             notifications: ks.bool('notch-notifications'),
             activities: ks.bool('notch-live-activities'),
-            osd: ks.bool('notch-osd'),
+            osd: true,      // what reaches the notch was routed here (core/osd.js); also "Copied"
             normalMs,
             highMs: Math.round(normalMs * HIGH_FACTOR),
         };
@@ -269,13 +349,23 @@ export class NotchFeature {
         const notification = vm.notificationId === null ? null : this._notifications.get(vm.notificationId) ?? null;
         if (notification)
             this._shown.add(vm.notificationId);
+        const dashboard = vm.content === 'dashboard';
         this._view.render(vm, {
             notification,
-            media: media ? { ...mediaInfo(media), appIcon: media.app?.get_icon() ?? null } : null,
+            media: media && showsActivity(media.status) ? { ...mediaInfo(media), appIcon: media.app?.get_icon() ?? null } : null,
             dnd: state.dnd,
             count: NotificationRouter.state().count,
-            recent: vm.content === 'dashboard' ? this._recentNotifications() : null,
-            clipboard: this._clipboardEntries(),
+            recent: dashboard && vm.tab === 'now' ? this._recentNotifications() : null,
+            clipboard: dashboard && vm.tab === 'tray' ? this._clipboardEntries() : null,
+            shelf: this._shelf,
+            selected: this._selected,
+            widgets: dashboard && vm.tab === 'widgets' ? {
+                events: this._events,
+                weather: this._widgets?.weather() ?? null,
+                mic: this._widgets?.mic() ?? { available: false, muted: false },
+                dnd: state.dnd,
+                timersEnabled: !!this._ctx.timers && this._ks.bool('notch-activity-timers'),
+            } : null,
         });
 
         // Only the pill over a fullscreen window; no bar there.
@@ -381,30 +471,16 @@ export class NotchFeature {
         this._requeue(critical);
     }
 
-    _applyOsd() {
-        const parts = this._renew('osd');
-        if (this._ks.bool('notch-osd') && canDivertOsd(Main.osdWindowManager)) {
-            const self = this;
-            parts.inject(Main.osdWindowManager, '_showOsdWindow',
-                function (orig, monitorIndex, icon, label, level, maxLevel) {
-                    // Other monitors keep the stock OSD; the notch lives on the primary one.
-                    if (!self._alive || !self._view || monitorIndex !== Main.layoutManager.primaryIndex)
-                        return orig.call(this, monitorIndex, icon, label, level, maxLevel);
-                    try {
-                        self._dispatch({
-                            type: 'osd',
-                            icon,
-                            label,
-                            level: Number.isFinite(level) && level >= 0 ? level : null,
-                            maxLevel: Number.isFinite(maxLevel) && maxLevel > 0 ? maxLevel : null,
-                        });
-                    } catch (e) {
-                        console.error('[Kiwi] notch OSD failed, using the stock one:', e);
-                        return orig.call(this, monitorIndex, icon, label, level, maxLevel);
-                    }
-                    return undefined;
-                });
-        }
+    // A volume / brightness change that core/osd.js routed here. The notch lives on the primary
+    // monitor, where the router only looks.
+    _showOsd({ icon, label, level, maxLevel }) {
+        this._dispatch({
+            type: 'osd',
+            icon,
+            label,
+            level: Number.isFinite(level) && level >= 0 ? level : null,
+            maxLevel: Number.isFinite(maxLevel) && maxLevel > 0 ? maxLevel : null,
+        });
     }
 
     _applyMedia() {
@@ -528,6 +604,119 @@ export class NotchFeature {
         }));
     }
 
+    // ---- live activity sources -------------------------------------------------------------
+
+    _applySources() {
+        if (!this._alive)
+            return;
+        const all = this._ks.bool('notch-live-activities');
+        const sink = {
+            activity: (key, kind, data, opts = {}) => this._dispatch({
+                type: 'activity', key, kind, data: data ?? null, fresh: !!opts.fresh,
+            }),
+            events: list => {
+                this._events = list;
+                this._sync();
+            },
+        };
+        for (const [id, key] of SOURCES) {
+            const want = all && this._ks.bool(key) && (id !== 'timers' || !!this._ctx.timers);
+            const running = this._sources.get(id);
+            if (want === !!running)
+                continue;
+            if (running) {
+                this._sources.delete(id);
+                running.dispose();
+                if (id === 'calendar')
+                    this._events = null;
+                continue;
+            }
+            const reg = new CleanupRegistry();
+            this._sources.set(id, reg);
+            try {
+                this._startSource(id, reg, sink);
+            } catch (e) {
+                console.error(`[Kiwi] notch: the ${id} activity failed to start:`, e);
+            }
+        }
+    }
+
+    _startSource(id, reg, sink) {
+        const { events, timers, gettext } = this._ctx;
+        switch (id) {
+        case 'battery': watchPower(reg, sink); break;
+        case 'bluetooth': watchBluetooth(reg, sink); break;
+        case 'timers': watchTimers(reg, { events, timers }, sink, gettext); break;
+        case 'recording': watchRecording(reg, events, sink); break;
+        case 'calendar': watchCalendar(reg, sink); break;
+        case 'downloads':
+            watchDownloads(reg, sink, uri => {
+                if (this._ks.bool('notch-shelf-downloads'))
+                    this._shelf?.add([uri]);
+            });
+            break;
+        case 'codes': watchCodes(reg, sink); break;
+        }
+    }
+
+    _activityAction(activity, id) {
+        const d = activity.data ?? {};
+        const timers = this._ctx.timers;
+        switch (id) {
+        case 'copy':
+            St.Clipboard.get_default().set_text(St.ClipboardType.CLIPBOARD, d.code);
+            this._dispatch({ type: 'activity', key: activity.key, kind: activity.kind, data: null });
+            this._dispatch({ type: 'confirm', kind: 'copied', label: this._ctx.gettext('Code copied') });
+            break;
+        case 'stop': stopRecording(); break;
+        case 'pause': timers?.pause(d.id); break;
+        case 'resume': timers?.resume(d.id); break;
+        case 'cancel': timers?.cancel(d.id); break;
+        }
+    }
+
+    _shelfAction(action, uri) {
+        const shelf = this._shelf;
+        if (!shelf)
+            return;
+        switch (action) {
+        case 'select':
+            this._selected = uri;
+            this._sync();
+            break;
+        case 'open':
+            this._dispatch({ type: 'collapse' });
+            shelf.open(uri);
+            break;
+        case 'reveal':
+            this._dispatch({ type: 'collapse' });
+            shelf.reveal(uri);
+            break;
+        case 'copy':
+            shelf.copy(uri);
+            this._dispatch({ type: 'confirm', kind: 'copied', label: this._ctx.gettext('Copied') });
+            break;
+        case 'remove':
+            this._selected = null;
+            shelf.remove(uri);
+            break;
+        case 'clear':
+            this._selected = null;
+            shelf.clear();
+            break;
+        case 'add-clipboard':
+            shelf.addFromClipboard().catch(e => console.error('[Kiwi] notch shelf:', e));
+            break;
+        }
+    }
+
+    _openApp(ids) {
+        this._dispatch({ type: 'collapse' });
+        const system = Shell.AppSystem.get_default();
+        const app = ids.map(id => system.lookup_app(id)).find(Boolean);
+        app?.activate();
+    }
+
     // ---- media -----------------------------------------------------------------------------
 
     // The player to show: playing beats paused beats stopped; among two playing, the one
@@ -557,10 +746,12 @@ export class NotchFeature {
         this._notePlaying();
         // A paused player keeps its pill, with the waveform at rest; a stopped one leaves.
         const best = this._bestPlayer();
+        const data = best && showsActivity(best.status) ? mediaInfo(best) : null;
         this._dispatch({
             type: 'activity',
             key: MEDIA_KEY,
-            data: best && showsActivity(best.status) ? mediaInfo(best) : null,
+            kind: data?.playing ? 'media' : 'media-paused',
+            data,
         });
     }
 

@@ -30,17 +30,49 @@ export const EVENTS = Object.freeze({
     'work-area-changed': { monitor: 'number' },
     // core/motion.js (Motion)
     'motion-changed': { reducedMotion: 'boolean', animations: 'boolean' },
+    // core/timers.js (TimerService)
+    'timers-changed': { timers: 'object[] see core/timersModel.js' },
+    'timer-finished': { timer: 'object' },
     // lib/featureRegistry.js, through extension.js: a feature started or stopped
     'feature-changed': { id: 'string', active: 'boolean' },
+    // features/screenshots: a screen recording started (kind 'screen' or 'area') or ended
+    // (path of the video file when GNOME reports it, else null). The notch shows it live.
+    'recording-started': { kind: "'screen'|'area'" },
+    'recording-stopped': { path: 'string|null' },
     // Requests between features (the owner of the policy listens, see features.js)
     'minimize-requested': { window: 'Meta.Window', source: 'string' },
     // The menu bar (features/menuBar): the clock was clicked. The Notification Center (P5)
     // opens on it; until then the stock calendar card opens as well.
     'notification-center-requested': { source: "string ('clock')" },
-    // App-menu commands for the window manager (core/appMenus/commands.js). The owner of the
-    // policy listens; with no listener the app menu runs a plain fallback itself.
+    // Hide / Hide Others / Show All (App menu, Super+H): 'hide' hides `appId`, 'others' every
+    // app but `appId`, 'all' brings every hidden app back. features/windows/hide.js acts; with
+    // no listener the app menu runs a plain fallback itself (core/appMenus/commands.js).
     'app-hide-requested': { appId: 'string|null', mode: "'hide' | 'others' | 'all'" },
-    'window-tile-requested': { window: 'Meta.Window', mode: "'left' | 'right'" },
+    // An app was hidden (its windows minimized without effect, WindowState 'hidden') or shown
+    'app-hidden': { appId: 'string', hidden: 'boolean' },
+    // Window tiling (features/windows acts; the green-button menu and the Window menu ask).
+    // `mode` is a tiling action of core/tileActions.js: a zone ('left', 'top-right', 'fill',
+    // ...), 'center', 'restore' or 'arrange-<name>'.
+    'window-tile-requested': { window: 'Meta.Window', mode: 'string' },
+    // The tiling engine put a window in a tile (zone) or took it out (zone null)
+    'window-tiled': { window: 'Meta.Window', zone: 'string|null' },
+    // Desktop actions (core/desktopActions.js: hot corners, gestures, the app switcher). App
+    // Exposé (Mission Control, P3) and the Launchpad listen; with no listener a stock fallback
+    // runs (the overview, the app grid). appId null means the focused app.
+    'app-expose-requested': { appId: 'string|null', source: "string ('corner'|'gesture'|'switcher')" },
+    // Launchpad (features/launchpad) also hears it from its dock tile (source 'dock')
+    'launchpad-requested': { source: "string ('corner'|'gesture'|'dock')" },
+    // Spotlight's "Start Timer" action (features/spotlight). The timers' owner (the notch's
+    // live activities, P5) listens; with no listener Spotlight runs a plain notification timer.
+    'timer-start-requested': { seconds: 'number', label: 'string', source: "string ('spotlight')" },
+    // The green button of the top-bar controls (features/windowControls) was hovered or left;
+    // Split View (features/splitView) offers its menu for a full-screen window
+    'green-button-hover': { window: 'Meta.Window|null', actor: 'Clutter.Actor', hovered: 'boolean' },
+    // Split View: tile a full-screen window to one half and pick its partner (the green menu
+    // emits it; features/splitView acts)
+    'split-view-requested': { window: 'Meta.Window', side: "'left' | 'right'" },
+    // A Split View pair formed (active) or ended (features/splitView)
+    'split-view-changed': { windows: 'Meta.Window[]', active: 'boolean' },
 });
 
 export class EventHub {

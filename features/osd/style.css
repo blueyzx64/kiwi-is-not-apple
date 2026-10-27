@@ -1,0 +1,44 @@
+/* feature: osd */
+/* The Tahoe volume / brightness pill. Its fill comes from lib/glass.js (surface 'overlays');
+   with glass off it keeps the solid look below. The root behind it is the shadow host. */
+.kiwi-osd-shadow {
+  background-color: transparent;
+  border-radius: 18px;
+}
+
+.kiwi-osd-pill {
+  border-radius: 18px;
+  padding: 0 14px;
+  spacing: 12px;
+  background-color: rgba(36, 36, 40, 0.94);
+}
+
+.kiwi-osd-column {
+  spacing: 6px;
+}
+
+.kiwi-osd-caption {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.kiwi-osd-track {
+  height: 6px;
+  border-radius: 3px;
+  background-color: rgba(128, 128, 128, 0.35);
+}
+
+.kiwi-osd-fill {
+  height: 6px;
+  border-radius: 3px;
+  background-color: #ffffff;
+}
+
+.kiwi-glass-light .kiwi-osd-fill {
+  background-color: #1d1d1f;
+}
+
+.kiwi-osd-muted .kiwi-osd-caption,
+.kiwi-osd-muted .kiwi-osd-icon {
+  color: rgba(128, 128, 128, 1);
+}

@@ -13,10 +13,13 @@
 //   - Stage Manager owns window placement: fullscreen-to-its-own-Space pauses (its saved
 //     value is kept).
 //   - The notch owns the centre of the top bar: the date menu moves right (calendar).
+//   - Tiling shortcuts: window-tiling binds only accelerators that no stock GNOME binding and no
+//     running Kiwi shortcut holds (Stage Manager's Ctrl+Super+Down wins while it runs).
 //   - Kiwi's dock owns the dock: Dash to Dock is kept off while it runs (core/originals).
 
 // ctx: see extension.js (settings, gettext, events, desktop, layout, motion, originals, ...)
 const bool = (ctx, key) => ctx.settings.get_boolean(key);
+const HOT_CORNERS = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
 
 // The date menu leaves the centre box when the user asked for it, and always while the notch
 // owns the centre. The message list moves to Quick Settings with it.
@@ -76,18 +79,42 @@ export const FEATURES = [
         load: async () => (await import('./features/windowControls/appButtons.js')).AppButtonsFeature,
     },
     {
+        // Sequoia tiling: drag zones, the green-button menu's tiles, Ctrl+Super shortcuts.
+        // Owns org.gnome.mutter edge-tiling (off while it runs). Asked through 'window-tile-requested'.
+        id: 'window-tiling', setting: 'windows-tiling',
+        load: async () => (await import('./features/windows/index.js')).WindowTiling,
+    },
+    {
+        // Hide / Hide Others (Super+H, 'app-hide-requested'); takes Super+H from GNOME's minimize
+        id: 'app-hide', setting: 'windows-app-hide',
+        load: async () => (await import('./features/windows/hide.js')).AppHide,
+    },
+    {
         // Local clipboard history; its panel icon claims a slot through PanelLayout
         id: 'clipboard-history', setting: 'clipboard-history',
         load: async () => (await import('./features/clipboard/index.js')).ClipboardHistory,
     },
     {
-        // Top-bar button and Super+D slide the windows aside; hands off to Stage Manager's
-        // toggleDesktop() while that runs (looked up through ctx.features)
+        // Top-bar button, Super+D and a click on empty wallpaper slide the windows aside; hands
+        // off to Stage Manager's toggleDesktop() while that runs (looked up through ctx.features)
         id: 'show-desktop',
         when: ctx => bool(ctx, 'show-desktop-button') ||
-            ctx.settings.get_strv('show-desktop-shortcut').length > 0,
+            ctx.settings.get_strv('show-desktop-shortcut').length > 0 ||
+            ctx.settings.get_string('click-wallpaper-reveals-desktop') !== 'never',
+        keys: ['show-desktop-button', 'click-wallpaper-reveals-desktop'],
         restartOn: ['show-desktop-shortcut'],
         load: async () => (await import('./features/showDesktop/index.js')).ShowDesktop,
+    },
+    {
+        // Full-screen app grid with folders and jiggle delete; GNOME's folders and order are
+        // its data. Takes Super+A from GNOME's app grid while on (core/originals).
+        id: 'launchpad', setting: 'launchpad',
+        load: async () => (await import('./features/launchpad/index.js')).Launchpad,
+    },
+    {
+        // Full screen Split View on the green button; builds on full screen as its own Space
+        id: 'split-view', setting: 'split-view',
+        load: async () => (await import('./features/splitView/index.js')).SplitView,
     },
     {
         // Super tap / shortcut opens Spotlight; the clipboard rows come from clipboard-history
@@ -117,6 +144,14 @@ export const FEATURES = [
         load: async () => (await import('./features/shellBehaviour/index.js')).ShellBehaviour,
     },
     {
+        // The overview restyled as Mission Control, App Exposé, start on the desktop. It owns
+        // dynamic-workspaces (static Spaces) and app-switcher current-workspace-only through
+        // core/originals; the dock and the Stage Manager strip hide with the overview.
+        id: 'mission-control', setting: 'mission-control',
+        restartOn: ['mission-control-shortcut', 'app-expose-shortcut', 'mc-static-spaces'],
+        load: async () => (await import('./features/missionControl/index.js')).MissionControl,
+    },
+    {
         // macOS-style rounded corners: one shader effect per window actor
         id: 'rounded-corners', setting: 'rounded-corners',
         load: async () => (await import('./features/roundedCorners/index.js')).RoundedCorners,
@@ -135,6 +170,14 @@ export const FEATURES = [
         load: async () => (await import('./features/dock/index.js')).Dock,
     },
     {
+        // Genie / Scale minimize into the dock (or any target a provider gives). 'gnome' keeps
+        // GNOME's own effect, so the feature does not run then.
+        id: 'minimize-effect',
+        when: ctx => ctx.settings.get_string('dock-minimize-effect') !== 'gnome',
+        keys: ['dock-minimize-effect'],
+        load: async () => (await import('./features/minimizeEffect/index.js')).MinimizeEffect,
+    },
+    {
         // Stage Manager wins over fullscreen-to-its-own-Space; its saved value is kept
         id: 'stage-manager', setting: 'stage-manager',
         conflictsWith: ['move-window-to-new-workspace'],
@@ -148,10 +191,62 @@ export const FEATURES = [
         load: async () => (await import('./features/stageManager/shortcut.js')).StageManagerShortcut,
     },
     {
+        // Caps Lock and input-source badge at the text caret (lib/caret.js)
+        id: 'input-indicator', setting: 'input-indicator',
+        load: async () => (await import('./features/inputIndicator/index.js')).InputIndicator,
+    },
+    {
+        // Emoji & Symbols popover (Super+Ctrl+Space); types through lib/paste.js
+        id: 'emoji-picker', setting: 'emoji-picker',
+        load: async () => (await import('./features/emoji/index.js')).EmojiPicker,
+    },
+    {
         // Pill in the centre of the bar for banners, media and volume. Replaces the stock banners
-        // and OSD (parts switch live on notch-notifications / notch-osd / notch-live-activities).
+        // and OSD (parts switch live on notch-notifications / notch-live-activities; volume and brightness
+        // come from core/osd.js while osd-location is 'notch').
         id: 'notch', setting: 'notch',
         load: async () => (await import('./features/notch/index.js')).NotchFeature,
+    },
+    {
+        // Shift+Super+3/4/5, the toolbar and the floating thumbnail, on GNOME's own screenshot UI
+        id: 'screenshots', setting: 'screenshots',
+        restartOn: ['screenshots-shortcut-screen', 'screenshots-shortcut-selection', 'screenshots-shortcut-toolbar'],
+        load: async () => (await import('./features/screenshots/index.js')).Screenshots,
+    },
+    {
+        // Super+Tab and Super+`: Kiwi's handlers for switch-applications and switch-group while
+        // on, the Shell's own given back after (the user's shortcuts are never written)
+        id: 'app-switcher', setting: 'app-switcher',
+        restartOn: ['switcher-cycle-windows'],
+        load: async () => (await import('./features/switcher/index.js')).AppSwitcher,
+    },
+    {
+        // 3/4-finger touchpad gestures; GNOME's own swipes stay (the router only watches them)
+        id: 'gestures', setting: 'gestures',
+        load: async () => (await import('./features/gestures/index.js')).Gestures,
+    },
+    {
+        // Four hot corners; off (no barriers) while every corner is 'none', the macOS default
+        id: 'hot-corners',
+        when: ctx => HOT_CORNERS.some(c => ctx.settings.get_string(`hot-corner-${c}`) !== 'none'),
+        load: async () => (await import('./features/hotCorners/index.js')).HotCorners,
+    },
+    {
+        // The Tahoe volume / brightness pill under the menu bar: a sink of core/osd.js, which
+        // routes each change to the notch or here (osd-location). Off with 'system'.
+        id: 'osd', when: ctx => ctx.settings.get_string('osd-location') !== 'system',
+        keys: ['osd-location'],
+        load: async () => (await import('./features/osd/index.js')).OsdPill,
+    },
+    {
+        // macOS-style glass alerts: the Shell's modal dialogs restyled (theme only)
+        id: 'dialogs', setting: 'dialogs-glass',
+        load: async () => (await import('./features/dialogs/index.js')).Dialogs,
+    },
+    {
+        // Accessibility colour filters on the whole screen (one shader effect on the stage)
+        id: 'color-filters', setting: 'color-filter',
+        load: async () => (await import('./features/colorFilters/index.js')).ColorFilters,
     },
     {
         // Desktop widgets above the wallpaper, below windows (core/widgets is the shared model)
