@@ -33,7 +33,9 @@ import { Motion } from './core/motion.js';
 import { TimerService } from './core/timers.js';
 import { AppMenuService } from './core/appMenus/service.js';
 import { OsdRouter } from './core/osd.js';
-import { OriginalsStore, STORE_BACKUP_KEY, STORE_KEY, restoreStale } from './core/originals.js';
+import { OriginalsStore, STORE_BACKUP_KEY, STORE_KEY, originalId, restoreStale } from './core/originals.js';
+import { WM_SCHEMA } from './features/windowControls/buttonLayout.js';
+import { parseButtonLayout } from './features/windowControls/model.js';
 import { FEATURES } from './features.js';
 
 // Keys Kiwi writes itself at run time. No `when` or restartOn reads them, and a write made
@@ -71,13 +73,18 @@ export default class KiwiExtension extends Extension {
         // Before anything reads settings or owns a GNOME key: a migration write during the
         // registry's first pass would re-enter it with half-migrated values, and a GNOME key a
         // crashed session still held must be the user's again before a feature saves it.
-        runAllMigrations(this._settings);
         this._originals = new OriginalsStore(this._settings);
         try {
-            restoreLegacyButtonLayout(this._settings, openSettings('org.gnome.desktop.wm.preferences'));
+            restoreLegacyButtonLayout(this._settings, openSettings(WM_SCHEMA));
         } catch (err) {
             console.error('[Kiwi] could not restore the saved 2.x button layout:', err);
         }
+        runAllMigrations(this._settings, {
+            // The user's own layout: the one Kiwi saved if a crashed session still held it
+            buttonLayoutSide: () => parseButtonLayout(
+                this._originals.get(originalId(WM_SCHEMA, 'button-layout'))?.value ??
+                openSettings(WM_SCHEMA)?.get_string('button-layout')).side,
+        });
         // Lists a feature takes members out of (Dash to Dock) are left: GNOME never calls
         // disable() at logout, so the entry is there at every login, and giving the member back
         // now would make the Shell enable it just for the dock to remove it again. The dock

@@ -1,6 +1,7 @@
 // Run: gjs -m tests/windowsModel.test.js
+import { leadZone } from '../core/tileActions.js';
 import {
-    ZONES, ARRANGEMENTS, parseAction, zoneRect, centerRect, placeIn, hitZone, dropZone, planArrangement,
+    ZONES, ARRANGEMENTS, parseAction, zoneRect, centerRect, placeIn, hitZone, dropZone, planArrangement, pickerHit, needsDwell, nearRect, pickerHalfWidth,
     untileRect, rectChanged, TileBook, SHORTCUTS, pickBindable, TILE_MARGIN, EDGE_PX,
 } from '../features/windows/model.js';
 import { planHide, HiddenApps, HIDE_MODES } from '../features/windows/hideModel.js';
@@ -28,10 +29,19 @@ const MON = { x: 0, y: 0, width: 1280, height: 800 };
 const TOP = 32;
 
 // --- actions
-test('dropZone: released drags tile, cancelled (button still down) ones do not', () => {
-    eq(dropZone('left', false), 'left');
-    eq(dropZone('left', true), null);
-    eq(dropZone(null, false), null);
+test('dropZone: the top zones tile at once, edges only after their outline showed', () => {
+    eq(dropZone({ live: 'fill', shown: null, buttonDown: false }), 'fill');
+    eq(dropZone({ live: 'picker', shown: null, buttonDown: false }), 'picker');
+    eq(dropZone({ live: 'left', shown: 'left', buttonDown: false }), 'left');
+    eq(dropZone({ live: 'left', shown: null, buttonDown: false }), null);
+    eq(dropZone({ live: 'left', shown: 'right', buttonDown: false }), null);
+});
+test('dropZone: cancelled (button still down) or nowhere does not tile', () => {
+    eq(dropZone({ live: 'fill', shown: 'fill', buttonDown: true }), null);
+    eq(dropZone({ live: null, shown: 'left', buttonDown: false }), null);
+});
+test('needsDwell: only edges and corners wait', () => {
+    eq(['fill', 'picker', 'left', 'top-left'].map(needsDwell), [false, false, true, true]);
 });
 
 test('parseAction knows zones, center, restore and arrangements', () => {
@@ -162,6 +172,34 @@ test('second monitor offsets', () => {
     eq(hitZone({ x: 1280, y: 500 }, m2, { topEdge: 6 }), 'left');
     eq(hitZone({ x: 3199, y: 500 }, m2, { topEdge: 6 }), 'right');
     eq(hitZone({ x: 2000, y: 3 }, m2, { topEdge: 6 }), 'fill');
+});
+
+test('top centre is the picker, the rest of the bar fills', () => {
+    eq(hit(640, 3, { picker: true }), 'picker');
+    eq(hit(640 + pickerHalfWidth(MON), 3, { picker: true }), 'picker');
+    eq(hit(640 + pickerHalfWidth(MON) + 1, 3, { picker: true }), 'fill');
+    eq(hit(640, 3), 'fill');
+    eq(hit(640, 3, { picker: true, menuBar: false }), null);
+});
+test('top corners stay quarters even when the picker is on', () => eq(hit(0, 3, { picker: true }), 'top-left'));
+test('an open picker keeps the pointer within its margin, and only that', () => {
+    const rect = { x: 500, y: 40, width: 280, height: 160 };
+    eq(hit(640, 120, { picker: true, pickerRect: rect }), 'picker');
+    eq(hit(640, 215, { picker: true, pickerRect: rect }), 'picker');
+    eq(hit(640, 400, { picker: true, pickerRect: rect }), null);
+});
+test('pickerHit finds the cell under the pointer', () => {
+    const cells = [{ action: 'left', rect: { x: 0, y: 0, width: 10, height: 10 } },
+        { action: 'right', rect: { x: 10, y: 0, width: 10, height: 10 } }];
+    eq(pickerHit({ x: 12, y: 5 }, cells), 'right');
+    eq(pickerHit({ x: 10, y: 5 }, cells), 'right');
+    eq(pickerHit({ x: 25, y: 5 }, cells), null);
+    eq(nearRect({ x: 25, y: 5 }, cells[1].rect, 6), true);
+});
+
+test('leadZone: a zone is its own, an arrangement leads with its first zone', () => {
+    eq(['left', 'arrange-left-right', 'arrange-quarters', 'arrange-bottom-top', 'center', 'nope'].map(leadZone),
+        ['left', 'left', 'top-left', 'bottom', null, null]);
 });
 
 // --- arrangements

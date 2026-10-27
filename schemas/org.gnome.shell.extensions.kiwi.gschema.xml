@@ -272,9 +272,18 @@
           <choice value="maximized"/>
           <choice value="fullscreen"/>
         </choices>
-        <default>'all'</default>
+        <default>'maximized'</default>
         <summary>Panel window controls scope</summary>
-        <description>Which focused windows get window controls in the top bar: all windows, maximized windows (fullscreen included) or fullscreen windows only. Titlebar button removal follows the same scope. Replaces show-window-controls-fullscreen-only.</description>
+        <description>Which focused windows get window controls in the top bar: all windows, maximized windows (fullscreen included, the default: other windows keep the buttons in their own titlebar) or fullscreen windows only. Titlebar button removal follows the same scope. Replaces show-window-controls-fullscreen-only.</description>
+      </key>
+      <key name="window-controls-side" type="s">
+        <choices>
+          <choice value="right"/>
+          <choice value="left"/>
+        </choices>
+        <default>'right'</default>
+        <summary>Window controls side</summary>
+        <description>Which side holds the close, minimize and maximize buttons, in the top bar and in the apps' own titlebars (the GNOME window button-layout, which Kiwi sets and restores). 'right' (default) is the GNOME side: minimize, maximize, close, and in the top bar the far right of the bar, after the clock. 'left' is the macOS side: close, minimize, maximize. Replaces window-controls-position and app-buttons-position.</description>
       </key>
       <key name="window-controls-position" type="s">
         <choices>
@@ -283,13 +292,18 @@
           <choice value="right"/>
         </choices>
         <default>'left'</default>
-        <summary>Panel window controls position</summary>
-        <description>Which side of the top bar holds the window controls. 'left' (default) shows close, minimize and maximize on the left, macOS style. 'system' follows the side of the window button layout set in GNOME.</description>
+        <summary>(Deprecated, unused) Panel window controls position</summary>
+        <description>(Deprecated, unused) replaced by window-controls-side, kept so older settings migrate.</description>
       </key>
       <key name="remove-titlebar-buttons" type="b">
         <default>true</default>
         <summary>Remove titlebar buttons from windows</summary>
-        <description>While the panel shows window controls for all windows, remove the close, minimize and maximize buttons from every app's own titlebar. Kiwi sets the GNOME window button layout (org.gnome.desktop.wm.preferences button-layout) to one without them, which GTK 3, GTK 4/libadwaita, Chromium/Electron and server-side frames honour, and restores the saved original when the controls or this option are turned off or Kiwi is disabled. With the maximized or fullscreen scope the layout is left alone and GTK CSS in the user's gtk.css hides the buttons of GTK windows in those states.</description>
+        <description>Remove the close, minimize and maximize buttons from an app's own titlebar where the top bar shows them. With the scope 'all' Kiwi sets the GNOME window button layout (org.gnome.desktop.wm.preferences button-layout) to one without them, which GTK 3, GTK 4/libadwaita, Chromium/Electron and server-side frames honour. With the maximized or fullscreen scope GTK CSS in the user's gtk.css hides the buttons of GTK windows in those states, and the layout loses them only while a window with a server-side frame (X11) is focused in that state. Kiwi restores the user's layout when the controls or this option are turned off or Kiwi is disabled.</description>
+      </key>
+      <key name="hide-maximized-titlebars" type="b">
+        <default>false</default>
+        <summary>Hide title bars of maximized windows</summary>
+        <description>Take the title bar off a maximized or full-screen window that has one of its own and nothing else to lose: windows Mutter decorates (X11 frames, via _MOTIF_WM_HINTS, needs the xprop tool) and plain GTK 3 title bars without a header bar (CSS in the user's gtk.css). GTK 4 / libadwaita header bars are never hidden. Off by default.</description>
       </key>
       <key name="app-buttons-position" type="s">
         <choices>
@@ -297,8 +311,8 @@
           <choice value="left"/>
         </choices>
         <default>'right'</default>
-        <summary>App titlebar buttons position (top-bar controls off)</summary>
-        <description>While show-window-controls is off, Kiwi sets the GNOME window button layout so every app shows its own close, minimize and maximize buttons on this side: 'right' (appmenu:minimize,maximize,close, the GNOME side) or 'left' (close,minimize,maximize:appmenu, the macOS side). Other layout entries are kept. The user's layout is saved in saved-button-layout and written back when the top-bar controls are turned on or Kiwi is disabled.</description>
+        <summary>(Deprecated, unused) App titlebar buttons position</summary>
+        <description>(Deprecated, unused) replaced by window-controls-side, kept so older settings migrate.</description>
       </key>
       <key name="app-buttons-style" type="s">
         <choices>
@@ -315,8 +329,8 @@
           <choice value="close"/>
         </choices>
         <default>'all'</default>
-        <summary>App titlebar buttons set (top-bar controls off)</summary>
-        <description>Which buttons the apps show while show-window-controls is off: 'all' (close, minimize and maximize) or 'close' only (the stock Fedora layout).</description>
+        <summary>App titlebar buttons set</summary>
+        <description>Which buttons the apps show in their own titlebar, on the side window-controls-side names: 'all' (close, minimize and maximize) or 'close' only (the stock Fedora layout). Applies with the top-bar controls on (where windows keep their buttons) and off.</description>
       </key>
       <key name="move-window-to-new-workspace" type="b">
         <default>true</default>
@@ -387,6 +401,11 @@
         <default>true</default>
         <summary>Drag windows to menu bar to fill screen</summary>
         <description>Drag a window onto the top bar to fill the screen (without full screen).</description>
+      </key>
+      <key name="windows-tile-drag-picker" type="b">
+        <default>true</default>
+        <summary>Layout picker at the top centre while dragging</summary>
+        <description>Dragging a window to the top bar at the centre of the screen opens the layout picker (halves, quarters, arrangements) under the notch. Releasing over a layout tiles to it; releasing elsewhere in the top-centre zone fills the screen. Needs windows-tile-drag-menubar.</description>
       </key>
       <key name="windows-tile-drag-modifier" type="b">
         <default>true</default>
@@ -1711,7 +1730,7 @@
       <key name="saved-button-layout" type="s">
         <default>''</default>
         <summary>(Deprecated, unused) Saved window button layout (internal)</summary>
-        <description>The user's org.gnome.desktop.wm.preferences button-layout, saved while Kiwi replaces it (top-bar controls on: without buttons; off: app-buttons-position). Empty when Kiwi does not own the layout. A non-empty value found when Kiwi starts without needing it is written back once (crash recovery).</description>
+        <description>The user's org.gnome.desktop.wm.preferences button-layout, saved while Kiwi replaces it (deprecated: the user's layout is kept in saved-originals now). Empty when Kiwi does not own the layout. A non-empty value found when Kiwi starts without needing it is written back once (crash recovery).</description>
       </key>
       <key name="panel-autohide" type="b">
         <default>true</default>

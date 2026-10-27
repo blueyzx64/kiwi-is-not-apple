@@ -17,71 +17,22 @@
 // Shell API: PopupMenu.PopupMenu / PopupBaseMenuItem / PopupSubMenuMenuItem, Main.uiGroup,
 // Main.panel.menuManager (keyboard navigation and the grab).
 
-import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
-import { ARRANGEMENTS, ZONES } from '../../core/tileActions.js';
+import { PICKER_SECTIONS } from '../../core/tileActions.js';
 import { MENU_CLOSE_ARGS } from '../../lib/compat.js';
 import { Glass } from '../../lib/glass.js';
-
-const GLYPH_W = 26;
-const GLYPH_H = 18;
-const GLYPH_INSET = 2;   // border (1px) + 1px air inside the glyph frame
-const PANE_GAP = 2;
-
-const N_ = s => s;
-
-const MOVE_RESIZE = [
-    ['left', N_('Left')], ['right', N_('Right')], ['top', N_('Top')], ['bottom', N_('Bottom')],
-    ['top-left', N_('Top Left')], ['top-right', N_('Top Right')],
-    ['bottom-left', N_('Bottom Left')], ['bottom-right', N_('Bottom Right')],
-];
-const FILL_ARRANGE = [
-    ['fill', N_('Fill')],
-    ['arrange-left-right', N_('Left & Right')], ['arrange-right-left', N_('Right & Left')],
-    ['arrange-top-bottom', N_('Top & Bottom')], ['arrange-quarters', N_('Quarters')],
-];
-
-/** The panes a glyph draws: the first is the window, the others ghosts of the next windows. */
-function panesOf(action) {
-    if (action in ZONES)
-        return [ZONES[action]];
-    const name = action.replace(/^arrange-/, '');
-    return (ARRANGEMENTS[name] ?? []).map(z => ZONES[z]);
-}
-
-function buildGlyph(action) {
-    const frame = new St.Widget({
-        style_class: 'kiwi-tile-glyph', width: GLYPH_W, height: GLYPH_H,
-        layout_manager: new Clutter.FixedLayout(),
-    });
-    const iw = GLYPH_W - 2 * GLYPH_INSET;
-    const ih = GLYPH_H - 2 * GLYPH_INSET;
-    // Inner edges give up half a gap each, so neighbouring panes stay apart
-    const edge = (frac, len, end) =>
-        Math.round(GLYPH_INSET + frac * len + (frac > 0 && frac < 1 ? (end ? -PANE_GAP / 2 : PANE_GAP / 2) : 0));
-    panesOf(action).forEach((f, i) => {
-        const x0 = edge(f.x, iw, false);
-        const x1 = edge(f.x + f.w, iw, true);
-        const y0 = edge(f.y, ih, false);
-        const y1 = edge(f.y + f.h, ih, true);
-        const pane = new St.Widget({ style_class: i === 0 ? 'kiwi-tile-pane' : 'kiwi-tile-pane ghost' });
-        pane.set_position(x0, y0);
-        pane.set_size(Math.max(1, x1 - x0), Math.max(1, y1 - y0));
-        frame.add_child(pane);
-    });
-    return frame;
-}
+import { buildGlyph } from '../../lib/tileGlyphs.js';
 
 export class GreenMenu {
     /**
      * @param {object} opts
-     * @param {Clutter.Actor} opts.source the indicator the menu hangs from. Not the green
+     * @param {import('gi://Clutter').Actor} opts.source the indicator the menu hangs from. Not the green
      *   button itself: a St.Button that is a menu source stops taking presses after the menu
      *   grab ends (seen on GNOME 50.6), as panel menus always hang from their PanelMenu.Button
-     * @param {Clutter.Actor} opts.target the green button the arrow points at
+     * @param {import('gi://Clutter').Actor} opts.target the green button the arrow points at
      * @param {Function} opts.gettext
      * @param {(action: string, arg?: number) => void} opts.onAction tiling actions, or
      *   'fullscreen' | 'zoom' | 'workspace' (arg index) | 'monitor' (arg index)
@@ -131,8 +82,8 @@ export class GreenMenu {
         const _ = this._;
         menu.removeAll();
         if (s.tiling) {
-            this._glyphSection(_('Move & Resize'), MOVE_RESIZE.slice(0, 4), MOVE_RESIZE.slice(4));
-            this._glyphSection(_('Fill & Arrange'), FILL_ARRANGE);
+            for (const section of PICKER_SECTIONS)
+                this._glyphSection(_(section.title), ...section.rows);
             menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
             menu.addAction(_('Center'), () => this._onAction('center'));
             const back = menu.addAction(_('Return to Previous Size'), () => this._onAction('restore'));

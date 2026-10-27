@@ -1,0 +1,9 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
+/* "Hide title bars of maximized windows": the plain GTK3 title bar of a window that draws
+   its own (no header bar). Header bars are never touched. */
+.maximized .titlebar.default-decoration,
+.fullscreen .titlebar.default-decoration {
+  margin: -200px 0 0;
+  opacity: 0;
+}

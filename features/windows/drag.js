@@ -18,13 +18,20 @@ import GLib from 'gi://GLib';
 import Meta from 'gi://Meta';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import { getPointerWatcher } from 'resource:///org/gnome/shell/ui/pointerWatcher.js';
 
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { Glass } from '../../lib/glass.js';
-import { EDGE_PX, dropZone, hitZone } from './model.js';
+import { ZONES, leadZone } from '../../core/tileActions.js';
+import { EDGE_PX, PICKER_ZONE, dropZone, hitZone, needsDwell, pickerHit } from './model.js';
+import { TilePicker } from './picker.js';
 
 // How long the pointer rests against an edge before the outline shows (no modifier)
 const DWELL_MS = 150;
+// The pointer is read once per frame (60 Hz) while a window is dragged. Mutter clamps a dragged
+// window below the bar, so the window's own position-changed stops once the pointer is past
+// that: it cannot be what tells Kiwi the pointer reached the top edge.
+const POINTER_POLL_MS = 16;
 
 const MOVE_OPS = new Set([Meta.GrabOp.MOVING, Meta.GrabOp.MOVING_UNCONSTRAINED]);
 
@@ -43,13 +50,17 @@ export class TileDrag {
         this._layout = layout;
         this._engine = engine;
         this._grab = null;     // CleanupRegistry of the drag in progress
+        this._watch = null;    // the pointer watch of the drag
         this._win = null;
         this._zone = null;     // zone under the pointer
         this._shown = null;    // zone the outline shows (after the dwell)
+        this._action = null;   // the picker glyph under the pointer
+        this._monitor = -1;
         this._dwell = 0;
         this._anim = null;
         this._untilePending = false;
         this._preview = null;
+        this._picker = null;
     }
 
     enable() {
@@ -64,6 +75,7 @@ export class TileDrag {
             surface: 'overlays', radius: 12, isDark: () => st.color_scheme !== St.SystemColorScheme.PREFER_LIGHT,
         });
         cleanup.add(() => glass.destroy());
+        this._picker = new TilePicker(this._ctx, cleanup);
         cleanup.connect(global.display, 'grab-op-begin', (_d, win, op) => this._begin(win, op));
         cleanup.connect(global.display, 'grab-op-end', (_d, win) => this._end(win));
         cleanup.add(() => this._stop());
@@ -85,8 +97,12 @@ export class TileDrag {
         this._win = win;
         this._untilePending = this._engine.isTiled(win);
         this._grab = new CleanupRegistry();
-        this._grab.connect(win, 'position-changed', () => this._onMove());
         this._grab.connect(win, 'unmanaged', () => this._stop());
+        this._watch = getPointerWatcher().addWatch(POINTER_POLL_MS, () => this._onMove());
+        this._grab.add(() => {
+            this._watch?.remove();
+            this._watch = null;
+        });
     }
 
     _end(win) {
@@ -94,43 +110,72 @@ export class TileDrag {
             return;
         const monitor = this._monitor;
         // Esc cancels the grab with the button still down: the window goes back, nothing tiles
-        const [, , mods] = global.get_pointer();
-        const zone = dropZone(this._shown, (mods & Clutter.ModifierType.BUTTON1_MASK) !== 0);
+        const [x, y, mods] = global.get_pointer();
+        const live = this._zoneAt(x, y, mods);
+        const zone = dropZone({
+            live: live?.zone ?? null, shown: this._shown, buttonDown: (mods & Clutter.ModifierType.BUTTON1_MASK) !== 0,
+        });
+        // Over the picker: the glyph under the pointer, else Fill
+        const action = zone === PICKER_ZONE ? pickerHit({ x, y }, this._picker.cells()) ?? 'fill' : zone;
         this._stop();
-        if (zone)
-            this._engine.tile(win, zone, monitor);
+        if (action in ZONES)
+            this._engine.tile(win, action, monitor);
+        else if (action)
+            this._engine.perform(win, action);
     }
 
-    // Drag over: drop the tracking and fade the outline out
+    // Drag over: drop the tracking and fade the outline and the picker out
     _stop() {
         this._grab?.dispose();
         this._grab = null;
         this._win = null;
         this._zone = null;
+        this._action = null;
         this._cancelDwell();
+        this._picker?.close();
         this._hidePreview();
+    }
+
+    // The zone under the pointer, or null (also: the monitor it is on)
+    _zoneAt(x, y, mods) {
+        const monitor = global.display.get_current_monitor();
+        const mon = Main.layoutManager.monitors[monitor];
+        if (!mon)
+            return null;
+        const bar = this._layout.rect('menu-bar', monitor);
+        const ks = this._ks;
+        const modifier = (mods & Clutter.ModifierType.MOD1_MASK) !== 0 && ks.bool('windows-tile-drag-modifier');
+        const barBottom = bar && bar.height > 0 ? bar.y + bar.height : mon.y + EDGE_PX;
+        const zone = hitZone({ x, y }, mon, {
+            topEdge: barBottom,
+            edges: ks.bool('windows-tile-drag-edges'),
+            menuBar: ks.bool('windows-tile-drag-menubar'),
+            modifier,
+            picker: ks.bool('windows-tile-drag-picker'),
+            pickerRect: this._picker.rect,
+        });
+        return { zone, monitor, mon, barBottom };
     }
 
     _onMove() {
         const [x, y, mods] = global.get_pointer();
         const win = this._win;
+        if (!win)
+            return;
         if (this._untilePending) {
             this._untilePending = false;
             this._engine.untileForDrag(win, { x, y });
         }
-        const monitor = global.display.get_current_monitor();
-        const mon = Main.layoutManager.monitors[monitor];
-        if (!mon)
+        const at = this._zoneAt(x, y, mods);
+        if (!at)
             return;
-        const bar = this._layout.rect('menu-bar', monitor);
-        const ks = this._ks;
-        const modifier = (mods & Clutter.ModifierType.MOD1_MASK) !== 0 && ks.bool('windows-tile-drag-modifier');
-        const zone = hitZone({ x, y }, mon, {
-            topEdge: bar && bar.height > 0 ? bar.y + bar.height : mon.y + EDGE_PX,
-            edges: ks.bool('windows-tile-drag-edges'),
-            menuBar: ks.bool('windows-tile-drag-menubar'),
-            modifier,
-        });
+        const { zone, monitor } = at;
+        if (zone === PICKER_ZONE) {
+            this._onPicker(at, x, y);
+            return;
+        }
+        this._picker.close();
+        this._action = null;
         if (zone === this._zone && monitor === this._monitor)
             return;
         this._zone = zone;
@@ -140,8 +185,9 @@ export class TileDrag {
             this._hidePreview();
             return;
         }
-        if (modifier || this._shown) {
-            // Moving between zones, or Alt: no second wait
+        const modifier = (mods & Clutter.ModifierType.MOD1_MASK) !== 0 && this._ks.bool('windows-tile-drag-modifier');
+        if (modifier || this._shown || !needsDwell(zone)) {
+            // The top bar, moving between zones, or Alt: no wait
             this._showPreview(zone, monitor);
             return;
         }
@@ -151,6 +197,21 @@ export class TileDrag {
                 this._showPreview(zone, monitor);
             return GLib.SOURCE_REMOVE;
         }, { name: 'kiwi tile dwell' });
+    }
+
+    // The pointer is in the top-centre zone: the picker is open, the glyph under the pointer is
+    // previewed (Fill while none is)
+    _onPicker({ monitor, mon, barBottom }, x, y) {
+        this._cancelDwell();
+        this._zone = PICKER_ZONE;
+        this._monitor = monitor;
+        this._picker.open(mon, barBottom);
+        const action = pickerHit({ x, y }, this._picker.cells());
+        this._picker.hover(action);
+        if (action === this._action && this._shown)
+            return;
+        this._action = action;
+        this._showPreview(action ? leadZone(action) : 'fill', monitor);
     }
 
     _cancelDwell() {

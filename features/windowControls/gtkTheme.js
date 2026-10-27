@@ -30,7 +30,7 @@ const MANAGED_BLOCK_REGEX = /\/\* Kiwi \(is not Apple\) - managed imports: begin
 const LEGACY_IMPORT_REGEX = /^[^\n]*@import[^\n]*kiwi@kemma[^\n]*\n?/gm;
 
 const KEYS = ['enable-app-window-buttons', 'button-size', 'show-window-controls', 'window-controls-scope',
-    'remove-titlebar-buttons', 'popup-menu-styling', 'app-buttons-style'];
+    'remove-titlebar-buttons', 'popup-menu-styling', 'app-buttons-style', 'hide-maximized-titlebars'];
 
 /**
  * gtk.css text with Kiwi's block replaced by `block` ('' removes it), user rules untouched.
@@ -101,6 +101,7 @@ export class GtkTheme {
             style: ks.string('app-buttons-style'),
             size: ks.string('button-size'),
             appFixes: ks.bool('popup-menu-styling'),
+            hideTitlebars: ks.bool('hide-maximized-titlebars'),
         }, version);
         if (!sheets.length)
             return '';

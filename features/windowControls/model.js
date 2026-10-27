@@ -6,9 +6,9 @@ export const MACOS_ORDER = ['close', 'minimize', 'maximize'];
 export const SYSTEM_RIGHT_ORDER = ['minimize', 'maximize', 'close'];
 
 export const SCOPES = ['all', 'maximized', 'fullscreen'];
-export const POSITIONS = ['system', 'left', 'right'];
+/** The side of the window controls, in the top bar and in the apps' titlebars. */
+export const SIDES = ['right', 'left'];
 
-export const APP_BUTTONS_POSITIONS = ['right', 'left'];
 export const APP_BUTTONS_STYLES = ['gnome', 'macos'];
 export const APP_BUTTONS_SETS = ['all', 'close'];
 
@@ -44,44 +44,62 @@ export function parseButtonLayout(layoutStr) {
 }
 
 /**
- * Where the controls go and in which order.
- * 'system' follows the layout. Forcing the other side uses the usual order of that side
- * (macOS order on the left, GNOME order on the right); the same side keeps the user's order.
+ * Where the controls go and in which order: macOS order (close, minimize, maximize) on the
+ * left, GNOME order with close at the screen edge on the right.
  *
- * @param {string} position 'system' | 'left' | 'right'
- * @param {{buttons: string[], side: string}} parsed result of parseButtonLayout
+ * @param {string} side 'left' | 'right' (anything else is 'right', the default)
  * @returns {{buttons: string[], side: 'left'|'right'}}
  */
-export function resolvePlacement(position, parsed) {
-    if (position !== 'left' && position !== 'right')
-        return { buttons: parsed.buttons, side: parsed.side };
-    if (position === parsed.side)
-        return { buttons: parsed.buttons, side: position };
-    return { buttons: position === 'left' ? [...MACOS_ORDER] : [...SYSTEM_RIGHT_ORDER], side: position };
+export function placementFor(side) {
+    return side === 'left'
+        ? { buttons: [...MACOS_ORDER], side: 'left' }
+        : { buttons: [...SYSTEM_RIGHT_ORDER], side: 'right' };
 }
 
 /**
- * Should the panel buttons be on screen?
+ * Should the panel buttons be on screen for the focused window?
+ * - scope 'all': every window;
+ * - scope 'maximized' (default): a window with no controls of its own (a server-side frame)
+ *   always; a window with its own (a header bar) only while it is maximized, full screen or
+ *   touching the top bar;
+ * - scope 'fullscreen': full-screen windows only.
  *
  * @param {object} s
  * @param {string} s.scope 'all' | 'maximized' | 'fullscreen'
  * @param {boolean} s.hasWindow a managed, normal window has focus
  * @param {boolean} s.maximized
  * @param {boolean} s.fullscreen
+ * @param {boolean} [s.touching] the window's top edge is against the top bar (touchesTopBar)
+ * @param {boolean} [s.noOwnControls] Mutter draws its title bar (decorated), so it has no
+ *   controls of its own to keep
  * @param {boolean} s.overview
  * @param {boolean} s.excluded see isExcludedWindow
  */
-export function shouldShow({ scope, hasWindow, maximized, fullscreen, overview, excluded }) {
+export function shouldShow({ scope, hasWindow, maximized, fullscreen, touching = false, noOwnControls = false,
+    overview, excluded }) {
     if (!hasWindow || overview || excluded)
         return false;
     switch (scope) {
     case 'fullscreen':
-        return fullscreen;
+        return !!fullscreen;
     case 'maximized':
-        return maximized || fullscreen;
+        return !!noOwnControls || !!maximized || !!fullscreen || !!touching;
     default:
         return true;
     }
+}
+
+/**
+ * Is the window's top edge against the top bar (the work area's top)? A window dragged up
+ * until it stops, a tile whose top is the work area's top (the caller adds those through
+ * `zoneTouchesTop`), or one a few pixels off.
+ *
+ * @param {{y: number}} frame
+ * @param {{y: number}} workArea
+ * @param {number} [slack] px
+ */
+export function touchesTopBar(frame, workArea, slack = 2) {
+    return !!frame && !!workArea && frame.y <= workArea.y + slack;
 }
 
 /**
@@ -145,13 +163,45 @@ export function stripControlButtons(layoutStr) {
 }
 
 /**
- * Does Kiwi replace the WM button-layout? Only while the panel shows the controls for every
- * window: with the maximized / fullscreen scopes, floating windows must keep their own
- * buttons, and the layout is global, so the GTK CSS (which can follow the window state)
- * does the removal then.
+ * Does the WM button-layout lose its buttons for good? Only while the panel shows the
+ * controls for every window: with the maximized / fullscreen scopes, floating windows must keep
+ * their own buttons, and the layout is global, so the GTK CSS (which can follow the window
+ * state) does the removal for GTK windows then (see hidesTitlebarButtons for the others).
  */
 export function ownsButtonLayout({ showOnPanel, remove, scope }) {
     return !!showOnPanel && !!remove && scope === 'all';
+}
+
+/**
+ * Should the WM button-layout be the one without buttons right now?
+ * - scope 'all': always (the top bar has them for every window);
+ * - otherwise while the focused window's controls are in the top bar (`onPanel`, see
+ *   shouldShow). The layout is global: GTK 3 / 4, Chromium and Mutter's own frames all follow
+ *   it, so this is the one way to take the buttons off a window that is not maximized (a tile
+ *   against the top bar, a server-side frame). Other windows lose theirs only while that
+ *   window has focus. Maximized client-side windows also have the GTK CSD sheet, which keeps
+ *   them clean while another window has focus.
+ *
+ * @param {object} s
+ * @param {boolean} s.remove remove-titlebar-buttons
+ * @param {string} s.scope
+ * @param {boolean} s.onPanel the focused window's controls are on the panel
+ * @returns {boolean}
+ */
+export function hidesTitlebarButtons({ remove, scope, onPanel }) {
+    return !!remove && (scope === 'all' || !!onPanel);
+}
+
+/**
+ * The WM button-layout Kiwi sets for a given user layout: without the buttons while the top
+ * bar has them (`hide`), else the apps' own buttons on the chosen side.
+ *
+ * @param {string} original the user's layout
+ * @param {{hide: boolean, side: string, set: string}} s
+ * @returns {string}
+ */
+export function titlebarLayout(original, { hide, side, set }) {
+    return hide ? stripControlButtons(original) : appButtonsLayout(original, { position: side, set });
 }
 
 /**
@@ -281,7 +331,7 @@ export function appButtonsMacos({ showOnPanel, remove = true, scope = 'all', ena
  * they can override the rest).
  *
  * @param {{showOnPanel: boolean, remove: boolean, scope: string, enableAppButtons: boolean,
- *   style: string, size: string, appFixes: boolean}} config
+ *   style: string, size: string, appFixes: boolean, hideTitlebars?: boolean}} config
  * @param {'3'|'4'} version GTK major version
  * @returns {string[]} file names
  */
@@ -295,7 +345,57 @@ export function gtkSheets(config, version) {
     const hide = titlebarHideSheet({ ...config, gtkVersion: version });
     if (hide)
         sheets.push(hide);
+    // Plain GTK3 title bars (no header bar) go only when the owner asks; GTK 4 has none
+    if (config.hideTitlebars && version === '3')
+        sheets.push('hide-titlebar-plain3.css');
     if (config.appFixes)
         sheets.push(`fixes${version}.css`);
     return sheets;
+}
+
+// --- Title bars Mutter draws (X11 windows): _MOTIF_WM_HINTS, the property Mutter reads to decide
+
+const MWM_HINTS_DECORATIONS = 2;
+
+/**
+ * The five 32-bit values of a `xprop -id X _MOTIF_WM_HINTS` output, or null when the window
+ * has no such property (or the output is not what xprop prints).
+ *
+ * @param {string} output
+ * @returns {?number[]}
+ */
+export function parseMotifHints(output) {
+    const m = /=\s*((?:0x[0-9a-f]+|\d+)(?:\s*,\s*(?:0x[0-9a-f]+|\d+))*)\s*$/im.exec(String(output ?? ''));
+    const values = m ? m[1].split(',').map(v => Number(v.trim())) : [];
+    return values.length === 5 && values.every(Number.isInteger) ? values : null;
+}
+
+/**
+ * The hints with the decorations taken away: the decorations flag set and its field 0, every
+ * other field as the window had it.
+ *
+ * @param {?number[]} original null when the window had none
+ * @returns {number[]}
+ */
+export function undecoratedHints(original) {
+    const [flags, functions, , input, status] = original ?? [0, 0, 0, 0, 0];
+    return [flags | MWM_HINTS_DECORATIONS, functions, 0, input, status];
+}
+
+/**
+ * The xprop arguments that set the hints of window `xid`, or remove the property (null).
+ *
+ * @param {string} xid '0x...'
+ * @param {?number[]} values
+ * @returns {string[]}
+ */
+export function motifArgs(xid, values) {
+    return values
+        ? ['xprop', '-id', xid, '-f', '_MOTIF_WM_HINTS', '32c', '-set', '_MOTIF_WM_HINTS', values.join(', ')]
+        : ['xprop', '-id', xid, '-remove', '_MOTIF_WM_HINTS'];
+}
+
+/** Should the title bar Mutter draws be taken off this window? */
+export function hidesFrameTitlebar({ enabled, serverSide, x11, maximized, fullscreen }) {
+    return !!enabled && !!serverSide && !!x11 && (!!maximized || !!fullscreen);
 }
