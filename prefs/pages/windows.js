@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Windows: the traffic lights (in the top bar, or in the apps' own titlebars), full screen
-// Spaces, rounded corners and Show Desktop.
+// Windows: the traffic lights (in the top bar, or in the apps' own titlebars), tiling and Hide,
+// full screen Spaces, rounded corners and Show Desktop.
 
 import Adw from 'gi://Adw';
 import Gio from 'gi://Gio';
 
 import * as windowControlsPrefs from '../../features/windowControls/prefs.js';
+import * as windowsPrefs from '../../features/windows/prefs.js';
 import * as roundedCornersPrefs from '../../features/roundedCorners/prefs.js';
 import * as showDesktopPrefs from '../../features/showDesktop/prefs.js';
 import { addFeatureGroups, comboRow, switchRow } from '../widgets.js';
@@ -36,6 +37,7 @@ export function build(args) {
         'show-window-controls'));
     page.add(buttons);
     addFeatureGroups(page, windowControlsPrefs, args);
+    addFeatureGroups(page, windowsPrefs, args);
 
     const spaces = new Adw.PreferencesGroup({ title: _('Full Screen') });
     spaces.add(switchRow(settings, _('Full Screen in Its Own Space'),

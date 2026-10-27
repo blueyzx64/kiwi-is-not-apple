@@ -54,13 +54,15 @@ import { AppItem, SeparatorItem, WindowItem } from './items.js';
 import { DownloadsItem, FolderStackItem, downloadsDir, installerFor } from './stack.js';
 import { TrashItem } from './trash.js';
 import { LaunchpadItem } from './launchpad.js';
+import { MissionControlItem } from './missionControlItem.js';
 import { DockMenu, altHeld, fillAppMenu, isAltKey } from './appMenu.js';
 import { readAutostart, setAutostart } from './autostart.js';
 import { keepOtherDocksOff } from './dashToDock.js';
 
 const LAYOUT_KEYS = ['dock-position', 'dock-icon-size'];
 const CONTENT_KEYS = ['dock-show-recents', 'dock-running-dots', 'dock-minimize-to-app', 'dock-downloads',
-    'dock-background-apps', 'dock-folders', 'dock-badges', 'dock-launchpad', 'launchpad'];
+    'dock-background-apps', 'dock-folders', 'dock-badges', 'dock-launchpad', 'launchpad',
+    'dock-mission-control'];
 const MOTION_KEYS = ['dock-magnification', 'dock-magnification-size', 'dock-launch-animation', 'dock-attention-bounce'];
 const HIDE_KEYS = ['dock-autohide', 'dock-autohide-delay'];
 // Pushing against the edge reveals an auto-hidden dock: the same pressure as the Shell's hot
@@ -270,6 +272,7 @@ export class Dock {
             background,
             folders: this.config.folders,
             launchpad: this.config.launchpad,
+            missionControl: this.config.missionControl,
         });
         this._view.setItems(items, spec => this._createItem(spec));
         const key = items.map(i => i.id).join('\n');
@@ -325,6 +328,8 @@ export class Dock {
             return new TrashItem(this, spec);
         case 'launchpad':
             return new LaunchpadItem(this, spec);
+        case 'mission-control':
+            return new MissionControlItem(this, spec);
         default:
             return null;
         }
@@ -678,6 +683,11 @@ export class Dock {
         return menu;
     }
 
+    /** The running Mission Control feature (App Exposé, the Mission Control tile), or null. */
+    missionControl() {
+        return this._ctx.features.instance('mission-control');
+    }
+
     openAppMenu(item) {
         const app = item.app;
         const id = item.spec.id;
@@ -697,6 +707,7 @@ export class Dock {
                 autostart,
                 alt: altHeld(),
                 background: !!item.spec.background,
+                showAllWindows: !!this.missionControl(),
             });
             const metaWindows = () => this._desktop.model.windows({ appId: id })
                 .map(w => this._desktop.metaWindow(w.id)).filter(Boolean);
@@ -709,6 +720,7 @@ export class Dock {
                 openAtLogin: on => setAutostart(id, info?.get_filename() ?? null, on)
                     .catch(e => console.error('[Kiwi] dock: Open at Login failed:', e)),
                 showInFiles: () => this._showInFiles(info?.get_filename()),
+                showAllWindows: () => this.missionControl()?.showAppExpose(id),
                 quit: () => app.request_quit(),
                 stopBackground: () => this._background.stop(app),
                 forceQuit: () => metaWindows().forEach(w => w.kill()),

@@ -3,12 +3,12 @@
 | ID | Model | Package | Worktree / branch | Depends on | Status |
 |---|---|---|---|---|---|
 | P1-menubar | (earlier agent) | Menu bar, logo menu, app menu P1 | kiwi-v3-menubar / v3/p1-menubar | | merged |
-| P1-windows | (earlier agent) | Tiling, green menu, Hide | kiwi-v3-windows / v3/p1-windows | | running |
+| P1-windows | (earlier agent) | Tiling, green menu, Hide | kiwi-v3-windows / v3/p1-windows | | merged |
 | L1 | sonnet | P2 Dock motion & extras: Genie/Scale minimize, bounce, magnification, LauncherEntry badges, grey background-app dots, folder Stacks | kiwi-l1 / v3/l1 | dock merged | merged |
 | L2 | sonnet | P2 System surfaces: Tahoe volume/brightness OSD under the menu bar, centred dialogs, colour filters | kiwi-l2 / v3/l2-surfaces | | started |
-| L3 | sonnet | P2 Screenshot toolbar (Shift+Super+3/4/5) + floating thumbnail | kiwi-l3 / v3/l3-screenshot | | started |
+| L3 | sonnet | P2 Screenshot toolbar (Shift+Super+3/4/5) + floating thumbnail | kiwi-l3 / v3/l3-screenshot | | merged |
 | L4 | sonnet | P2 Input: Caps Lock / input-source badge, emoji popover, icon styles (dark/tinted) | kiwi-l4 / v3/l4-input | | started |
-| L5 | sonnet | P3 Mission Control + App Exposé + start-on-desktop | kiwi-l5 / v3/l5-mission | | started |
+| L5 | sonnet | P3 Mission Control + App Exposé + start-on-desktop | kiwi-l5 / v3/l5-mission | | merged |
 | L6 | sonnet | P3 App switcher (Super+Tab, Super+`) + trackpad gestures + hot corners | kiwi-l6 / v3/l6 | | merged |
 | L7 | sonnet | P3 Launchpad (folders, jiggle delete with installer/Flatpak rules) + click-wallpaper/Show Desktop wiring + full screen Split View | kiwi-l7 / v3/l7-launchpad | | merged |
 | L8 | sonnet | P4 Stage Manager v3 rebuild on core (sets, strip, other-side rule with dock, scenario + fuzz suites) | kiwi-l8 / v3/l8-stage | | started |
@@ -77,3 +77,9 @@ Deploy conservatively, sized to the scope and type of work. Resume in waves of a
 - L7 → merged (Launchpad with folders and jiggle delete for Flatpak/Installer apps only, a dock tile, click-wallpaper key, Split View). The conflicts with L1 in dock/model, dock/index, events and code-map were combined by the orchestrator. Follow-ups: once P1-windows merges, its green menu emits `split-view-requested` and Split View's own hover menu goes. With DING running, wallpaper clicks are never taken. Split View has no divider.
 - FX2 → merged (R3 #4–6, #12, #16, #17; wallpaper decode for the menu bar runs in a helper process `features/menuBar/wallpaperProbe.js`; default focus shortcut is Ctrl+F2; XML slide support `xmlSlideAt`). Left: R3 #14 and #13 (design). The unsafe `%s` replace at core/appMenus/model.js:183 → L12. The decode in lib/wallpaperTint.js `decodeWallpaper` (shared with Launchpad) is still in-process → FX3.
 - FX3 started (R2 fixes): worktree kiwi-fix-glass, branch v3/fix-glass.
+- L5 → merged (Mission Control on the overview: Spaces bar with +/×/reorder, App Exposé with minimized strip, F3/Ctrl+Up/Ctrl+Down, start on desktop, static Spaces via originals; API `ctx.features.instance('mission-control')`). The conflicts with L1/L7 in dock, schema, tests and code-map were combined by the orchestrator. Limits: no per-display Spaces; you reorder by dragging the label.
+- Resumed L4 (cap 5: P1-windows, L2, L3, FX3, L4).
+- ccr after the L7 merge: run-f44.sh 20 gave 0 Kiwi errors, 8/8 PASS (/tmp/x2/runs/20261027-150951-kiwi-is-not-apple-f44).
+- P1-windows → merged (Sequoia tiling `window-tiling`, green-button menu, Hide `app-hide`, glass traffic lights; core/tileActions.js; events `window-tiled`, `app-hidden`; WindowState `hidden`). Orchestrator follow-up done: with the green menu on, full-screen Left/Right go to Split View (`split-view-requested`), and Split View's own hover menu shows only when the green menu is off. To FX3: the dock must skip `hidden` windows among minimized ones, and the square grey shadow behind the green menu is the same issue as R2 F3. Open: press-and-hold opens on release, not while held; Move to Display is untested (one monitor); tile memory is lost on lock.
+- L3 → merged (Shift+Super+3/4/5, glass toolbar, timer, floating thumbnail, macOS file naming; events `recording-started`/`recording-stopped` for L9). Fact for L9/L10: on GNOME 50, `Source.iconName` is null for themed-icon sources, so match `gicon.get_names()`. Limits: no real recording was tested (no recorder in the roots); GNOME still copies every shot to the clipboard.
+- Resumed L8 Stage Manager (cap 5: L2, L4, FX3, L8). Notes for L8: minimizeEffect `setTargetProvider`; the Sushi preview must stay on stage; skip `hidden` and `splitView` windows; `click-wallpaper-reveals-desktop` lives in lib/clickModel.js.

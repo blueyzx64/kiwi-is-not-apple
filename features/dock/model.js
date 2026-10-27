@@ -61,6 +61,7 @@ export function readConfig(get) {
         downloads: get.bool('dock-downloads'),
         // The Launchpad tile shows while Launchpad itself is on
         launchpad: get.bool('dock-launchpad') && get.bool('launchpad'),
+        missionControl: get.bool('dock-mission-control'),
         stackView: STACK_VIEWS.includes(view) ? view : 'automatic',
         magnification: get.bool('dock-magnification'),
         magnifiedSize: clamp(get.int('dock-magnification-size'), ICON_SIZE_MIN, MAGNIFIED_SIZE_MAX),
@@ -133,7 +134,7 @@ export function pushRecent(recents, appId, max = RECENT_MAX) {
  * @returns {object[]} {kind: 'launchpad'|'app'|'separator'|'window'|'downloads'|'folder'|'trash', id, ...}
  *   app items carry `background: true` when only a background process runs
  */
-export function dockItems({ pinned, running, recents, showRecents, minimized = [], downloads = true, background = [], folders = [], launchpad = false }) {
+export function dockItems({ pinned, running, recents, showRecents, minimized = [], downloads = true, background = [], folders = [], launchpad = false, missionControl = false }) {
     const items = [];
     if (launchpad)
         items.push({ kind: 'launchpad', id: 'launchpad' });
@@ -145,6 +146,9 @@ export function dockItems({ pinned, running, recents, showRecents, minimized = [
     const bg = id => live.has(id) && !windowed.has(id);
     for (const id of pinned)
         items.push({ kind: 'app', id, section: 'pinned', running: live.has(id), background: bg(id) });
+    // Mission Control (optional, off by default) sits with the pinned apps, as the macOS app does
+    if (missionControl)
+        items.push({ kind: 'mission-control', id: 'mission-control', section: 'pinned' });
     const unpinned = running.filter(id => !pinnedSet.has(id));
     let second = unpinned.map(id => ({ kind: 'app', id, section: 'running', running: true, background: bg(id) }));
     if (showRecents) {
@@ -231,7 +235,8 @@ function tidy(entries) {
 
 /**
  * The right-click menu of an app icon (macOS order): open windows; desktop actions; New Window
- * (or Open); Options ▸ Keep in Dock, Open at Login, Show in Files; Quit (Force Quit with Alt).
+ * (or Open); Options ▸ Keep in Dock, Open at Login, Show in Files; Show All Windows; Quit (Force Quit
+ * with Alt).
  *
  * @param {object} p
  * @param {{id, title, minimized}[]} p.windows
@@ -243,9 +248,10 @@ function tidy(entries) {
  * @param {{enabled: boolean, editable: boolean}} p.autostart
  * @param {boolean} p.alt Alt (Option) held: Quit becomes Force Quit
  * @param {boolean} [p.background] the app runs only in the background (no window)
+ * @param {boolean} [p.showAllWindows] offer "Show All Windows" (App Exposé)
  * @returns {object[]} entries {type, ...}
  */
-export function menuEntries({ windows, focusedWindow, actions, canNewWindow, pinned, hasDesktopFile, autostart, alt, background = false }) {
+export function menuEntries({ windows, focusedWindow, actions, canNewWindow, pinned, hasDesktopFile, autostart, alt, background = false, showAllWindows = false }) {
     const running = windows.length > 0;
     const entries = windows.map(w => ({
         type: 'window', id: w.id, title: w.title || '', focused: w.id === focusedWindow, minimized: !!w.minimized,
@@ -270,6 +276,9 @@ export function menuEntries({ windows, focusedWindow, actions, canNewWindow, pin
     });
     if (running) {
         entries.push({ type: 'separator' });
+        // App Exposé, when Mission Control runs
+        if (showAllWindows)
+            entries.push({ type: 'show-all-windows' });
         entries.push({ type: alt ? 'force-quit' : 'quit' });
     } else if (background) {
         // macOS 27: an app left running in the background can be stopped from its icon

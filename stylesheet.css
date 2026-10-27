@@ -1618,6 +1618,19 @@
     background-color: rgba(60, 60, 66, 0.92);
 }
 
+/* The optional Mission Control tile (missionControlItem.js) */
+.kiwi-dock-mission-control {
+    background-gradient-direction: vertical;
+    background-gradient-start: #4a4a52;
+    background-gradient-end: #1f1f24;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.kiwi-dock-mission-control-window {
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0, 0, 0, 0.25);
+}
+
 /* ==== features/launchpad/style.css ==== */
 
 /* feature: launchpad */
@@ -2053,6 +2066,100 @@
   padding: 5px 16px;
 }
 
+/* ==== features/missionControl/style.css ==== */
+
+/* feature: mission-control */
+
+/* The Spaces bar: GNOME's thumbnails, larger, with room for the labels under them */
+.kiwi-mission-control .kiwi-mc-spaces-box {
+    padding: 12px 0 30px;
+    spacing: 22px;
+}
+
+.kiwi-mission-control .kiwi-mc-spaces-box .workspace-thumbnail {
+    border-radius: 8px;
+}
+
+.kiwi-mission-control .kiwi-mc-spaces-box .workspace-thumbnail-indicator {
+    border: 3px solid rgba(255, 255, 255, 0.92);
+    border-radius: 11px;
+    padding: 0;
+}
+
+/* macOS spreads the windows with wider gaps than GNOME */
+.kiwi-mission-control .window-picker {
+    spacing: 36px;
+}
+
+.kiwi-mc-space-label {
+    color: #ffffff;
+    font-size: 9.5pt;
+    font-weight: 600;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+.kiwi-mc-space-close {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border-radius: 10px;
+    color: #ffffff;
+    background-color: rgba(58, 58, 60, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+
+.kiwi-mc-space-close:hover {
+    background-color: rgba(88, 88, 92, 0.96);
+}
+
+.kiwi-mc-space-add {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 10px;
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.kiwi-mc-space-add:hover,
+.kiwi-mc-space-add:focus {
+    background-color: rgba(255, 255, 255, 0.28);
+}
+
+/* App Exposé: the minimized windows along the bottom */
+.kiwi-mc-expose-strip {
+    padding: 12px 20px;
+    spacing: 20px;
+    border-radius: 20px;
+    background-color: rgba(28, 28, 30, 0.42);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.kiwi-mc-expose-card {
+    padding: 6px;
+    border-radius: 12px;
+}
+
+.kiwi-mc-expose-card:hover,
+.kiwi-mc-expose-card:focus {
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+.kiwi-mc-expose-preview {
+    border-radius: 6px;
+}
+
+.kiwi-mc-expose-title {
+    color: #ffffff;
+    font-size: 9pt;
+    margin-top: 6px;
+    max-width: 180px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+
 /* ==== features/notch/style.css ==== */
 
 /* feature: notch */
@@ -2462,6 +2569,167 @@
 .kiwi-notch-clip-text {
     font-size: 14px;
     color: #ffffff;
+}
+
+/* ==== features/screenshots/style.css ==== */
+
+/* feature: screenshots */
+/* The Shift+Super+5 toolbar, its Options popover, the timer pill and the floating thumbnail.
+   lib/glass.js gives the bar, popover and pill their fill ('overlays' / 'menus'); these are
+   the shapes, and the solid look when glass is off. */
+.kiwi-screenshot-toolbar {
+    margin-bottom: 48px;
+    padding: 6px 8px;
+    spacing: 2px;
+    border-radius: 18px;
+    background-color: rgba(36, 36, 40, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #f5f5f7;
+}
+
+.kiwi-screenshot-separator {
+    width: 1px;
+    margin: 8px 6px;
+    background-color: rgba(255, 255, 255, 0.22);
+}
+
+.kiwi-screenshot-close {
+    width: 24px;
+    height: 24px;
+    margin: 0 4px;
+    border-radius: 12px;
+    background-color: rgba(255, 255, 255, 0.14);
+    color: inherit;
+}
+
+.kiwi-screenshot-close:hover {
+    background-color: rgba(255, 255, 255, 0.26);
+}
+
+.kiwi-screenshot-mode {
+    min-width: 72px;
+    padding: 6px 6px 4px;
+    border-radius: 10px;
+    color: inherit;
+    background-color: transparent;
+}
+
+.kiwi-screenshot-mode:hover {
+    background-color: rgba(255, 255, 255, 0.10);
+}
+
+.kiwi-screenshot-mode:checked {
+    background-color: rgba(255, 255, 255, 0.22);
+}
+
+.kiwi-screenshot-mode:focus,
+.kiwi-screenshot-options-row:focus,
+.kiwi-screenshot-capture:focus {
+    box-shadow: inset 0 0 0 2px -st-accent-color;
+}
+
+.kiwi-screenshot-mode-label {
+    margin-top: 3px;
+    font-size: 8.5pt;
+    text-align: center;
+}
+
+.kiwi-screenshot-record-dot {
+    color: #ff453a;
+}
+
+.kiwi-screenshot-options-button {
+    padding: 6px 10px;
+    border-radius: 10px;
+    spacing: 4px;
+    color: inherit;
+    font-size: 10pt;
+}
+
+.kiwi-screenshot-options-button:hover,
+.kiwi-screenshot-options-button:checked {
+    background-color: rgba(255, 255, 255, 0.14);
+}
+
+.kiwi-screenshot-capture {
+    margin-left: 6px;
+    padding: 6px 16px;
+    border-radius: 10px;
+    background-color: -st-accent-color;
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 10pt;
+}
+
+.kiwi-screenshot-capture:hover {
+    background-color: lighten(-st-accent-color, 6%);
+}
+
+/* Options popover, above the Options button */
+.kiwi-screenshot-options {
+    min-width: 230px;
+    padding: 6px;
+    border-radius: 12px;
+    background-color: rgba(36, 36, 40, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #f5f5f7;
+}
+
+.kiwi-screenshot-options-header {
+    padding: 6px 10px 2px;
+    font-size: 8.5pt;
+    font-weight: 600;
+    color: rgba(245, 245, 247, 0.6);
+}
+
+.kiwi-screenshot-options-row {
+    padding: 4px 10px 4px 6px;
+    border-radius: 6px;
+    color: inherit;
+    font-size: 10pt;
+}
+
+.kiwi-screenshot-options-row:hover {
+    background-color: -st-accent-color;
+    color: #ffffff;
+}
+
+.kiwi-screenshot-check {
+    margin-right: 6px;
+}
+
+.kiwi-screenshot-options-separator {
+    height: 1px;
+    margin: 4px 8px;
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+/* Timer countdown */
+.kiwi-screenshot-countdown {
+    min-width: 120px;
+    min-height: 120px;
+    border-radius: 28px;
+    background-color: rgba(36, 36, 40, 0.86);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #f5f5f7;
+}
+
+.kiwi-screenshot-countdown-number {
+    font-size: 48pt;
+    font-weight: 300;
+    text-align: center;
+}
+
+/* Floating thumbnail: the picture with a light rim and a soft shadow */
+.kiwi-screenshot-thumbnail {
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    background-color: rgba(0, 0, 0, 0.25);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.kiwi-screenshot-thumbnail-picture {
+    border-radius: 9px;
 }
 
 /* ==== features/splitView/style.css ==== */
@@ -2934,4 +3202,166 @@
 
 .window-controls-box.system-mode .window-control-icon {
   icon-size: 16px;
+}
+
+/* Glass traffic lights (windows-traffic-style 'glass', macOS 27 Golden Gate): a bead with a
+ * vertical gradient, a darker rim, a white catchlight at the top and a soft glow at the
+ * bottom; the glyphs show while the cluster is hovered. Inactive (backdrop) beads are flat
+ * grey without highlights. 4px of padding on each button keeps the hit target >= 20px. */
+.window-controls-box.glass-mode {
+  spacing: 0;
+}
+
+.window-controls-box.glass-mode .window-control-button {
+  padding: 5px 4px;
+}
+
+.kiwi-tl-bead {
+  width: 13px;
+  height: 13px;
+  border-radius: 7px;
+  border-width: 1px;
+  border-style: solid;
+  background-gradient-direction: vertical;
+  box-shadow: inset 0 -1px 2px rgba(255, 255, 255, 0.35);
+}
+
+.window-controls-box.small-size .kiwi-tl-bead {
+  width: 12px;
+  height: 12px;
+  border-radius: 6px;
+}
+
+.kiwi-tl-bead.close {
+  background-gradient-start: #ff9b92;
+  background-gradient-end: #ec4c41;
+  border-color: rgba(150, 28, 22, 0.55);
+}
+
+.kiwi-tl-bead.minimize {
+  background-gradient-start: #ffdc7a;
+  background-gradient-end: #f2b31c;
+  border-color: rgba(160, 104, 0, 0.55);
+}
+
+.kiwi-tl-bead.maximize {
+  background-gradient-start: #8ce88c;
+  background-gradient-end: #2fbd46;
+  border-color: rgba(18, 112, 32, 0.55);
+}
+
+.window-control-button:active .kiwi-tl-bead.close {
+  background-gradient-start: #e8786e;
+  background-gradient-end: #c93a30;
+}
+
+.window-control-button:active .kiwi-tl-bead.minimize {
+  background-gradient-start: #e8c05a;
+  background-gradient-end: #cf950f;
+}
+
+.window-control-button:active .kiwi-tl-bead.maximize {
+  background-gradient-start: #6ccb6c;
+  background-gradient-end: #229a36;
+}
+
+.kiwi-tl-catchlight {
+  width: 7px;
+  height: 4px;
+  margin-top: 1px;
+  border-radius: 3px;
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+.window-controls-box.small-size .kiwi-tl-catchlight {
+  width: 6px;
+  height: 3px;
+}
+
+.kiwi-tl-glyph {
+  icon-size: 9px;
+}
+
+.kiwi-tl-bead.close .kiwi-tl-glyph { color: rgba(90, 8, 4, 0.8); }
+.kiwi-tl-bead.minimize .kiwi-tl-glyph { color: rgba(110, 62, 0, 0.8); }
+.kiwi-tl-bead.maximize .kiwi-tl-glyph { color: rgba(8, 80, 18, 0.8); }
+
+.kiwi-tl-bead.backdrop {
+  background-gradient-direction: none;
+  background-color: rgba(140, 140, 146, 0.55);
+  border-color: rgba(0, 0, 0, 0.14);
+  box-shadow: none;
+}
+
+.kiwi-tl-bead.backdrop .kiwi-tl-catchlight {
+  background-color: transparent;
+}
+
+/* The green-button menu (Fill & Arrange): section headers that name the hovered layout, and
+ * rows of layout glyphs. The window's pane is solid, the other windows' panes are ghosts. */
+.kiwi-green-menu .kiwi-green-menu-header {
+  font-size: 0.85em;
+  font-weight: 600;
+  color: rgba(128, 128, 128, 1);
+}
+
+.kiwi-green-menu .kiwi-green-menu-glyphs {
+  padding-top: 2px;
+  padding-bottom: 4px;
+}
+
+.kiwi-green-menu-glyph-row {
+  spacing: 6px;
+}
+
+.kiwi-tile-glyph-button {
+  padding: 3px;
+  border-radius: 6px;
+}
+
+.kiwi-tile-glyph-button:hover,
+.kiwi-tile-glyph-button:focus {
+  background-color: -st-accent-color;
+}
+
+.kiwi-tile-glyph {
+  border: 1px solid rgba(128, 128, 128, 0.9);
+  border-radius: 4px;
+}
+
+.kiwi-tile-pane {
+  border-radius: 2px;
+  background-color: rgba(128, 128, 128, 0.95);
+}
+
+.kiwi-tile-pane.ghost {
+  background-color: rgba(128, 128, 128, 0.4);
+}
+
+.kiwi-tile-glyph-button:hover .kiwi-tile-glyph,
+.kiwi-tile-glyph-button:focus .kiwi-tile-glyph {
+  border-color: -st-accent-fg-color;
+}
+
+.kiwi-tile-glyph-button:hover .kiwi-tile-pane,
+.kiwi-tile-glyph-button:focus .kiwi-tile-pane {
+  background-color: -st-accent-fg-color;
+}
+
+.kiwi-tile-glyph-button:hover .kiwi-tile-pane.ghost,
+.kiwi-tile-glyph-button:focus .kiwi-tile-pane.ghost {
+  background-color: rgba(255, 255, 255, 0.45);
+}
+
+/* ==== features/windows/style.css ==== */
+
+/* feature: window-tiling */
+
+/* The drag outline. lib/glass.js gives it Kiwi's faux glass (overlays surface); this is the
+ * plain translucent outline it keeps when glass is off. No box-shadow: St draws the blurred
+ * shadow of a resizing actor as a rectangle. It sits just below the dragged window. */
+.kiwi-tile-preview {
+  border-radius: 12px;
+  background-color: rgba(240, 240, 244, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.45);
 }

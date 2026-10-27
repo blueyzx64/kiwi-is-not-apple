@@ -83,6 +83,7 @@ prefs.js metadata.json stylesheet.css schemas/ po/`). `make pack-check` verifies
 | `motion.js` | applies them to actors; cancellable | `start/stop`, `env`, `duration(req)`, `ease(actor, props, req, owner)`, `spring(actor, prop, to, req, owner)`, `tween(actor, req, onFrame(p), owner)` (a 0..1 progress for meshes and computed layouts) |
 | `desktopActions.js` (+`Model`) | one desktop action (Mission Control, App Exposé, Desktop, Notification Center, Launchpad, lock, display sleep) for hot corners, gestures and the switcher; asks the owner by event or `ctx.features`, stock fallback when nobody listens | `new DesktopActions(ctx)`, `run(action, {source, appId?})`, `allowed(action)`; `DESKTOP_ACTIONS`, `normalizeAction` |
 | `originals.js` | the user's value of GNOME keys Kiwi owns (pure; the Shell side is a Gio.Settings) | `OriginalsStore`, `SettingOwner(store, settings, key, {type, transform/value, onOriginalChanged})` with `sync/reapply/release/original`, `restoreStale(store, openSettings)`; `ListMembersOwner(store, settings, key, members)` takes only some members out of a string list (Dash to Dock from `enabled-extensions`) and adds back just those |
+| `tileActions.js` | tiling vocabulary: zones, arrangements, `parseAction` (payload of `window-tile-requested`) | `ZONES`, `ARRANGEMENTS`, `parseAction` |
 | `panelLayout.js` (+`Model`) | who sits where in the top bar; hides stock items | `PanelLayout.claim(cleanup, {id, actor, box, anchor})`, `PanelLayout.hide(cleanup, role)` |
 | `windowState.js` | why a window is not in its normal place (`staged`, ...) | `WindowState.set/has/list/watch`, `interceptMinimize`, `setStageActive` |
 | `notificationRouter.js` | banners to the notch or stock, shared `{count, dnd}` | `setBannerSink`, `pinBanners`, `connect`, `state`, `setDnd` |
@@ -94,7 +95,8 @@ Events (`EVENTS` in `core/events.js`): `window-added`, `window-changed`, `window
 `motion-changed`, `feature-changed`, `minimize-requested`, `notification-center-requested`
 (the clock), `app-hide-requested` and `window-tile-requested` (app-menu commands for the
 window manager; the menu bar runs a fallback when nobody listens), `launchpad-requested` (dock tile,
-pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view-changed` (Split View).
+pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view-changed` (Split View), `recording-started` /
+`recording-stopped` (screenshots; for the notch's recording live activity).
 
 ## 4. lib/
 
@@ -134,6 +136,8 @@ pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view
 | `roundedCorners/` | `rounded-corners` | shader effect per window |
 | `liquidGlass/` | `liquid-glass` | attaches `lib/glass.js` to the panel, Control Center and calendar menus; the glass prefs |
 | `shellBehaviour/` | `shell-behaviour` | swipes stop at workspaces; no hot corner |
+| `missionControl/` | `mission-control` | overview restyled as Mission Control: Spaces bar (+, ×, reorder), App Exposé with minimized strip, F3 / Ctrl+Up / Ctrl+Down, start on the desktop, static Spaces (dynamic-workspaces via core/originals) |
+| `windows/` | `window-tiling`, `app-hide` | Sequoia tiling: drag zones with a glass outline (`drag.js`), shortcuts, arrangements, margins, tile book (`model.js`); owns mutter `edge-tiling`; answers `window-tile-requested`. Hide / Hide Others (`hide.js`, `hideModel.js`), WindowState `hidden`, answers `app-hide-requested`, takes Super+H from GNOME's minimize while on |
 | `fullscreenSpace/` | `move-window-to-new-workspace` | full screen in its own Space (kept as in 2.x); a `splitView`-flagged window stays in its Space when it leaves full screen |
 | `splitView/` | `split-view` | full screen Split View: green-button hover menu, tile a half, pick the partner from thumbnails; WindowState `splitView` |
 | `dock/` | `dock` | Kiwi's own dock: favourites, running and recent apps, minimized windows, Downloads stack (`stack.js`), Trash (`trash.js`), menus (`appMenu.js`), Open at Login (`autostart.js`); an edge claim in core/layout; keeps Dash to Dock off (`dashToDock.js`); `iconRect(appId)` / `minimizeTarget(win)` for Genie; P2: magnification (`magnify.js`), launch/attention bounce, LauncherEntry badges, grey background-app dots, minimized-window thumbnail on the app icon, folder Stacks (`dock-folders`) |

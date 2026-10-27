@@ -6,7 +6,7 @@
 //   actions.run('app-expose', { source: 'corner' });
 //
 // The action's owner is asked through ctx (never imported):
-//   mission-control       Main.overview (Mission Control restyles it, P3)
+//   mission-control       the mission-control feature's toggle(); fallback: Main.overview
 //   app-expose            'app-expose-requested' (Mission Control); fallback: the overview
 //   desktop               the show-desktop feature's toggle() (it hands off to Stage Manager)
 //   notification-center   the date menu, whose opening the menu bar turns into
@@ -49,7 +49,8 @@ export class DesktopActions {
         const { events } = this._ctx;
         switch (action) {
         case 'mission-control':
-            Main.overview.toggle();
+            // Mission Control's own toggle also leaves App Exposé for Mission Control
+            (this._ctx.features?.instance('mission-control') ?? Main.overview).toggle();
             return true;
         case 'app-expose':
             if (events.listenerCount('app-expose-requested') > 0) {

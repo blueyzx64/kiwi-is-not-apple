@@ -13,6 +13,8 @@
 //   - Stage Manager owns window placement: fullscreen-to-its-own-Space pauses (its saved
 //     value is kept).
 //   - The notch owns the centre of the top bar: the date menu moves right (calendar).
+//   - Tiling shortcuts: window-tiling binds only accelerators that no stock GNOME binding and no
+//     running Kiwi shortcut holds (Stage Manager's Ctrl+Super+Down wins while it runs).
 //   - Kiwi's dock owns the dock: Dash to Dock is kept off while it runs (core/originals).
 
 // ctx: see extension.js (settings, gettext, events, desktop, layout, motion, originals, ...)
@@ -77,6 +79,17 @@ export const FEATURES = [
         load: async () => (await import('./features/windowControls/appButtons.js')).AppButtonsFeature,
     },
     {
+        // Sequoia tiling: drag zones, the green-button menu's tiles, Ctrl+Super shortcuts.
+        // Owns org.gnome.mutter edge-tiling (off while it runs). Asked through 'window-tile-requested'.
+        id: 'window-tiling', setting: 'windows-tiling',
+        load: async () => (await import('./features/windows/index.js')).WindowTiling,
+    },
+    {
+        // Hide / Hide Others (Super+H, 'app-hide-requested'); takes Super+H from GNOME's minimize
+        id: 'app-hide', setting: 'windows-app-hide',
+        load: async () => (await import('./features/windows/hide.js')).AppHide,
+    },
+    {
         // Local clipboard history; its panel icon claims a slot through PanelLayout
         id: 'clipboard-history', setting: 'clipboard-history',
         load: async () => (await import('./features/clipboard/index.js')).ClipboardHistory,
@@ -131,6 +144,14 @@ export const FEATURES = [
         load: async () => (await import('./features/shellBehaviour/index.js')).ShellBehaviour,
     },
     {
+        // The overview restyled as Mission Control, App Exposé, start on the desktop. It owns
+        // dynamic-workspaces (static Spaces) and app-switcher current-workspace-only through
+        // core/originals; the dock and the Stage Manager strip hide with the overview.
+        id: 'mission-control', setting: 'mission-control',
+        restartOn: ['mission-control-shortcut', 'app-expose-shortcut', 'mc-static-spaces'],
+        load: async () => (await import('./features/missionControl/index.js')).MissionControl,
+    },
+    {
         // macOS-style rounded corners: one shader effect per window actor
         id: 'rounded-corners', setting: 'rounded-corners',
         load: async () => (await import('./features/roundedCorners/index.js')).RoundedCorners,
@@ -174,6 +195,12 @@ export const FEATURES = [
         // and OSD (parts switch live on notch-notifications / notch-osd / notch-live-activities).
         id: 'notch', setting: 'notch',
         load: async () => (await import('./features/notch/index.js')).NotchFeature,
+    },
+    {
+        // Shift+Super+3/4/5, the toolbar and the floating thumbnail, on GNOME's own screenshot UI
+        id: 'screenshots', setting: 'screenshots',
+        restartOn: ['screenshots-shortcut-screen', 'screenshots-shortcut-selection', 'screenshots-shortcut-toolbar'],
+        load: async () => (await import('./features/screenshots/index.js')).Screenshots,
     },
     {
         // Super+Tab and Super+`: Kiwi's handlers for switch-applications and switch-group while
