@@ -19,7 +19,7 @@
 | L13 | sonnet | P6 Spotlight Tahoe features | kiwi-l13 / v3/l13-spotlight | | started |
 | L14 | sonnet | P6 Control Center customisation, pinned controls, status-item (SNI) host, menu bar item manager, Low Power/battery rows | kiwi-l14 / v3/l14 | P1-menubar | started |
 | L15 | sonnet | P7 Installer integration (Kiwi side) + onboarding | kiwi-l15 / v3/l15-installer | | started |
-| R1–R5 | sonnet | Adversarial review of merged work | read-only | merges | R1–R3 started |
+| R1–R5 | sonnet | Adversarial review of merged work | read-only | merges | R1, R2, R3 done; R4 once after wave 3 |
 | H* | haiku | see helper list below | | | |
 
 ## Helper tasks (haiku)
@@ -65,3 +65,8 @@ Deploy conservatively, sized to the scope and type of work. Resume in waves of a
 - Agents: read only the files they need, do one final 20-cycle Shell run plus at most one targeted run, and keep reports to 20 lines or fewer.
 - Cut: H10 and H11 are folded into H9's library (no separate agents). H12 becomes an orchestrator grep. R4 and R5 become one reviewer (R4), run once after wave 3.
 - Order after the current eight: L2, L3, L4, L8, then L9, L10, L11, L12, L14, L15.
+
+## R2 (glass, appearance, dock) findings → FX3 (queued: starts after FX2 merges, because FX2 touches the wallpaper decode in adaptiveBar)
+- S1 F1: the wallpaper tint decode freezes the Shell (lib/wallpaperTint.js:129, adaptiveBar.js:273). Use one shared decode: GNOME's thumbnail or a capped size off the main loop.
+- S2 F2: both docks run when DtD is enabled live (originals.js:347 `_strip` is synchronous, so strip from idle or yield). F3: theme outer shadow on glass menus (explicit `box-shadow:none`). F4: no session-modes, so lock/unlock flips settings and flashes DtD (keep the holds while locked). F5: the stack freezes on big folders (lazy rows, debounce, ignore .part). F6: menu-bar glass contrast 3.92:1 on white (tint floor).
+- S3 F7 (autostart through a dangling symlink), F8 (trash.js:89 after destroy), F10 (web-app minimize target), F11 (click on a focused app unminimizes). F9 is fixed by FX1. F12 is unconfirmed, so skip it.
