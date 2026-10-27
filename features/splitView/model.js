@@ -6,6 +6,7 @@
 //   thumbnailRects(sizes, area)     the picker's thumbnails on the free half
 //   menuEntries(state)              what the green button offers
 //   survivorAfter(pair, gone)       who stays full screen when a pair ends
+//   preSplitRect(frame, area)       the size a window that leaves a pair goes back to
 //
 // macOS (El Capitan to Sequoia; research native-apps-and-system-ui "Full screen and Split
 // View", 2018-2019 "Window tile menu on the green button"): hovering the green button of a
@@ -104,4 +105,20 @@ export function survivorAfter(pair, gone) {
     if (gone === pair.b)
         return pair.a ?? null;
     return null;
+}
+
+/**
+ * The size a window goes back to when it leaves a pair: its frame before the split, unless
+ * that frame still covers the whole area (Mutter had not given the window its windowed size
+ * yet), which is no size to go back to.
+ *
+ * @param {?{x, y, width, height}} frame
+ * @param {{x, y, width, height}} area
+ * @returns {?{x, y, width, height}}
+ */
+export function preSplitRect(frame, area) {
+    if (!frame || (frame.width >= area.width && frame.height >= area.height))
+        return null;
+    const { x, y, width, height } = frame;
+    return { x, y, width, height };
 }

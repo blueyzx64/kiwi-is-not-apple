@@ -1,6 +1,6 @@
 // Run: gjs -m tests/windowsModel.test.js
 import {
-    ZONES, ARRANGEMENTS, parseAction, zoneRect, centerRect, placeIn, hitZone, planArrangement,
+    ZONES, ARRANGEMENTS, parseAction, zoneRect, centerRect, placeIn, hitZone, dropZone, planArrangement,
     untileRect, rectChanged, TileBook, SHORTCUTS, pickBindable, TILE_MARGIN, EDGE_PX,
 } from '../features/windows/model.js';
 import { planHide, HiddenApps, HIDE_MODES } from '../features/windows/hideModel.js';
@@ -28,6 +28,12 @@ const MON = { x: 0, y: 0, width: 1280, height: 800 };
 const TOP = 32;
 
 // --- actions
+test('dropZone: released drags tile, cancelled (button still down) ones do not', () => {
+    eq(dropZone('left', false), 'left');
+    eq(dropZone('left', true), null);
+    eq(dropZone(null, false), null);
+});
+
 test('parseAction knows zones, center, restore and arrangements', () => {
     eq(parseAction('left'), { kind: 'zone', name: 'left' });
     eq(parseAction('fill'), { kind: 'zone', name: 'fill' });

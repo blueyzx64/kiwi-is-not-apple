@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Stage Manager strip view: one rounded glass floor at the screen edge with the strip
-// entries lying on it, each a stack of live, tilted window clones with the app icon badge.
+// Stage Manager strip view: the strip entries float on the wallpaper at the screen edge (as on
+// macOS there is no panel under them), each a stack of live, tilted window clones with the app icon badge.
 // It also owns the drop target over the stage (while an entry is dragged) and the layer the
 // flights fly in, so the whole feature draws inside one container, destroyed on disable.
 //
@@ -12,8 +12,8 @@
 //   container      Clutter.Actor 1x1 at 0,0
 //     drop         St.Widget .kiwi-stage-drop over the stage, a DND target, while an entry is dragged
 //     strip        Clutter.Actor: slides off the edge when the strip steps aside
-//       shadow     St.Widget .kiwi-stage-shadow, the glass floor's drop-shadow host
-//       floor      St.Widget .kiwi-stage-strip (Kiwi glass), track_hover
+//       floor      St.Widget .kiwi-stage-strip: invisible, the strip's hover and drop area
+//                  (it reaches the screen edge, so a pointer resting there keeps the strip out)
 //         card     St.Button .kiwi-stage-card per entry: hit box, DND source
 //           holder   Clutter.Actor: clones back to front, the focus ring, the label, the badge
 //     flights      Clutter.Actor: the windows flying to and from the strip, above everything
@@ -35,7 +35,6 @@ import * as DND from 'resource:///org/gnome/shell/ui/dnd.js';
 import * as Layout from 'resource:///org/gnome/shell/ui/layout.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
-import { Glass } from '../../lib/glass.js';
 import {
     METRICS, clonePose, edgeBarrier, fitCount, layerRect, slotBox, slotAt, stackLayers, stripLayout,
     stripVisible, tiltAngle,
@@ -106,15 +105,8 @@ export class StripView {
 
         this._strip = new Clutter.Actor({ reactive: false, visible: false });
         this.container.add_child(this._strip);
-        this._shadow = new St.Widget({ style_class: 'kiwi-stage-shadow', reactive: false });
-        this._strip.add_child(this._shadow);
         this._floor = new St.Widget({ style_class: 'kiwi-stage-strip', reactive: true, track_hover: true });
         this._strip.add_child(this._floor);
-        this._shadow.add_constraint(new Clutter.BindConstraint({
-            source: this._floor, coordinate: Clutter.BindCoordinate.ALL,
-        }));
-        const glass = Glass.attach(this._floor, { surface: 'overlays', role: 'bar', shadow: this._shadow });
-        cleanup.add(() => glass.destroy());
         this._floor.connect('notify::hover', () => this._syncShown());
 
         this._flights = new Clutter.Actor({ reactive: false });
