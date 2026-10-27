@@ -2,7 +2,7 @@
 import {
     relativeLuminance, wallpaperBand, bandLuminance, chooseText, touchesBar, barLook, parseOsRelease, parseCpuInfo, parseMemTotal,
     formatBytes, deviceModel, chassisIcon, gpuNames, parseRecentXbel, forceQuitRows,
-    privacyDots, micApps,
+    privacyDots, micApps, confirmationHolds, fillPlaceholders, fitMenus, decodesByRatio,
 } from '../features/menuBar/model.js';
 
 let failed = 0;
@@ -70,13 +70,75 @@ test('band luminance of a solid and a half/half image', () => {
     near(mixed.spread, 1);
 });
 
-test('text flips with hysteresis and a scrim on mixed bands', () => {
-    eq(chooseText({ mean: 0.9, spread: 0 }), { darkText: true, scrim: false });
-    eq(chooseText({ mean: 0.02, spread: 0 }), { darkText: false, scrim: false });
+test('text flips with hysteresis', () => {
+    eq(chooseText({ mean: 0.9, spread: 0 }), { darkText: true, scrim: false, solid: false });
+    eq(chooseText({ mean: 0.02, spread: 0 }), { darkText: false, scrim: false, solid: false });
     eq(chooseText({ mean: 0.16, spread: 0 }, true).darkText, true);   // stays dark
     eq(chooseText({ mean: 0.10, spread: 0 }, true).darkText, false);  // flips
     eq(chooseText({ mean: 0.20, spread: 0 }, false).darkText, false); // stays light
-    eq(chooseText({ mean: 0.5, spread: 0.6 }).scrim, true);
+    eq(chooseText({ mean: 0.5, spread: 0.6 }).scrim, true);           // a wide spread
+});
+
+test('contrast-safe: a half black, half white band keeps the solid bar', () => {
+    // Left half black, right half white: the mean (0.5) used to pick dark text over the black half
+    const split = { mean: 0.5, spread: 1, low: 0, high: 1 };
+    eq(chooseText(split).solid, true);
+    // Mostly dark with a bright patch: light text, but a scrim, not solid
+    const patch = { mean: 0.08, spread: 0.2, low: 0.02, high: 0.3 };
+    const t = chooseText(patch);
+    eq([t.darkText, t.scrim, t.solid], [false, true, false]);
+    // The darkest tenth decides for dark text: a bright band with dark corners is not "light"
+    eq(chooseText({ mean: 0.7, spread: 0.5, low: 0.05, high: 0.95 }).solid, true);
+    // A uniformly readable band needs neither
+    eq(chooseText({ mean: 0.04, spread: 0.02, low: 0.03, high: 0.05 }), { darkText: false, scrim: false, solid: false });
+});
+
+test('band luminance reports the 10th and 90th percentile', () => {
+    const px = solid(10, 2, [0, 0, 0]);
+    for (let y = 0; y < 2; y++)
+        for (let x = 5; x < 10; x++)
+            px.set([255, 255, 255], (y * 10 + x) * 3);
+    const m = bandLuminance(px, { rowstride: 30, channels: 3 }, { x: 0, y: 0, width: 10, height: 2 });
+    near(m.low, 0);
+    near(m.high, 1);
+});
+
+test('wallpapers placed by their real pixels are not decoded by ratio', () => {
+    eq(['zoom', 'stretched', 'scaled', 'spanned'].every(decodesByRatio), true);
+    eq(['centered', 'wallpaper'].some(decodesByRatio), false);
+});
+
+test('force quit: the confirmation holds only for the app it named', () => {
+    eq(confirmationHolds('a', 'a'), true);
+    eq(confirmationHolds('a', 'b'), false);
+    eq(confirmationHolds(null, null), false);
+    eq(confirmationHolds(null, 'a'), false);
+});
+
+test('placeholders are filled in order and are not read as patterns', () => {
+    eq(fillPlaceholders('Log Out %s…', 'Ann'), 'Log Out Ann…');
+    eq(fillPlaceholders('Log Out %s…', "$&'$$"), "Log Out $&'$$…");
+    eq(fillPlaceholders('%s, %s available', '1 TB', '$& GB'), '1 TB, $& GB available');
+    eq(fillPlaceholders('%s and %s', 'x'), 'x and %s');
+});
+
+test('menu strip: everything fits', () => {
+    eq(fitMenus([60, 40, 40], 200, 20), { shown: 3, more: false, xs: [0, 60, 100], moreX: 140 });
+});
+
+test('menu strip: the menus that do not fit go behind the » button', () => {
+    // 60 + 40 + 40 + 40 = 180 > 150: the app name, File and room for »
+    eq(fitMenus([60, 40, 40, 40], 150, 20), { shown: 2, more: true, xs: [0, 60], moreX: 100 });
+    // the app name is always shown, even when it alone is wider than the strip
+    eq(fitMenus([300, 40], 100, 20), { shown: 1, more: true, xs: [0], moreX: 300 });
+    // the » button needs its room: 60 + 50 would fit, 60 + 50 + 20 would not
+    eq(fitMenus([60, 50, 40], 125, 20).shown, 1);
+    eq(fitMenus([], 100, 20), { shown: 0, more: false, xs: [], moreX: 0 });
+});
+
+test('menu strip: right-to-left text starts at the right edge', () => {
+    eq(fitMenus([60, 40, 40], 200, 20, true), { shown: 3, more: false, xs: [140, 100, 60], moreX: 40 });
+    eq(fitMenus([60, 40, 40, 40], 150, 20, true), { shown: 2, more: true, xs: [90, 50], moreX: 30 });
 });
 
 test('a window touches the bar at the top of the work area', () => {
@@ -107,6 +169,11 @@ test('sizes and models', () => {
     eq(formatBytes(512110190592), '512 GB');
     eq(formatBytes(1500000000000), '1.5 TB');
     eq(formatBytes(16314192 * 1024, { memory: true }), '16 GB');
+    // MemTotal is below the installed size (iGPU-reserved memory): round up to the module size
+    eq(formatBytes(15.2 * 1024 ** 3, { memory: true }), '16 GB');
+    eq(formatBytes(7.6 * 1024 ** 3, { memory: true }), '8 GB');
+    eq(formatBytes(30.9 * 1024 ** 3, { memory: true }), '32 GB');
+    eq(formatBytes(64 * 1024 ** 3, { memory: true }), '64 GB');
     eq(formatBytes(0), '');
     eq(deviceModel('LENOVO', '21CB'), 'LENOVO 21CB');
     eq(deviceModel('Framework', 'Framework Laptop 13'), 'Framework Laptop 13');

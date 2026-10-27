@@ -40,7 +40,7 @@ export function buildPrefs({ settings, extension }) {
     const keys = new Adw.PreferencesGroup({ title: _('Keyboard') });
     keys.add(switchRow(settings, _('Shortcut Symbols'),
         _('Write shortcuts in menus as ⌘ ⌥ ⌃ ⇧ (Super is ⌘). Off writes them in words'), 'menubar-command-glyphs'));
-    keys.add(shortcutRow(settings, _, { key: 'menubar-focus-shortcut', title: _('Use the Menu Bar with the Keyboard'), example: 'F10' }));
+    keys.add(shortcutRow(settings, _, { key: 'menubar-focus-shortcut', title: _('Use the Menu Bar with the Keyboard'), example: '<Control>F2' }));
     keys.add(shortcutRow(settings, _, { key: 'menubar-force-quit-shortcut', title: _('Force Quit Applications'), example: '<Super><Alt>Escape' }));
 
     return [bar, keys];
