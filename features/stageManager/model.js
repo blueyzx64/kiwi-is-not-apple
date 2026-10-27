@@ -1,843 +1,820 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Stage Manager model: pure maths and state, no gi imports (tests: tests/stageManagerModel.test.js).
+// Stage Manager state machine. Pure: no gi imports, no clock, no Shell objects
+// (tests: tests/stageManagerModel.test.js scenarios, tests/stageManagerFuzz.test.js).
+//
+//   const sm = new StageMachine({ allAtOnce: true, newWindows: 'replace', recentCount: 6 });
+//   const effects = sm.dispatch({ type: 'add', window: info, now });
+//
+// Events in, effects out. The Shell adapter (index.js) turns desktop changes and user input
+// into events, and only applies the effects it gets back. Time comes in with the events
+// (`now`, ms), and delays go out as `timer` effects that come back as `timer` events.
 //
 // Vocabulary
-//   window   {id, appId}                       a plain description; the shell adapter maps real windows to these
-//   stage    {id, appId, windows: [id], lead}  one or more windows shown together (grouped by app)
-//   rect     {x, y, width, height}             pixels, absolute
+//   window  a plain description (core/desktopModel.js WindowInfo): id, appId, type, parent,
+//           workspace (-1 = on all), monitor, fullscreen, above, skipTaskbar, title, minimized
+//   entry   {id, ws, windows: [id] (lead first), set, seq}: windows shown and hidden together.
+//           One app's windows (All at Once) or one window (One at a Time), or a set the user
+//           built from several apps.
+//   space   per workspace: {stage: entry id|null, strip: [entry id] (slot order), desktop}
 //
-// The model answers: which stage is on the stage, which ones go to the strip and in what order,
-// which windows to show or hide after a switch, and where everything is drawn.
+// The rule every state obeys (checkInvariants() asserts it; the fuzz test runs it after
+// every event):
+//   - a managed window is in exactly one entry, of its own workspace;
+//   - it is visible iff its entry is its space's stage;
+//   - an attached window (a dialog or other transient) is visible iff its root is;
+//   - an exempt window (sticky, always-on-top, skip-taskbar, picture-in-picture, an orphan
+//     dialog, on another monitor, or full screen when it appeared) is never hidden;
+//   - every entry is either the stage or in the strip of its space, never both, and no entry
+//     is empty.
+//
+// Effects (in this order within one dispatch):
+//   {type: 'strip', ws}                   the strip of workspace ws changed: redraw it
+//   {type: 'hide', ids, animate}          these windows leave the stage (fly to their entry)
+//   {type: 'show', ids, animate}          these come onto it (fly from their entry), lead last
+//   {type: 'unminimize', id}              Mutter minimized it; it lives in the strip instead
+//   {type: 'focus', id}                   give it the focus (null: no window has focus)
+//   {type: 'desktop', shown}              the active space's desktop was shown or hidden
+//   {type: 'timer', key, ms}              send {type: 'timer', key} after ms
+//   {type: 'cancel', key}                 forget that timer
 
-export const DEFAULTS = Object.freeze({
-    stripWidth: 200,
-    thumbW: 180,
-    thumbH: 130,
-    gap: 18,
-    padTop: 24,
-    padBottom: 24,
-    minScale: 0.55,       // cards shrink to this at most, then the strip stops listing more
-    rotation: 22,         // degrees, see cardTilt(); windows turn to face the stage
-    cardPad: 14,          // px between the card's edge and the window inside it (scaled with the card)
-    badge: 34,
-    stackMax: 3,
-    edgeZone: 2,
+/** A stage that empties by a close waits this long for a new window before the next comes. */
+export const GRACE_MS = 400;
+/** After a switch the model made, focus changes to other entries are ignored this long
+ * (Mutter's default focus after a minimize, and windows that raise each other). */
+export const QUIET_MS = 300;
+/** "Open in current stage" waits this long for the app's window to appear. */
+export const JOIN_MS = 10000;
+
+export const DEFAULT_CONFIG = Object.freeze({
+    allAtOnce: true,        // stage-manager-group-by-app
+    newWindows: 'replace',  // stage-manager-new-windows: 'replace' | 'join'
+    recentCount: 6,         // stage-manager-recent-count: most entries the strip shows
 });
 
-// ---- rect helpers ----------------------------------------------------------------------
-
-export function overlaps(a, b) {
-    return a.x < b.x + b.width && b.x < a.x + a.width &&
-        a.y < b.y + b.height && b.y < a.y + a.height;
-}
-
-function clamp(v, lo, hi) {
-    return Math.max(lo, Math.min(hi, v));
-}
-
-// ---- thumbnails ------------------------------------------------------------------------
-
-/**
- * Fit a source into a box, keeping the aspect ratio, never upscaling past 1.
- * @returns {{scale: number, width: number, height: number, x: number, y: number}}
- *   x, y: offset that centres the result in the box.
- */
-export function thumbFit(srcW, srcH, boxW, boxH) {
-    if (!(srcW > 0) || !(srcH > 0) || !(boxW > 0) || !(boxH > 0))
-        return { scale: 0, width: 0, height: 0, x: 0, y: 0 };
-    const scale = Math.min(1, boxW / srcW, boxH / srcH);
-    const width = srcW * scale;
-    const height = srcH * scale;
-    return { scale, width, height, x: (boxW - width) / 2, y: (boxH - height) / 2 };
-}
-
-/**
- * Thumbnail of a window: the clone shows the whole buffer (client shadows included), so the
- * holder clips it to the frame. `frame` and `buffer` are rects from Meta.Window
- * (get_frame_rect, get_buffer_rect).
- * @returns {{scale, width, height, x, y, cloneX, cloneY, cloneW, cloneH}}
- *   width/height: size of the clipping holder; x/y: its offset in the box;
- *   clone*: place and size of the Clutter.Clone inside the holder.
- */
-export function cropThumb(frame, buffer, boxW, boxH) {
-    const fit = thumbFit(frame.width, frame.height, boxW, boxH);
-    if (fit.scale === 0)
-        return { ...fit, cloneX: 0, cloneY: 0, cloneW: 0, cloneH: 0 };
-    const s = fit.scale;
-    return {
-        ...fit,
-        cloneX: (buffer.x - frame.x) * s,
-        cloneY: (buffer.y - frame.y) * s,
-        cloneW: buffer.width * s,
-        cloneH: buffer.height * s,
-    };
-}
-
-/**
- * Size of a window in a strip slot: true aspect ratio, similar visual weight for every window.
- * The window is scaled toward `area` (a share of the slot), then shrunk to fit the slot's
- * max width and height. A tall window ends up as tall as the slot, a wide one as wide, and a
- * normal one in between; none becomes a sliver.
- * @param {number} w  window width
- * @param {number} h  window height
- * @param {number} maxW  slot width
- * @param {number} maxH  slot height
- * @param {number} [fill]  share of the slot's area to aim for (0..1)
- * @returns {{width: number, height: number, scale: number}} scale: from window to slot pixels
- */
-export function balancedFit(w, h, maxW, maxH, fill = 0.6) {
-    if (!(w > 0) || !(h > 0) || !(maxW > 0) || !(maxH > 0))
-        return { width: 0, height: 0, scale: 0 };
-    const target = Math.max(0, Math.min(1, fill)) * maxW * maxH;
-    let scale = Math.sqrt(target / (w * h));
-    scale = Math.min(scale, maxW / w, maxH / h);
-    return { width: w * scale, height: h * scale, scale };
-}
-
-/**
- * Pose of a window clone (the clone has the buffer's size) whose frame is drawn in `rect`
- * (centred, aspect kept), turned about the frame's centre. The pivot is the frame centre, so
- * position does not depend on scale or rotation and a flight can tween x, y, scale and angle.
- * @param {rect} frame
- * @param {rect} buffer
- * @param {rect} rect
- * @returns {?{x: number, y: number, pivotX: number, pivotY: number, scale: number}}
- *   pivot normalised to the buffer size; x, y: clone position in rect's coordinate space
- */
-export function clonePose(frame, buffer, rect) {
-    if (!(frame.width > 0) || !(frame.height > 0) || !(buffer.width > 0) || !(buffer.height > 0) ||
-        !(rect.width > 0) || !(rect.height > 0))
-        return null;
-    const px = frame.x - buffer.x + frame.width / 2;
-    const py = frame.y - buffer.y + frame.height / 2;
-    return {
-        x: rect.x + rect.width / 2 - px,
-        y: rect.y + rect.height / 2 - py,
-        pivotX: px / buffer.width,
-        pivotY: py / buffer.height,
-        scale: Math.min(rect.width / frame.width, rect.height / frame.height),
-    };
-}
-
-/**
- * A small rect centred on a point: where a window shrinks to when it has no card to land on.
- * @param {{x: number, y: number}} point
- * @param {rect} frame keeps its aspect ratio
- * @param {number} width
- */
-export function pointRect(point, frame, width = 24) {
-    const h = frame.width > 0 ? width * frame.height / frame.width : width;
-    return { x: point.x - width / 2, y: point.y - h / 2, width, height: h };
-}
-
-/**
- * Layers of a stacked card, front first. A stage of one window has one layer.
- * dx points toward the screen edge, so the stack peeks out away from the stage.
- */
-export function stackLayers(count, side = 'left', max = DEFAULTS.stackMax, { set = false } = {}) {
-    const n = clamp(Math.floor(count) || 0, 0, max);
-    const dir = side === 'right' ? 1 : -1;
-    // A set of different windows fans out more and stays opaque: every window is meant to show
-    const step = set ? { dx: 16, dy: -12, scale: 0.05, fade: 0.08 } : { dx: 7, dy: -6, scale: 0.06, fade: 0.28 };
-    const layers = [];
-    for (let i = 0; i < n; i++) {
-        layers.push({
-            index: i,
-            dx: dir * i * step.dx,
-            dy: i * step.dy,
-            scale: 1 - i * step.scale,
-            opacity: Math.round(255 * (1 - i * step.fade)),
-            tilt: set ? -dir * i * 3 : 0,     // a fanned set: back windows turn a little more
-        });
-    }
-    return layers;
-}
-
-/** Y-rotation of a card in degrees; positive turns the card's far edge away from the viewer on the stage side. */
-export function cardTilt(side, degrees = DEFAULTS.rotation) {
-    return side === 'right' ? -degrees : degrees;
-}
-
-// ---- strip layout ------------------------------------------------------------------------
-
-/**
- * How many cards fit before they would drop under minScale.
- */
-export function fitCount(workAreaHeight, wanted, opts = {}) {
-    const o = { ...DEFAULTS, ...opts };
-    const avail = workAreaHeight - o.padTop - o.padBottom;
-    let n = Math.max(0, Math.floor(wanted));
-    while (n > 0) {
-        const natural = n * o.thumbH + (n - 1) * o.gap;
-        if (avail / natural >= o.minScale)
-            return n;
-        n--;
-    }
-    return 0;
-}
-
-/**
- * Where the strip and its cards go.
- * @param {{workArea: rect, side: 'left'|'right', count: number}} args (+ DEFAULTS overrides)
- * @returns {{strip: rect, cards: rect[], scale: number}}
- *   cards are absolute rects (card box = thumbW×thumbH × scale), centred vertically.
- */
-export function stripLayout({ workArea, side = 'left', count, ...opts }) {
-    const o = { ...DEFAULTS, ...opts };
-    const stripX = side === 'right' ? workArea.x + workArea.width - o.stripWidth : workArea.x;
-    const strip = { x: stripX, y: workArea.y, width: o.stripWidth, height: workArea.height };
-    const n = Math.max(0, Math.floor(count));
-    if (n === 0)
-        return { strip, cards: [], scale: 1 };
-
-    const avail = Math.max(1, workArea.height - o.padTop - o.padBottom);
-    const natural = n * o.thumbH + (n - 1) * o.gap;
-    const scale = Math.min(1, avail / natural);
-    const cardW = o.thumbW * scale;
-    const cardH = o.thumbH * scale;
-    const gap = o.gap * scale;
-    const total = n * cardH + (n - 1) * gap;
-    const top = workArea.y + o.padTop + (avail - total) / 2;
-    const x = stripX + (o.stripWidth - cardW) / 2;
-
-    const cards = [];
-    for (let i = 0; i < n; i++)
-        cards.push({ x, y: top + i * (cardH + gap), width: cardW, height: cardH });
-    return { strip, cards, scale };
-}
-
-/** Thin rect at the screen edge that reveals an auto-hidden strip. */
-export function edgeZone(workArea, side = 'left', width = DEFAULTS.edgeZone) {
-    const x = side === 'right' ? workArea.x + workArea.width - width : workArea.x;
-    return { x, y: workArea.y, width, height: workArea.height };
-}
-
-/**
- * Vertical pressure barrier on the strip's screen edge (reveals an auto-hidden strip without a
- * reactive actor over the windows). Null when another monitor continues past that edge, since a
- * barrier there would stop the pointer crossing over.
- * @param {rect} workArea  of the primary monitor
- * @param {rect} monitor   the primary monitor
- * @param {rect[]} others  the other monitors
- * @returns {{x1, x2, y1, y2, direction: 'positive'|'negative'}|null}
- *   direction: the Meta.BarrierDirection that lets the pointer move away from the edge
- */
-export function edgeBarrier(workArea, monitor, others = [], side = 'left') {
-    const right = side === 'right';
-    const x = right ? monitor.x + monitor.width : monitor.x;
-    const y1 = workArea.y;
-    const y2 = workArea.y + workArea.height;
-    const neighbour = others.some(m => {
-        const touches = right ? m.x === monitor.x + monitor.width : m.x + m.width === monitor.x;
-        return touches && m.y < y2 && m.y + m.height > y1;
-    });
-    if (neighbour || y2 <= y1)
-        return null;
-    return { x1: x, x2: x, y1, y2, direction: right ? 'negative' : 'positive' };
-}
-
-// ---- stage area ---------------------------------------------------------------------------
-
-/** The part of the work area the stage may use. An auto-hide strip reserves nothing. */
-export function stageArea(workArea, { side = 'left', stripWidth = DEFAULTS.stripWidth, autohide = false, stripShown = true } = {}) {
-    if (autohide || !stripShown)
-        return { ...workArea };
-    const x = side === 'right' ? workArea.x : workArea.x + stripWidth;
-    return { x, y: workArea.y, width: Math.max(0, workArea.width - stripWidth), height: workArea.height };
-}
-
-/**
- * Keep the window's size; only move it (and shrink it if it cannot fit) so it stays inside
- * the stage area. A window already inside is returned unchanged.
- */
-export function fitToStage(rect, area) {
-    const width = Math.min(rect.width, area.width);
-    const height = Math.min(rect.height, area.height);
-    return {
-        x: clamp(rect.x, area.x, area.x + area.width - width),
-        y: clamp(rect.y, area.y, area.y + area.height - height),
-        width,
-        height,
-    };
-}
-
-/** A window of this size centred in the stage area (new windows, or after a switch). */
-export function centerOnStage(size, area) {
-    const width = Math.min(size.width, area.width);
-    const height = Math.min(size.height, area.height);
-    return {
-        x: area.x + (area.width - width) / 2,
-        y: area.y + (area.height - height) / 2,
-        width,
-        height,
-    };
-}
-
-// ---- auto-hide ----------------------------------------------------------------------------
-
-/**
- * @param {{autohide, overview, stageOverlapsStrip, stageCoversStrip, pointerAtEdge, pointerOnStrip}} s
- *   stageCoversStrip: a stage window over the strip that Kiwi does not move aside (maximized,
- *   tiled, fullscreen). The strip steps aside for it even without auto-hide, as on macOS.
- * @returns {boolean} true: the strip is shown
- */
-export function stripShown({ autohide, overview, stageOverlapsStrip, stageCoversStrip = false, pointerAtEdge, pointerOnStrip }) {
-    if (overview)
-        return false;
-    if (!autohide && !stageCoversStrip)
-        return true;
-    if (!stageOverlapsStrip)
-        return true;
-    return !!(pointerAtEdge || pointerOnStrip);
-}
-
-// ---- which windows Stage Manager leaves alone ---------------------------------------------
-
 const PIP_TITLE = /picture[\s-]*in[\s-]*picture/i;
+const MAX_DEPTH = 16;
 
-/**
- * Windows that float over every stage: always-on-top, on all workspaces, picture-in-picture,
- * or on another monitor than the strip. They are never hidden, moved or listed.
- * @param {{above: boolean, sticky: boolean, title: ?string, monitor: number, primary: number}} w
- */
-export function isExempt({ above, sticky, title, monitor, primary }) {
-    if (above || sticky)
-        return true;
-    if (title && PIP_TITLE.test(title))
-        return true;
-    return monitor !== primary;
-}
-
-// ---- focus ------------------------------------------------------------------------------
-
-/**
- * The window that owns a focused dialog: follow transient-for up to the first window the stage
- * manager lists. Returns the window itself when it is listed, null when the chain has none.
- * @param {T} win
- * @param {(w: T) => T|null} parentOf  e.g. w => w.get_transient_for()
- * @param {(w: T) => boolean} isListed
- * @template T
- */
-export function focusRoot(win, parentOf, isListed, maxDepth = 16) {
-    const seen = new Set();
-    for (let w = win, depth = 0; w && depth <= maxDepth && !seen.has(w); depth++) {
-        if (isListed(w))
-            return w;
-        seen.add(w);
-        w = parentOf(w);
-    }
+/** Why a window is left alone, or null when Stage Manager manages it. */
+export function exemptReason(w, primary) {
+    if (w.workspace === -1)
+        return 'sticky';
+    if (w.above)
+        return 'above';
+    if (w.skipTaskbar)
+        return 'skip-taskbar';
+    if (w.title && PIP_TITLE.test(w.title))
+        return 'pip';
+    if (w.monitor !== primary)
+        return 'monitor';
     return null;
 }
 
-// ---- window sets: drop zones and side-by-side plans -----------------------------------------
-
-/**
- * Where a strip entry dropped on the stage goes. The outer parts tile the dropped windows on
- * that side of the stage; the middle band adds them to the set as they are.
- * @param {{x: number, y: number}} point
- * @param {rect} area  the stage area
- * @param {number} [centre]  share of the width the middle band takes
- * @returns {'left'|'right'|'center'|null} null: outside the stage
- */
-export function dropZone(point, area, centre = 0.3) {
-    if (!area || !(area.width > 0) || !(area.height > 0))
-        return null;
-    if (point.x < area.x || point.x >= area.x + area.width || point.y < area.y || point.y >= area.y + area.height)
-        return null;
-    const rel = (point.x - area.x) / area.width;
-    const half = clamp(centre, 0, 1) / 2;
-    if (rel < 0.5 - half)
-        return 'left';
-    if (rel >= 0.5 + half)
-        return 'right';
-    return 'center';
-}
-
-/** The highlight drawn for a drop zone: the half it tiles into, or the whole stage for the middle. */
-export function dropZoneRect(area, zone, inset = 12) {
-    if (!area || !zone)
-        return null;
-    const half = Math.floor(area.width / 2);
-    const base = zone === 'left' ? { x: area.x, width: half }
-        : zone === 'right' ? { x: area.x + area.width - half, width: half }
-            : { x: area.x, width: area.width };
-    return {
-        x: base.x + inset, y: area.y + inset,
-        width: Math.max(0, base.width - 2 * inset), height: Math.max(0, area.height - 2 * inset),
-    };
-}
-
-/**
- * Left-to-right order of a tiled set after a drop: the dropped windows on the zone's side, the
- * windows already on the stage on the other. A middle drop tiles nothing (null).
- * @param {'left'|'right'|'center'} zone
- * @param {Array} dropped  ids of the dropped entry
- * @param {Array} staged   ids on the stage (current tile order, or its windows)
- */
-export function tileOrder(zone, dropped, staged) {
-    if (zone !== 'left' && zone !== 'right')
-        return null;
-    const rest = staged.filter(id => !dropped.includes(id));
-    return zone === 'left' ? [...dropped, ...rest] : [...rest, ...dropped];
-}
-
-/**
- * Side-by-side frames: equal columns over the stage area, a gap between them and around.
- * @param {rect} area
- * @param {number} count
- * @param {number} [gap]
- * @returns {rect[]} integer rects, left to right
- */
-export function tilePlan(area, count, gap = 8) {
-    const n = Math.max(0, Math.floor(count));
-    if (n === 0 || !(area.width > 0) || !(area.height > 0))
-        return [];
-    const inner = area.width - gap * (n + 1);
-    const w = Math.floor(inner / n);
-    if (w <= 0)
-        return [];
-    const out = [];
-    for (let i = 0; i < n; i++) {
-        out.push({
-            x: Math.round(area.x + gap + i * (w + gap)),
-            y: Math.round(area.y + gap),
-            width: w,
-            height: Math.max(1, Math.round(area.height - 2 * gap)),
-        });
+export class StageMachine {
+    /** @param {object} [config] see DEFAULT_CONFIG */
+    constructor(config = {}) {
+        this._config = { ...DEFAULT_CONFIG, ...config };
+        this._windows = new Map();   // id -> window description
+        this._member = new Map();    // managed window id -> entry id
+        this._entries = new Map();   // entry id -> entry
+        this._spaces = new Map();    // ws -> space
+        this._seq = 0;
+        this._active = 0;
+        this._primary = 0;
+        this._join = null;           // {appId} while "open in current stage" is armed
+        this._fx = null;
+        this._hiddenBefore = null;
     }
-    return out;
-}
 
-/**
- * Second pass of a side-by-side layout, once the apps have answered. An app with a minimum
- * size larger than its column keeps that size, and mutter then keeps the window's old
- * position too, so it can end up overlapping its neighbours or past the screen edge. This
- * places the windows at the sizes they really took, left to right, inside the area: equal
- * gaps when they fit, else overlapping evenly (the first one at the left edge, the last at the
- * right). A window narrower than its column is centred in it; one shorter than the area is
- * centred vertically; one taller than the area keeps its top edge in view.
- * @param {rect} area  the stage area tilePlan() used
- * @param {{width: number, height: number}[]} sizes  real frame sizes, left to right
- * @param {number} [gap]
- * @returns {{x: number, y: number}[]} integer positions, left to right
- */
-export function settleTiles(area, sizes, gap = 8) {
-    const n = sizes.length;
-    if (n === 0 || !(area?.width > 0) || !(area?.height > 0))
-        return [];
-    const plan = tilePlan(area, n, gap);
-    const colW = plan[0]?.width ?? 0;
-    const ys = sizes.map(s => {
-        const inner = area.height - 2 * gap;
-        if (s.height > area.height)
-            return area.y;
-        if (s.height > inner)
-            return area.y + Math.floor((area.height - s.height) / 2);
-        return area.y + gap + Math.floor((inner - s.height) / 2);
-    });
-    const cols = sizes.map(s => Math.max(colW, s.width));
-    const need = cols.reduce((a, b) => a + b, 0) + gap * (n + 1);
-    const xs = [];
-    if (need <= area.width) {
-        // Everyone fits: columns as planned, a narrower window centred in its column
-        let x = area.x + gap;
-        for (let i = 0; i < n; i++) {
-            xs.push(x + Math.floor((cols[i] - sizes[i].width) / 2));
-            x += cols[i] + gap;
-        }
-    } else {
-        // Too wide: overlap evenly, first at the left edge, last at the right
-        const total = sizes.reduce((a, s) => a + s.width, 0) + gap * (n + 1);
-        const overlap = n > 1 ? (total - area.width) / (n - 1) : 0;
-        let x = area.x + gap;
-        for (let i = 0; i < n; i++) {
-            const maxX = area.x + area.width - Math.min(area.width, sizes[i].width + (i === n - 1 ? gap : 0));
-            xs.push(Math.round(clamp(x, area.x, Math.max(area.x, maxX))));
-            x += sizes[i].width + gap - overlap;
-        }
+    // ---- queries ------------------------------------------------------------------------
+
+    get config() {
+        return { ...this._config };
     }
-    return xs.map((x, i) => ({ x: Math.round(x), y: Math.round(ys[i]) }));
-}
 
-// ---- motion and input helpers ------------------------------------------------------------
+    get activeWorkspace() {
+        return this._active;
+    }
 
-/** A duration under the user's animation speed (1 = normal, 2 = twice as fast). */
-export function scaleMs(ms, speed = 1) {
-    const s = Number.isFinite(speed) && speed > 0 ? clamp(speed, 0.25, 4) : 1;
-    return Math.max(0, Math.round(ms / s));
-}
+    /** @returns {?{id, ws, windows, set}} a copy */
+    entry(id) {
+        const e = this._entries.get(id);
+        return e ? { id: e.id, ws: e.ws, windows: [...e.windows], set: e.set } : null;
+    }
 
-/** Direction the strip content slides on a workspace switch: +1 to a later workspace, -1 back, 0 none. */
-export function workspaceDirection(from, to) {
-    if (!Number.isInteger(from) || !Number.isInteger(to) || from === to)
-        return 0;
-    return to > from ? 1 : -1;
-}
+    /** The entry a managed window is in (null for exempt, attached or unknown windows). */
+    entryOf(windowId) {
+        return this._member.get(windowId) ?? null;
+    }
 
-/**
- * A press and release on the wallpaper count as a click (not a drag or a long press).
- * @param {{x, y, time}} press
- * @param {{x, y, time}} release
- */
-export function isClick(press, release, { slop = 6, maxMs = 600 } = {}) {
-    if (!press || !release)
-        return false;
-    const dist = Math.hypot(release.x - press.x, release.y - press.y);
-    const dt = release.time - press.time;
-    return dist <= slop && dt >= 0 && dt <= maxMs;
-}
+    /** The stage entry id of a workspace (default the active one). */
+    stage(ws = this._active) {
+        return this._spaces.get(ws)?.stage ?? null;
+    }
 
-// ---- stages and focus ---------------------------------------------------------------------
+    /** All strip entry ids of a workspace, in slot order (also those past the shown count). */
+    strip(ws = this._active) {
+        return [...(this._spaces.get(ws)?.strip ?? [])];
+    }
 
-export class StageModel {
+    /** The entries the strip shows (at most recentCount), as copies. */
+    shownStrip(ws = this._active) {
+        return this.strip(ws).slice(0, this._config.recentCount).map(id => this.entry(id));
+    }
+
+    /** Is the desktop shown on a workspace? */
+    desktopShown(ws = this._active) {
+        return this._spaces.get(ws)?.desktop ?? false;
+    }
+
+    /** Windows on the stage of a workspace (managed ones), lead first. */
+    stageWindows(ws = this._active) {
+        const e = this._entries.get(this.stage(ws));
+        return e ? [...e.windows] : [];
+    }
+
+    /** Should this window be hidden now? */
+    isHidden(id) {
+        const root = this._root(id);
+        if (root === null)
+            return false;
+        const entryId = this._member.get(root);
+        if (entryId === undefined)
+            return false;
+        const e = this._entries.get(entryId);
+        return this._spaces.get(e.ws).stage !== entryId;
+    }
+
+    /** Every window the model hides. */
+    hidden() {
+        const out = [];
+        for (const id of this._windows.keys()) {
+            if (this.isHidden(id))
+                out.push(id);
+        }
+        return out;
+    }
+
+    /** 'managed' | 'attached' | 'exempt' | 'unknown' */
+    kindOf(id) {
+        if (!this._windows.has(id))
+            return 'unknown';
+        if (this._member.has(id))
+            return 'managed';
+        return this._root(id) !== null ? 'attached' : 'exempt';
+    }
+
+    /** Workspaces the model holds state for. */
+    workspaces() {
+        return [...this._spaces.keys()];
+    }
+
+    // ---- dispatch -----------------------------------------------------------------------
+
     /**
-     * @param {{groupByApp?: boolean, recentCount?: number}} opts
+     * @param {object} event {type, ...}; see the handlers below
+     * @returns {object[]} effects
      */
-    constructor({ groupByApp = true, recentCount = 6 } = {}) {
-        this._group = !!groupByApp;
-        this._recent = Math.max(1, Math.floor(recentCount));
-        this._wins = new Map();     // id -> {id, appId, stamp}
-        this._order = [];           // stage ids, most recent first
-        this._current = null;       // stage id on the stage
-        this._clock = 0;
-        this._sets = 0;             // counter for set ids ('set:<n>')
-        this._tiles = new Map();    // set id -> window ids left to right (side by side)
+    dispatch(event) {
+        this._fx = { strip: new Set(), timers: [], cancels: [], focus: undefined, unminimize: [],
+            desktop: null, animate: event.animate ?? true };
+        this._hiddenBefore = new Set(this.hidden());
+        const now = event.now ?? 0;
+        const handler = HANDLERS[event.type];
+        if (!handler)
+            throw new Error(`StageMachine: unknown event '${event.type}'`);
+        handler.call(this, event, now);
+        return this._flush();
     }
 
-    get groupByApp() {
-        return this._group;
+    // ---- event handlers (called through HANDLERS) ----------------------------------------
+
+    _onConfig(e) {
+        for (const k of ['newWindows', 'recentCount']) {
+            if (k in e)
+                this._config[k] = e[k];
+        }
+        for (const ws of this._spaces.keys())
+            this._fx.strip.add(ws);
     }
 
-    get recentCount() {
-        return this._recent;
+    _onMonitors(e) {
+        this._primary = e.primary;
+        for (const w of [...this._windows.values()])
+            this._reclassify(w.id, e.now ?? 0);
     }
 
-    setRecentCount(n) {
-        this._recent = Math.max(1, Math.floor(n));
-    }
-
-    /** Regroup all known windows. MRU order of the stages is kept by first appearance. */
-    setGroupByApp(on) {
-        on = !!on;
-        if (on === this._group)
+    _onWorkspace(e) {
+        if (e.active === this._active)
             return;
-        const before = this._stages();
-        const currentWin = this._current ? this._lead(this._stageById(this._current)) : null;
-        this._group = on;
-        const seen = [];
-        for (const st of before) {
-            for (const id of st.windows) {
-                const sid = this._stageKey(this._wins.get(id));
-                if (!seen.includes(sid))
-                    seen.push(sid);
-            }
-        }
-        this._order = seen;
-        this._current = currentWin !== null ? this._stageKey(this._wins.get(currentWin)) : null;
-        if (this._current)
-            this._moveFront(this._current);
+        this._active = e.active;
+        this._fx.strip.add(e.active);
     }
 
-    /**
-     * Replace the set of live windows. New windows join the stage of their app (when grouping)
-     * or get a stage of their own, at the back of the order. Gone windows leave; an empty
-     * stage disappears. Order of existing stages is kept. While grouping by app, a new window
-     * of an app that is part of a set joins that set ("all at once").
-     * @param {{id: string|number, appId: string|null}[]} windows
-     * @returns {{added: Array}} ids seen for the first time
-     */
-    sync(windows) {
-        const live = new Map(windows.map(w => [w.id, w]));
-        for (const id of [...this._wins.keys()]) {
-            if (!live.has(id))
-                this._wins.delete(id);
-        }
-        const added = [];
-        for (const w of windows) {
-            const known = this._wins.get(w.id);
-            if (known) {
-                known.appId = w.appId ?? null;
-            } else {
-                const win = { id: w.id, appId: w.appId ?? null, stamp: 0, set: null, solo: false };
-                if (this._group && win.appId !== null) {
-                    const mate = [...this._wins.values()].find(o => o.set && !o.solo && o.appId === win.appId);
-                    if (mate)
-                        win.set = mate.set;
-                }
-                this._wins.set(w.id, win);
-                added.push(w.id);
-            }
-        }
-        this._dissolve();
-        this._rebuildOrder();
-        return { added };
-    }
-
-    /**
-     * Add every window of stage `srcId` to stage `dstId`: the two become one set (macOS: drag a
-     * strip entry onto the stage, or Shift-click it). The set takes the destination's place in
-     * the order and is current if either stage was.
-     * @returns {?object} the set's view, null when either stage is unknown or they are the same
-     */
-    join(srcId, dstId) {
-        const src = this._stageById(srcId);
-        const dst = this._stageById(dstId);
-        if (!src || !dst || src.id === dst.id)
-            return null;
-        const key = dst.id.startsWith('set:') ? dst.id : `set:${++this._sets}`;
-        for (const id of [...dst.windows, ...src.windows]) {
-            const win = this._wins.get(id);
-            win.set = key;
-            win.solo = false;
-        }
-        const tiles = this._tiles.get(dst.id);
-        this._tiles.delete(src.id);
-        this._order = this._order.filter(k => k !== src.id).map(k => k === dst.id ? key : k);
-        if (!this._order.includes(key))
-            this._order.unshift(key);
-        if (this._current === dst.id || this._current === src.id)
-            this._current = key;
-        if (tiles)
-            this._tiles.set(key, tiles);
-        this._prune();
-        return this._view(this._stageById(key));
-    }
-
-    /**
-     * Lay a set out side by side, left to right. Ids not in the set are dropped; fewer than two
-     * left clears the layout.
-     */
-    setTiles(stageId, ids) {
-        const st = this._stageById(stageId);
-        if (!st || !st.id.startsWith('set:'))
-            return null;
-        const order = ids.filter((id, i) => st.windows.includes(id) && ids.indexOf(id) === i);
-        if (order.length < 2)
-            this._tiles.delete(st.id);
-        else
-            this._tiles.set(st.id, order);
-        return this.tilesOf(st.id);
-    }
-
-    /** Side-by-side order of a set's live windows, or null when it is not tiled. */
-    tilesOf(stageId) {
-        const st = this._stageById(stageId);
-        const order = st ? this._tiles.get(st.id) : null;
-        if (!order)
-            return null;
-        const live = order.filter(id => st.windows.includes(id));
-        return live.length >= 2 ? live : null;
-    }
-
-    /** Make the stage holding this window the current one. Unknown ids do nothing. */
-    focus(id) {
-        const win = this._wins.get(id);
-        if (!win)
-            return { changed: false, stage: this.current };
-        win.stamp = ++this._clock;
-        const key = this._stageKey(win);
-        const changed = this._current !== key;
-        this._current = key;
-        this._moveFront(key);
-        return { changed, stage: this.current };
-    }
-
-    /** Switch to a stage by its id. */
-    activateStage(stageId) {
-        const stage = this._stageById(stageId);
-        if (!stage)
-            return null;
-        this._current = stageId;
-        this._moveFront(stageId);
-        return this._view(stage);
-    }
-
-    /** Take one window out of its group into a stage of its own, right after its old stage in the order. */
-    split(id) {
-        const win = this._wins.get(id);
-        if (!win)
-            return null;
-        const oldKey = this._stageKey(win);
-        win.solo = true;
-        win.set = null;
-        const tiles = this._tiles.get(oldKey);
-        if (tiles)
-            this._tiles.set(oldKey, tiles.filter(t => t !== id));
-        const key = this._stageKey(win);
-        const wasCurrent = this._current === oldKey;
-        const at = this._order.indexOf(oldKey);
-        if (!this._order.includes(key))
-            this._order.splice(at < 0 ? this._order.length : at + 1, 0, key);
-        this._dissolve();
-        this._prune();
-        if (wasCurrent && !this._stageById(this._current))
-            this._current = this._order[0] ?? null;
-        return this._view(this._stageById(key));
-    }
-
-    /** Nothing is on the stage (e.g. the last window was sent to the strip). */
-    unfocus() {
-        this._current = null;
-    }
-
-    get current() {
-        const st = this._current ? this._stageById(this._current) : null;
-        return st ? this._view(st) : null;
-    }
-
-    stageOf(id) {
-        const win = this._wins.get(id);
-        const st = win ? this._stageById(this._stageKey(win)) : null;
-        return st ? this._view(st) : null;
-    }
-
-    /** Stages for the strip: not the current one, most recent first, at most recentCount. */
-    strip() {
-        return this._stages()
-            .filter(st => st.id !== this._current)
-            .slice(0, this._recent)
-            .map(st => this._view(st));
-    }
-
-    /**
-     * Is this window parked in the strip: in a stage that has a card (not the current one)?
-     * @param {string|number} id
-     * @param {number} [stripLimit] cards the strip really shows
-     */
-    inStrip(id, stripLimit = Infinity) {
-        return this.strip().slice(0, Math.max(0, stripLimit)).some(st => st.windows.includes(id));
-    }
-
-    /** Every stage, most recent first (current included). */
-    stages() {
-        return this._stages().map(st => this._view(st));
-    }
-
-    /**
-     * What to do after a switch: show the current stage's windows, hide the windows of the
-     * stages that have a card in the strip. A stage without a card (past recentCount, or past
-     * what fits on screen: pass that as stripLimit) is never hidden, or it would be unreachable.
-     * @param {number} [stripLimit] cards the strip really shows
-     * @returns {{show: (string|number)[], hide: (string|number)[]}}
-     */
-    visibility(stripLimit = Infinity) {
-        const hidden = new Set(this.strip().slice(0, Math.max(0, stripLimit)).map(st => st.id));
-        const show = [];
-        const hide = [];
-        for (const st of this._stages())
-            (hidden.has(st.id) ? hide : show).push(...st.windows);
-        return { show, hide };
-    }
-
-    /** Lead window of the stage holding this app's windows (most recent first), or null. */
-    leadForApp(appId) {
-        if (appId === null || appId === undefined)
-            return null;
-        const st = this._stages().find(s => s.appId === appId);
-        return st ? this._lead(st) : null;
-    }
-
-    get size() {
-        return this._wins.size;
-    }
-
-    // ---- internals --------------------------------------------------------------------
-
-    _stageKey(win) {
-        if (win.set)
-            return win.set;
-        if (!this._group || win.solo || win.appId === null)
-            return `win:${win.id}`;
-        return `app:${win.appId}`;
-    }
-
-    _stages() {
-        const by = new Map();
-        for (const win of this._wins.values()) {
-            const key = this._stageKey(win);
-            if (!by.has(key))
-                by.set(key, { id: key, appId: win.appId, windows: [] });
-            by.get(key).windows.push(win.id);
-        }
-        return this._order.filter(k => by.has(k)).map(k => by.get(k));
-    }
-
-    _stageById(id) {
-        return this._stages().find(st => st.id === id) ?? null;
-    }
-
-    _lead(stage) {
-        let best = stage.windows[0];
-        for (const id of stage.windows) {
-            if (this._wins.get(id).stamp > this._wins.get(best).stamp)
-                best = id;
-        }
-        return best;
-    }
-
-    _view(stage) {
-        const view = { id: stage.id, appId: stage.appId, windows: [...stage.windows], lead: this._lead(stage) };
-        if (stage.id.startsWith('set:')) {
-            view.set = true;
-            view.apps = [...new Set(stage.windows.map(id => this._wins.get(id).appId))];
-        }
-        return view;
-    }
-
-    _moveFront(key) {
-        const i = this._order.indexOf(key);
-        if (i > 0)
-            this._order.splice(i, 1);
-        if (i !== 0)
-            this._order.unshift(key);
-    }
-
-    /** A set left with one window is no set: the window goes back to its own (or its app's) stage. */
-    _dissolve() {
-        const count = new Map();
-        for (const w of this._wins.values()) {
-            if (w.set)
-                count.set(w.set, (count.get(w.set) ?? 0) + 1);
-        }
-        for (const w of this._wins.values()) {
-            if (!w.set || count.get(w.set) > 1)
+    // Enable: every window at once, oldest focus first, no motion. `focus` is the focused id.
+    _onInit(e) {
+        this._fx.animate = false;
+        this._primary = e.primary ?? 0;
+        this._active = e.active ?? 0;
+        // Least recent first, so each later entry pushes the earlier ones down the strip
+        for (const w of [...e.windows].reverse())
+            this._windows.set(w.id, { ...w });
+        for (const w of [...e.windows].reverse()) {
+            if (!this._isManagedNow(w))
                 continue;
-            const old = w.set;
-            w.set = null;
-            const key = this._stageKey(w);
-            const at = this._order.indexOf(old);
-            if (at >= 0) {
-                if (this._order.includes(key))
-                    this._order.splice(at, 1);
-                else
-                    this._order[at] = key;
+            const entry = this._entryForInit(w);
+            entry.windows.unshift(w.id);
+            this._member.set(w.id, entry.id);
+            if (w.minimized)
+                this._fx.unminimize.push(w.id);
+            this._switchTo(entry, 'front', { focus: false });
+        }
+        // The focused window's entry is the stage (it is already, unless focus is elsewhere)
+        const root = e.focus !== null && e.focus !== undefined ? this._root(e.focus) : null;
+        const entryId = root !== null ? this._member.get(root) : undefined;
+        if (entryId !== undefined)
+            this._switchTo(this._entries.get(entryId), 'front', { focus: false });
+    }
+
+    _onAdd(e, now) {
+        if (this._windows.has(e.window.id)) {
+            this._onChange({ window: e.window }, now);
+            return;
+        }
+        this._windows.set(e.window.id, { ...e.window });
+        if (this._isManagedNow(e.window)) {
+            this._arrive(e.window.id, now);
+            return;
+        }
+        // A new dialog of a window in the strip brings that window's entry to the stage, so it
+        // is never shown nowhere
+        const root = this._root(e.window.id);
+        if (root !== null && root !== e.window.id && this.isHidden(e.window.id)) {
+            const entry = this._entries.get(this._member.get(root));
+            const focus = entry.ws === this._active;
+            this._switchTo(entry, 'front', { focus, focusId: e.window.id });
+            this._space(entry.ws).quietUntil = now + QUIET_MS;
+        }
+    }
+
+    _onChange(e, now) {
+        const old = this._windows.get(e.window.id);
+        if (!old) {
+            this._onAdd(e, now);
+            return;
+        }
+        const next = { ...old, ...e.window };
+        this._windows.set(next.id, next);
+        const id = next.id;
+        if (next.minimized && !old.minimized && this._member.has(id)) {
+            this._fx.unminimize.push(id);
+            this._minimize(id, now);
+            return;
+        }
+        if (this._member.has(id) && next.workspace !== old.workspace && next.workspace !== -1) {
+            this._leave(id, now);
+            this._arrive(id, now);
+            return;
+        }
+        this._reclassify(id, now);
+    }
+
+    _onRemove(e, now) {
+        if (!this._windows.has(e.id))
+            return;
+        if (this._member.has(e.id))
+            this._leave(e.id, now, { closed: true });
+        this._windows.delete(e.id);
+    }
+
+    _onFocus(e, now) {
+        if (e.id === null || e.id === undefined)
+            return;
+        const root = this._root(e.id);
+        const entryId = root !== null ? this._member.get(root) : undefined;
+        if (entryId === undefined)
+            return;
+        const entry = this._entries.get(entryId);
+        const space = this._space(entry.ws);
+        if (space.stage === entry.id) {
+            this._toFront(entry, root);
+            return;
+        }
+        const stage = this._entries.get(space.stage);
+        if (this._join && stage && (this._join.appId === null || this._join.appId === this._windows.get(root).appId)) {
+            // "Open in current stage" on a running app: its window joins the set
+            this._join = null;
+            this._fx.cancels.push('join');
+            this._toFront(entry, root);
+            this._merge(entry, stage);
+            space.quietUntil = now + QUIET_MS;
+            return;
+        }
+        if (space.graceKey) {
+            // The stage emptied a moment ago: Mutter's default focus, wait for a new window
+            space.pendingFocus = entry.id;
+            return;
+        }
+        if (now < space.quietUntil) {
+            // Not the user: keep the focus on the stage
+            this._fx.focus = this._lead(space.stage);
+            return;
+        }
+        this._toFront(entry, root);
+        // The window already has the focus (maybe a dialog of the root): do not move it
+        this._switchTo(entry, 'front', { focus: false });
+        space.quietUntil = now + QUIET_MS;
+    }
+
+    // A strip entry was clicked (add: Shift held) or dropped on the stage (add: true)
+    _onActivate(e, now) {
+        const entry = this._entries.get(e.entry);
+        if (!entry)
+            return;
+        const space = this._space(entry.ws);
+        this._cancelGrace(space);
+        space.quietUntil = now + QUIET_MS;
+        const stage = this._entries.get(space.stage);
+        if (e.add && stage && stage !== entry) {
+            this._merge(entry, stage);
+            this._fx.focus = stage.windows[0];
+            return;
+        }
+        this._switchTo(entry, 'swap');
+    }
+
+    // The window controls' minimize, routed here by WindowState.interceptMinimize
+    _onMinimize(e, now) {
+        if (this._member.has(e.id))
+            this._minimize(e.id, now);
+    }
+
+    _onRemoveFromSet(e, now) {
+        const entryId = this._member.get(e.id);
+        if (entryId === undefined)
+            return;
+        const entry = this._entries.get(entryId);
+        if (entry.windows.length < 2)
+            return;
+        this._split(entry, e.id, now);
+    }
+
+    // A stage window dropped on another strip entry joins that entry
+    _onMoveToEntry(e, now) {
+        const from = this._member.get(e.id);
+        const target = this._entries.get(e.entry);
+        if (from === undefined || !target || from === target.id || target.ws !== this._entries.get(from).ws)
+            return;
+        const space = this._space(target.ws);
+        this._detach(e.id);
+        target.windows.push(e.id);
+        this._member.set(e.id, target.id);
+        target.set = true;
+        this._fx.strip.add(target.ws);
+        space.quietUntil = now + QUIET_MS;
+        if (space.stage === null)
+            this._fx.focus = null;
+        else
+            this._fx.focus = this._lead(space.stage);
+    }
+
+    _onToggleDesktop(e, now) {
+        const ws = e.ws ?? this._active;
+        const space = this._space(ws);
+        space.quietUntil = now + QUIET_MS;
+        if (space.desktop) {
+            const back = this._entries.get(space.desktopPrev) ?? null;
+            space.desktop = false;
+            space.desktopPrev = null;
+            this._fx.desktop = false;
+            if (back && back.ws === ws)
+                this._switchTo(back, 'swap');
+            return;
+        }
+        this._cancelGrace(space);
+        const stage = this._entries.get(space.stage);
+        if (stage) {
+            space.strip.unshift(stage.id);
+            space.stage = null;
+            this._fx.strip.add(ws);
+        }
+        space.desktop = true;
+        space.desktopPrev = stage?.id ?? null;
+        this._fx.desktop = true;
+        this._fx.focus = null;
+    }
+
+    // Keyboard: the next or previous entry, in the order the entries were made
+    _onCycle(e, now) {
+        const space = this._space(this._active);
+        const ring = [...this._entries.values()].filter(x => x.ws === this._active)
+            .sort((a, b) => a.seq - b.seq);
+        if (ring.length === 0)
+            return;
+        const i = ring.findIndex(x => x.id === space.stage);
+        const dir = e.dir < 0 ? -1 : 1;
+        const next = i < 0 ? ring[dir > 0 ? 0 : ring.length - 1] : ring[(i + dir + ring.length) % ring.length];
+        if (next.id === space.stage)
+            return;
+        space.quietUntil = now + QUIET_MS;
+        this._switchTo(next, 'swap');
+    }
+
+    // Keyboard: strip slot n (1-based)
+    _onSlot(e, now) {
+        const space = this._space(this._active);
+        const shown = space.strip.slice(0, this._config.recentCount);
+        const id = shown[e.n - 1];
+        if (id === undefined)
+            return;
+        space.quietUntil = now + QUIET_MS;
+        this._switchTo(this._entries.get(id), 'swap');
+    }
+
+    // "Open in current stage": the next window (of appId, if given) joins the stage
+    _onJoinNext(e) {
+        this._join = { appId: e.appId ?? null };
+        this._fx.timers.push({ key: 'join', ms: JOIN_MS });
+    }
+
+    _onTimer(e) {
+        if (e.key === 'join') {
+            this._join = null;
+            return;
+        }
+        for (const [ws, space] of this._spaces) {
+            if (space.graceKey !== e.key)
+                continue;
+            space.graceKey = null;
+            const pending = this._entries.get(space.pendingFocus);
+            space.pendingFocus = null;
+            if (space.stage !== null || space.desktop)
+                return;
+            const next = pending?.ws === ws ? pending : this._entries.get(space.strip[0]);
+            if (next)
+                this._switchTo(next, 'front', { focus: ws === this._active });
+            return;
+        }
+    }
+
+    // ---- moves ----------------------------------------------------------------------------
+
+    _space(ws) {
+        let s = this._spaces.get(ws);
+        if (!s) {
+            s = { stage: null, strip: [], desktop: false, desktopPrev: null, graceKey: null,
+                pendingFocus: null, quietUntil: -Infinity };
+            this._spaces.set(ws, s);
+        }
+        return s;
+    }
+
+    _newEntry(ws, windows = []) {
+        const e = { id: `e${++this._seq}`, ws, windows, set: false, seq: this._seq };
+        this._entries.set(e.id, e);
+        return e;
+    }
+
+    _lead(entryId) {
+        return this._entries.get(entryId)?.windows[0] ?? null;
+    }
+
+    // Root of a window: itself when managed or exempt; for an attached window, the managed or
+    // exempt window its transient-for chain ends at. null for an orphan transient.
+    _root(id) {
+        let w = this._windows.get(id);
+        for (let depth = 0; w && depth < MAX_DEPTH; depth++) {
+            if (this._member.has(w.id))
+                return w.id;
+            if (w.parent === null || w.parent === undefined)
+                return depth === 0 ? null : w.id;
+            w = this._windows.get(w.parent);
+        }
+        return null;
+    }
+
+    // A managed window right now: a normal top-level window that is not exempt
+    _isManagedNow(w) {
+        if (w.type !== 'normal' || (w.parent !== null && w.parent !== undefined))
+            return false;
+        if (w.fullscreen)
+            return false;   // never enters a set while full screen; it arrives when it leaves
+        return exemptReason(w, this._primary) === null;
+    }
+
+    _reclassify(id, now) {
+        const w = this._windows.get(id);
+        const member = this._member.has(id);
+        // A member that goes full screen stays in its entry (and on its stage)
+        const want = member && w.fullscreen && w.type === 'normal' && !w.parent
+            ? exemptReason(w, this._primary) === null
+            : this._isManagedNow(w);
+        if (member && !want)
+            this._leave(id, now, {});
+        else if (!member && want)
+            this._arrive(id, now);
+    }
+
+    _entryForInit(w) {
+        const space = this._space(w.workspace);
+        if (this._config.allAtOnce) {
+            const ids = space.stage !== null ? [space.stage, ...space.strip] : space.strip;
+            const same = ids.map(id => this._entries.get(id)).find(e => !e.set && this._appOf(e) === w.appId);
+            if (same && w.appId)
+                return same;
+        }
+        return this._newEntry(w.workspace);
+    }
+
+    _appOf(entry) {
+        return this._windows.get(entry.windows[0])?.appId ?? null;
+    }
+
+    // A managed window appears (new, moved in from another workspace, or no longer exempt)
+    _arrive(id, now) {
+        const w = this._windows.get(id);
+        if (w.minimized)
+            this._fx.unminimize.push(id);
+        const space = this._space(w.workspace);
+        const stage = this._entries.get(space.stage) ?? null;
+        const join = this._join && (this._join.appId === null || this._join.appId === w.appId);
+        const inStage = stage && !space.desktop;
+        let target = null;
+        if (join && inStage) {
+            target = stage;
+            this._join = null;
+            this._fx.cancels.push('join');
+        } else if (this._config.allAtOnce && w.appId) {
+            if (inStage && stage.windows.some(x => this._windows.get(x)?.appId === w.appId))
+                target = stage;
+            else
+                target = space.strip.map(x => this._entries.get(x)).find(e => !e.set && this._appOf(e) === w.appId) ?? null;
+        }
+        if (!target && this._config.newWindows === 'join' && inStage)
+            target = stage;
+        if (target) {
+            const mixed = target.windows.some(x => this._windows.get(x)?.appId !== w.appId);
+            target.windows.unshift(id);
+            this._member.set(id, target.id);
+            if (mixed)
+                target.set = true;
+            if (target === stage) {
+                this._fx.focus = w.workspace === this._active ? id : this._fx.focus;
+                this._fx.strip.add(w.workspace);
+                return;
             }
-            if (this._current === old)
-                this._current = key;
-            count.delete(old);
+            this._switchTo(target, 'front', { focus: w.workspace === this._active, focusId: id });
+            space.quietUntil = now + QUIET_MS;
+            return;
         }
-        for (const k of [...this._tiles.keys()]) {
-            if (!count.has(k))
-                this._tiles.delete(k);
+        const entry = this._newEntry(w.workspace, [id]);
+        this._member.set(id, entry.id);
+        this._switchTo(entry, 'front', { focus: w.workspace === this._active });
+        space.quietUntil = now + QUIET_MS;
+    }
+
+    // Take a managed window out of its entry (dropping an empty entry). Returns the entry.
+    _detach(id) {
+        const entry = this._entries.get(this._member.get(id));
+        this._member.delete(id);
+        entry.windows = entry.windows.filter(x => x !== id);
+        if (entry.windows.length < 2)
+            entry.set = false;
+        const space = this._space(entry.ws);
+        this._fx.strip.add(entry.ws);
+        if (entry.windows.length === 0) {
+            this._entries.delete(entry.id);
+            space.strip = space.strip.filter(x => x !== entry.id);
+            if (space.stage === entry.id)
+                space.stage = null;
+            if (space.desktopPrev === entry.id)
+                space.desktopPrev = null;
+            if (space.pendingFocus === entry.id)
+                space.pendingFocus = null;
+        }
+        return entry;
+    }
+
+    // A managed window goes away (closed, moved to another workspace, became exempt)
+    _leave(id, now, { closed = false } = {}) {
+        const ws = this._entries.get(this._member.get(id)).ws;
+        const wasStage = this._space(ws).stage === this._member.get(id);
+        const entry = this._detach(id);
+        const space = this._space(ws);
+        if (!wasStage)
+            return;
+        if (space.stage === entry.id) {
+            if (closed)
+                this._fx.focus = entry.windows[0];
+            return;
+        }
+        if (!space.desktop) {
+            // The stage emptied: wait a moment for a new window (an Open dialog's document)
+            this._cancelGrace(space);
+            space.graceKey = `empty:${entry.ws}:${++this._seq}`;
+            space.pendingFocus = null;
+            this._fx.timers.push({ key: space.graceKey, ms: GRACE_MS });
         }
     }
 
-    _prune() {
-        const keys = new Set([...this._wins.values()].map(w => this._stageKey(w)));
-        this._order = this._order.filter(k => keys.has(k));
+    _cancelGrace(space) {
+        if (!space.graceKey)
+            return;
+        this._fx.cancels.push(space.graceKey);
+        space.graceKey = null;
+        space.pendingFocus = null;
     }
 
-    _rebuildOrder() {
-        const keys = [];
-        for (const win of this._wins.values()) {
-            const k = this._stageKey(win);
-            if (!keys.includes(k))
-                keys.push(k);
+    // Put an entry on its space's stage. 'swap': the old stage takes the strip slot the entry
+    // leaves; 'front': the old stage goes to the top of the strip.
+    _switchTo(entry, placement, { focus = true, focusId = null } = {}) {
+        const space = this._space(entry.ws);
+        this._cancelGrace(space);
+        if (space.desktop) {
+            space.desktop = false;
+            space.desktopPrev = null;
+            if (entry.ws === this._active)
+                this._fx.desktop = false;
         }
-        const kept = this._order.filter(k => keys.includes(k));
-        const fresh = keys.filter(k => !kept.includes(k));
-        this._order = [...kept, ...fresh];
-        if (this._current && !keys.includes(this._current))
-            this._current = null;
+        if (focus)
+            this._fx.focus = focusId ?? entry.windows[0];
+        if (space.stage === entry.id)
+            return;
+        const old = space.stage;
+        const slot = space.strip.indexOf(entry.id);
+        if (slot >= 0)
+            space.strip.splice(slot, 1);
+        if (old !== null) {
+            if (placement === 'swap' && slot >= 0 && slot < this._config.recentCount)
+                space.strip.splice(slot, 0, old);
+            else
+                space.strip.unshift(old);
+        }
+        space.stage = entry.id;
+        this._fx.strip.add(entry.ws);
+    }
+
+    _toFront(entry, id) {
+        const i = entry.windows.indexOf(id);
+        if (i > 0) {
+            entry.windows.splice(i, 1);
+            entry.windows.unshift(id);
+            this._fx.strip.add(entry.ws);
+        }
+    }
+
+    // Add the windows of `from` to `into` (a set), on top
+    _merge(from, into) {
+        const space = this._space(from.ws);
+        into.windows = [...from.windows, ...into.windows];
+        for (const id of from.windows)
+            this._member.set(id, into.id);
+        into.set = true;
+        this._entries.delete(from.id);
+        space.strip = space.strip.filter(x => x !== from.id);
+        if (space.desktopPrev === from.id)
+            space.desktopPrev = null;
+        this._fx.strip.add(from.ws);
+    }
+
+    // One window leaves its entry for a new entry of its own at the top of the strip
+    _split(entry, id, now) {
+        const space = this._space(entry.ws);
+        this._detach(id);
+        const own = this._newEntry(entry.ws, [id]);
+        this._member.set(id, own.id);
+        const at = space.strip.indexOf(entry.id);
+        space.strip.splice(at < 0 ? 0 : at + 1, 0, own.id);
+        space.quietUntil = now + QUIET_MS;
+        if (space.stage === entry.id)
+            this._fx.focus = entry.windows[0];
+    }
+
+    // Minimize: the window goes to the strip. Alone on the stage, its whole entry goes and the
+    // stage stays empty (the desktop and the strip show); in a set, it gets its own entry.
+    _minimize(id, now) {
+        const entry = this._entries.get(this._member.get(id));
+        const space = this._space(entry.ws);
+        if (space.stage !== entry.id)
+            return;
+        space.quietUntil = now + QUIET_MS;
+        if (entry.windows.length > 1) {
+            this._split(entry, id, now);
+            return;
+        }
+        this._cancelGrace(space);
+        space.strip.unshift(entry.id);
+        space.stage = null;
+        this._fx.strip.add(entry.ws);
+        this._fx.focus = null;
+    }
+
+    // ---- effects ----------------------------------------------------------------------------
+
+    _flush() {
+        const fx = this._fx;
+        const out = [];
+        for (const ws of fx.strip)
+            out.push({ type: 'strip', ws });
+        const after = new Set(this.hidden());
+        const hide = [...after].filter(id => !this._hiddenBefore.has(id));
+        const show = [...this._hiddenBefore].filter(id => !after.has(id) && this._windows.has(id));
+        if (hide.length)
+            out.push({ type: 'hide', ids: hide, animate: fx.animate });
+        if (show.length) {
+            // Back to front: the lead of its entry last, so it ends on top
+            const rank = id => {
+                const e = this._entries.get(this._member.get(this._root(id)));
+                return e ? -e.windows.indexOf(this._root(id)) : 0;
+            };
+            show.sort((a, b) => rank(a) - rank(b));
+            out.push({ type: 'show', ids: show, animate: fx.animate });
+        }
+        for (const id of fx.unminimize)
+            out.push({ type: 'unminimize', id });
+        if (fx.focus !== undefined)
+            out.push({ type: 'focus', id: fx.focus });
+        if (fx.desktop !== null)
+            out.push({ type: 'desktop', shown: fx.desktop });
+        for (const key of fx.cancels)
+            out.push({ type: 'cancel', key });
+        for (const t of fx.timers)
+            out.push({ type: 'timer', key: t.key, ms: t.ms });
+        this._fx = null;
+        this._hiddenBefore = null;
+        return out;
+    }
+
+    // ---- invariants (tests) -----------------------------------------------------------------
+
+    /** @returns {string[]} broken rules, [] when the state is sound */
+    checkInvariants() {
+        const bad = [];
+        const seen = new Map();
+        for (const [ws, space] of this._spaces) {
+            const ids = space.stage !== null ? [space.stage, ...space.strip] : [...space.strip];
+            if (new Set(ids).size !== ids.length)
+                bad.push(`ws${ws}: an entry is listed twice`);
+            for (const id of ids) {
+                const e = this._entries.get(id);
+                if (!e)
+                    bad.push(`ws${ws}: unknown entry ${id}`);
+                else if (e.ws !== ws)
+                    bad.push(`${id} listed on ws${ws} but belongs to ws${e.ws}`);
+                seen.set(id, (seen.get(id) ?? 0) + 1);
+            }
+            if (space.desktop && space.stage !== null)
+                bad.push(`ws${ws}: desktop shown with a stage`);
+        }
+        for (const [id, e] of this._entries) {
+            if (seen.get(id) !== 1)
+                bad.push(`${id} is listed ${seen.get(id) ?? 0} times`);
+            if (e.windows.length === 0)
+                bad.push(`${id} is empty`);
+            if (e.set && e.windows.length < 2)
+                bad.push(`${id} is a set of one`);
+            for (const w of e.windows) {
+                if (this._member.get(w) !== id)
+                    bad.push(`window ${w} in ${id} but member of ${this._member.get(w)}`);
+                const info = this._windows.get(w);
+                if (!info)
+                    bad.push(`window ${w} in ${id} is gone`);
+                else if (info.workspace !== e.ws)
+                    bad.push(`window ${w} on ws${info.workspace} in ${id} of ws${e.ws}`);
+            }
+        }
+        for (const [w, entryId] of this._member) {
+            if (!this._entries.get(entryId)?.windows.includes(w))
+                bad.push(`window ${w} points at ${entryId} which does not hold it`);
+        }
+        for (const [id, w] of this._windows) {
+            const kind = this.kindOf(id);
+            if (kind === 'managed' && !this._isManagedNow(w) && !w.fullscreen)
+                bad.push(`window ${id} managed but should not be`);
+            if (kind === 'exempt' && this.isHidden(id))
+                bad.push(`exempt window ${id} hidden`);
+            if (kind !== 'managed' && kind !== 'attached' && this._isManagedNow(w))
+                bad.push(`window ${id} should be managed`);
+        }
+        return bad;
     }
 }
+
+const HANDLERS = Object.freeze({
+    'config': StageMachine.prototype._onConfig,
+    'monitors': StageMachine.prototype._onMonitors,
+    'workspace': StageMachine.prototype._onWorkspace,
+    'init': StageMachine.prototype._onInit,
+    'add': StageMachine.prototype._onAdd,
+    'change': StageMachine.prototype._onChange,
+    'remove': StageMachine.prototype._onRemove,
+    'focus': StageMachine.prototype._onFocus,
+    'activate': StageMachine.prototype._onActivate,
+    'minimize': StageMachine.prototype._onMinimize,
+    'remove-from-set': StageMachine.prototype._onRemoveFromSet,
+    'move-to-entry': StageMachine.prototype._onMoveToEntry,
+    'toggle-desktop': StageMachine.prototype._onToggleDesktop,
+    'cycle': StageMachine.prototype._onCycle,
+    'slot': StageMachine.prototype._onSlot,
+    'join-next': StageMachine.prototype._onJoinNext,
+    'timer': StageMachine.prototype._onTimer,
+});

@@ -40,6 +40,8 @@ const WINDOW_SIGNALS = [
     ['notify::title', ['title']],
     ['notify::wm-class', ['appId']],
     ['notify::skip-taskbar', ['skipTaskbar']],
+    ['notify::above', ['above']],
+    ['notify::transient-for', ['parent']],
 ];
 
 export class DesktopService {
@@ -180,6 +182,10 @@ export class DesktopService {
             out.maximized = isMaximized(win);
         if (want('skipTaskbar'))
             out.skipTaskbar = !!win.skip_taskbar;
+        if (want('above'))
+            out.above = !!win.is_above();
+        if (want('parent'))
+            out.parent = win.get_transient_for()?.get_stable_sequence() ?? null;
         return out;
     }
 

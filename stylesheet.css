@@ -2393,6 +2393,11 @@
 /* One floor under the whole strip: Kiwi glass (lib/glass.js) while Liquid Glass is on, else
    this plain translucent rounded panel with a rim and a soft shadow. The windows lie on it,
    tilted toward the stage. */
+.kiwi-stage-shadow {
+    border-radius: 20px;
+    background-color: transparent;
+}
+
 .kiwi-stage-strip {
     border-radius: 20px;
     background-color: rgba(255, 255, 255, 0.09);
@@ -2447,14 +2452,10 @@
     padding: 3px 10px;
 }
 
-/* Drop target over the stage while a strip entry is dragged */
+/* While an entry is dragged, the stage is a drop target: "Add to Stage" */
 .kiwi-stage-drop {
-    background-color: transparent;
-}
-
-.kiwi-stage-drop-zone {
     border-radius: 18px;
-    background-color: rgba(255, 255, 255, 0.12);
+    background-color: rgba(255, 255, 255, 0.10);
     border: 2px solid -st-accent-color;
 }
 

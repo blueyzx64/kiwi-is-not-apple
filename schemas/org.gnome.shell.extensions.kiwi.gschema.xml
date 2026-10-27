@@ -408,17 +408,17 @@
       <key name="stage-manager-side" type="s">
         <default>'left'</default>
         <summary>Stage Manager strip side</summary>
-        <description>Which screen edge holds the strip: "left" or "right".</description>
+        <description>Which screen edge holds the strip: "left" or "right". With the dock on the left or right edge, the strip always takes the other side.</description>
       </key>
       <key name="stage-manager-autohide" type="b">
         <default>true</default>
         <summary>Auto-hide the strip</summary>
-        <description>Hide the strip while a window on the stage overlaps it, and show it again when the pointer reaches the screen edge.</description>
+        <description>Hide the strip while a window on the stage overlaps it, and show it again when the pointer pushes against the screen edge.</description>
       </key>
       <key name="stage-manager-group-by-app" type="b">
         <default>true</default>
-        <summary>Group windows by app</summary>
-        <description>Windows of the same app share one stack in the strip. Off gives each window its own thumbnail.</description>
+        <summary>Show an app's windows all at once</summary>
+        <description>On ("All at Once", macOS default): an app's windows come onto the stage together and share one strip entry; a new window joins its app on the stage. Off ("One at a Time"): each window is its own entry, and a new window gets its own stage.</description>
       </key>
       <key name="stage-manager-recent-count" type="i">
         <default>6</default>
@@ -438,7 +438,7 @@
         </choices>
         <default>'replace'</default>
         <summary>New windows in Stage Manager</summary>
-        <description>"replace": a new app window takes the stage and the previous set goes to the strip as one entry (macOS). "join": the new window joins the set on the stage.</description>
+        <description>"replace": a new app window takes the stage and the previous set goes to the strip as one entry (macOS). "join": the new window joins the set on the stage. Alt-click an app (dock, app grid) to open it into the current stage once.</description>
       </key>
       <key name="stage-manager-wallpaper-click" type="b">
         <default>true</default>
@@ -461,6 +461,51 @@
         <default>['&lt;Control&gt;&lt;Super&gt;Down']</default>
         <summary>Remove from set shortcut</summary>
         <description>Takes the focused window out of the set on the stage and puts it in the strip. Only active while Stage Manager is on.</description>
+      </key>
+      <key name="stage-manager-show-recent" type="b">
+        <default>true</default>
+        <summary>Show recent apps</summary>
+        <description>Show the strip of recent apps beside the stage. Off keeps it hidden until the pointer pushes against the screen edge (macOS "Show recent apps in Stage Manager").</description>
+      </key>
+      <key name="stage-manager-next-shortcut" type="as">
+        <default>['&lt;Super&gt;&lt;Alt&gt;Down']</default>
+        <summary>Next set shortcut</summary>
+        <description>Puts the next set or app on the stage, in the order they were opened. Only active while Stage Manager is on.</description>
+      </key>
+      <key name="stage-manager-previous-shortcut" type="as">
+        <default>['&lt;Super&gt;&lt;Alt&gt;Up']</default>
+        <summary>Previous set shortcut</summary>
+        <description>Puts the previous set or app on the stage. Only active while Stage Manager is on.</description>
+      </key>
+      <key name="stage-manager-slot-1-shortcut" type="as">
+        <default>['&lt;Super&gt;&lt;Alt&gt;1']</default>
+        <summary>Switch to strip entry 1</summary>
+        <description>Puts entry 1 of the strip (counted from the top) on the stage. Only active while Stage Manager is on.</description>
+      </key>
+      <key name="stage-manager-slot-2-shortcut" type="as">
+        <default>['&lt;Super&gt;&lt;Alt&gt;2']</default>
+        <summary>Switch to strip entry 2</summary>
+        <description>Puts entry 2 of the strip (counted from the top) on the stage. Only active while Stage Manager is on.</description>
+      </key>
+      <key name="stage-manager-slot-3-shortcut" type="as">
+        <default>['&lt;Super&gt;&lt;Alt&gt;3']</default>
+        <summary>Switch to strip entry 3</summary>
+        <description>Puts entry 3 of the strip (counted from the top) on the stage. Only active while Stage Manager is on.</description>
+      </key>
+      <key name="stage-manager-slot-4-shortcut" type="as">
+        <default>['&lt;Super&gt;&lt;Alt&gt;4']</default>
+        <summary>Switch to strip entry 4</summary>
+        <description>Puts entry 4 of the strip (counted from the top) on the stage. Only active while Stage Manager is on.</description>
+      </key>
+      <key name="stage-manager-slot-5-shortcut" type="as">
+        <default>['&lt;Super&gt;&lt;Alt&gt;5']</default>
+        <summary>Switch to strip entry 5</summary>
+        <description>Puts entry 5 of the strip (counted from the top) on the stage. Only active while Stage Manager is on.</description>
+      </key>
+      <key name="stage-manager-slot-6-shortcut" type="as">
+        <default>['&lt;Super&gt;&lt;Alt&gt;6']</default>
+        <summary>Switch to strip entry 6</summary>
+        <description>Puts entry 6 of the strip (counted from the top) on the stage. Only active while Stage Manager is on.</description>
       </key>
 
       <!-- Show Desktop (features/showDesktop) -->

@@ -12,15 +12,17 @@
 //   ctx.events.on('app-focused', ({ appId }) => ..., cleanup);
 //
 // WindowInfo (frozen): {id, appId, title, type, workspace (-1 = on all), monitor, minimized,
-//   fullscreen, maximized, skipTaskbar}. `id` is Meta.Window.get_stable_sequence().
+//   fullscreen, maximized, skipTaskbar, above, parent}. `id` is Meta.Window.get_stable_sequence();
+//   `parent` is the id of the window it is transient for (a dialog's owner), or null.
 
 /** Field names a WindowInfo carries (besides id). */
 export const WINDOW_FIELDS = Object.freeze(['appId', 'title', 'type', 'workspace', 'monitor',
-    'minimized', 'fullscreen', 'maximized', 'skipTaskbar']);
+    'minimized', 'fullscreen', 'maximized', 'skipTaskbar', 'above', 'parent']);
 
 const DEFAULTS = Object.freeze({
     appId: null, title: '', type: 'normal', workspace: 0, monitor: 0,
     minimized: false, fullscreen: false, maximized: false, skipTaskbar: false,
+    above: false, parent: null,
 });
 
 /**
