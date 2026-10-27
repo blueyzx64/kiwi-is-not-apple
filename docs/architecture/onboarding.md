@@ -22,9 +22,11 @@ own AppKit-style skin when it is what installed Kiwi (research option B).
 1. `onboarding` is `'new'` after the first enable. `features.js` runs the `onboarding` feature
    only then.
 2. After `startup-complete` and an idle, the feature asks `model.offerDecision`: only the normal
-   user session (never `initial-setup`); GNOME starts in the overview, so it waits for the
-   overview to close; with another modal up (GNOME's welcome dialog) it waits for the next
-   enable. Otherwise it sets `'requested'` and calls `openPreferences()`.
+   user session (never `initial-setup`); while the overview (GNOME starts in it) or another
+   modal (GNOME's welcome dialog) is up, it asks again when the overview closes or a window
+   gets the focus. Then it sets `'requested'` and calls `openPreferences()`. If the prefs
+   process fails to start, the key stays `'requested'` and the assistant shows the next time
+   Kiwi Settings opens.
 3. `prefs.js` sees `'requested'` and presents the assistant as an `Adw.Dialog` when the window
    maps; the key becomes `'shown'`, then `'done'` when the dialog closes (Get Started, Not Now,
    Escape or closing the window). The feature stops as soon as the key leaves `'new'`.

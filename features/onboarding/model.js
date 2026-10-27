@@ -5,8 +5,8 @@
 //
 // Lifecycle of the `onboarding` key:
 //   'new'        never offered (the default). The Shell offers it once the session is idle:
-//                only in the normal user session, never over another modal (GNOME's welcome
-//                dialog), else it waits for the next enable.
+//                only in the normal user session, never over the overview or another modal
+//                (GNOME's welcome dialog): then it asks again when one closes.
 //   'requested'  the Shell opened the preferences for it; prefs presents the assistant
 //   'shown'      the assistant is up
 //   'done'       finished or skipped ("Not Now" keeps every default). Re-run from About.
@@ -23,16 +23,14 @@ export const ONBOARDING_KEY = 'onboarding';
 export const STATES = Object.freeze(['new', 'requested', 'shown', 'done']);
 
 /**
- * What the Shell does now: 'offer' (open it), 'after-overview' (GNOME starts in the overview:
- * ask again when it closes) or 'not-now' (another session mode or another modal such as GNOME's
- * welcome dialog; the next enable asks again).
+ * What the Shell does now: 'offer' (open it), 'later' (the overview, where GNOME starts, or
+ * another modal such as GNOME's welcome dialog is up: ask again when the overview closes or a
+ * window gets the focus) or 'never' (already offered, or not the user's session).
  */
 export function offerDecision({ state, sessionMode, overviewVisible, modalOpen }) {
     if (state !== 'new' || sessionMode !== 'user')
-        return 'not-now';
-    if (overviewVisible)
-        return 'after-overview';
-    return modalOpen ? 'not-now' : 'offer';
+        return 'never';
+    return overviewVisible || modalOpen ? 'later' : 'offer';
 }
 
 /** Should the preferences window present the assistant as it opens? */

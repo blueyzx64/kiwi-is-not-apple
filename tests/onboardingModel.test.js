@@ -60,15 +60,15 @@ test('every step control names a schema key of the right type and values', () =>
 test('the macOS order: welcome first, done last, the asked-for steps in between', () => {
     eq(STEPS.map(s => s.id), ['welcome', 'appearance', 'dock', 'menu-bar', 'windows', 'stage-manager', 'privacy', 'done']);
 });
-test('offered once, in the user session, after the overview, never over another modal', () => {
+test('offered once, in the user session, never over the overview or another modal', () => {
     const at = fields => offerDecision({ state: 'new', sessionMode: 'user', overviewVisible: false, modalOpen: false, ...fields });
     eq(at({}), 'offer');
-    eq(at({ sessionMode: 'initial-setup' }), 'not-now');
-    eq(at({ modalOpen: true }), 'not-now');
-    // GNOME starts in the overview (itself a modal): wait for it to close
-    eq(at({ overviewVisible: true, modalOpen: true }), 'after-overview');
+    eq(at({ sessionMode: 'initial-setup' }), 'never');
+    // GNOME starts in the overview; the welcome dialog is a modal: ask again later
+    eq(at({ overviewVisible: true, modalOpen: true }), 'later');
+    eq(at({ modalOpen: true }), 'later');
     for (const state of ['requested', 'shown', 'done'])
-        eq(at({ state }), 'not-now', state);
+        eq(at({ state }), 'never', state);
     eq(STATES.map(shouldPresent), [false, true, false, false]);
 });
 test('Light / Dark / Auto', () => {
