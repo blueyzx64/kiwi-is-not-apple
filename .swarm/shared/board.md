@@ -111,3 +111,6 @@ Groups (about 6 agents): (1) dock and minimize effects; (2) Stage Manager and wi
 - ccr after L8, L10, L11, L14 and the cover-pane fix: run-f44.sh 20 gave 0 Kiwi errors, 8/8 PASS (/tmp/x2/runs/20261027-160247-kiwi-is-not-apple-f44b).
 - L15 → merged (core/installer.js client plus contract doc, Setup Assistant in prefs, Login Items page; duplicates removed). Open for L7's code: use `ctx.installer` and `can_uninstall`; GNOME Software's `uninstall` action is unverified.
 - ALL FEATURE PACKAGES MERGED. Verification phase started (brief: verify.md). V1 dock + minimize; V2 Stage Manager + tiling + Split View; V3 Mission Control, Launchpad, switcher, gestures, hot corners; V4 menu bar, app menu, Control Center, OSD/dialogs; V5 notch, Notification Center/Focus, widgets; V6 Spotlight, screenshots, input/emoji, appearance/glass, installer/onboarding.
+
+## Installer integration: PAUSED INDEFINITELY (owner, 2026-10-27)
+No more installer work: no new pieces (Trash-drag uninstall, fly-to-dock, update dot, installing Kiwi itself), no installer cleanups (Launchpad `ctx.installer` / `can_uninstall`), and no verification of installer paths. The merged code stays as it is: it is idle and does nothing when no installer is on the bus. Onboarding and Login Items are not installer work and stay in scope. V6 skips the installer paths.

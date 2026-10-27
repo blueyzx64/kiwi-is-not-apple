@@ -286,6 +286,8 @@ Keep the round-2 designs, restyled with faux glass, wired to the core model, and
 - **Never commit screenshots.**
 
 ## 9. P7: installer and app lifecycle
+> **Paused indefinitely (owner, 2026-10-27).** What is merged stays (an idle client that does nothing without the installer, the contract doc, the Downloads-stack "Open with Installer", Launchpad delete rules, the Setup Assistant and Login Items). No further installer work is planned until the owner resumes it.
+
 The owner's `app-installer` (Tauri 2 + SvelteKit, Rust domain/application/infrastructure crates) has been assessed: AppImage install and uninstall are real; RPM install is wired but not proven on Fedora. Full assessment, risks and next steps: [installer research, owner's app-installer](../research/macos/installer-and-app-lifecycle.md#owners-app-installer-assessment-and-integration-plan).
 
 **Principle.** Kiwi is the shell (Finder, Dock, Launchpad); the installer is Installer.app plus the uninstall back end. Neither depends on the other being installed. Kiwi talks to it only over D-Bus, async with timeouts, and degrades when it is absent (EGO).
