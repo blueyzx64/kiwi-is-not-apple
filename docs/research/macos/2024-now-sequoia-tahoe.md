@@ -507,8 +507,8 @@ general-purpose Rosetta 2. That has no desktop-feature impact for Kiwi.
     style; it generates a carousel of candidates.
   - **Genmoji:** custom emoji from a text prompt, people, or a mix of two emoji, inserted inline like stickers.
 - **Caveats (on macOS):** quality complaints (uncanny people); caps; ethical objections from some reviewers.
-- **Port to GNOME 50:** out of scope for a desktop shell. The emoji picker already exists in GNOME (Ctrl+.,
-  or Super+. on GNOME 50 via the input method).
+- **Port to GNOME 50:** out of scope for a desktop shell. GTK apps already have an emoji chooser (Ctrl+. or
+  Ctrl+;), and GNOME Characters covers the rest.
 - **Blockers / risks:** image models, GPU, licensing; EGO.
 - **Linux equivalents today:** Stable Diffusion front ends (e.g. Krita AI Diffusion); GNOME Characters and
   Smile for emoji.
@@ -1039,3 +1039,1031 @@ Apple's own definition (newsroom, June 2025; HIG Materials):
 - **Kiwi status:** partial (keys exist).
 - **Recommendation:** **Port (P1 core), effort S.**
 
+---
+
+## 4. macOS 26 Tahoe: system features
+
+### F32. Spotlight: one ranked list, filters, tab-to-scope and site search
+- **Introduced / changed:** Tahoe 26.0 ("biggest update to Spotlight ever"). Golden Gate rebuilt the index for
+  Siri AI (F60).
+- **What it is:**
+  - **One ranked list.** Results (apps, files, folders, events, messages, mail and more) are no longer in fixed
+    sections. They form one list ranked by relevance and learned habits: typing "N" picks Numbers if you use it.
+  - **Filter chips.** A row under the search field offers "Menu items" for the current app, Clipboard and
+    relevant apps. ←/→ move along the row.
+  - **Tab to scope.** **Tab** on a highlighted app scopes the search to that app's documents (Numbers + CSV) or
+    its searchable content (Mail, Notes).
+  - **Slash filters.** `/pdf`, `/screenshots`, `/folders`, `/gif`, `/png`, `/jpeg`, `/quicktime`, `/documents`,
+    `/clipboard`, and cloud providers such as `/dropbox` or `/google drive`.
+  - **Website search.** Type a site name (YouTube, Amazon, IMDb) then Tab to search that site.
+  - **Other sources.** Open Safari tabs and windows, podcasts, and third-party File Provider clouds (Dropbox,
+    Google Drive).
+  - **Settings:** per-app and per-category exclusions (now sliders), "results from Apple partners", clear
+    history, reset quick keys, clipboard off, and private query sharing.
+- **Caveats (on macOS):** index rebuilds after updates slow it; adaptive ranking can surprise; web suggestions
+  still clutter for some users.
+- **Port to GNOME 50:** Kiwi Spotlight (`apps/spotlight`), Shell extension:
+  - **Ranking:** a pure model (`model.js`) mixing provider score, a recency and frequency table (in-memory plus a
+    small JSON in `~/.local/share/kiwi/` that Kiwi owns) and type boosts. Shell.AppSystem's usage
+    (`Shell.AppUsage` / `get_default().compare`) gives app frequency for free.
+  - **Filter chips:** St buttons in a row; ←/→ when the caret is at the end.
+  - **Slash filters:** map `/pdf`, `/images`, `/folders` and so on to **LocalSearch (Tracker 3)** SPARQL over
+    D-Bus (`org.freedesktop.LocalSearch3`, TinySPARQL) with `nie:mimeType` filters; async only.
+  - **Tab to scope:** Tab on an app result restricts to files whose MIME type the app handles
+    (`Gio.AppInfo.get_supported_types()`) or to that app's own `SearchProvider2` if it has one (Files,
+    Calculator, Characters, Contacts, Calendar…).
+  - **Site search:** a user-editable list of `name → URL template` entries.
+- **Blockers / risks:**
+  - LocalSearch may be disabled or not indexing.
+  - Persistent ranking data is user data: keep it small, Kiwi-owned, and clear it with "Clear history".
+  - There is no API for "open browser tabs" across browsers; skip that.
+- **Linux equivalents today:** GNOME Shell search (search providers, no ranking learning); Ulauncher, Albert;
+  Vicinae (a Raycast-like launcher); the Search Light extension.
+- **Kiwi status:** partial (grouped results, top hit, calculator and keys exist; no chips, slash filters or
+  learning).
+- **Recommendation:** **Port (P2), effort M.**
+
+### F33. Spotlight browse views (Apps, Files, Actions, Clipboard) and Apps replacing Launchpad
+- **Introduced / changed:**
+  - Tahoe 26.0: **Launchpad removed**, replaced by Spotlight's Applications view.
+  - 26.1 widened the Apps grid from five to seven columns.
+- **What it is:**
+  - **The four views.** With Spotlight open and empty, four buttons appear to the right of the field after a
+    moment: **Applications, Files, Actions, Clipboard**. **⌘1–⌘4** jump to them, and a shortcut (or the
+    Launchpad/F4 key) opens Apps directly.
+  - **Apps:**
+    - five most-used apps at the top;
+    - an alphabetical grid or list;
+    - category filters (App Store categories);
+    - Utilities folded at the bottom;
+    - iPhone apps (via Mirroring) shown or hidden.
+    - There are no folders or custom order (Launchpad users complained).
+  - **Files:** app chips to filter by type, Suggestions, then a scrolling Recents list.
+- **Caveats (on macOS):** no manual arrangement or pinning; iPhone apps clutter the list; Launchpad fans upset.
+- **Port to GNOME 50:** Kiwi Spotlight plus Launchpad:
+  - **The tab strip:** four segmented pills (F23) bound to Super+1..4 while Spotlight has the modal grab.
+  - **Apps:** `Shell.AppSystem.get_default().get_installed()` grouped by the freedesktop `Categories=` field
+    (map to about 10 macOS-like categories); a top row from app usage; grid or list toggle.
+  - This is also how the plan's "Launchpad becomes part of the dock and app grid" (overhaul plan §3) can work:
+    **one Apps view shared by Launchpad and Spotlight.** Kiwi can keep folders (GNOME's `app-folders` schema)
+    because Kiwi users likely want them.
+  - **Files:** recents from `Gtk.RecentManager` cannot be used in the Shell (no Gtk). Read
+    `~/.local/share/recently-used.xbel` asynchronously (parse XBEL), or query LocalSearch for recently modified
+    documents.
+- **Blockers / risks:**
+  - `recently-used.xbel` parsing must be async and tolerant.
+  - Two app grids (Kiwi's and GNOME's overview grid) must not drift; reuse GNOME's folders.
+- **Linux equivalents today:** GNOME's app grid (folders, custom order), the Activities overview, Search Light.
+- **Kiwi status:** partial (Spotlight exists; Launchpad is being reworked; no browse views).
+- **Recommendation:** **Port (P2), effort M.** It gives one Apps view for both Launchpad and Spotlight.
+
+### F34. Spotlight Actions and Quick Keys
+- **Introduced / changed:** Tahoe 26.0 (App Intents actions; quick keys). Golden Gate: faster indexing of
+  intents; actions also used by Siri AI.
+- **What it is:**
+  - **The Actions view:** suggested actions (learned: "message Ana") and then all actions grouped by app, from
+    App Intents and Shortcuts: send an email, create a note, start a timer, play a podcast, toggle settings, run
+    a shortcut.
+  - **Parameters** are typed inline: "tmr 2" starts a 2-minute timer.
+  - **Quick keys:** 1–12 lowercase letters and digits, no symbols. Several actions can share a key (Spotlight
+    lists them). Spotlight also auto-assigns quick keys to actions you use.
+  - Quick keys don't sync between Macs. "Reset quick keys" is in Settings.
+- **Caveats (on macOS):** only for apps with App Intents; quick keys can pollute normal results if they are real
+  words.
+- **Port to GNOME 50:** Kiwi Spotlight with an **action registry** (pure model plus adapters):
+  - **Desktop actions:** `[Desktop Action …]` entries in .desktop files (New Window, New Private Window, Compose
+    message…) through `Gio.DesktopAppInfo.list_actions()` / `launch_action()`. Every GNOME app with jump-list
+    actions gets "actions" for free.
+  - **Kiwi's own actions:** toggle Dark Style, DND, Night Light, Wi-Fi and Bluetooth (through the Quick Settings
+    objects already used by Control Center), tile left/right (F1), Show Desktop, Stage Manager, Lock, Screenshot
+    (`Main.screenshotUI.open()`), start a timer (a Kiwi notch timer).
+  - **App menu commands** of the focused app (planned, overhaul plan §5.9) feed the same registry (F36).
+  - **Quick keys:** a user table `alias → action id` in GSettings (`as` of `alias=id`), plus auto-suggest after
+    three uses.
+  - **Parameters:** a simple trailing argument for actions that declare one (timer minutes, a search term).
+- **Blockers / risks:**
+  - No cross-app intents framework on Linux: D-Bus activatable actions (`org.freedesktop.Application.ActivateAction`)
+    exist for some GApplications but are not discoverable with labels, so only `.desktop` actions are reliable.
+  - Timers need Kiwi's own state (the notch).
+- **Linux equivalents today:** Ulauncher and Albert extensions (aliases, plugins); Vicinae; GNOME's desktop
+  actions in the dash right-click menu.
+- **Kiwi status:** none (Spotlight toggles Liquid Glass and Stage Manager only).
+- **Recommendation:** **Port (P2), effort M.** High value for keyboard users, and it unifies with the app menu
+  provider.
+
+### F35. Spotlight clipboard history
+- **Introduced / changed:** Tahoe 26.0.
+- **What it is:**
+  - Spotlight's Clipboard view (⌘4) lists everything copied in the **last 8 hours**: text, images and files. It
+    is searchable from the main field, and items can be re-copied.
+  - **Off by default** (privacy). It skips items from the Passwords app, but third-party managers' passwords do
+    show up.
+  - There is no length setting, no pinning, and no direct shortcut (Ars wants one).
+- **Caveats (on macOS):** the fixed 8-hour window; no editing; buried "half an inch too deep".
+- **Port to GNOME 50:** Kiwi already has clipboard history and Quick Paste (`apps/clipboard`).
+  - Add the **Clipboard tab** in Spotlight's browse views (F33), backed by the same store.
+  - Show clipboard results inline in searches only when `spotlight-clipboard` is on.
+  - Offer "keep for: 8 h / 1 day / 1 week / forever", and keep **off by default** (EGO: clipboard shortcuts not
+    enabled by default; declare clipboard access in metadata).
+  - Skip items whose MIME targets include `x-kde-passwordManagerHint` (`clipboard.md`).
+- **Blockers / risks:** EGO clipboard rules; images in memory.
+- **Linux equivalents today:** Clipboard Indicator, Pano, Clipboard History extensions; CopyQ.
+- **Kiwi status:** have (Quick Paste and history); the Spotlight tab is partial (recent clipboard in the empty
+  state exists).
+- **Recommendation:** **Port (P1 core), effort S.**
+
+### F36. Spotlight menu-item search and search history
+- **Introduced / changed:** Tahoe 26.0 (menu bar items searchable; up-arrow history).
+- **What it is:**
+  - **Menu items:** "Items from the menu bar for the app a user is currently working in are searchable", run with
+    Return, like the Help menu search but global.
+  - **History:** pressing **↑** in an empty Spotlight walks back through past searches, like a shell history.
+    "Clear Spotlight history" is in Settings.
+- **Caveats (on macOS):** only the frontmost app's menus.
+- **Port to GNOME 50:**
+  - **Menu items** come from the app menu providers (overhaul plan §5.1): GTK actions, exported `org.gtk.Menus`,
+    DBusMenu, AT-SPI. Flatten them into `{label path, action}` and feed the F34 registry; it is already planned
+    in §5.9.
+  - **History:** a ring buffer of the last 50 queries (in memory, optionally persisted by Kiwi), with ↑/↓ when
+    the field is empty.
+- **Blockers / risks:** most libadwaita apps expose few menus (hamburger menus are built lazily; AT-SPI mode is
+  experimental).
+- **Linux equivalents today:** HUD-style menu search (Unity HUD, KDE's KRunner app-menu search, Plotinus for GTK3).
+- **Kiwi status:** partial (planned in §5.9, P6).
+- **Recommendation:**
+  - History: **Port (P1 core), effort S.**
+  - Menu-item search: **Port (P2), effort M**, after the app menu providers.
+
+### F37. The redesigned, customisable Control Center (controls gallery)
+- **Introduced / changed:** Tahoe 26.0 (iOS 18-style). Golden Gate: a consistent closing animation.
+- **What it is:**
+  - Control Center has **no fixed mandatory items** any more.
+  - **Edit Controls** opens a gallery like the widget gallery: a searchable sidebar by app, and controls grouped
+    by app.
+  - Hovering a control shows a green **+**; you can also drag it into place in the panel, or drag it to the menu
+    bar (F39).
+  - **The controls:** timers, run a shortcut, **tile windows** (split the screen between the two most recent
+    windows), new note, voice memo, Shazam, HomeKit scenes, Focus modes, screen recording, display and sound
+    sliders, media.
+  - **Third-party controls** come through WidgetKit/App Intents. Very few shipped at launch, partly because of a
+    gallery bug (MacStories).
+  - The panel height is capped (about half a Studio Display).
+- **Caveats (on macOS):** few third-party controls; many controls are plain buttons without state; the capped
+  height.
+- **Port to GNOME 50:** Kiwi's Control Center (`apps/controlCenter`) restyles GNOME Quick Settings (`docs/features/control-center.md`):
+  - **Edit Controls (v2 in the spec):** a glass gallery listing every available control:
+    - GNOME's Quick Settings items (`quickSettings._grid` children, including other extensions' toggles: the
+      "More" section);
+    - plus **Kiwi controls**: Tile Windows (two recent windows side by side, F1), Stage Manager, Liquid Glass,
+      Show Desktop, Screenshot, Screen Record (`Main.screenshotUI` in recording mode), Timer (notch), Keep Awake
+      (an inhibitor via `org.gnome.SessionManager.Inhibit`), Dark Style, Night Light, Power Mode.
+  - **Layout:** grid positions and sizes (1×1, 2×1, 2×2) stored as `as` keys; the pure layout model in
+    `controlCenter/model.js`.
+  - Drag to reorder (St drag via `DND.makeDraggable`).
+- **Blockers / risks:**
+  - Quick Settings items from GNOME and other extensions are private objects (`_grid`, `_indicators`); keep them
+    wrapped and feature-detected per version (`version-matrix.md`).
+  - Never drop unknown items.
+- **Linux equivalents today:** GNOME Quick Settings (fixed order); Quick Settings Tweaker (reorder and hide).
+- **Kiwi status:** have (fixed layout); Edit Controls is planned as v2.
+- **Recommendation:** **Port (P2), effort L.** It is one of the most praised Tahoe changes, and Kiwi owns the
+  surface.
+
+### F38. Multiple Control Center panels
+- **Introduced / changed:** Tahoe 26.0.
+- **What it is:**
+  - In the gallery, a **+** in the menu bar adds another Control Center with its own icon (one of 11 glyphs) and
+    its own controls: a "Home" panel, a "Music" panel.
+  - Empty panels vanish when you close the gallery.
+- **Caveats (on macOS):** only 11 icons; adds menu bar items.
+- **Port to GNOME 50:** each extra panel is a `PanelMenu.Button` with a glass popover reusing the Control Center
+  grid renderer, holding a subset of controls. Store it as a JSON-ish `a(ssas)` (id, icon, controls) or simple
+  parallel `as` keys.
+- **Blockers / risks:** menu bar width (with the notch and app menus). The `core/layout.js` overflow rules apply.
+- **Linux equivalents today:** none.
+- **Kiwi status:** none.
+- **Recommendation:** **Later (P3), effort M**, after F37.
+
+### F39. Controls pinned to the menu bar
+- **Introduced / changed:** Tahoe 26.0.
+- **What it is:**
+  - Any Control Center control can be dragged to the menu bar as a standalone icon.
+  - Most such items are plain buttons (they open an app or flip a setting) without a dropdown or live state,
+    unlike the purpose-built Wi-Fi or Sound extras (Ars).
+  - When there are too many icons, app menus push them right while open.
+- **Caveats (on macOS):** the notch eats space; you can make it ugly; many items lack state.
+- **Port to GNOME 50:** Kiwi menu bar:
+  - each pinned control becomes a `PanelMenu.Button` in `Main.panel._rightBox` (via `addToStatusArea` with a
+    `kiwi-pin-<id>` role);
+  - a toggle control shows its state by icon or opacity; a slider control opens a small glass popover with the
+    slider;
+  - the pure model decides order and overflow.
+- **Blockers / risks:** panel space; mirrors in enable/disable.
+- **Linux equivalents today:** many single-purpose extensions (Caffeine, Night Light toggle buttons).
+- **Kiwi status:** none.
+- **Recommendation:** **Port (P2), effort M**, together with F37.
+
+### F40. Volume and brightness indicators from the menu bar
+- **Introduced / changed:**
+  - Tahoe 26.0: the 25-year-old centred square HUD is replaced by a glass bar that pops out under the Control
+    Center or Sound menu bar item.
+  - Golden Gate 27.2 beta: new volume and brightness slider designs (reported).
+- **What it is:** pressing the volume or brightness keys shows a horizontal glass slider at the top right, under
+  the Sound icon if it is in the menu bar, otherwise under Control Center. It is animated; it is not centred.
+- **Caveats (on macOS):** hard to get used to (MacStories); it can cover menu bar extras.
+- **Port to GNOME 50:** Shell extension.
+  - GNOME's OSD is `Main.osdWindowManager` (`ui/osdWindow.js`).
+  - Kiwi either injects into `OsdWindowManager.prototype.show` (InjectionManager) to position and restyle the
+    OSD window under the menu bar's Control Center button, or replaces it with a Kiwi popover (a slider and
+    icon) for volume and brightness while passing other OSDs (keyboard layout, airplane mode) through unchanged.
+  - The target rect comes from the Control Center button's `get_transformed_extents()`.
+  - Animate with F19 springs.
+- **Blockers / risks:** private API (`osdWindow.js` internals change across versions); multi-monitor: show it on
+  the monitor with the pointer or the primary one, as GNOME does.
+- **Linux equivalents today:** GNOME's centred OSD; the Better OSD extension (moves the OSD).
+- **Kiwi status:** none.
+- **Recommendation:** **Port (P2), effort S.** It is a cheap, very visible Tahoe detail.
+
+### F41. Lock screen clock customisation
+- **Introduced / changed:** Tahoe 26.0 (Wallpaper › Clock Appearance).
+- **What it is:**
+  - About six typefaces and weights, as on iOS (no colour options on the Mac).
+  - Shown on the lock screen, on the lock screen and screen saver, or off.
+  - The lock screen is still notification-free and widget-free.
+- **Caveats (on macOS):** buried in Wallpaper settings.
+- **Port to GNOME 50:** Shell extension, but it needs `"session-modes": ["user", "unlock-dialog"]` in
+  `metadata.json` to style `unlockDialog`'s clock (`.unlock-dialog-clock-time`).
+  - EGO reviewers require a reason for unlock-dialog mode, and **every** Kiwi feature must then behave in that
+    mode (the code map notes session-modes is not declared, so Kiwi is torn down on lock).
+  - A stylesheet-only change (font-family, weight, size) applied while locked is small.
+- **Blockers / risks:** the session-modes change affects the whole extension lifecycle; it is a big decision for a
+  small feature.
+- **Linux equivalents today:** extensions that theme the lock screen (Lock Screen Background, Blur my Shell's
+  lock-screen blur).
+- **Kiwi status:** none.
+- **Recommendation:** **Later (P3), effort M.** Only if the owner accepts unlock-dialog mode for other reasons.
+
+### F42. Cursor redesign (Tahoe) and the hand cursor's return (Golden Gate)
+- **Introduced / changed:**
+  - Tahoe: a rounder arrow cursor.
+  - Golden Gate: the link-hover "glove" (pointing hand) returns in a new design (Wikipedia).
+- **What it is:** a system cursor shape refresh.
+- **Caveats (on macOS):** none of note.
+- **Port to GNOME 50:**
+  - Cursors are an icon theme (`org.gnome.desktop.interface cursor-theme`).
+  - Shipping a cursor theme and switching the user's setting is a user-file and setting change outside the Shell.
+  - Recommend an existing macOS-like cursor theme from the installer instead.
+- **Blockers / risks:** copyright of Apple cursor art; changing the user's settings.
+- **Linux equivalents today:** Apple-like cursor themes (e.g. "macOS" cursors on GitHub/Flathub themes),
+  Bibata.
+- **Kiwi status:** none.
+- **Recommendation:** **Skip** in the extension. Installer (P7) can offer an optional cursor theme, effort S.
+
+### F43. The Menu Bar settings pane: hide any item, background, auto-hide
+- **Introduced / changed:** Tahoe 26.0 (new System Settings › Menu Bar pane; the Control Center settings merged
+  into it).
+- **What it is:**
+  - Per-app toggles to **allow or deny any app's menu bar item**, even when the app has no such option (the
+    ScanSnap and Adobe Creative Cloud example).
+  - The classic system items (Wi-Fi, Sound, Battery, Bluetooth, Spotlight, Siri, Time Machine, Fast User
+    Switching, Weather…).
+  - "Show menu bar background" (F20).
+  - "Automatically hide and show the menu bar": Always, On Desktop Only, In Full Screen Only, Never.
+  - "Recent documents, applications, and servers" counts.
+  - A link into the controls gallery.
+- **Caveats (on macOS):** it doesn't replace Bartender/Ice for ordering or overflow; no reordering beyond
+  Cmd-drag.
+- **Port to GNOME 50:** Kiwi menu bar prefs page plus Shell code:
+  - **List** every `Main.panel.statusArea` role, including AppIndicator/KStatusNotifier items from the
+    AppIndicator extension, which appear as status-area entries (`appindicator-…` roles), and GNOME's own items.
+  - **Hide** by `actor.hide()` with a tracked restore, and **reorder** within `_rightBox` (remove and insert the
+    container; restore the original index on disable).
+  - Kiwi must never destroy other extensions' items.
+  - **Auto-hide modes:** fold into the planned "fullscreen hides the menu bar" rule plus an optional "always
+    auto-hide" (the removed auto-hide top bar returns as a menu bar option).
+- **Blockers / risks:**
+  - Other extensions may re-add or move their items: watch `actor-added` on the boxes and re-apply.
+  - Private panel boxes (`_rightBox`).
+  - The prefs window can't see the Shell's status area directly; send the list over a small D-Bus or GSettings
+    "seen items" key that Kiwi writes.
+- **Linux equivalents today:** Just Perfection (hide items), Top Bar Organizer (reorder), Hide Top Bar.
+- **Kiwi status:** none.
+- **Recommendation:** **Port (P2), effort M.**
+
+### F44. The Phone app
+- **Introduced / changed:** Tahoe 26.0 (Continuity). Golden Gate: Call Context (shows Mail details such as a
+  flight code when you call a business).
+- **What it is:**
+  - The iPhone Phone app on the Mac: Favorites, Recents, Voicemails with transcripts, a keypad that takes
+    keyboard input and paste, call screening settings that sync to the phone, Hold Assist and Live Translation.
+  - Calls are relayed through the nearby iPhone.
+- **Caveats (on macOS):** needs an iPhone on the same account; no Android.
+- **Port to GNOME 50:**
+  - GSConnect and KDE Connect show call notifications (mute ringer, reply by SMS) for Android, but don't relay
+    call audio.
+  - Phone audio over Bluetooth HFP (PipeWire supports HFP) lets the PC act as a headset for any phone; no dialer
+    UI exists in GNOME.
+  - Out of scope.
+- **Blockers / risks:** Apple services; telephony stack.
+- **Linux equivalents today:** GSConnect, KDE Connect; GNOME Calls (for modems and phones running Linux).
+- **Kiwi status:** none.
+- **Recommendation:** **Skip, effort XL.**
+
+### F45. Live Activities from the iPhone in the menu bar
+- **Introduced / changed:** Tahoe 26.0.
+- **What it is:**
+  - Live Activities running on the paired iPhone (Uber, food delivery, flights via Flighty, sports scores, timers)
+    appear automatically as a **small black capsule** at the left of the menu bar's status area, with an icon and
+    a short status (an ETA).
+  - Clicking expands it below the menu bar. A second click opens the app in iPhone Mirroring.
+  - It needs Mirroring and notifications set up.
+- **Caveats (on macOS):** the menu bar-height capsule is too small to read (MacStories); iPhone only.
+- **Port to GNOME 50:**
+  - This is **exactly Kiwi's notch v3 "Now" tab** (overhaul plan §5.6): live activities for charging, timers,
+    screen recording, headphones, the next calendar event and download progress.
+  - Phone sources are optional: GSConnect exposes Android MPRIS media and notifications, which the notch already
+    reads.
+  - The macOS pattern to copy is the **compact capsule** (an icon and a short text such as "3 min", or a progress
+    ring) that expands on hover or click.
+  - **Sources:**
+    - UPower (`gi://UPowerGlib` or Shell's `Main.panel.statusArea.quickSettings._system` battery proxy);
+    - MPRIS (already used);
+    - Kiwi timers;
+    - `Main.screenshotUI` recording state;
+    - Bluetooth battery from BlueZ `org.bluez.Battery1`;
+    - Evolution Data Server calendar via Shell's `ui/calendar.js` sources;
+    - download progress from notifications with a progress hint (GNOME Web, Firefox via the portal).
+- **Blockers / risks:** there is no generic "live activity" protocol on Linux. Every source is a custom adapter,
+  and third-party apps can't publish one (the notification `x-kde`-style progress hints are not standard in
+  GNOME).
+- **Linux equivalents today:** none as a system feature; some "dynamic island" toy extensions.
+- **Kiwi status:** partial (the notch has media; live activities are planned in P5).
+- **Recommendation:** **Port (P2), effort M**: compact capsules in the notch for system sources first.
+
+### F46. Shortcuts automations and intelligent actions
+- **Introduced / changed:**
+  - Tahoe 26.0: Automations on the Mac, and "Use Model" actions on on-device, Private Cloud Compute or ChatGPT
+    models.
+  - Golden Gate: Describe a Shortcut (natural language), and new triggers (screenshot taken, notification
+    received) (F68).
+- **What it is:** "if this, then run shortcut" triggers:
+  - a time of day, sunrise or sunset (daily, weekly or monthly);
+  - an email arriving (by sender, subject or account);
+  - a message arriving;
+  - a **folder changing** (items added, modified or removed);
+  - an **external drive connected or ejected**;
+  - joining or leaving a **Wi-Fi network**;
+  - a **Bluetooth device** connecting;
+  - an **external display** connecting;
+  - **Stage Manager** turning on or off;
+  - **battery level** thresholds;
+  - Focus or DND changes.
+  - Each automation runs silently or **asks for confirmation through a notification**, and can notify when run.
+- **Caveats (on macOS):** trial-and-error authoring (Ars); the display trigger is not per display.
+- **Port to GNOME 50:** not a Shell feature, but the Shell sees many triggers.
+  - A small Kiwi **"Automations"** (P3 idea) could run user-chosen commands or `.desktop` actions on:
+    - display connect (`Main.layoutManager` `monitors-changed`);
+    - power thresholds (UPower);
+    - Wi-Fi SSID (NetworkManager via `gi://NM`, already used by Shell);
+    - Bluetooth connect (GnomeBluetooth);
+    - Stage Manager toggling (Kiwi);
+    - DND toggling;
+    - a time of day (a GLib timeout).
+  - Run commands with `Gio.Subprocess` (async). The confirmation step is a Kiwi notification with Run/Skip
+    actions.
+  - A full Shortcuts editor is out of scope.
+- **Blockers / risks:**
+  - Running arbitrary commands from an extension is an EGO red flag: only user-entered commands, never
+    downloaded scripts; document it clearly.
+  - Overlaps with systemd user units and udev.
+- **Linux equivalents today:** systemd user timers and path units; Automate (KDE, Plasma 6 "automations" are
+  limited); `gnome-shell` extensions like Auto Activities; Home Assistant for home triggers.
+- **Kiwi status:** none.
+- **Recommendation:** **Later (P3), effort L.** Stage Manager and display triggers are the Kiwi-flavoured part.
+
+### F47. The Games app and Game Overlay
+- **Introduced / changed:** Tahoe 26.0. 26.2: library filters and challenge score banners.
+- **What it is:**
+  - **Games:** a hub built on Game Center. Home (recent games, friends' activity, charts), Arcade, a Friends tab
+    with asynchronous challenges, and a Library that includes **non-App Store games** such as Steam installs.
+  - **Game Overlay (⌘⎋ or the rocket in the menu bar):** brightness, volume, energy mode, Game Mode and
+    controllers; then achievements and leaderboards; then social.
+- **Caveats (on macOS):** only Apple-implemented achievements show; no Mac-only filter.
+- **Port to GNOME 50:**
+  - A game library is an app (Lutris, Heroic, Steam).
+  - A **Kiwi overlay** for fullscreen games is conceivable (a glass panel on a keybinding with brightness,
+    volume, Power Mode via `net.hadess.PowerProfiles`, and DND), but fullscreen games often use direct scanout
+    (unredirected), and showing Shell chrome over them forces compositing and can stutter.
+- **Blockers / risks:** unredirection and VRR; games grabbing input.
+- **Linux equivalents today:** Steam overlay, MangoHud, GameMode, Lutris, Heroic, Bottles.
+- **Kiwi status:** none.
+- **Recommendation:** **Skip, effort L.**
+
+### F48. Journal on the Mac
+- **Introduced / changed:** Tahoe 26.0. Golden Gate: generative writing prompts.
+- **What it is:** Apple's journaling app with multiple journals, a Places map of entries, photos, Touch ID lock,
+  and iCloud sync.
+- **Caveats (on macOS):** no journaling suggestions from Mac activity; iCloud only.
+- **Port to GNOME 50:** an app, out of scope.
+- **Blockers / risks:** n/a.
+- **Linux equivalents today:** Iotas (notes), Folio, Diary-style apps on Flathub.
+- **Kiwi status:** none.
+- **Recommendation:** **Skip.**
+
+### F49. Live Translation
+- **Introduced / changed:** Tahoe 26.0 (Messages, FaceTime captions, Phone calls; on-device).
+- **What it is:**
+  - Messages are translated as you type and as they arrive (after a language download).
+  - FaceTime shows translated live captions.
+  - Phone calls get spoken translation.
+- **Caveats (on macOS):** language list; Apple Intelligence hardware.
+- **Port to GNOME 50:** app and model level, out of scope. Speech Note and Dialect (Translate) exist.
+- **Blockers / risks:** models, audio pipeline.
+- **Linux equivalents today:** Dialect; Speech Note (offline speech-to-text and translation); Firefox's local
+  translation.
+- **Kiwi status:** none.
+- **Recommendation:** **Skip.**
+
+### F50. Messages: backgrounds, polls, screening and typing indicators
+- **Introduced / changed:** Tahoe 26.0.
+- **What it is:**
+  - Per-conversation backgrounds (animated presets, photos, Image Playground); bubbles become glass over them.
+  - Polls, typing indicators in groups, and unknown-sender screening and spam filtering.
+  - A slide-over Details panel with tabs.
+- **Caveats (on macOS):** animated backgrounds hurt legibility; poor sync from Mac to iPhone.
+- **Port to GNOME 50:** app-level, out of scope.
+- **Blockers / risks:** n/a.
+- **Linux equivalents today:** Fractal, Signal, Telegram (all have chat backgrounds or polls in some form).
+- **Kiwi status:** none.
+- **Recommendation:** **Skip.**
+
+### F51. Low-battery and accessory alerts in the menu bar
+- **Introduced / changed:** Tahoe 26.0 ("Notifications for low battery and AirPods have been reduced to alerts in
+  their menu bar items").
+- **What it is:**
+  - The low-battery alert is an iPhone-style card with a **red circular meter**. It starts at 10 % and repeats
+    with each percentage drop; it can't be dismissed and can't be configured.
+  - Accessory (AirPods) connection and battery alerts appear from their menu bar item instead of as
+    notifications.
+- **Caveats (on macOS):** repeats too often and can't be tuned (Ars).
+- **Port to GNOME 50:** the notch (live activity) or the battery status item.
+  - Watch UPower's display device (`Percentage`, `State`, `WarningLevel`) and Bluetooth `org.bluez.Battery1`.
+  - Show a compact glass capsule with a ring meter (St `DrawingArea` or a Cairo-drawn ring, cheap) at 20 % /
+    10 % / 5 % thresholds (configurable, unlike macOS).
+  - Headphone connect shows "AirPods-style" capsule art (an icon, a name and a battery ring).
+  - GNOME's own low-battery notification (gsd-power) still fires. Suppress its banner only if the user opts in,
+    by filtering that source's banner in the notch.
+- **Blockers / risks:** gsd-power's notification is outside the Shell's control (it is a notification, so it can
+  be filtered, not prevented).
+- **Linux equivalents today:** gsd-power notifications; Bluetooth Battery Meter extension.
+- **Kiwi status:** partial (battery live activities are planned for the notch).
+- **Recommendation:** **Port (P2), effort S**, inside notch v3.
+
+### F52. Tahoe wallpapers and the clock on the screen saver
+- **Introduced / changed:** Tahoe 26.0 (Lake Tahoe dynamic photo wallpaper in Day, Morning, Evening and Night;
+  an abstract blue glass swirl in light and dark; 15 new aerial screen savers, including Goa, the Himalayas and
+  Kerala).
+- **What it is:** wallpapers that become moving screen savers and settle back. They change by time of day or
+  appearance. The clock can show over the screen saver (F41).
+- **Caveats (on macOS):** large downloads; Apple copyright.
+- **Port to GNOME 50:** same as F16: original Kiwi wallpapers (an abstract "glass swirl" style fits faux glass),
+  light/dark pairs or timed XML. GNOME has no screen saver beyond blanking.
+- **Blockers / risks:** copyright; no screensaver framework in GNOME.
+- **Linux equivalents today:** timed XML wallpapers; Hidamari.
+- **Kiwi status:** none.
+- **Recommendation:** **Later (P3), effort S** (with F16).
+
+### F53. One-time codes from Messages and Mail, autofilled in any browser
+- **Introduced / changed:** Sonoma for Safari; Tahoe 26.0 extends it to **any browser**, with optional automatic
+  deletion after use.
+- **What it is:** when an SMS or email with a verification code arrives, the code is offered by autofill in
+  Chrome, Firefox and others, and the message can be auto-deleted.
+- **Caveats (on macOS):** SMS 2FA is weak; it relies on Messages and Mail.
+- **Port to GNOME 50:**
+  - A notch or notification helper: when a notification body matches a code pattern ("code", "verification",
+    "OTP" plus 4–8 digits, localised keywords), show a **Copy code** button on the banner or notch capsule.
+  - Copy only on click (EGO: explicit user action; no auto-copy).
+  - Works for GSConnect SMS, Thunderbird or Geary mail notifications, and messaging apps.
+- **Blockers / risks:**
+  - No autofill API into other apps on Wayland; copy is the honest version.
+  - False positives; keep the matching conservative.
+- **Linux equivalents today:** none in GNOME; KDE Connect shows SMS.
+- **Kiwi status:** none.
+- **Recommendation:** **Port (P2), effort S.** A small, delightful notch feature.
+
+### F54. Magnifier, Accessibility Reader and Vehicle Motion Cues
+- **Introduced / changed:** Tahoe 26.0 (also Braille Access).
+- **What it is:**
+  - **Magnifier:** a camera magnifier (Continuity Camera or USB) with filters and perspective correction, and
+    text reading.
+  - **Accessibility Reader:** a system-wide reading mode.
+  - **Vehicle Motion Cues:** animated dots at the screen edges that follow vehicle motion, against motion
+    sickness; customisable.
+- **Caveats (on macOS):** Motion Cues is not captured in screenshots; niche.
+- **Port to GNOME 50:**
+  - Magnifier is an app (Snapshot plus GNOME's zoom).
+  - Motion Cues needs motion sensors (iio-sensor-proxy exposes an accelerometer on some laptops, but a laptop in
+    a car is not the use case).
+  - Skip.
+- **Blockers / risks:** hardware and sensors.
+- **Linux equivalents today:** GNOME Zoom (a11y magnifier), Snapshot, Orca, Speech Dispatcher.
+- **Kiwi status:** none.
+- **Recommendation:** **Skip.**
+
+### F55. Edge Light (macOS 26.2)
+- **Introduced / changed:** Tahoe 26.2.
+- **What it is:**
+  - A video effect that uses the **display as a ring light** in low light: a bright soft frame around the screen
+    edges during video calls.
+  - The width and colour temperature can be changed.
+  - It **recedes where the mouse is** so you can reach content under it.
+  - It can turn on automatically in low light on 2024+ Macs.
+- **Caveats (on macOS):** it covers screen edges; auto mode only on newer Macs.
+- **Port to GNOME 50:** Shell extension.
+  - A chrome actor over the whole monitor (`Main.layoutManager.addTopChrome` with no input region:
+    `reactive: false`). It draws a thick white-to-warm border with an inner fade (St `box-shadow: inset`, or four
+    gradient strips).
+  - It dims locally under the pointer (track `global.get_pointer()` on a 60 ms timeout only while on).
+  - **Trigger:** a manual Control Center tile. Automatic "camera in use" detection would need PipeWire node
+    monitoring (no Shell API; a `pw-dump` subprocess is heavy), so manual first.
+- **Blockers / risks:**
+  - Full-screen overlay actors force compositing (fine) and must not take input.
+  - Avoid it during fullscreen games.
+- **Linux equivalents today:** none known.
+- **Kiwi status:** none.
+- **Recommendation:** **Later (P3), effort S.** A fun Control Center tile, cheap to build.
+
+### F56. Other app changes (Terminal, Notes, Safari 26, Photos, FaceTime)
+- **Introduced / changed:** Tahoe 26.0–26.4.
+- **What it is:**
+  - **Terminal:** "Clear Light/Dark" glass themes, 24-bit colour, Powerline glyphs, a 120×30 default.
+  - **Notes:** Markdown import and export.
+  - **Safari 26:** floating rounded tabs, WebGPU, HDR images, SVG favicons; compact tabs return in 26.4.
+  - **Photos:** pinned Collections.
+  - **FaceTime:** a Contact Posters landing page.
+  - **Reminders:** AI auto-categorise.
+  - **Clock:** snooze 1–15 min.
+- **Caveats (on macOS):** Music and Photos moved controls to floating bottom pills (criticised).
+- **Port to GNOME 50:** app-level, out of scope. Note for Kiwi: Ptyxis (Fedora's terminal) already supports
+  transparency, which a user can pair with Kiwi.
+- **Blockers / risks:** n/a.
+- **Linux equivalents today:** Ptyxis, Apostrophe and Iotas (Markdown), Firefox.
+- **Kiwi status:** none.
+- **Recommendation:** **Skip.**
+
+---
+
+## 5. macOS 27 Golden Gate features
+
+### F57. Liquid Glass refinements: darker edges, brighter speculars, uniform toolbars, edge-to-edge sidebars, active-window shadows
+- **Introduced / changed:** Golden Gate 27.0 (announced June 2026; tuned through beta 6).
+- **What it is:**
+  - **Opacity:** raised overall, and it "diffuses complex content more effectively", so busy content behind is
+    smoothed more.
+  - **Edges and speculars:** a **darkened edge** and **brighter specular highlights** give depth and separation.
+  - **Toolbars:** uniform, with legible headings and control groups.
+  - **Sidebars:** **no longer floating**; edge-to-edge again, without the extra shadow, and with **coloured
+    sidebar icons**.
+  - **Active windows:** **window shadows** were changed so the active window is easier to identify.
+  - **Icons:** more glass layers (sharper).
+  - **HDR:** used "for depth and dimension" on capable displays.
+  - **Corners:** one window corner radius (F24).
+- **Caveats (on macOS):** fans of the clear WWDC 2025 look call it "frosted glass high/mid"; critics (Gruber)
+  call it the right direction.
+- **Port to GNOME 50:** these are cheap faux-glass tweaks Kiwi should adopt directly:
+  - **Darkened edge:** a 1 px outer border at rgba(0,0,0,0.18) (light) / rgba(0,0,0,0.45) (dark) under the white
+    inner rim. The pair reads as a glass edge.
+  - **Brighter specular:** a top rim at 45–55 % white instead of 25–35 %, with a short, bright corner glint.
+  - **Active window shadows:** Mutter draws shadows only for server-side decorated windows; GTK CSD apps draw
+    their own. The Shell can't change shadows on GTK windows. Kiwi could **dim inactive windows** slightly (an
+    opacity of 0.97 or a `Clutter.BrightnessContrastEffect` on `Meta.WindowActor`s that are not focused), off by
+    default.
+  - **HDR:** skip (GNOME 50 HDR is for content, not UI).
+- **Blockers / risks:** dimming inactive windows costs an effect per window; skip it on fullscreen and video.
+- **Linux equivalents today:** the Inactive Window Dimming extensions.
+- **Kiwi status:** partial (faux glass layers).
+- **Recommendation:** **Port (P1 core), effort S** for the edge and specular tokens; **Later (P3), effort S** for
+  the inactive-window dimming.
+
+### F58. Golden Gate wallpapers that animate on unlock
+- **Introduced / changed:** Golden Gate (the same default wallpaper as iOS/iPadOS 27; beta 3 added Golden Gate
+  Sunset and Night photos; beta 6 added more).
+- **What it is:** wallpapers that **animate when the Mac unlocks** and can be used as screen savers.
+- **Caveats (on macOS):** Apple copyright.
+- **Port to GNOME 50:** the unlock moment is visible to the Shell (`Main.screenShield` `locked-changed`, or the
+  session mode change). Kiwi could play a short **zoom-settle** on the background actors
+  (`Main.layoutManager._backgroundGroup`, scale from 1.04 to 1 over 600 ms) after unlock. It is cheap and gives
+  "the desktop comes alive" without video.
+- **Blockers / risks:** the Kiwi extension is disabled while locked (no unlock-dialog session mode), so the
+  re-enable after unlock is the hook. That also means the effect runs on every enable, so gate it on "came from
+  the lock screen".
+- **Linux equivalents today:** none.
+- **Kiwi status:** none.
+- **Recommendation:** **Later (P3), effort S.**
+
+### F59. Aqua-like glass traffic lights
+- **Introduced / changed:** Golden Gate beta 6 (August 2026) and shipping.
+- **What it is:**
+  - The close, minimise and zoom buttons move from flat colours (used since Yosemite) to **little glass beads**
+    with top and bottom highlights, echoing Mac OS X 10.0–10.4 Aqua.
+  - The selected control animates slightly (Jeff Nadeau's demo).
+  - Hover still reveals the glyphs.
+  - Critique (512 Pixels): too bright in dark mode, the least saturated stoplights ever, and background windows'
+    buttons are too prominent ("should drop the highlights").
+- **Caveats (on macOS):** brightness in dark mode; inactive windows look active.
+- **Port to GNOME 50:** Kiwi's traffic lights (`apps/windowControls`, in the menu bar or app-buttons mode) are St
+  buttons, so this is pure CSS.
+  - **The bead:** a base colour, a `background-gradient` (vertical, lighter top to base), a small white top
+    "catchlight" child (an ellipse via `border-radius`, 40 % white), a 1 px darker rim and an inner bottom glow.
+  - **Inactive window:** flat grey, no highlights (fixing 512 Pixels' complaint).
+  - **Hover:** shows the glyphs.
+  - **Press:** scale 0.94 with a spring.
+  - Offer "Flat (Tahoe)" or "Glass (Golden Gate)" styles.
+- **Blockers / risks:** none.
+- **Linux equivalents today:** GTK themes with macOS buttons (WhiteSur); Kiwi's dropped titlebutton CSS sets.
+- **Kiwi status:** have (flat traffic lights).
+- **Recommendation:** **Port (P1 core), effort S.**
+
+### F60. Siri AI in Spotlight ("Search or Ask") and the Siri app
+- **Introduced / changed:**
+  - Golden Gate 27.0, English first.
+  - Also available in the EU on the Mac.
+  - Built on Apple Foundation Models developed with Google's Gemini technology, running on device, on Private
+    Cloud Compute, and on Google Cloud.
+  - ChatGPT can be chosen instead (right-click › Ask…).
+- **What it is:**
+  - **Search or Ask.** ⌘Space opens a field that decides whether the query is a search or a request for Siri.
+    Siri answers in a small pill that expands, with follow-ups, a **+** for files and photos, and rich cards
+    (weather, calendar).
+  - **Context.** Siri sees the screen and personal data (Mail, Messages, Notes…) through a rebuilt semantic
+    index, and acts in apps via App Actions.
+  - **The Siri app** keeps conversation history and pins, synced across devices.
+  - Spotlight's menu bar icon is removed for waitlisted users (beta 3).
+  - The advanced voice model needs an M3 or later with 12 GB.
+- **Caveats (on macOS):** beta, waitlist, English only; daily caps on heavy AI features; privacy concerns about
+  screen and personal context; Apple's 2026 Full Disk Access changes respond to AI agents.
+- **Port to GNOME 50:**
+  - The **UI pattern** (one field that searches *or* asks) can be built into Kiwi Spotlight: a final "Ask…" row
+    sends the query to an **optional** assistant helper (the F9 D-Bus helper, local model by default; any cloud
+    provider only with explicit opt-in and a visible indicator). The answer appears in an expanding glass card
+    under the field.
+  - Personal-data and screen context are out of scope: no screen reading by default, ever.
+- **Blockers / risks:**
+  - EGO: no third-party data flows without explicit user action; no bundled binaries.
+  - LLM quality and resources.
+  - The scope: an assistant is not a desktop shell.
+- **Linux equivalents today:** Newelle (has a GNOME Shell integration via an extension), Alpaca, GPT4All.
+- **Kiwi status:** none.
+- **Recommendation:** **Later (P3), effort L.** Ship only the "Ask" hook, and leave the backend to optional helpers.
+
+### F61. Visual Intelligence on the Mac
+- **Introduced / changed:** Golden Gate 27.0.
+- **What it is:**
+  - **Shift-Cmd-Space** (or Shift-Cmd-6, or the icon in the Shift-Cmd-5 screenshot bar) lets you drag a region
+    of the screen.
+  - Siri then explains it, translates, searches for similar images, identifies plants, landmarks and objects, or
+    acts on it: adding a flyer's events to Calendar, a business card to Contacts, a barcode to Wallet, splitting
+    a bill (US).
+- **Caveats (on macOS):** AI accuracy; privacy; some features US-only.
+- **Port to GNOME 50:**
+  - **Capture:** `Main.screenshotUI` (or `Shell.Screenshot.screenshot_area`, in-process, async) gives the
+    pixels.
+  - **The realistic, non-AI part:** **OCR the region and copy the text** (Tesseract in a helper or via
+    `Gio.Subprocess` if installed), plus "search the web for this text". Optionally pass the image to the
+    assistant helper.
+- **Blockers / risks:** OCR dependency; image analysis needs models; must be strictly user-triggered.
+- **Linux equivalents today:** Frog (Text Grabber, GNOME Circle-style OCR app); Normcap; Google Lens through a
+  browser.
+- **Kiwi status:** none.
+- **Recommendation:** **Later (P3), effort M** (OCR "copy text from region" only).
+
+### F62. Write with Siri
+- **Introduced / changed:** Golden Gate 27.0 (replaces the Writing Tools entry point).
+- **What it is:**
+  - Anywhere you type: draft from a description, get feedback ("how does this sound?"), or edit by describing
+    the change.
+  - It can match your personal style in Mail and Messages.
+  - **Automatic proofreading** while typing.
+  - Related: Apple Intelligence **suggests file and folder names** from their contents when saving in Finder and
+    TextEdit.
+- **Caveats (on macOS):** users ask how to turn the bubble off (MacRumors comments).
+- **Port to GNOME 50:** see F9 (same helper and same PRIMARY-selection plus paste mechanism). There is no hook
+  into other apps' save dialogs (the portal file chooser is out of process), so file-name suggestions are not
+  possible.
+- **Blockers / risks:** as F9.
+- **Linux equivalents today:** as F9.
+- **Kiwi status:** none.
+- **Recommendation:** **Later (P3), effort XL** (merged with F9).
+
+### F63. The Dock's background-process indicator
+- **Introduced / changed:** Golden Gate 27.0.
+- **What it is:**
+  - If you quit an app and it still runs a background process, its Dock indicator turns **light grey**.
+  - Right-clicking offers **Stop Running in Background**.
+  - Dock context menus list background processes (Wikipedia).
+- **Caveats (on macOS):** a subtle grey on light Docks.
+- **Port to GNOME 50:** Kiwi dock.
+  - GNOME already tracks background apps: `xdg-desktop-portal`'s **Background** portal, monitored by the Shell
+    over D-Bus (`org.freedesktop.background.Monitor`, the `BackgroundApps` property). GNOME's Quick Settings
+    "Background Apps" menu uses it.
+  - Kiwi's dock can read the same property (async `Gio.DBusProxy`) and draw a grey dot for apps that have no
+    windows but are listed.
+  - "Stop running in background" calls the same quit action the Shell's menu uses (`app.request_quit()` or
+    `Shell.App.request_quit`).
+- **Blockers / risks:** only Flatpak or portal-aware apps report background state; host apps with tray icons are
+  not listed.
+- **Linux equivalents today:** GNOME Quick Settings › Background Apps (GNOME 44+).
+- **Kiwi status:** none.
+- **Recommendation:** **Port (P2), effort S.** Tiny, and it maps directly onto a GNOME API.
+
+### F64. Better window restoration across external displays
+- **Introduced / changed:** Golden Gate 27.0.
+- **What it is:**
+  - The Mac "restores window positions, spaces, and screen assignments" when a display is unplugged and
+    reconnected.
+  - More high-resolution and high-refresh modes (5K 120 Hz ultrawide).
+- **Caveats (on macOS):** a long-standing pain point, only partly solved.
+- **Port to GNOME 50:** Shell extension.
+  - On `monitors-changed`, snapshot each window's frame and monitor, keyed by the **monitor configuration**
+    (connector plus EDID serial via `global.backend.get_monitor_manager()`, or `Meta.MonitorManager` and
+    `get_monitor_for_connector`, which is private-ish).
+  - When the same configuration returns, move windows back (`move_to_monitor`, then `move_resize_frame`).
+  - Keep the snapshots in memory for the session only.
+- **Blockers / risks:**
+  - Window identity across reconnects is fine (same `Meta.Window` objects), but monitor matching needs the
+    connector and serial.
+  - Mutter may itself move windows during the change; apply after an idle.
+- **Linux equivalents today:** the "Remember window positions" style extensions; Mutter keeps some per-monitor
+  state.
+- **Kiwi status:** none.
+- **Recommendation:** **Later (P3), effort M.** Valuable for laptop and dock users; not a visible macOS "look"
+  feature.
+
+### F65. The Show Borders accessibility option
+- **Introduced / changed:** Golden Gate 27.0.
+- **What it is:** an Accessibility option that **draws borders around interface elements**, so controls and panels
+  stay distinct where translucent surfaces blend together. It is lighter than Increase Contrast.
+- **Caveats (on macOS):** it is an admission that the glass blends too much.
+- **Port to GNOME 50:** one CSS class on Kiwi's glass: `kiwi-glass-borders` adds a 1 px 35 %-contrast border to
+  every glass surface and control (the "darkened edge" at full strength). A toggle in Appearance, independent of
+  High Contrast.
+- **Blockers / risks:** none.
+- **Linux equivalents today:** GNOME high contrast (heavier).
+- **Kiwi status:** none.
+- **Recommendation:** **Port (P1 core), effort S.**
+
+### F66. Extra-large desktop widgets and live-updating widgets
+- **Introduced / changed:** Golden Gate 27.0 (desktop widgets themselves date from Sonoma).
+- **What it is:**
+  - Right-click a desktop widget › **Extra-Large Portrait** (weather, Home, Reminders).
+  - Widgets now update in real time while their app is open.
+- **Caveats (on macOS):** widgets cover the desktop; dimmed when windows are on top.
+- **Port to GNOME 50:**
+  - Desktop widgets belong in the Sonoma file. For Kiwi, the notch Widgets tab (overhaul plan §5.6) is the
+    widget surface.
+  - Big desktop widgets need a desktop layer (`Main.layoutManager._backgroundGroup` children, below windows),
+    which is feasible (Desktop Widgets extensions do it).
+- **Blockers / risks:** input on background-layer actors; keeping them below windows; multi-monitor.
+- **Linux equivalents today:** Desktop Widgets (Desktop Clock), Conky.
+- **Kiwi status:** none (notch widgets planned).
+- **Recommendation:** **Later (P3), effort L.** Covered by the Sonoma research file's widget entry.
+
+### F67. Touch: pull-to-refresh, the "dynamic interface" and the Dynamic Island MacBook Pro (reported)
+- **Introduced / changed:**
+  - Golden Gate 27.0: pull-to-refresh in Safari, Mail, News, Podcasts and Calendar; Sidecar touch input.
+  - 27.2: touch gesture recognisers in Safari, Photos, Notes and Quick Look.
+  - **Reported** for 28 October 2026: a 14-inch and 16-inch touchscreen OLED MacBook Pro with a **Dynamic Island
+    instead of the notch**, with a touch-aware "dynamic interface" (Bloomberg via MacRumors).
+- **What it is (as reported):**
+  - Controls adapt to whether you last used touch or the trackpad.
+  - Touching a button can open a menu around the finger.
+  - The Dock and menu bar are optimised for touch.
+  - The Dynamic Island replaces the notch cut-out.
+- **Caveats (on macOS):** not yet announced; details may change.
+- **Port to GNOME 50:**
+  - **The Dynamic Island** directly validates Kiwi's notch v3 direction (hover to expand, live activities). When
+    Apple ships it, update the notch spec with its real sizes and animations.
+  - **Touch:** GNOME Shell already handles touch (Clutter touch events and gestures, `Clutter.*Gesture` on 49+).
+    Kiwi's menu bar, dock and Control Center should have ≥ 32 px touch targets on touchscreens (larger padding
+    when the last input was touch: watch `Clutter.Seat` / `global.stage` `captured-event` device type).
+  - Pull-to-refresh is app-level; skip.
+- **Blockers / risks:** the Apple hardware is unannounced; no touch test hardware in Kiwi's test environment (it
+  has a virtual mouse and keyboard only).
+- **Linux equivalents today:** GNOME's touch support; Phosh.
+- **Kiwi status:** partial (the notch exists; Dynamic Island behaviour is planned in P5).
+- **Recommendation:**
+  - Dynamic Island alignment of the notch: **Port (P2), effort S.**
+  - Touch-adaptive sizing: **Later (P3), effort M.**
+
+### F68. Shortcuts from natural language, and new automation triggers
+- **Introduced / changed:** Golden Gate 27.0 ("Describe a Shortcut", in beta; triggers for screenshot taken and
+  notification received).
+- **What it is:**
+  - Clicking New Shortcut opens a text box. Describe the automation ("every morning, show my first meeting,
+    weather and reminders") and Apple Intelligence assembles the actions.
+  - Test it, then refine it with "Describe a change".
+  - New triggers: **taking a screenshot**, **receiving a notification**.
+- **Caveats (on macOS):** beta; often needs manual fixes.
+- **Port to GNOME 50:** see F46. The two new triggers are both visible to the Shell (the screenshot UI's
+  `screenshot-taken` signal; notifications in the message tray), so a Kiwi "Automations" feature could include
+  them. The natural-language authoring is out of scope.
+- **Blockers / risks:** as F46.
+- **Linux equivalents today:** as F46.
+- **Kiwi status:** none.
+- **Recommendation:** **Later (P3), effort L** (with F46).
+
+---
+
+## 6. Faux Liquid Glass cookbook (no blur)
+
+How each Liquid Glass trait maps to St CSS and actors that Kiwi can draw today (GNOME 50, no shaders, no blur). It
+belongs in `lib/glass.js` and the `apple-design` skill's tokens; the entries above refer to it.
+
+| Liquid Glass trait (Apple) | Faux version in Kiwi (St) | Notes |
+|---|---|---|
+| Blurred, luminosity-adjusted backdrop ("regular") | Opaque-ish tint: light `rgba(246,246,248,0.78)`, dark `rgba(36,36,40,0.74)`; optional 2–3 % noise PNG as `background-image` | Higher alpha than real glass, since nothing hides the backdrop's detail. Kiwi's tint slider maps here (F31). |
+| "Clear" variant over media | Light `rgba(255,255,255,0.32)` / dark `rgba(20,20,24,0.36)`; add the HIG's **35 % black dimming layer** when what is behind is bright (sample luminance) | Dock, app switcher, notch over video, Control Center (Apple uses the glassier style there). |
+| Lensing at the edges | Inset ring: `box-shadow: inset 0 0 0 1px rgba(255,255,255,0.16)` plus an inner child with a 6–10 px inner gradient band (lighter at the rim) | St draws one `box-shadow` per actor, so use a wrapper (outer shadow) plus an inner child (inset ring), as `liquid-glass.md` §3 says. |
+| Specular highlight | A 1 px top rim at 35–55 % white (brighter in Golden Gate, F57) + a top-to-30 % vertical gradient from `rgba(255,255,255,0.22)` to 0 + an optional radial corner glint | Static. Apple's moves with the device; the Mac's barely does. |
+| Darkened edge (27) | A 1 px outer border `rgba(0,0,0,0.18)` (light) / `0.45` (dark) | Pairs with the white inner rim; with "Show Borders" (F65) make it 35 % contrast. |
+| Adaptive tint from content | Mix 5–10 % of the wallpaper's average colour (async GdkPixbuf sample at 32×32) into the fill; re-sample on wallpaper change | "Wallpaper tinting", which macOS has done since Yosemite; Reduce Transparency turns it off. |
+| Light and dark adaptation | Follow `org.gnome.desktop.interface color-scheme`; for the menu bar, also flip text by the sampled wallpaper luminance (F20) | WCAG relative luminance; hysteresis to avoid flicker. |
+| Adaptive shadow | Outer `box-shadow: 0 10px 30px rgba(0,0,0,0.22)` (light) / `0.45` (dark); stronger for popovers than for bars | Keep shadows off the menu bar unless "Show background" is on. |
+| Scroll-edge effect | `St.ScrollView` `-st-vfade-offset: 24px` (soft) or a hard 1 px divider line plus a solid band (hard) | Spotlight lists, the Control Center, the clipboard. |
+| Concentric corners | Inner radius = outer − padding (tokens in `apple-design`); one window radius (F24) | Golden Gate's lesson: one consistent radius. |
+| Grouped controls | A shared capsule actor behind related buttons | Toolbars in Kiwi popovers. |
+| Interactive lens (slider knob, toggle) | On press or drag: knob width ×1.3 + switch to the "clear" fill + a brighter rim, springing back (F19) | Animate transform and opacity only. |
+| Morphing popovers | Scale 0.92→1 from the source button's pivot + opacity; spring overshoot (`EASE_OUT_BACK`) | Reduced motion: a 150 ms fade only. |
+| Reduce Transparency | Every glass class → opaque fill, the rim kept as a border, wallpaper tint off, the menu bar gets a background | One switch in `lib/glass.js`; per-surface overrides (`liquid-glass-surfaces`). |
+| Increase Contrast / High Contrast | Solid fills, 1 px 60 % borders, no gradients, a stronger focus ring; follow `org.gnome.desktop.a11y.interface high-contrast` | Mirrors macOS (it also implies Reduce Transparency). |
+| Clear ↔ Tinted (26.1 / 27 slider) | One slider mapped to fill alpha (about 35 %–85 %) and rim strength; greyed out under Reduce Transparency or High Contrast | Matches Apple's behaviour (F31). |
+
+Real blur stays a possible GNOME 51 extra (`global.compositor.set_background_blur_params()`, Shell surfaces only),
+never a requirement.
+
+---
+
+## 7. Summary table
+
+Effort: S (days), M (one to two weeks), L (several weeks), XL (out of proportion, or a separate project).
+
+| # | Feature | Release | Recommendation | Effort | Main blocker |
+|---|---|---|---|---|---|
+| F1 | Window tiling: edge, corner and menu-bar drag, ⌥-drag | 15.0 | Port (P1 core) | L | Mutter tiling is not introspected; must disable and restore `edge-tiling` |
+| F2 | Green-button tile menu, Window › Move & Resize | 15.0 | Port (P1 core) | M | Works only on Kiwi's own buttons, not in-app CSD buttons |
+| F3 | Tiling keyboard shortcuts and arrangements | 15.0 | Port (P1 core) | S | Shortcut clashes with user bindings |
+| F4 | Tiled margins and linked divider resize | 15.0 | Port (P2) | M | Resize feedback loops; async Wayland resizes |
+| F5 | iPhone Mirroring | 15.0 / 27 | Skip | XL | Closed, attested Apple protocol |
+| F6 | iPhone notifications on Mac | 15.0 | Later (P3) | S | Apple-only; GSConnect is Android-only |
+| F7 | Passwords app | 15.0 / 26 | Skip | L | Security; not a Shell feature |
+| F8 | Presenter preview, video backgrounds | 15.0 / 15.2 | Skip | L | Portal picker is out of process |
+| F9 | Writing Tools | 15.1 / 15.2 | Later (P3) | XL | No text-field API on Wayland; needs an LLM helper; EGO data rules |
+| F10 | Notification summaries, Reduce Interruptions | 15.1 / 26 | Port (P2) grouping + DND allow-list; Later (P3) LLM | M | LLM helper for real summaries |
+| F11 | New Siri look, Type to Siri, ChatGPT | 15.1 / 15.2 | Skip | XL | No assistant backend |
+| F12 | Image Playground, Genmoji | 15.2 / 15.3 / 26 / 27 | Skip | XL | Image models; not a desktop feature |
+| F13 | Math Notes, Calculator | 15.0 | Later (P3) (Spotlight calculator history) | S | none |
+| F14 | Safari Highlights, Reader, Viewer, Distraction Control | 15.0 | Skip | L | Browser feature |
+| F15 | Weather in the menu bar | 15.2 | Port (P3) | S | Needs GNOME Weather location; private `misc/weather.js` |
+| F16 | Sequoia wallpapers | 15.0 | Later (P3) (original Kiwi wallpapers) | S | Apple copyright |
+| F17 | System Settings reorganisation | 15.0 / 26 | Port (P1 core) (prefs naming) | S | none |
+| F18 | Liquid Glass material | 26.0 / 27 | Port (P1 core) | M | No blur (by choice); app windows untouchable |
+| F19 | Liquid motion: morphing, springs | 26.0 / 27 | Port (P2) | M | Per-frame JS cost |
+| F20 | Transparent menu bar, adaptive text | 26.0 | Port (P1 core) | M | Async wallpaper sampling; window-proximity tracking |
+| F21 | Glass Dock and app switcher | 26.0 | Port (P1 core) | S | Depends on Kiwi's dock |
+| F22 | Glass sidebars and toolbars; scroll-edge effects | 26.0 / 27 | Port (P1 core) scroll fades; Skip app chrome | S | App chrome is out of process |
+| F23 | Redesigned controls | 26.0 | Port (P1 core) | S | `ui/slider.js` draws from limited CSS |
+| F24 | Window corner radius changes | 26.0 / 27 | Port (P1 core) (one radius) | S | GPU cost per window |
+| F25 | Glass icons, squircle "icon jail" | 26.0 / 27 | Later (P3) | M | Fights GNOME icon shapes; disliked |
+| F26 | Icon and widget styles: dark, clear, tinted | 26.0 | Port (P2) | M | Only on Kiwi-drawn icons; effect cost |
+| F27 | Folder colours, emoji, symbols; theme colours | 26.0 | Later (P3) folders; Port (P1 core) accent | M | Files draws folders; user-metadata rule |
+| F28 | Icons in menus (and the 27 rollback) | 26.0 / 27 | Port (P1 core) (design rule) | S | none |
+| F29 | Left-aligned dialogs, pop-up power dialog | 26.0 | Port (P2) | S | Private end-session dialog |
+| F30 | Reduce Transparency and Increase Contrast | 26.0 / 26.1 | Port (P1 core) | S | GNOME has no reduce-transparency key (Kiwi-only) |
+| F31 | Liquid Glass Clear/Tinted, then slider | 26.1 / 27 | Port (P1 core) | S | none |
+| F32 | Spotlight ranking, filters, tab-scope, site search | 26.0 | Port (P2) | M | LocalSearch availability |
+| F33 | Spotlight browse views; Apps replaces Launchpad | 26.0 / 26.1 | Port (P2) | M | Recents without Gtk; two app grids |
+| F34 | Spotlight Actions and Quick Keys | 26.0 | Port (P2) | M | No intents framework; `.desktop` actions only |
+| F35 | Spotlight clipboard history | 26.0 | Port (P1 core) | S | EGO clipboard rules |
+| F36 | Spotlight menu-item search and history | 26.0 | Port (P1 core) history; Port (P2) menu items | M | App menus sparse in libadwaita |
+| F37 | Customisable Control Center gallery | 26.0 | Port (P2) | L | Private Quick Settings internals |
+| F38 | Multiple Control Center panels | 26.0 | Later (P3) | M | Menu bar width |
+| F39 | Controls pinned to the menu bar | 26.0 | Port (P2) | M | Panel space, overflow |
+| F40 | Volume and brightness OSD from the menu bar | 26.0 / 27.2 | Port (P2) | S | Private `osdWindow.js` |
+| F41 | Lock screen clock customisation | 26.0 | Later (P3) | M | Needs the unlock-dialog session mode |
+| F42 | Cursor redesign, glove cursor | 26.0 / 27 | Skip (installer may offer one) | S | Changes user settings; art copyright |
+| F43 | Menu Bar settings: hide or reorder any item | 26.0 | Port (P2) | M | Other extensions re-adding items |
+| F44 | Phone app | 26.0 / 27 | Skip | XL | Apple Continuity; telephony |
+| F45 | Live Activities in the menu bar | 26.0 | Port (P2) (in the notch) | M | No live-activity protocol on Linux |
+| F46 | Shortcuts automations | 26.0 | Later (P3) | L | Running commands is an EGO red flag |
+| F47 | Games app and Game Overlay | 26.0 / 26.2 | Skip | L | Unredirected fullscreen games |
+| F48 | Journal | 26.0 | Skip | — | App |
+| F49 | Live Translation | 26.0 | Skip | — | Models |
+| F50 | Messages backgrounds, polls, screening | 26.0 | Skip | — | App |
+| F51 | Low-battery and accessory alerts from the menu bar | 26.0 | Port (P2) | S | gsd-power notification duplicates |
+| F52 | Tahoe wallpapers and aerial screen savers | 26.0 | Later (P3) | S | Copyright; no GNOME screen saver |
+| F53 | Verification-code copy from notifications | 26.0 | Port (P2) | S | No autofill API; false positives |
+| F54 | Magnifier, Accessibility Reader, Motion Cues | 26.0 | Skip | — | Sensors and apps |
+| F55 | Edge Light | 26.2 | Later (P3) | S | No camera-in-use API |
+| F56 | Other app updates (Terminal, Notes, Safari) | 26.x | Skip | — | Apps |
+| F57 | Glass refinements: edges, speculars, shadows | 27.0 | Port (P1 core) tokens; Later (P3) inactive dimming | S | Can't change GTK CSD shadows |
+| F58 | Wallpapers animate on unlock | 27.0 | Later (P3) | S | Extension is off while locked |
+| F59 | Aqua-like glass traffic lights | 27.0 | Port (P1 core) | S | none |
+| F60 | Siri AI "Search or Ask" and the Siri app | 27.0 | Later (P3) ("Ask" hook only) | L | LLM backend; EGO data rules |
+| F61 | Visual Intelligence | 27.0 | Later (P3) (OCR region) | M | OCR dependency |
+| F62 | Write with Siri, AI file names | 27.0 | Later (P3) (with F9) | XL | As F9; no save-dialog hook |
+| F63 | Dock background-process indicator | 27.0 | Port (P2) | S | Only portal-aware apps report |
+| F64 | Window restoration across displays | 27.0 | Later (P3) | M | Monitor identity matching |
+| F65 | Show Borders | 27.0 | Port (P1 core) | S | none |
+| F66 | Extra-large and live widgets | 27.0 | Later (P3) | L | Desktop-layer actors |
+| F67 | Touch interface and Dynamic Island MacBook (reported) | 27.0 / 27.2 | Port (P2) notch alignment; Later (P3) touch sizing | M | Unannounced hardware; no touch test rig |
+| F68 | Shortcuts from natural language; new triggers | 27.0 | Later (P3) (with F46) | L | As F46 |
+
+**Count:** 68 features. By headline recommendation (the first one listed when an entry splits): Port (P1 core) 18,
+Port (P2) 17, Port (P3) or Later (P3) 19, Skip 14.
+
+---
+
+## 8. Top port candidates and main blockers
+
+**Top 8 port candidates** (value to the macOS feel ÷ effort, building on what Kiwi has):
+1. **Window tiling** (F1–F4): edge, corner and menu-bar drag with a glass preview, Ctrl-drag for instant zones,
+   the green-button menu, Super+Ctrl shortcuts, margins. Kiwi's `windowTiling.js` engine already exists. P1, L.
+2. **The faux Liquid Glass system** (F18, F30, F31, F57, F65, §6): regular and clear variants, the rim, the dark
+   edge, speculars, scroll-edge fades, one Clear↔Tinted slider, Reduce Transparency, High Contrast, Show
+   Borders, per-surface control. P1, M.
+3. **The transparent menu bar with adaptive text** (F20): the most visible Tahoe trait; solid when a window
+   touches the top. P1, M.
+4. **Spotlight browse views, actions, quick keys, clipboard and history** (F32–F36): one Apps view shared with
+   Launchpad; `.desktop` actions and Kiwi actions; clipboard tab. P1/P2, M each.
+5. **Customisable Control Center with controls in the menu bar** (F37, F39, F43): gallery, sizes, Kiwi controls
+   (Tile, Stage Manager, Glass, Edge Light), pinning and hiding menu bar items. P2, L.
+6. **Live activities in the notch** (F45, F51, F53, F67): compact capsules for battery, timers, recording,
+   headphones, downloads, plus "Copy code" for one-time codes. It aligns with the reported Dynamic Island Mac.
+   P2, M.
+7. **Volume and brightness OSD under the menu bar** (F40) and **glass traffic lights** (F59): small, very visible.
+   P2 and P1, S.
+8. **Icon styles on Kiwi's surfaces** (F26) and the **Dock background-app indicator** (F63): Dark and Tinted
+   icons with stock Clutter effects; grey dots from the Background portal. P2, M and S.
+
+**Notable blockers:**
+- **Wayland process separation:**
+  - the Shell can't restyle or glass app windows, sidebars or toolbars (F22);
+  - it can't change GTK CSD shadows (F57);
+  - it can't reach into text fields (F9, F62) or the portal screen-share picker (F8).
+- **No real blur** by owner decision. Faux glass needs higher opacity, and the cookbook (§6) compensates. GNOME 51
+  blur is a possible extra for Shell surfaces only.
+- **Mutter's tiling is not introspected** (`meta_window_tile`), so Kiwi tiles are plain resizes. Kiwi must manage
+  tile groups itself and switch Mutter's `edge-tiling` off and on symmetrically.
+- **Apple-only services:** iPhone Mirroring, the Phone app, iPhone Live Activities and notifications, Passwords
+  sync, Siri and Apple Intelligence (F5–F7, F11, F44). Android has partial stand-ins (scrcpy, GSConnect).
+- **AI features** need an optional, separately packaged local-model helper. EGO forbids bundled binaries and data
+  sent to third parties without explicit action (F9, F10, F60–F62).
+- **Private Shell internals** used by F37, F40, F43 (`quickSettings._grid`, `osdWindow.js`, `panel._rightBox`)
+  must be wrapped and checked on each GNOME bump.
+- **The session-modes decision:** lock-screen features (F41, F58) need `unlock-dialog`, which changes Kiwi's whole
+  lifecycle.
+- **User-file rule:** folder icons (F27), wallpapers (F16, F52) and cursor themes (F42) touch user data or
+  settings. They must be opt-in, tracked and fully reversible (CLAUDE.md).
+
+---
+
+## 9. Sources
+
+**Apple**
+- Apple Newsroom: "macOS Sequoia takes productivity and intelligence on Mac to new heights" (June 2024): https://www.apple.com/newsroom/2024/06/macos-sequoia-takes-productivity-and-intelligence-on-mac-to-new-heights/
+- Apple Newsroom: "macOS Tahoe 26 makes the Mac more capable, productive, and intelligent than ever" (June 2025): https://www.apple.com/newsroom/2025/06/macos-tahoe-26-makes-the-mac-more-capable-productive-and-intelligent-than-ever/
+- Apple Newsroom: "Apple introduces a delightful and elegant new software design" (Liquid Glass, June 2025): https://www.apple.com/newsroom/2025/06/apple-introduces-a-delightful-and-elegant-new-software-design/
+- Apple Support: "Mac window tiling icons & keyboard shortcuts": https://support.apple.com/guide/mac-help/tile-app-windows-mchl9674d0b0/mac
+- Apple Support: "Tile windows on Mac": https://support.apple.com/guide/mac-help/tile-windows-mchlef287e5d/mac
+- Apple Support: "What's new in the updates for macOS Sequoia 15": https://support.apple.com/en-us/120283
+- Apple Support: "What's new in the updates for macOS Tahoe 26": https://support.apple.com/en-us/122868
+- Apple Human Interface Guidelines, Materials (Liquid Glass regular and clear, dimming layer): https://developer.apple.com/design/human-interface-guidelines/materials
+- Apple HIG, The menu bar: https://developer.apple.com/design/human-interface-guidelines/the-menu-bar
+- Apple HIG, App icons (layers; default, dark, clear, tinted): https://developer.apple.com/design/human-interface-guidelines/app-icons
+
+**Reviews and analysis**
+- Ars Technica, "macOS 15 Sequoia: The Ars Technica review" (Andrew Cunningham, 2024): https://arstechnica.com/gadgets/2024/09/macos-15-sequoia-the-ars-technica-review/
+- Ars Technica, "macOS 26 Tahoe: The Ars Technica review" (2025): https://arstechnica.com/gadgets/2025/09/macos-26-tahoe-the-ars-technica-review/
+- MacStories, "macOS 26 Tahoe: The MacStories Review" (design, p. 2; system features, p. 3): https://www.macstories.net/stories/macos-26-tahoe-the-macstories-review/2 and https://www.macstories.net/stories/macos-26-tahoe-the-macstories-review/3
+- The Eclectic Light Company, "Appearance revisited: Get Tahoe 26.1 looking in better shape": https://eclecticlight.co/2025/11/05/appearance-revisited-get-tahoe-26-1-looking-in-better-shape/
+- 9to5Mac, "macOS 26 windows are hard to resize because they aren't really rounded" (Jan 2026): https://9to5mac.com/2026/01/13/macos-26-windows-are-hard-to-resize-because-they-arent-really-rounded/
+- MacMost, "New Small And Hidden Features In macOS Tahoe": https://macmost.com/new-small-and-hidden-features-in-macos-tahoe.html
+- TidBITS, "How to Tame Sequoia's Window Tiling": https://tidbits.com/2024/11/08/how-to-tame-sequoias-window-tiling/
+- MacRumors, "Apple Releases macOS Tahoe 26.1 With New Liquid Glass Setting": https://www.macrumors.com/2025/11/03/apple-releases-macos-tahoe-26-1/
+- MacRumors, "macOS Golden Gate: Everything We Know" (roundup): https://www.macrumors.com/roundup/macos-27/
+- MacRumors, "All the Liquid Glass Changes in macOS Golden Gate" (June 2026): https://macrumors.com/2026/06/09/macos-golden-gate-liquid-glass/
+- MacRumors, "50 New macOS Golden Gate Features and Changes Worth Checking Out" (Sept 2026): https://www.macrumors.com/2026/09/17/new-features-changes-macos-27/
+- MacRumors, "macOS 27.2 Adds Touch Gestures Ahead of MacBook Ultra" (Oct 2026): https://www.macrumors.com/2026/10/05/macos-27-2-touch-gestures/
+- MacRumors, "Apple Reportedly Announcing New MacBook Pro With OLED Touchscreen on Wednesday" (25 Oct 2026): https://www.macrumors.com/2026/10/25/macbook-pro-with-touchscreen-on-wednesday/
+- 512 Pixels, "Golden Gate Beta 6 Turns Stoplights into Liquid Glass" (Aug 2026): https://512pixels.net/2026/08/golden-gate-beta-6-stoplights-liquid-glass/
+- Daring Fireball, "Nature Is Healing: macOS 27 Golden Gate Beta 6 Adds Redesigned Traffic Light Window Controls": https://daringfireball.net/linked/2026/08/18/golden-gate-27-window-controls
+
+**Release histories**
+- Wikipedia, macOS Sequoia: https://en.wikipedia.org/wiki/MacOS_Sequoia
+- Wikipedia, macOS Tahoe: https://en.wikipedia.org/wiki/MacOS_Tahoe
+- Wikipedia, macOS Golden Gate: https://en.wikipedia.org/wiki/MacOS_Golden_Gate
+
+**Kiwi and GNOME context (in repo)**
+- `docs/architecture/overhaul-plan.md`, `docs/architecture/code-map.md`, `docs/features/liquid-glass.md`,
+  `docs/features/spotlight.md`, `docs/features/control-center.md`, `apps/windowTiling.js`
+- `.claude/skills/gnome-shell-extension/SKILL.md` (EGO rules, version landmines 48–51)
