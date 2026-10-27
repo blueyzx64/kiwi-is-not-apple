@@ -109,14 +109,6 @@ export function buildPrefs({ settings, window, extension }) {
     connect('stage-manager-group-by-app', syncGroup);
     strip.add(group);
 
-    const recent = new Adw.SpinRow({
-        title: _('Apps in the strip'),
-        subtitle: _('The most thumbnails to list'),
-        adjustment: new Gtk.Adjustment({ lower: 1, upper: 10, step_increment: 1, page_increment: 2 }),
-    });
-    settings.bind('stage-manager-recent-count', recent, 'value', Gio.SettingsBindFlags.DEFAULT);
-    strip.add(recent);
-
     // Tilt on/off is the degrees key at 0 or not; the last angle is kept for "on"
     const tiltOn = new Adw.SwitchRow({
         title: _('Tilt the windows'),

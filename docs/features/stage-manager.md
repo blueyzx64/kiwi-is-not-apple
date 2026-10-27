@@ -21,7 +21,7 @@ live thumbnails in a strip at the side; clicking one swaps it onto the stage.
 
 ## 4. Settings
 `stage-manager` b=true · `stage-manager-side` s=`left` · `stage-manager-autohide` b=true ·
-`stage-manager-group-by-app` b=true · `stage-manager-recent-count` i=6 ·
+`stage-manager-group-by-app` b=true ·
 `stage-manager-shortcut` as · `stage-manager-new-windows` s=`replace`|`join` ·
 `stage-manager-wallpaper-click` b=true · `stage-manager-tilt` i=22 (0–40) ·
 `stage-manager-animation-speed` d=1.0 (0.5–2) · `stage-manager-remove-shortcut` as=Ctrl+Super+Down

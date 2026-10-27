@@ -23,8 +23,12 @@
 // of the actor's local paint volume at ceil(resource scale) (mutter 50
 // clutter_offscreen_effect_pre_paint, mirrored by model.fboOrigin). That box can change without
 // a signal (an X11 shadow grows on focus), so paint_target re-checks the texture size and
-// recomputes when it differs. It also runs when a Clutter.Clone (overview, Stage Manager) paints
-// the actor, which reuses the same texture, so clones show the same corners.
+// recomputes when it differs.
+//
+// Clones (overview, Stage Manager strip and flights) do not use the effect: a clone would draw
+// the effect's 1:1 texture scaled down with plain bilinear filtering (no mipmaps), which aliases
+// and blurs every thumbnail. Without the effect, a clone samples mutter's own window texture,
+// which mutter mipmaps below half size. Thumbnails keep the corners the app drew itself.
 
 import GObject from 'gi://GObject';
 import Cogl from 'gi://Cogl';
@@ -162,6 +166,12 @@ export function effectClass() {
             this.set_uniform_float(this._loc.radius, 1, [g.radius]);
             this.set_uniform_float(this._loc.aa, 1, [g.aa]);
             this.set_uniform_float(this._loc.corners, 4, this._corners);
+        }
+
+        vfunc_pre_paint(node, paintContext) {
+            if (this.get_actor()?.is_in_clone_paint())
+                return false;
+            return super.vfunc_pre_paint(node, paintContext);
         }
 
         vfunc_paint_target(node, paintContext) {

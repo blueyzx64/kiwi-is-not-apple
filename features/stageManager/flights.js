@@ -14,6 +14,7 @@
 import Clutter from 'gi://Clutter';
 
 import { clonePose } from './geometry.js';
+import { attachThumbEffect } from './thumbEffect.js';
 
 export const FLIGHT_MS = 420;
 
@@ -26,12 +27,14 @@ export class Flights {
      * @param {Clutter.Actor} env.layer where clones fly
      * @param {import('../../core/motion.js').Motion} env.motion
      * @param {(ms: number) => number} env.ms a duration under the animation speed
+     * @param {() => {radius: number, mask: number[]}} env.corners thumbEffect.cornerSpec of the settings
      * @param {(win: Meta.Window, toStage: boolean) => void} env.onLanded
      */
-    constructor(cleanup, { layer, motion, ms, onLanded }) {
+    constructor(cleanup, { layer, motion, ms, corners, onLanded }) {
         this._layer = layer;
         this._motion = motion;
         this._ms = ms;
+        this._corners = corners;
         this._onLanded = onLanded;
         this._active = new Map();   // Meta.Window -> flight
         cleanup.add(() => this.cancelAll());
@@ -84,6 +87,8 @@ export class Flights {
         clone.set_scale(a.scale, a.scale);
         clone.scale_z = a.scale;
         clone.rotation_angle_y = reduced ? 0 : start.angle ?? 0;
+        attachThumbEffect(clone, buffer, { x: frame.x - buffer.x, y: frame.y - buffer.y, width: frame.width, height: frame.height },
+            this._corners());
         clone.opacity = reduced && toStage ? 0 : 255;
         this._layer.add_child(clone);
 

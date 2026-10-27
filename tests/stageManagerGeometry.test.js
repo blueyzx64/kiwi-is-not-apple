@@ -1,6 +1,6 @@
 // Run: gjs -m tests/stageManagerGeometry.test.js
 import {
-    METRICS, balancedFit, clonePose, edgeBarrier, fitCount, layerRect, overlaps, slotAt, stackLayers,
+    METRICS, balancedFit, clonePose, dropHint, edgeBarrier, edgeFade, layerRect, revealOffset, overlaps, slotAt, stackLayers,
     stripLayout, stripSide, stripVisible, scaleMs, tiltAngle, workspaceDirection,
 } from '../features/stageManager/geometry.js';
 
@@ -35,10 +35,47 @@ test('layout: slots centred in the band, inside the work area, floor around them
     eq(stripLayout({ workArea: wa, side: 'left', count: 0 }).floor, null);
 });
 
-test('fitCount stops before entries get too small', () => {
-    eq(fitCount(400, 6), 4);
-    eq(fitCount(1400, 6), 6);
-    eq(fitCount(100, 6), 0);
+test('layout: few entries fit; many shrink to the minimum, then the strip scrolls', () => {
+    const few = stripLayout({ workArea: wa, side: 'left', count: 3 });
+    eq(few.scrollMax, 0);
+    const nine = stripLayout({ workArea: wa, side: 'left', count: 8 });
+    eq(nine.scrollMax, 0);
+    eq(nine.scale >= METRICS.minScale && nine.scale < 1, true);
+    const twelve = stripLayout({ workArea: wa, side: 'left', count: 12 });
+    eq(twelve.scale, METRICS.minScale);
+    eq(twelve.slots.length, 12);
+    eq(twelve.scrollMax > 0, true);
+    eq(twelve.floor, twelve.band);
+    const last = twelve.slots[11];
+    eq(last.y + last.height + METRICS.padBottom - twelve.scrollMax, wa.y + wa.height);
+});
+
+test('edge fade: 1 at rest, 0 once the near edge reaches the floor edge', () => {
+    const l = stripLayout({ workArea: wa, side: 'left', count: 12 });
+    eq(edgeFade(l.slots[0], 0, l.floor), 1);
+    eq(edgeFade(l.slots[11], l.scrollMax, l.floor), 1);
+    eq(edgeFade(l.slots[11], 0, l.floor), 0);
+    const mid = edgeFade(l.slots[0], 10, l.floor);
+    eq(mid > 0 && mid < 1, true);
+});
+
+test('reveal offset: brings a slot into view, clamped', () => {
+    const l = stripLayout({ workArea: wa, side: 'left', count: 12 });
+    eq(revealOffset(l.slots[0], 0, l.floor, l.scrollMax), 0);
+    eq(revealOffset(l.slots[11], 0, l.floor, l.scrollMax), l.scrollMax);
+    const mid = revealOffset(l.slots[8], 0, l.floor, l.scrollMax);
+    eq(mid > 0 && mid <= l.scrollMax, true);
+    eq(revealOffset(l.slots[0], l.scrollMax, l.floor, l.scrollMax), 0);
+});
+
+test('window drop hint: only on an entry, never in the tiling zone', () => {
+    const l = stripLayout({ workArea: wa, side: 'left', count: 3 });
+    const base = { floor: l.floor, workArea: wa, zone: 48 };
+    eq(dropHint({ x: 100, y: 300 }, { ...base, onEntry: true }), 'over');
+    eq(dropHint({ x: 100, y: 300 }, { ...base, onEntry: false }), 'near');
+    eq(dropHint({ x: 20, y: 300 }, { ...base, onEntry: true }), null);
+    eq(dropHint({ x: 600, y: 300 }, { ...base, onEntry: false }), null);
+    eq(dropHint({ x: 100, y: 40 }, { ...base, onEntry: true }), null);
 });
 
 test('balanced sizes: tall, wide and square windows get similar weight, aspect kept', () => {

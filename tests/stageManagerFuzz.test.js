@@ -20,7 +20,7 @@ function rng(seed) {
 function run(seed, steps) {
     const r = rng(seed);
     const pick = list => list[Math.floor(r() * list.length)];
-    const config = { allAtOnce: r() < 0.6, newWindows: r() < 0.7 ? 'replace' : 'join', recentCount: 2 + Math.floor(r() * 5) };
+    const config = { allAtOnce: r() < 0.6, newWindows: r() < 0.7 ? 'replace' : 'join' };
     const sm = new StageMachine(config);
     const windows = new Map();   // id -> description (the "desktop")
     const opacity = new Map();   // id -> 0 | 255: what the adapter would have applied

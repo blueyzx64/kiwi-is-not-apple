@@ -14,14 +14,16 @@
 //     strip        Clutter.Actor: slides off the edge when the strip steps aside
 //       floor      St.Widget .kiwi-stage-strip: invisible, the strip's hover and drop area
 //                  (it reaches the screen edge, so a pointer resting there keeps the strip out)
+//         content  Clutter.Actor moved up by the scroll offset when the entries do not all fit
 //         card     St.Button .kiwi-stage-card per entry: hit box, DND source
 //           holder   Clutter.Actor: clones back to front, the focus ring, the label, the badge
 //     flights      Clutter.Actor: the windows flying to and from the strip, above everything
 //   barrier        Meta.Barrier + Layout.PressureBarrier on the edge: a push reveals the strip
 //
-// Sharpness: clones draw straight from the window texture (no offscreen), unclipped, so the
-// window's own soft shadow is the edge of the tilted quad and shows no jaggies. scale_z is
-// scaled with x and y so the perspective of a small window is not exaggerated.
+// Sharpness: a thumbnail is a live clone of the window actor with thumbEffect.js, which averages
+// the texels under each output pixel and rounds the corners in full-size texels. (Without it the
+// clone samples a 1:1 texture with plain bilinear filtering and text turns into dark specks.)
+// The window's own soft shadow is the edge of the tilted quad and shows no jaggies.
 //
 // Private API: none. Main.layoutManager (public), ui/dnd.js and Layout.PressureBarrier (public
 // classes, same in 48-51). Checked on GNOME Shell 50.6: a clone of an opacity-0 actor paints.
@@ -36,9 +38,10 @@ import * as Layout from 'resource:///org/gnome/shell/ui/layout.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import * as A11y from '../../lib/a11y.js';
+import { attachThumbEffect } from './thumbEffect.js';
 import {
-    METRICS, clonePose, edgeBarrier, fitCount, layerRect, slotBox, slotAt, stackLayers, stripLayout,
-    stripVisible, tiltAngle,
+    METRICS, clonePose, edgeBarrier, edgeFade, layerRect, revealOffset, slotBox, slotAt, stackLayers,
+    stripLayout, stripVisible, tiltAngle,
 } from './geometry.js';
 
 const HOVER_SCALE = 1.1;
@@ -46,6 +49,8 @@ const HOVER_TILT = 0.4;          // share of the tilt left on hover: the window 
 const DRAG_OPACITY = 90;         // an entry left behind while its clone is dragged
 const PRESSURE_THRESHOLD = 40;   // px pushed against the edge, as the auto-hide top bar
 const PRESSURE_TIMEOUT = 600;
+const WHEEL_STEP = 90;           // px scrolled by one wheel notch
+const SMOOTH_STEP = 60;          // px per unit of a smooth (touchpad) scroll delta
 
 export class StripView {
     /**
@@ -56,19 +61,23 @@ export class StripView {
      * @param {(entryId: string, mods: {add: boolean}) => void} env.onActivate a click
      * @param {(entryId: string) => void} env.onDrop an entry dropped on the stage
      * @param {() => void} env.onLayout the strip moved, grew, showed or hid
+     * @param {() => ?{radius: number, mask: number[]}} env.corners the corner rounding of thumbnails (thumbEffect.cornerSpec)
      * @param {(text: string) => string} env.gettext
      */
     constructor(cleanup, env) {
         this._cleanup = cleanup;
         this._env = env;
         this._state = {
-            side: 'left', workArea: null, entries: [], tilt: METRICS.tilt, recentCount: 6,
+            side: 'left', workArea: null, entries: [], tilt: METRICS.tilt,
             showRecent: true, autohide: true, overlapped: false, suppressed: false,
         };
         this._thumbs = new Map();     // Meta.Window -> {actor, rect (absolute, unslid), angle, badge}
         this._slots = [];             // [{entryId, rect}] absolute, unslid
         this._flying = new Set();     // windows a flight stands in for
         this._floorRect = null;
+        this._scrollMax = 0;          // how far the entries scroll (0: they all fit)
+        this._scrollTarget = 0;
+        this._firstId = null;         // first entry shown last time
         this._shown = null;           // last applied visibility (null: never)
         this._edge = false;           // the pointer just pushed the edge
         this._dragging = null;        // entry id while an entry is dragged
@@ -108,6 +117,11 @@ export class StripView {
         this.container.add_child(this._strip);
         this._floor = new St.Widget({ style_class: 'kiwi-stage-strip', reactive: true, track_hover: true });
         this._strip.add_child(this._floor);
+        // Entries live in a content actor, moved by the scroll offset
+        this._content = new Clutter.Actor({ reactive: false });
+        this._floor.add_child(this._content);
+        this._content.connect('notify::translation-y', () => this._applyFades());
+        this._floor.connect('scroll-event', (_a, event) => this._onScroll(event));
         this._floor.connect('notify::hover', () => this._syncShown());
         // Keyboard: Ctrl+Alt+Tab lists the strip even while it is tucked away; choosing it slides
         // it out and puts the focus on its first card. The strip stays out while focus is inside.
@@ -157,7 +171,7 @@ export class StripView {
 
     /**
      * Set what the strip shows; any of: side, workArea, entries [{id, windows: Meta.Window[]
-     * (lead first), app: ?Shell.App, names: string[], set}], tilt, recentCount, slide (-1, 0, 1).
+     * (lead first), app: ?Shell.App, names: string[], set}], tilt, slide (-1, 0, 1).
      */
     update(next) {
         if (this._dead)
@@ -199,21 +213,21 @@ export class StripView {
         const t = this._dead ? null : this._thumbs.get(win);
         if (!t)
             return null;
-        return { ...t.rect, x: t.rect.x + this._strip.translation_x, angle: t.angle };
+        return { ...this._visible(t.rect), angle: t.angle };
     }
 
     /** Where an entry's slot is now (absolute, slid), or null. */
     slotRect(entryId) {
         const s = this._dead ? null : this._slots.find(x => x.entryId === entryId);
-        return s ? { ...s.rect, x: s.rect.x + this._strip.translation_x } : null;
+        return s ? this._visible(s.rect) : null;
     }
 
     /** The entry whose slot is under an absolute point, or null. */
     entryAt(x, y) {
         if (this._dead || !this._shown)
             return null;
-        const i = slotAt(this._slots.map(s => s.rect), { x, y });
-        return i < 0 ? null : this._slots[i].entryId;
+        const i = slotAt(this._slots.map(s => this._visible(s.rect)), { x, y });
+        return i < 0 || this._fadeOf(this._slots[i].rect) <= 0 ? null : this._slots[i].entryId;
     }
 
     /** A flight stands in for this window's clone: hide the clone (and badge) until it lands. */
@@ -252,6 +266,80 @@ export class StripView {
         this._syncShown();
     }
 
+    // ---- scrolling -----------------------------------------------------------------------------
+
+    get _offset() {
+        return -this._content.translation_y;
+    }
+
+    // A rect (absolute, unscrolled) where it is on screen now: slide and scroll included, kept
+    // inside the floor so a flight to an entry scrolled out of sight ends at the strip's edge
+    _visible(rect) {
+        const f = this._floorRect;
+        const y = f ? Math.max(f.y, Math.min(f.y + f.height - rect.height, rect.y - this._offset)) : rect.y;
+        return { ...rect, x: rect.x + this._strip.translation_x, y };
+    }
+
+    _fadeOf(slot) {
+        return this._floorRect ? edgeFade(slot, this._offset, this._floorRect) : 1;
+    }
+
+    // Entries nearer the top or bottom edge are fainter; those past it are out of reach
+    _applyFades() {
+        if (this._dead || !this._floorRect)
+            return;
+        const cards = this._content.get_children();
+        for (let i = 0; i < cards.length && i < this._slots.length; i++) {
+            const fade = this._fadeOf(this._slots[i].rect);
+            cards[i].opacity = Math.round(255 * fade);
+            cards[i].reactive = fade > 0;
+        }
+    }
+
+    // Scroll to an offset (clamped): at once, or eased
+    _scrollTo(offset, animate) {
+        const target = Math.max(0, Math.min(this._scrollMax, offset));
+        this._scrollTarget = target;
+        this._content.remove_all_transitions();
+        if (!animate) {
+            this._content.translation_y = -target;
+            return;
+        }
+        this._ease(this._content, { translation_y: -target }, { duration: this._env.ms(180), curve: 'standard' });
+    }
+
+    _onScroll(event) {
+        if (this._scrollMax <= 0)
+            return Clutter.EVENT_PROPAGATE;
+        const dir = event.get_scroll_direction();
+        let delta = 0;
+        let smooth = false;
+        if (dir === Clutter.ScrollDirection.UP)
+            delta = -WHEEL_STEP;
+        else if (dir === Clutter.ScrollDirection.DOWN)
+            delta = WHEEL_STEP;
+        else if (dir === Clutter.ScrollDirection.SMOOTH) {
+            delta = event.get_scroll_delta()[1] * SMOOTH_STEP;
+            // A touchpad already moves in small steps; a wheel notch is eased
+            smooth = event.get_scroll_source() !== Clutter.ScrollSource.WHEEL;
+        } else {
+            return Clutter.EVENT_PROPAGATE;
+        }
+        const base = smooth ? this._offset : this._scrollTarget;
+        this._scrollTo(base + delta, !smooth);
+        return Clutter.EVENT_STOP;
+    }
+
+    // Keyboard focus on an entry brings it into view
+    _reveal(index) {
+        const slot = this._slots[index]?.rect;
+        if (!slot || !this._floorRect || this._scrollMax <= 0)
+            return;
+        const next = revealOffset(slot, this._scrollTarget, this._floorRect, this._scrollMax);
+        if (next !== this._scrollTarget)
+            this._scrollTo(next, true);
+    }
+
     // ---- build -------------------------------------------------------------------------------
 
     _ease(actor, props, request) {
@@ -278,31 +366,38 @@ export class StripView {
     _clearCards() {
         this._thumbs.clear();
         this._slots = [];
-        for (const child of this._floor.get_children())
+        for (const child of this._content.get_children())
             child.destroy();
     }
 
     _rebuild(slide) {
-        const { side, workArea, entries, recentCount } = this._state;
+        const { side, workArea, entries } = this._state;
         this._clearCards();
-        const wanted = Math.min(entries.length, recentCount);
-        const count = workArea ? fitCount(workArea.height, wanted) : 0;
+        const count = workArea ? entries.length : 0;
         if (!workArea || count === 0) {
             this._floorRect = null;
+            this._scrollMax = 0;
+            this._firstId = null;
             this._syncBarrier();
             this._syncShown();
             return;
         }
         const layout = stripLayout({ workArea, side, count });
         const old = this._floorRect;
+        this._scrollMax = layout.scrollMax;
+        // A new first entry (the stage changed) shows the top; otherwise the view stays
+        const keep = this._firstId === entries[0].id ? Math.min(this._offset, layout.scrollMax) : 0;
+        this._firstId = entries[0].id;
+        this._scrollTo(keep, false);
         const floor = layout.floor;
         this._floorRect = floor;
         this._placeFloor(old, floor);
         for (let i = 0; i < count; i++) {
             const rect = layout.slots[i];
             this._slots.push({ entryId: entries[i].id, rect });
-            this._floor.add_child(this._makeCard(entries[i], rect, floor, layout.scale));
+            this._content.add_child(this._makeCard(entries[i], rect, floor, layout.scale, i));
         }
+        this._applyFades();
         this._syncBarrier();
         this._syncShown();
         // Workspace switch: the other workspace's entries slide in from the way it came
@@ -329,7 +424,7 @@ export class StripView {
         this._ease(f, { y: floor.y, height: floor.height }, { duration: this._env.ms(260), curve: 'standard' });
     }
 
-    _makeCard(entry, rect, floor, scale) {
+    _makeCard(entry, rect, floor, scale, index) {
         const { side, tilt } = this._state;
         const angle = tiltAngle(side, tilt);
         const names = entry.names.filter(Boolean);
@@ -340,6 +435,7 @@ export class StripView {
         // Cards live in the floor, which eases its y: keep them where the slots are on screen
         button.set_position(rect.x - floor.x, rect.y - floor.y);
         button.set_size(rect.width, rect.height);
+        button.connect('key-focus-in', () => this._reveal(index));
         button.connect('clicked', () => {
             // The click's or the key press's modifiers, so Shift+Enter adds as Shift+click does
             const mods = Clutter.get_current_event()?.get_state() ?? 0;
@@ -386,17 +482,17 @@ export class StripView {
         if (label)
             holder.add_child(label);
         // Hover: the lead window lifts, grows a little and turns toward you; the names fade in
-        const rest = front.scale;
+        const { scaleX, scaleY } = front;
         button.connect('notify::hover', () => {
             const on = button.hover && !this._dragging;
             const k = on ? HOVER_SCALE : 1;
             const a = on ? angle * HOVER_TILT : angle;
             if (on)
-                this._floor.set_child_above_sibling(button, null);
+                this._content.set_child_above_sibling(button, null);
             const req = { duration: this._env.ms(200), curve: 'standard' };
             front.actor.remove_all_transitions();
             ring.remove_all_transitions();
-            this._ease(front.actor, { scale_x: rest * k, scale_y: rest * k, scale_z: rest * k, rotation_angle_y: a }, req);
+            this._ease(front.actor, { scale_x: scaleX * k, scale_y: scaleY * k, scale_z: Math.min(scaleX, scaleY) * k, rotation_angle_y: a }, req);
             this._ease(ring, { scale_x: k, scale_y: k, rotation_angle_y: a }, req);
             if (label) {
                 label.remove_all_transitions();
@@ -509,12 +605,14 @@ export class StripView {
         clone.set_size(buffer.width, buffer.height);
         clone.set_pivot_point(pose.pivotX, pose.pivotY);
         clone.set_position(Math.round(pose.x), Math.round(pose.y));
-        clone.set_scale(pose.scale, pose.scale);
+        clone.set_scale(pose.scaleX, pose.scaleY);
         clone.scale_z = pose.scale;
         clone.rotation_angle_y = angle;
+        attachThumbEffect(clone, buffer, { x: frame.x - buffer.x, y: frame.y - buffer.y, width: frame.width, height: frame.height },
+            this._env.corners());
         const dx = Math.round(pose.x) - pose.x;
         const dy = Math.round(pose.y) - pose.y;
-        return { actor: clone, rect: { ...rect, x: rect.x + dx, y: rect.y + dy }, scale: pose.scale };
+        return { actor: clone, rect: { ...rect, x: rect.x + dx, y: rect.y + dy }, scaleX: pose.scaleX, scaleY: pose.scaleY };
     }
 
     // A window with no actor yet: its app icon on a rounded tile, same pose
@@ -533,7 +631,7 @@ export class StripView {
         icon.x_align = Clutter.ActorAlign.CENTER;
         icon.y_align = Clutter.ActorAlign.CENTER;
         tile.add_child(icon);
-        return { actor: tile, rect: { x: tile.x, y: tile.y, width: tile.width, height: tile.height }, scale: 1 };
+        return { actor: tile, rect: { x: tile.x, y: tile.y, width: tile.width, height: tile.height }, scaleX: 1, scaleY: 1 };
     }
 
     // ---- edge reveal ---------------------------------------------------------------------------

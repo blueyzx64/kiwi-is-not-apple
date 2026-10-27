@@ -379,17 +379,16 @@ test('monitor change: windows that end up on another monitor leave their entry',
     eq(t.hidden(), []);
 });
 
-test('recent count limits the shown strip only; older entries stay reachable', () => {
-    const t = desk({ recentCount: 2 });
-    for (const n of ['a', 'b', 'c', 'd'])
+test('the strip lists every entry, however many; any is reachable', () => {
+    const t = desk();
+    const names = [...'abcdefghijkl'];
+    for (const n of names)
         t.open(n);
-    eq(t.sm.shownStrip().length, 2);
-    eq(t.strip().length, 3);
+    eq(t.sm.shownStrip().length, 11);
+    eq(t.strip().length, 11);
     t.later(QUIET_MS);
     t.focus('a');
     eq(t.stage(), ['a']);
-    t.send({ type: 'config', recentCount: 4 });
-    eq(t.fxOf('strip').length, 1);
 });
 
 test('a new dialog of a strip window brings its entry onto the stage', () => {
