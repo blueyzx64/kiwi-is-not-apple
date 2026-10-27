@@ -157,12 +157,14 @@ test('filters: appId null matches app-less windows; apps() skips them', () => {
     eq(m.windows({ appId: 'nope' }), []);
     eq(m.apps(), ['a']);
 });
-test('filters: minimized false drops minimized windows; minimized true does not filter', () => {
+test('filters: minimized false drops minimized windows; minimized true keeps only them', () => {
     const m = new DesktopModel();
     m.upsertWindow(1, { appId: 'a', minimized: true });
     m.upsertWindow(2, { appId: 'a' });
     eq(m.windows({ minimized: false }).map(w => w.id), [2]);
-    eq(m.windows({ minimized: true }).map(w => w.id).sort(), [1, 2], 'documented: only false filters');
+    eq(m.windows({ minimized: true }).map(w => w.id), [1], 'only the minimized one');
+    eq(m.windows({ minimized: undefined }).map(w => w.id).sort(), [1, 2], 'undefined does not filter');
+    eq(m.apps({ minimized: true }), ['a']);
     eq(m.apps({ minimized: false }), ['a']);
     m.upsertWindow(2, { minimized: true });
     eq(m.apps({ minimized: false }), [], 'an app with only minimized windows drops out');
@@ -414,6 +416,25 @@ test('web-app ids: GNOME Web dash spelling, trimming and order', () => {
     eq(appIdCandidates('org.gnome.Epiphany').ids, ['org.gnome.Epiphany.desktop', 'org.gnome.epiphany.desktop'],
         'the browser itself is not a web app');
 });
+
+// ---- bug fixes (board F3): an undefined field keeps the value -------------------------------
+test('F3: upsert with an undefined field keeps the default for a new window, the old value for a known one', () => {
+    const m = new DesktopModel();
+    m.upsertWindow(1, { appId: undefined, title: 'T' });
+    eq(m.window(1).appId, null, 'default, not undefined');
+    eq(m.upsertWindow(1, { appId: 'a' }), ['appId']);
+    eq(m.upsertWindow(1, { appId: undefined }), [], 'undefined is no change');
+    eq(m.window(1).appId, 'a');
+    eq(m.apps(), ['a']);
+    eq(m.upsertWindow(1, { appId: undefined, minimized: true }), ['minimized']);
+    eq(m.window(1).appId, 'a');
+    noUndefinedFields(m.window(1));
+});
+function noUndefinedFields(info) {
+    for (const f of WINDOW_FIELDS)
+        if (info[f] === undefined)
+            throw new Error(`field ${f} is undefined`);
+}
 
 if (failed) {
     print(`${failed} failed`);
