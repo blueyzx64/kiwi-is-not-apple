@@ -98,3 +98,4 @@ Groups (about 6 agents): (1) dock and minimize effects; (2) Stage Manager and wi
 - L8: resumed to fix its 3 open failures before it merges.
 - Next leads: L10, L12 (running with L9, L8 and H13); then L11, L14, L15.
 - L9 → merged (hover expand, tabs, live activities, file shelf via Mutter DnD, core/timers.js `ctx.timers`). The orchestrator dropped L9's own `notch-osd` part in favour of L2's core/osd routing. For verification: drop-onto-notch was not confirmed in the final full run (it was in a notch-only run); the expand animation's worst frame is 29 ms in software rendering; the source app shows a drop onto the notch as a cancelled drag.
+- ccr runs: after P1-windows and L3 (20261027-151727-…-f44), and after L2, L4, FX3 and L9 (20261027-153451-…-f44d): both 0 Kiwi errors, 8/8 PASS.
