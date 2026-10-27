@@ -51,6 +51,7 @@ export function readConfig(get) {
         runningDots: get.bool('dock-running-dots'),
         minimizeToApp: get.bool('dock-minimize-to-app'),
         downloads: get.bool('dock-downloads'),
+        missionControl: get.bool('dock-mission-control'),
         stackView: STACK_VIEWS.includes(view) ? view : 'automatic',
     });
 }
@@ -112,12 +113,15 @@ export function pushRecent(recents, appId, max = RECENT_MAX) {
  * @param {boolean} [p.downloads] show the Downloads stack
  * @returns {object[]} {kind: 'app'|'separator'|'window'|'downloads'|'trash', id, ...}
  */
-export function dockItems({ pinned, running, recents, showRecents, minimized = [], downloads = true }) {
+export function dockItems({ pinned, running, recents, showRecents, minimized = [], downloads = true, missionControl = false }) {
     const items = [];
     const live = new Set(running);
     const pinnedSet = new Set(pinned);
     for (const id of pinned)
         items.push({ kind: 'app', id, section: 'pinned', running: live.has(id) });
+    // Mission Control (optional, off by default) sits with the pinned apps, as the macOS app does
+    if (missionControl)
+        items.push({ kind: 'mission-control', id: 'mission-control', section: 'pinned' });
     const unpinned = running.filter(id => !pinnedSet.has(id));
     let second = unpinned.map(id => ({ kind: 'app', id, section: 'running', running: true }));
     if (showRecents) {
@@ -202,7 +206,8 @@ function tidy(entries) {
 
 /**
  * The right-click menu of an app icon (macOS order): open windows; desktop actions; New Window
- * (or Open); Options ▸ Keep in Dock, Open at Login, Show in Files; Quit (Force Quit with Alt).
+ * (or Open); Options ▸ Keep in Dock, Open at Login, Show in Files; Show All Windows; Quit (Force Quit
+ * with Alt).
  *
  * @param {object} p
  * @param {{id, title, minimized}[]} p.windows
@@ -213,9 +218,10 @@ function tidy(entries) {
  * @param {boolean} p.hasDesktopFile false for window-backed apps (no file to pin or autostart)
  * @param {{enabled: boolean, editable: boolean}} p.autostart
  * @param {boolean} p.alt Alt (Option) held: Quit becomes Force Quit
+ * @param {boolean} [p.showAllWindows] offer "Show All Windows" (App Exposé)
  * @returns {object[]} entries {type, ...}
  */
-export function menuEntries({ windows, focusedWindow, actions, canNewWindow, pinned, hasDesktopFile, autostart, alt }) {
+export function menuEntries({ windows, focusedWindow, actions, canNewWindow, pinned, hasDesktopFile, autostart, alt, showAllWindows = false }) {
     const running = windows.length > 0;
     const entries = windows.map(w => ({
         type: 'window', id: w.id, title: w.title || '', focused: w.id === focusedWindow, minimized: !!w.minimized,
@@ -240,6 +246,9 @@ export function menuEntries({ windows, focusedWindow, actions, canNewWindow, pin
     });
     if (running) {
         entries.push({ type: 'separator' });
+        // App Exposé, when Mission Control runs
+        if (showAllWindows)
+            entries.push({ type: 'show-all-windows' });
         entries.push({ type: alt ? 'force-quit' : 'quit' });
     }
     return tidy(entries);

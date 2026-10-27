@@ -214,6 +214,18 @@ test('reveal: leaving the edge before the delay disarms it', () => {
     eq([r.wantsTimer, r.settle()], [false, false]);
 });
 
+test('items: the optional Mission Control tile sits after the pinned apps', () => {
+    const items = dockItems({ pinned: ['files'], running: ['calc'], recents: [], showRecents: false, missionControl: true });
+    eq(items.map(i => i.kind), ['app', 'mission-control', 'app', 'separator', 'downloads', 'trash']);
+    eq(dockItems({ pinned: ['files'], running: [], recents: [], showRecents: false }).some(i => i.kind === 'mission-control'), false);
+});
+test('menu: Show All Windows (App Exposé) before Quit, only when running and offered', () => {
+    const m = menuEntries({ ...menuBase, windows: [{ id: 1, title: 'x' }], showAllWindows: true });
+    eq(m.slice(-2).map(e => e.type), ['show-all-windows', 'quit']);
+    eq(menuEntries({ ...menuBase, windows: [{ id: 1, title: 'x' }] }).some(e => e.type === 'show-all-windows'), false);
+    eq(menuEntries({ ...menuBase, showAllWindows: true }).some(e => e.type === 'show-all-windows'), false);
+});
+
 if (failed) {
     print(`${failed} failed`);
     imports.system.exit(1);

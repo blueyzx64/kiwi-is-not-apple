@@ -1586,6 +1586,19 @@
     background-color: rgba(60, 60, 66, 0.92);
 }
 
+/* The optional Mission Control tile (missionControlItem.js) */
+.kiwi-dock-mission-control {
+    background-gradient-direction: vertical;
+    background-gradient-start: #4a4a52;
+    background-gradient-end: #1f1f24;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.kiwi-dock-mission-control-window {
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0, 0, 0, 0.25);
+}
+
 /* ==== features/menuBar/style.css ==== */
 
 /* feature: menu-bar (logo menu, app menus, transparent bar, privacy dots, dialogs) */
@@ -1831,6 +1844,100 @@
   border-radius: 7px;
   padding: 5px 16px;
 }
+
+/* ==== features/missionControl/style.css ==== */
+
+/* feature: mission-control */
+
+/* The Spaces bar: GNOME's thumbnails, larger, with room for the labels under them */
+.kiwi-mission-control .kiwi-mc-spaces-box {
+    padding: 12px 0 30px;
+    spacing: 22px;
+}
+
+.kiwi-mission-control .kiwi-mc-spaces-box .workspace-thumbnail {
+    border-radius: 8px;
+}
+
+.kiwi-mission-control .kiwi-mc-spaces-box .workspace-thumbnail-indicator {
+    border: 3px solid rgba(255, 255, 255, 0.92);
+    border-radius: 11px;
+    padding: 0;
+}
+
+/* macOS spreads the windows with wider gaps than GNOME */
+.kiwi-mission-control .window-picker {
+    spacing: 36px;
+}
+
+.kiwi-mc-space-label {
+    color: #ffffff;
+    font-size: 9.5pt;
+    font-weight: 600;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+.kiwi-mc-space-close {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border-radius: 10px;
+    color: #ffffff;
+    background-color: rgba(58, 58, 60, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+
+.kiwi-mc-space-close:hover {
+    background-color: rgba(88, 88, 92, 0.96);
+}
+
+.kiwi-mc-space-add {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 10px;
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.kiwi-mc-space-add:hover,
+.kiwi-mc-space-add:focus {
+    background-color: rgba(255, 255, 255, 0.28);
+}
+
+/* App Exposé: the minimized windows along the bottom */
+.kiwi-mc-expose-strip {
+    padding: 12px 20px;
+    spacing: 20px;
+    border-radius: 20px;
+    background-color: rgba(28, 28, 30, 0.42);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.kiwi-mc-expose-card {
+    padding: 6px;
+    border-radius: 12px;
+}
+
+.kiwi-mc-expose-card:hover,
+.kiwi-mc-expose-card:focus {
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+.kiwi-mc-expose-preview {
+    border-radius: 6px;
+}
+
+.kiwi-mc-expose-title {
+    color: #ffffff;
+    font-size: 9pt;
+    margin-top: 6px;
+    max-width: 180px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
 
 /* ==== features/notch/style.css ==== */
 

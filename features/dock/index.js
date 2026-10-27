@@ -44,12 +44,14 @@ import { DockView } from './view.js';
 import { AppItem, SeparatorItem, WindowItem } from './items.js';
 import { DownloadsItem, installerFor } from './stack.js';
 import { TrashItem } from './trash.js';
+import { MissionControlItem } from './missionControlItem.js';
 import { DockMenu, altHeld, fillAppMenu, isAltKey } from './appMenu.js';
 import { readAutostart, setAutostart } from './autostart.js';
 import { keepOtherDocksOff } from './dashToDock.js';
 
 const LAYOUT_KEYS = ['dock-position', 'dock-icon-size'];
-const CONTENT_KEYS = ['dock-show-recents', 'dock-running-dots', 'dock-minimize-to-app', 'dock-downloads'];
+const CONTENT_KEYS = ['dock-show-recents', 'dock-running-dots', 'dock-minimize-to-app', 'dock-downloads',
+    'dock-mission-control'];
 const HIDE_KEYS = ['dock-autohide', 'dock-autohide-delay'];
 // Pushing against the edge reveals an auto-hidden dock: the same pressure as the Shell's hot
 // corner (ui/layout.js HOT_CORNER_PRESSURE_THRESHOLD / _TIMEOUT)
@@ -234,6 +236,7 @@ export class Dock {
             showRecents: this.config.showRecents,
             minimized: this._minimized,
             downloads: this.config.downloads,
+            missionControl: this.config.missionControl,
         });
         this._view.setItems(items, spec => this._createItem(spec));
         this._queueGeometry();
@@ -261,6 +264,8 @@ export class Dock {
             return new DownloadsItem(this, spec);
         case 'trash':
             return new TrashItem(this, spec);
+        case 'mission-control':
+            return new MissionControlItem(this, spec);
         default:
             return null;
         }
@@ -510,6 +515,11 @@ export class Dock {
         return menu;
     }
 
+    /** The running Mission Control feature (App Exposé, the Mission Control tile), or null. */
+    missionControl() {
+        return this._ctx.features.instance('mission-control');
+    }
+
     openAppMenu(item) {
         const app = item.app;
         const id = item.spec.id;
@@ -528,6 +538,7 @@ export class Dock {
                 hasDesktopFile,
                 autostart,
                 alt: altHeld(),
+                showAllWindows: !!this.missionControl(),
             });
             const metaWindows = () => this._desktop.model.windows({ appId: id })
                 .map(w => this._desktop.metaWindow(w.id)).filter(Boolean);
@@ -540,6 +551,7 @@ export class Dock {
                 openAtLogin: on => setAutostart(id, info?.get_filename() ?? null, on)
                     .catch(e => console.error('[Kiwi] dock: Open at Login failed:', e)),
                 showInFiles: () => this._showInFiles(info?.get_filename()),
+                showAllWindows: () => this.missionControl()?.showAppExpose(id),
                 quit: () => app.request_quit(),
                 forceQuit: () => metaWindows().forEach(w => w.kill()),
             }, this.gettext);

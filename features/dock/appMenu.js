@@ -46,7 +46,7 @@ export class DockMenu extends PopupMenu.PopupMenu {
  * @param {DockMenu} menu
  * @param {object[]} entries model.menuEntries()
  * @param {object} on handlers: window(id), action(id), newWindow(), open(), keepInDock(on),
- *   openAtLogin(on), showInFiles(), quit(), forceQuit()
+ *   openAtLogin(on), showInFiles(), showAllWindows(), quit(), forceQuit()
  * @param {(s: string) => string} _ gettext
  * @returns {{setAlt: (alt: boolean) => void}} relabels the Quit item live
  */
@@ -102,6 +102,9 @@ export function fillAppMenu(menu, entries, on, _) {
             menu.addMenuItem(sub);
             break;
         }
+        case 'show-all-windows':
+            add(_('Show All Windows'), () => on.showAllWindows());
+            break;
         case 'quit':
         case 'force-quit':
             force = e.type === 'force-quit';

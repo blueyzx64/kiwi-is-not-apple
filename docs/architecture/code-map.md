@@ -129,6 +129,7 @@ window manager; the menu bar runs a fallback when nobody listens).
 | `roundedCorners/` | `rounded-corners` | shader effect per window |
 | `liquidGlass/` | `liquid-glass` | attaches `lib/glass.js` to the panel, Control Center and calendar menus; the glass prefs |
 | `shellBehaviour/` | `shell-behaviour` | swipes stop at workspaces; no hot corner |
+| `missionControl/` | `mission-control` | overview restyled as Mission Control: Spaces bar (+, ×, reorder), App Exposé with minimized strip, F3 / Ctrl+Up / Ctrl+Down, start on the desktop, static Spaces (dynamic-workspaces via core/originals) |
 | `fullscreenSpace/` | `move-window-to-new-workspace` | full screen in its own Space (kept as in 2.x) |
 | `dock/` | `dock` | Kiwi's own dock: favourites, running and recent apps, minimized windows, Downloads stack (`stack.js`), Trash (`trash.js`), menus (`appMenu.js`), Open at Login (`autostart.js`); an edge claim in core/layout; keeps Dash to Dock off (`dashToDock.js`); `iconRect(appId)` / `minimizeTarget(win)` for Genie |
 | `appearance/` | `appearance`, `popup-menu-styling` | Auto Light/Dark (owns `color-scheme` through core/originals), accent (`accent-color`) and highlight colours (`scheme.js`, `model.js`); accent menus (`index.js`; the GTK app fixes are in `gtk-theme`) |
