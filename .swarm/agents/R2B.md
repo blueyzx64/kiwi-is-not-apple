@@ -1,5 +1,5 @@
 ## Status
-working (worktree /home/user/kiwi-r2-menubar, branch v3/r2-menubar)
+done: v3/r2-menubar@976501f
 ## Plan
 1 transparent bar default + key menubar-solid-on-window (off); 2 ModalSurface hover-switch (NC) + autoclose hunt; 3 overlay-key allowed in POPUP always; 4 maximized bar; 5 real Fedora logo via shader recolour; 6 verify Alt+Tab
 ## Progress log
