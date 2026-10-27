@@ -1,5 +1,7 @@
 // Run: gjs -m tests/launcherEntryModel.test.js
-import { LauncherEntryBook, appIdFromUri, badgeOf, progressOf } from '../core/launcherEntryModel.js';
+// lib/launcherEntryModel.js and lib/backgroundAppsModel.js: badges and background apps.
+import { LauncherEntries, appIdFromUri, isBlank } from '../lib/launcherEntryModel.js';
+import { backgroundAppIds, gApplicationPath } from '../lib/backgroundAppsModel.js';
 
 let failed = 0;
 function test(name, fn) {
@@ -10,53 +12,40 @@ function eq(a, b, msg = '') {
         throw new Error(`${msg} expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`);
 }
 
-test('app uris', () => {
-    eq(appIdFromUri('application://org.gnome.Nautilus.desktop'), 'org.gnome.Nautilus.desktop');
-    eq(appIdFromUri('application://a/b.desktop'), null);
-    eq(appIdFromUri('file:///x.desktop'), null);
-    eq(appIdFromUri('application://nodesktop'), null);
-    eq(appIdFromUri(null), null);
+test('uri: application:// ids, .desktop added; anything else ignored', () => {
+    eq(appIdFromUri('application://org.gnome.Geary.desktop'), 'org.gnome.Geary.desktop');
+    eq(appIdFromUri('application://telegram'), 'telegram.desktop');
+    eq([appIdFromUri('file:///x'), appIdFromUri('application://'), appIdFromUri(null), appIdFromUri('application://a/b')], [null, null, null, null]);
 });
-test('updates merge per app and report only real changes', () => {
-    const book = new LauncherEntryBook();
-    const uri = 'application://io.github.blueyzx64.Installer.desktop';
-    eq(book.update(':1.5', uri, { 'progress': 0.25, 'progress-visible': true }), 'io.github.blueyzx64.Installer.desktop');
-    eq(progressOf(book.entry('io.github.blueyzx64.Installer.desktop')), 0.25);
-    eq(book.update(':1.5', uri, { 'progress': 0.25 }), null);
-    eq(book.update(':1.5', uri, { 'count': 3, 'count-visible': true, 'quicklist': '/x' }), 'io.github.blueyzx64.Installer.desktop');
-    const e = book.entry('io.github.blueyzx64.Installer.desktop');
-    eq([e.progress, e.count, badgeOf(e)], [0.25, 3, '3']);
-    // Wrong types are ignored
-    eq(book.update(':1.5', uri, { 'progress': 'lots', 'count-visible': 1 }), null);
+test('update: fields merge over earlier ones', () => {
+    const e = new LauncherEntries();
+    eq(e.update(':1.5', 'application://mail.desktop', { 'count': 4, 'count-visible': true }), 'mail.desktop');
+    e.update(':1.5', 'application://mail.desktop', { 'progress': 0.5, 'progress-visible': true, 'bogus': 1 });
+    eq(e.get('mail.desktop'), { count: 4, countVisible: true, progress: 0.5, progressVisible: true, urgent: false });
+    eq(e.update(':1.5', 'nope', {}), null);
+    eq(isBlank(e.get('mail.desktop')), false);
+    eq(isBlank(null), true);
 });
-test('an entry that shows nothing is forgotten', () => {
-    const book = new LauncherEntryBook();
-    const uri = 'application://a.desktop';
-    book.update(':1.9', uri, { 'progress': 0.5, 'progress-visible': true });
-    eq(book.update(':1.9', uri, { 'progress-visible': false }), 'a.desktop');
-    eq(book.entry('a.desktop'), null);
-    eq(book.senders(), []);
+test('sender gone: its entries go, unless another sender still holds the app', () => {
+    const e = new LauncherEntries();
+    e.update(':1.1', 'application://a.desktop', { urgent: true });
+    e.update(':1.1', 'application://b.desktop', { 'count': 1, 'count-visible': true });
+    e.update(':1.2', 'application://b.desktop', { 'count': 2 });
+    eq(e.senderGone(':1.1'), ['a.desktop']);
+    eq(e.get('a.desktop'), null);
+    eq(e.get('b.desktop').count, 2);
+    eq(e.senderGone(':1.9'), []);
+    eq(e.senders(), [':1.2']);
 });
-test('a sender leaving the bus drops its entries only', () => {
-    const book = new LauncherEntryBook();
-    book.update(':1.1', 'application://a.desktop', { 'urgent': true });
-    book.update(':1.1', 'application://b.desktop', { 'count': 2, 'count-visible': true });
-    book.update(':1.2', 'application://c.desktop', { 'urgent': true });
-    eq(book.senders(), [':1.1', ':1.2']);
-    eq(book.dropSender(':1.1'), ['a.desktop', 'b.desktop']);
-    eq([book.entry('a.desktop'), !!book.entry('c.desktop')], [null, true]);
+test('background apps: desktop ids, deduplicated, bad entries skipped', () => {
+    eq(backgroundAppIds([{ app_id: 'org.gnome.Calculator' }, { app_id: 'org.gnome.Calculator', instance: '2' },
+        { app_id: 'x.desktop' }, { app_id: '' }, { message: 'm' }, null, { app_id: 'a/b' }]),
+    ['org.gnome.Calculator.desktop', 'x.desktop']);
+    eq(backgroundAppIds(undefined), []);
 });
-test('progress clamps; badges cap and hide at zero', () => {
-    eq(progressOf({ progress: 1.7, progressVisible: true }), 1);
-    eq(progressOf({ progress: -1, progressVisible: true }), 0);
-    eq(progressOf({ progress: 0.5, progressVisible: false }), null);
-    eq(progressOf(null), null);
-    eq(badgeOf({ count: 0, countVisible: true }), null);
-    eq(badgeOf({ count: 12000, countVisible: true }), '9999+');
-    eq(badgeOf({ count: 4, countVisible: false }), null);
+test('background apps: the GApplication name and path of a desktop id', () => {
+    eq(gApplicationPath('org.gnome.Text-Editor.desktop'), { name: 'org.gnome.Text-Editor', path: '/org/gnome/Text_Editor' });
 });
 
-if (failed) {
-    print(`${failed} failed`);
-    imports.system.exit(1);
-}
+if (failed)
+    throw new Error(`${failed} test(s) failed`);

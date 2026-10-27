@@ -6,8 +6,16 @@ import Gtk from 'gi://Gtk';
 
 import { addSwitchRows } from '../widgets.js';
 
-/** Kiwi's own bookkeeping: never reset (it is what puts the user's GNOME settings back). */
-const INTERNAL_KEYS = new Set(['migrations-done', 'saved-originals', 'clipboard-recording', 'onboarding']);
+/**
+ * Keys Reset Everything leaves alone, read from the schema so a new cache cannot be missed:
+ * Kiwi's own bookkeeping (summary ends with "(internal)": it is what puts the user's GNOME
+ * settings back) and the dropped 2.x keys (summary starts "(Deprecated, unused)": some hold
+ * restore records a migration still needs).
+ */
+const keepOnReset = (schema, key) => {
+    const summary = schema.get_key(key).get_summary() ?? '';
+    return summary.endsWith('(internal)') || summary.startsWith('(Deprecated, unused)');
+};
 
 export const PAGE = { id: 'general', icon: 'preferences-system-symbolic' };
 
@@ -43,9 +51,13 @@ export function build({ settings, window, _ }) {
         dialog.connect('response', (_d, response) => {
             if (response !== 'reset')
                 return;
-            settings.settings_schema.list_keys()
-                .filter(key => !INTERNAL_KEYS.has(key))
+            // One write for all keys: the Shell then evaluates its features once
+            const schema = settings.settings_schema;
+            settings.delay();
+            schema.list_keys()
+                .filter(key => !keepOnReset(schema, key))
                 .forEach(key => settings.reset(key));
+            settings.apply();
         });
         dialog.present(window);
     });

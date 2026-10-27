@@ -474,18 +474,8 @@ export function workspaceDirection(from, to) {
     return to > from ? 1 : -1;
 }
 
-/**
- * A press and release on the wallpaper count as a click (not a drag or a long press).
- * @param {{x, y, time}} press
- * @param {{x, y, time}} release
- */
-export function isClick(press, release, { slop = 6, maxMs = 600 } = {}) {
-    if (!press || !release)
-        return false;
-    const dist = Math.hypot(release.x - press.x, release.y - press.y);
-    const dt = release.time - press.time;
-    return dist <= slop && dt >= 0 && dt <= maxMs;
-}
+/** A press and release on the wallpaper count as a click (shared with Show Desktop). */
+export { isClick } from '../../lib/clickModel.js';
 
 // ---- stages and focus ---------------------------------------------------------------------
 

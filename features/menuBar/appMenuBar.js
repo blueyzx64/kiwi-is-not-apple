@@ -2,14 +2,17 @@
 // The app's part of the menu bar: the focused app's name in bold, then its menus (plan §5.1).
 //
 // The menus come from core/appMenus (ctx.appMenus): generic menus for every app, plus the
-// GTK actions the app exports. Titles are known from the cached provider result; the items
+// GTK actions the app exports. With native menus on, this part registers the menu bar
+// providers while it runs: the GTK exported menu bar and DBusMenu (Qt, Electron and other
+// Xwayland apps), then AT-SPI when its experimental setting is on. A native menu bar
+// replaces File, Edit and View; the App, Window and Help menus stay Kiwi's. Titles are known from the cached provider result; the items
 // are built only when a menu opens, so a closed menu bar costs nothing but a label update on
 // focus changes. With no focused window (the desktop) the menus are Files', as Finder's are
 // on macOS; in the overview the app menus step aside.
 //
 // Every title is a PanelMenu.Button registered with the panel's menu manager, so hovering
 // from one open menu to the next and Left/Right on the keyboard move between them, like
-// macOS. focus() (F10) opens the app menu with its first item selected.
+// macOS. focus() (Ctrl+F2) opens the app menu with its first item selected.
 //
 // Shell API: PanelMenu.Button, PopupMenu, Main.panel.menuManager, Shell.AppSystem.
 
@@ -24,28 +27,47 @@ import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import { PanelLayout } from '../../core/panelLayout.js';
-import { searchMenus, WM_ACCEL_SLOTS } from '../../core/appMenus/model.js';
-import { LazyMenu, menuItem } from './menuItems.js';
+import { menuEntries, searchMenus, WM_ACCEL_SLOTS } from '../../core/appMenus/model.js';
+import { GtkMenusProvider } from '../../core/appMenus/gtkMenus.js';
+import { DBusMenuProvider } from '../../core/appMenus/dbusMenu.js';
+import { AtspiProvider } from '../../core/appMenus/atspi.js';
+import { fitMenus } from './model.js';
+import { LazyMenu, menuHeading, menuItem } from './menuItems.js';
 import { MenuGlass } from './menuGlass.js';
 
 export const APPS_CLAIM = 'kiwi-menubar-apps';
+const OVERFLOW_ID = 'overflow';
+const OVERFLOW_TITLE = '»';
 const DESKTOP_APP = 'org.gnome.Nautilus.desktop';
 const SOFTWARE_APP = 'org.gnome.Software.desktop';
 const HELP_RESULTS = 8;
 
 /**
- * Lays its children out left to right and leaves out (allocates empty) those that do not fit,
- * so a long menu list never runs into the notch or the clock. Its minimum width is its first
- * child's (the app name).
+ * Lays its children out in a row (mirrored in right-to-left text) and, when they do not fit,
+ * leaves the menus that do not (allocated empty) and shows the "»" button instead, so a long
+ * menu list never runs into the notch or the clock. The first child is the app name (always
+ * shown) and `more` the "»" button; their widths come from model.js fitMenus.
+ *
+ * `onFit(shown, total)` is called when the split changes. It runs inside an allocation, so a
+ * handler must only queue work (an idle), never touch the actors.
  */
 const OverflowLayout = GObject.registerClass(
 class KiwiMenuOverflowLayout extends Clutter.LayoutManager {
+    _init() {
+        super._init();
+        this.more = null;
+        this.onFit = null;
+        this._fit = '';
+    }
+
+    _menus(container) {
+        return container.get_children().filter(c => c.visible && c !== this.more);
+    }
+
     vfunc_get_preferred_width(container, forHeight) {
         let min = 0;
         let nat = 0;
-        for (const child of container.get_children()) {
-            if (!child.visible)
-                continue;
+        for (const child of this._menus(container)) {
             const [, n] = child.get_preferred_width(forHeight);
             if (!min)
                 min = n;
@@ -58,7 +80,7 @@ class KiwiMenuOverflowLayout extends Clutter.LayoutManager {
         let min = 0;
         let nat = 0;
         for (const child of container.get_children()) {
-            if (!child.visible)
+            if (!child.visible && child !== this.more)
                 continue;
             const [m, n] = child.get_preferred_height(-1);
             min = Math.max(min, m);
@@ -70,23 +92,29 @@ class KiwiMenuOverflowLayout extends Clutter.LayoutManager {
     vfunc_allocate(container, box) {
         const height = box.get_height();
         const width = box.get_width();
-        let x = 0;
-        let full = false;
-        for (const child of container.get_children()) {
-            if (!child.visible)
-                continue;
-            const [, n] = child.get_preferred_width(height);
+        const menus = this._menus(container);
+        const widths = menus.map(c => c.get_preferred_width(height)[1]);
+        const moreWidth = this.more ? this.more.get_preferred_width(height)[1] : 0;
+        const rtl = container.get_text_direction() === Clutter.TextDirection.RTL;
+        const fit = fitMenus(widths, width, moreWidth, rtl);
+        const place = (child, x, w) => {
             const childBox = new Clutter.ActorBox();
-            if (!full && x + n <= width + 0.5) {
-                childBox.set_origin(x, 0);
-                childBox.set_size(n, height);
-                x += n;
-            } else {
-                full = true;
-                childBox.set_origin(x, 0);
-                childBox.set_size(0, 0);
-            }
+            childBox.set_origin(x, 0);
+            childBox.set_size(w, w ? height : 0);
             child.allocate(childBox);
+        };
+        menus.forEach((child, i) => {
+            if (i < fit.shown)
+                place(child, fit.xs[i], widths[i]);
+            else
+                place(child, 0, 0);
+        });
+        if (this.more)
+            place(this.more, fit.moreX, fit.more ? moreWidth : 0);
+        const key = `${fit.shown}/${menus.length}`;
+        if (key !== this._fit) {
+            this._fit = key;
+            this.onFit?.(fit.shown, menus.length);
         }
     }
 });
@@ -130,13 +158,20 @@ export class AppMenuBar {
     /**
      * @param {object} ctx the feature ctx
      * @param {CleanupRegistry} cleanup this part's registry
-     * @param {{keys: () => object}} opts shortcut label options
+     * @param {object} opts
+     * @param {() => object} opts.keys shortcut label options
+     * @param {{native: boolean, atspi: boolean, popovers: boolean}} [opts.providers] which
+     *   menu bar providers to run
      */
-    constructor(ctx, cleanup, { keys }) {
+    constructor(ctx, cleanup, { keys, providers = {} }) {
         this._ctx = ctx;
         this._cleanup = cleanup;
         this._keys = keys;
+        this._providerOpts = providers;
         this._buttons = [];
+        this._more = null;       // the "»" button holding the menus that do not fit
+        this._fit = { shown: 0, total: 0 };
+        this._fitIdle = 0;
         this._target = null;
         this._menus = [];
     }
@@ -144,6 +179,16 @@ export class AppMenuBar {
     /** Menu titles shown now (tests, the harness). */
     get titles() {
         return this._buttons.filter(b => b.container.visible).map(b => b.def?.title ?? '');
+    }
+
+    /** Titles of the menus the strip has no room for; they are in the "»" menu (tests, the harness). */
+    get hiddenTitles() {
+        return this._buttons.filter(b => b.container.visible).slice(this._fit.shown).map(b => b.def?.title ?? '');
+    }
+
+    /** The "»" button (tests, the harness). */
+    get moreButton() {
+        return this._more;
     }
 
     /** The menus of the focused app as built now (tests, the harness, Spotlight later). */
@@ -160,18 +205,33 @@ export class AppMenuBar {
         const cleanup = this._cleanup;
         this._service = ctx.appMenus.acquire(cleanup);
         this._desktop = ctx.desktop.acquire(cleanup);
+        const { native = true, atspi = false, popovers = false } = this._providerOpts;
+        if (native) {
+            this._service.registerProvider(cleanup, new GtkMenusProvider());
+            this._service.registerProvider(cleanup, new DBusMenuProvider());
+        }
+        if (atspi)
+            this._service.registerProvider(cleanup, new AtspiProvider({ popovers }));
+        this._service.onChanged(cleanup, (windowId, how) => this._onProviderChanged(windowId, how));
         this._wm = new Gio.Settings({ schema_id: 'org.gnome.desktop.wm.keybindings' });
         this._mutter = new Gio.Settings({ schema_id: 'org.gnome.mutter.keybindings' });
 
         this._glass = new MenuGlass(cleanup);
+        const layout = new OverflowLayout();
         this._strip = new St.Widget({
-            style_class: 'kiwi-menubar-apps', layout_manager: new OverflowLayout(),
+            style_class: 'kiwi-menubar-apps', layout_manager: layout,
             y_expand: true, clip_to_allocation: true,
         });
+        this._more = this._newButton(OVERFLOW_TITLE);
+        this._more.accessible_name = this._ctx.gettext('More Menus');
+        this._more.def = { id: OVERFLOW_ID, title: OVERFLOW_TITLE, items: [] };
+        layout.more = this._more.container;
+        layout.onFit = (shown, total) => this._queueFit(shown, total);
         cleanup.add(() => {
-            for (const b of this._buttons)
+            for (const b of [...this._buttons, this._more])
                 b.destroy();
             this._buttons = [];
+            this._more = null;
             this._strip.destroy();
             this._strip = null;
         });
@@ -205,7 +265,7 @@ export class AppMenuBar {
         }
         const cached = this._service.peek(target);
         this._setMenus(this._build(target, cached));
-        if (!cached && target.gtk) {
+        if (!cached) {
             this._service.results(target).then(results => {
                 if (this._target === target && !this._openButton())
                     this._setMenus(this._build(target, results));
@@ -213,7 +273,7 @@ export class AppMenuBar {
         }
     }
 
-    /** Open the app menu with its first item focused (F10); close it when a menu is open. */
+    /** Open the app menu with its first item focused (Ctrl+F2); close it when a menu is open. */
     focus() {
         const open = this._openButton();
         if (open) {
@@ -226,6 +286,28 @@ export class AppMenuBar {
         first.menu.open(BoxPointer.PopupAnimation.FULL);
         first.menu.actor.navigate_focus(null, St.DirectionType.TAB_FORWARD, false);
         return true;
+    }
+
+    /**
+     * The focused app's menu items, for Spotlight's menu-item search (macOS Help search, but
+     * global). Reads the app's actions if they are not cached yet.
+     *
+     * @returns {Promise<{appName: string, entries: {path: string, label: string, run: Function}[]}|null>}
+     */
+    async menuItems() {
+        const target = this._currentTarget();
+        if (!target)
+            return null;
+        const results = this._service.peek(target) ?? (target.gtk ? await this._service.results(target) : null);
+        const menus = this._service.build(target, results, {
+            generic: this._generic(target), accels: this._accels(), _: this._ctx.gettext,
+        });
+        return {
+            appName: target.appName,
+            entries: menuEntries(menus).map(({ path, item }) => ({
+                path, label: item.label, run: () => this._service.activate(target, item.command),
+            })),
+        };
     }
 
     /** Open one menu by id ('app', 'file', ...); tests and the harness. */
@@ -291,19 +373,9 @@ export class AppMenuBar {
 
     _setMenus(menus) {
         while (this._buttons.length < menus.length) {
-            const b = new TopMenu('', button => this._onOpen(button));
-            Main.panel.menuManager.addMenu(b.menu);
-            this._glass.add(b.menu);
-            this._cleanup.connect(b.menu, 'open-state-changed', (_m, open) => {
-                // Connected after the menu manager's handler, so it runs once the grab took
-                // the key focus: macOS puts the cursor in Help's search field
-                if (open)
-                    b.searchEntry?.grab_key_focus();
-                else if (!this._openButton())
-                    this._refreshTitles();
-            });
-            // A PanelMenu.Button lives in its own container (St.Bin), like in the panel boxes
-            this._strip.add_child(b.container);
+            const b = this._newButton('');
+            // Before the "»" button, which stays last
+            this._strip.insert_child_below(b.container, this._more.container);
             this._buttons.push(b);
         }
         this._buttons.forEach((b, i) => {
@@ -315,8 +387,64 @@ export class AppMenuBar {
         });
     }
 
+    // A title button with its menu registered with the panel's menu manager
+    _newButton(title) {
+        const b = new TopMenu(title, button => this._onOpen(button));
+        Main.panel.menuManager.addMenu(b.menu);
+        this._glass.add(b.menu);
+        this._cleanup.connect(b.menu, 'open-state-changed', (_m, open) => {
+            // Connected after the menu manager's handler, so it runs once the grab took
+            // the key focus: macOS puts the cursor in Help's search field
+            if (open)
+                b.searchEntry?.grab_key_focus();
+            else if (!this._openButton())
+                this._refreshTitles();
+        });
+        // A PanelMenu.Button lives in its own container (St.Bin), like in the panel boxes; the
+        // strip leaves the ones that do not fit empty, so they must not paint outside it
+        b.container.clip_to_allocation = true;
+        this._strip.add_child(b.container);
+        return b;
+    }
+
+    // The layout split the row (inside an allocation): apply it once the allocation is over
+    _queueFit(shown, total) {
+        this._fit = { shown, total };
+        if (this._fitIdle)
+            return;
+        this._fitIdle = this._cleanup.idle(() => {
+            this._fitIdle = 0;
+            this._applyFit();
+        }, { name: 'menu bar overflow' });
+    }
+
+    // Menus without room are out of keyboard navigation (an empty button must not take focus);
+    // the "»" button shows when there are any
+    _applyFit() {
+        if (!this._strip)
+            return;
+        const { shown, total } = this._fit;
+        this._buttons.forEach((b, i) => {
+            b.reactive = b.can_focus = i < shown;
+        });
+        const needed = shown < total;
+        this._more.reactive = this._more.can_focus = needed;
+        if (!needed && this._more.menu.isOpen)
+            this._more.menu.close(BoxPointer.PopupAnimation.NONE);
+        this._more.def = this._overflowDef(this._menus);
+    }
+
+    // The menus that did not fit, as submenus of the "»" menu
+    _overflowDef(menus) {
+        const hidden = menus.slice(this._fit.shown);
+        return {
+            id: OVERFLOW_ID, title: OVERFLOW_TITLE,
+            items: hidden.map(m => ({ kind: 'submenu', label: m.title, items: m.items })),
+        };
+    }
+
     _openButton() {
-        return this._buttons.find(b => b.menu.isOpen) ?? null;
+        return [...this._buttons, this._more].find(b => b?.menu.isOpen) ?? null;
     }
 
     _closeMenus() {
@@ -330,7 +458,7 @@ export class AppMenuBar {
         const id = button.def?.id;
         const fill = results => {
             const menus = this._build(target, results);
-            button.def = menus.find(m => m.id === id) ?? button.def;
+            button.def = id === OVERFLOW_ID ? this._overflowDef(menus) : menus.find(m => m.id === id) ?? button.def;
             this._fill(button);
         };
         fill(target ? this._service.peek(target) : null);
@@ -339,6 +467,30 @@ export class AppMenuBar {
         this._service.results(target).then(results => {
             if (this._target === target && button.menu.isOpen)
                 fill(results);
+        });
+    }
+
+    // A provider saw the app's menus change. Menus that came or went (org.gtk.Menus Changed,
+    // DBusMenu LayoutUpdated, a window registering its menu) are re-read at once for the titles;
+    // a state change (org.gtk.Actions Changed: Undo became possible) only matters to an open
+    // menu, which is refilled. Closed menus re-read their stale result when they open.
+    _onProviderChanged(windowId, { structure }) {
+        const target = this._target;
+        if (!target || target.windowId !== windowId)
+            return;
+        if (!structure && !this._openButton())
+            return;
+        this._service.results(target).then(results => {
+            if (this._target !== target)
+                return;
+            const open = this._openButton();
+            if (!open) {
+                this._setMenus(this._build(target, results));
+                return;
+            }
+            const menus = this._build(target, results);
+            open.def = menus.find(m => m.id === open.def?.id) ?? open.def;
+            this._fill(open);
         });
     }
 
@@ -379,10 +531,13 @@ export class AppMenuBar {
             case 'search':
                 button.searchEntry = this._addSearch(menu);
                 break;
+            case 'heading':
+                menu.addMenuItem(menuHeading(it.label));
+                break;
             default:
                 menu.addMenuItem(menuItem(it.label, {
                     accel: it.accel, keys: this._keys(), enabled: it.enabled,
-                    checked: checks ? !!it.checked : null,
+                    checked: checks ? !!it.checked : null, radio: !!it.radio,
                     onActivate: () => this._service.activate(target, it.command),
                 }));
             }

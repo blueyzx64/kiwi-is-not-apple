@@ -223,6 +223,8 @@ export class DBusSearch {
                         gicon: iconFor(meta, appIcon),
                         score: externalScore(items.length, normalize(row.title) === q),
                         clipboardText: row.clipboardText,
+                        // Files' ids are file:// URIs: Quick Look and the recent list use them
+                        uri: isFiles && row.id.startsWith('file://') ? row.id : undefined,
                         source: { info, resultId: row.id, terms },
                     });
                 }

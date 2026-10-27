@@ -75,6 +75,22 @@ test('text stays readable over the worst backdrop at the clearest setting (4.5:1
     }
 });
 
+test('a bright or dark wallpaper never takes the text below 4.5:1 (the tint floor)', () => {
+    for (const dark of [true, false]) {
+        for (const wallpaper of [[255, 255, 255], [0, 0, 0], [255, 0, 0], [0, 0, 255], [128, 128, 128]]) {
+            for (const surface of ['panel', 'dock', 'menus', 'overlays']) {
+                for (const noise of [false, true]) {
+                    const l = resolve(snap({ tint: 0, noise }), env({ dark, wallpaper }), surface);
+                    ok(worstCaseContrast(l) >= 4.5, `${surface} ${dark} ${wallpaper} ${noise}: ${worstCaseContrast(l).toFixed(2)}`);
+                }
+            }
+        }
+    }
+    const plain = resolve(snap({ tint: 0 }), env({ dark: true }), 'panel');
+    const bright = resolve(snap({ tint: 0 }), env({ dark: true, wallpaper: [255, 255, 255] }), 'panel');
+    ok(bright.alpha > plain.alpha, 'denser on a bright wallpaper');
+});
+
 test('wallpaper tint: 8 % of the wallpaper colour, only when wanted and translucent', () => {
     const red = [255, 0, 0];
     const tinted = resolve(snap(), env({ wallpaper: red }), 'menus');

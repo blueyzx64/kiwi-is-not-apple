@@ -25,6 +25,9 @@ export function buildPrefs({ settings, extension }) {
     }));
     bar.add(switchRow(settings, _('App Menus'),
         _('The focused app’s name in bold and its menus: App, File, Edit, Window and Help'), 'menubar-app-menu'));
+    bar.add(switchRow(settings, _('Apps’ Own Menus'),
+        _('Show the menus apps export (GTK menu bars, and Qt, Electron or LibreOffice under Xwayland) in place of the generic File, Edit and View'),
+        'menubar-native-menus'));
     bar.add(switchRow(settings, _('Transparent Menu Bar'),
         _('No background over the wallpaper, with text that follows its brightness. Solid when a window touches the bar'),
         'menubar-transparent'));
@@ -37,11 +40,21 @@ export function buildPrefs({ settings, extension }) {
     bar.add(switchRow(settings, _('Alt-Click the Clock for Do Not Disturb'),
         _('Clicking the clock opens the calendar and notifications'), 'menubar-clock-option-dnd'));
 
+    const lab = new Adw.PreferencesGroup({
+        title: _('Experimental'),
+        description: _('Menus read from the accessibility tree. Apps must expose it (GTK always does; Firefox, Chromium and Qt only with accessibility turned on).'),
+    });
+    lab.add(switchRow(settings, _('Read Menus Through Accessibility'),
+        _('Mirror the menu bar inside windows of apps that do not export their menus'), 'menubar-atspi-menus'));
+    lab.add(switchRow(settings, _('Read Primary Menus'),
+        _('For apps without a menu bar, open the ☰ menu out of sight, read it into the app menu and remember it. The app sees its menu open and close'),
+        'menubar-atspi-popovers'));
+
     const keys = new Adw.PreferencesGroup({ title: _('Keyboard') });
     keys.add(switchRow(settings, _('Shortcut Symbols'),
         _('Write shortcuts in menus as ⌘ ⌥ ⌃ ⇧ (Super is ⌘). Off writes them in words'), 'menubar-command-glyphs'));
-    keys.add(shortcutRow(settings, _, { key: 'menubar-focus-shortcut', title: _('Use the Menu Bar with the Keyboard'), example: 'F10' }));
+    keys.add(shortcutRow(settings, _, { key: 'menubar-focus-shortcut', title: _('Use the Menu Bar with the Keyboard'), example: '<Control>F2' }));
     keys.add(shortcutRow(settings, _, { key: 'menubar-force-quit-shortcut', title: _('Force Quit Applications'), example: '<Super><Alt>Escape' }));
 
-    return [bar, keys];
+    return [bar, keys, lab];
 }

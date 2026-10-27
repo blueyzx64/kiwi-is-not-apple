@@ -102,3 +102,68 @@ clipped to the radius, remote art loads as an icon through GIO).
   yet, so the dashboard keeps the clock instead of "Unknown title".
 - A click on the dashboard scrubber seeks there (MPRIS SetPosition).
 - Dashboard list bodies honour notification markup like the card (Rhythmbox sends `<i>`).
+
+## Notch v3 (P5)
+
+**Behaviour.** The pointer resting on the notch for `notch-hover-delay` (300 ms) opens it
+(`notch-hover-expand`, on); it closes 0.6 s after the pointer leaves. A click opens it too, or pins
+a hovered one: then the notch holds a grab, and a click outside or Escape closes it (2.5 s after
+leaving otherwise). A notification card under the pointer is never replaced by a hover.
+
+**Expanded view: one 648x192 shape for every tab** (no resize when switching; the body slides
+24 px from the side of the tab and crossfades through core/motion):
+- *Now*: the media hero (art, title, scrubber, controls) or a large clock, then up to three rows:
+  live activities first (with their buttons: pause/resume/cancel a timer, stop a recording, copy a
+  code), then recent notifications and "N more".
+- *Tray*: the file shelf (below), and the clipboard column when `notch-show-clipboard` is on.
+- *Widgets*: calendar day (today's next events from the calendar server), weather (the date menu's
+  own WeatherClient; no second client), and controls: Focus (Do Not Disturb), microphone mute
+  (the Shell's mixer) and 1/5/15-minute Kiwi timers.
+
+**Live activities.** Sources in `sources/`, each switchable (`notch-activity-*`, `notch-copy-codes`):
+
+| Source | From | Pill | Now tab |
+|---|---|---|---|
+| Battery | UPower DisplayDevice (signals) | "Charging 62%" 4 s on plug-in; "Low Battery" 8 s when crossing 20 % / 10 % | "Charging" while charging |
+| Headphones | BlueZ ObjectManager + Battery1 | "connected" 4 s with battery | a row per connected audio device |
+| Timers | `core/timers.js` (Kiwi's own; Spotlight can call `ctx.timers.startTimer`) | countdown; "Done" 10 s with the system "complete" sound | pause/resume, cancel |
+| Recording | core events `recording-started/stopped`, emitted from the Shell's `screenshotUI.screencast-in-progress` until a recording owner emits them | red dot, elapsed, stop | stop |
+| Next event | the Shell's `DBusEventSource` (own instance) | from 15 min before ("in 9 min", then "Now") | later events of the day |
+| Downloads | LauncherEntry `progress` + partial files in Downloads (`.part`, `.crdownload`, ...) | name or count, progress bar or bytes | same |
+| One-time codes | every notification in the tray, read locally (`model.detectCode`) | "Code 482913 [Copy]" 30 s | Copy |
+
+Priority (model.js `KINDS`): alerts first for their few seconds (timer done > code > low battery
+> charger / headphones connected), then recording > timer > playing media > download > event soon
+> paused media. Quiet state (charging, connected headphones, a later event) never takes the pill.
+Equal priority: newest wins.
+
+**File shelf: how files get in on Wayland (measured on GNOME Shell 50.6).** A drag that starts in
+a Wayland app is not delivered to Shell actors as Clutter DnD; the app sees no drop target and
+cancels. But Mutter shares the drag with the compositor: `global.backend.get_dnd()` (Meta.Dnd, as
+the Shell's xdndHandler uses) emits `dnd-enter`, `dnd-position-change(x, y)` for every move and
+`dnd-leave` at the end, and the dragged data is the **DND selection**: `Meta.Selection`
+`get_mimetypes(SELECTION_DND)` lists `text/uri-list` and `transfer_async()` returns the links. At the
+release the selection is dropped *before* `dnd-leave`, so `drop.js` reads the links as soon as the
+drag enters the notch's drop zone (at least 420x72 at the top centre), opens the Tray as a drop
+area, and adds them if the drag ends there. The source app still animates a cancelled drag (it
+got no drop), which is the one visible difference from macOS. Also in: "Add from Clipboard" (files
+copied in Files: `x-special/gnome-copied-files`, `text/uri-list`, or a copied path), finished
+downloads (`notch-shelf-downloads`) and screenshots (`notch-shelf-screenshots`). **Out:** a Shell
+actor cannot start a Wayland drag (Mutter exposes no compositor-side data source to GJS), so items
+offer Open, Show in Files (FileManager1), Copy (`text/uri-list`, pastes as the file in Files) and
+Remove. Only links are stored (`notch-shelf`); files are never copied, moved or deleted.
+
+**Look and motion.** Pure black, no glass layer, the ears kept; Apple's dark system colours for
+tints (orange timers, red recording/low battery, green charging, blue downloads); 12 px minimum
+type, tabular figures for times and codes. Shape springs through `core/motion`
+(`{response 0.42, damping 0.8}` growing, critically damped shrinking); reduced motion and
+animations-off jump with a short crossfade. The waveform scales fixed-height bars (transforms,
+no relayout).
+
+**Measured (GNOME Shell 50.6 headless, software rendering, 1280x800).** Idle with nothing shown:
+no notch timers, timeouts or animations armed; the whole Shell used 30 ms of CPU in 10 s with the
+notch on and 20 ms with it off (noise level). A playing song (waveform): 330 ms per 5 s for the
+whole Shell, all of it repaint under software rendering. Expand with animations forced on: 28
+frames, 15.1 ms average and 29 ms worst stage frame (layout + paint of the whole stage), collapse 25
+frames at 13.0 ms; the spring sets only width and height (pages are fixed-size and clip, so no
+reflow). An event pill refreshes twice a minute, a countdown once a second, only while shown.

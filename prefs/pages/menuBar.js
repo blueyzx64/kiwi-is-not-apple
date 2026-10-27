@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Menu Bar: the macOS menu bar (features/menuBar/prefs.js) and what else the top bar holds.
+// Menu Bar: the macOS menu bar (features/menuBar/prefs.js), what else the top bar holds, and
+// where volume and brightness show (features/osd/prefs.js).
 
 import Adw from 'gi://Adw';
 import Gio from 'gi://Gio';
 
 import { addFeatureGroups, comboRow, switchRow, watchKey } from '../widgets.js';
 import * as menuBarPrefs from '../../features/menuBar/prefs.js';
+import * as osdPrefs from '../../features/osd/prefs.js';
 
 export const PAGE = { id: 'menu-bar', icon: 'focus-top-bar-symbolic' };
 
@@ -55,5 +57,6 @@ export function build(args) {
     watchKey(settings, 'control-center', dnd, syncCc);
     bar.add(dnd);
     page.add(bar);
+    addFeatureGroups(page, osdPrefs, args);
     return page;
 }

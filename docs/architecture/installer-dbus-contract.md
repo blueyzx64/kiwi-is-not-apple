@@ -99,7 +99,7 @@ com.canonical.Unity.LauncherEntry.Update(
     {'progress': <0.0..1.0>, 'progress-visible': <true>})
 ```
 and `{'progress-visible': <false>}` after `done` or `failed`. Kiwi's consumer is
-`core/launcherEntry.js`; it forgets an entry when its sender leaves the bus.
+`lib/launcherEntry.js` (the dock's badges and progress bars).
 
 ## 5. Security
 - **The confirmation is the security boundary.** Any process of the user can call the session
@@ -120,7 +120,7 @@ and `{'progress-visible': <false>}` after `done` or `failed`. Kiwi's consumer is
 |---|---|
 | Startup | Nothing until a feature acquires `ctx.installer`. Then `bus_watch_name` on the bus name, one `ListActivatableNames`, and `Get(Version)` when the name appears. |
 | Dock, Downloads stack | "Open with Installer" calls `Open(path, '')` when the installer is usable, else launches its desktop file with the file. Install progress comes from the LauncherEntry mirror. |
-| Launchpad ⓧ, dock Trash (`core/uninstall.js`) | `ListManagedApps` once (cached until `AppsChanged`), then `Uninstall(app_id, '')`; the poof plays on `UninstallFinished(removed)`, the wobble goes on after `cancelled`. |
+| Launchpad ⓧ (`features/launchpad/uninstall.js`) | `OwnsDesktopId` per app (or `ListManagedApps`, cached until `AppsChanged`), then `Uninstall(app_id, '')`; the poof plays on `UninstallFinished(removed)`, the wobble goes on after `cancelled`. |
 | Notch (P5) | `Progress` through `ctx.installer.progress` and the `installer-progress` event ("Installing Lumen Notes… 40 %"). |
 
 Timeouts in Kiwi: 5 s for `ListManagedApps`, 3 s for `OwnsDesktopId` and `Get(Version)`, 8 s for

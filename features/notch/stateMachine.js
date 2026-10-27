@@ -16,6 +16,8 @@
 // A newer notification of the same or higher urgency replaces the one on screen (which goes
 // back to the queue) unless the pointer is over it. The queue badge counts what is waiting.
 
+import { activityTiming, rankActivities, pillActivity, nextActivityExpiry, pillWidth, TABS } from './model.js';
+
 export const URGENCY = Object.freeze({ LOW: 0, NORMAL: 1, HIGH: 2, CRITICAL: 3 });
 
 export const SIZES = Object.freeze({
@@ -36,7 +38,8 @@ export const DEFAULT_CONFIG = Object.freeze({
     compactMs: 3000,
     osdMs: 1500,
     hoverGraceMs: 1500,     // minimum time left after the pointer leaves a card
-    dashboardLeaveMs: 2500, // dashboard closes this long after the pointer leaves it
+    dashboardLeaveMs: 2500, // a dashboard opened by a click closes this long after the pointer leaves
+    hoverLeaveMs: 600,      // one opened by hovering closes sooner, like the macOS notch apps
     maxPending: 8,
 });
 
@@ -46,11 +49,12 @@ export function initialState(now = 0) {
         dnd: false,
         fullscreen: false,
         hover: false,
+        dragOver: false,    // a drag from an app is over the notch (drop.js)
         current: null,      // {id, urgency, forFeedback, at, compact, until, hovered, remaining}
         pending: [],        // same shape without timing, newest first within an urgency
-        activities: [],     // [{key, priority, data, at}] in insertion order
+        activities: [],     // [{key, kind, priority, until, pill, data, at}] see model.js KINDS
         osd: null,          // {kind, level, maxLevel, icon, startedAt, until}
-        dashboard: null,    // null | {until: number|null}
+        dashboard: null,    // null | {until: number|null, openedAt, by: 'click'|'hover', tab}
     };
 }
 
@@ -180,6 +184,8 @@ function onTick(s, ev, cfg) {
         if (s.dashboard && s.dashboard.until !== null)
             s.dashboard = { ...s.dashboard, until: s.dashboard.until + overlap(s.dashboard.openedAt) };
     }
+    if (s.activities.some(a => a.until !== null && a.until <= s.now))
+        s.activities = s.activities.filter(a => a.until === null || a.until > s.now);
     if (s.osd)
         return;
     if (s.current && !s.current.hovered && s.current.until !== null && s.now >= s.current.until)
@@ -208,8 +214,38 @@ function onHover(s, ev, cfg) {
         }
         s.current = cur;
     }
-    if (s.dashboard)
-        s.dashboard = { ...s.dashboard, until: hover ? null : s.now + cfg.dashboardLeaveMs };
+    if (s.dashboard) {
+        const leave = s.dashboard.by === 'hover' ? cfg.hoverLeaveMs : cfg.dashboardLeaveMs;
+        s.dashboard = { ...s.dashboard, until: hover || s.dragOver ? null : s.now + leave };
+    }
+}
+
+// A file drag over the notch opens the Tray to drop on; it closes like a hovered one when the
+// drag moves away, and stays a little longer after a drop so the new item is seen.
+function onDragOver(s, ev, cfg) {
+    s.dragOver = !!ev.value;
+    if (s.dragOver) {
+        if (s.current && isCritical(s.current))
+            return;
+        if (!s.dashboard)
+            openDashboard(s, cfg, 'hover', 'tray');
+        s.dashboard = { ...s.dashboard, tab: 'tray', until: null };
+        return;
+    }
+    if (s.dashboard && !s.hover) {
+        const leave = ev.dropped ? cfg.dashboardLeaveMs : cfg.hoverLeaveMs;
+        s.dashboard = { ...s.dashboard, until: s.now + leave };
+    }
+}
+
+function openDashboard(s, cfg, by, tab) {
+    const leave = by === 'hover' ? cfg.hoverLeaveMs : cfg.dashboardLeaveMs;
+    s.dashboard = {
+        until: s.hover || s.dragOver ? null : s.now + leave,
+        openedAt: s.now,
+        by,
+        tab: TABS.includes(tab) ? tab : TABS[0],
+    };
 }
 
 function onClick(s, ev, cfg, effects) {
@@ -221,12 +257,26 @@ function onClick(s, ev, cfg, effects) {
         return;
     }
     if (s.dashboard) {
+        // A click on a dashboard that hovering opened keeps it open (and the view takes the
+        // grab for outside clicks and Escape); a second click closes it.
+        if (s.dashboard.by === 'hover') {
+            s.dashboard = { ...s.dashboard, by: 'click' };
+            return;
+        }
         s.dashboard = null;
         promote(s, cfg);
         return;
     }
     // Opening the dashboard sends what is waiting back to the queue.
-    s.dashboard = { until: s.hover ? null : s.now + cfg.dashboardLeaveMs, openedAt: s.now };
+    openDashboard(s, cfg, 'click', ev.tab);
+}
+
+// The pointer rested on the notch (the view runs the hover delay). Only an idle notch or a
+// live activity opens: a notification card under the pointer is being read.
+function onExpand(s, ev, cfg) {
+    if (s.osd || s.current || s.dashboard || !s.hover)
+        return;
+    openDashboard(s, cfg, 'hover', ev.tab);
 }
 
 function onOsd(s, ev, cfg) {
@@ -253,7 +303,16 @@ function onActivity(s, ev, cfg) {
         return;
     }
     const old = s.activities.find(a => a.key === ev.key);
-    s.activities = [...rest, { key: ev.key, priority: ev.priority ?? 0, data: ev.data, at: old?.at ?? ev.now }];
+    // An update keeps its place; `fresh` (a new code, a new alert) starts it over.
+    const at = !ev.fresh && old && old.kind === (ev.kind ?? null) ? old.at : ev.now;
+    const timing = ev.kind
+        ? activityTiming(ev.kind, at)
+        : { priority: ev.priority ?? 0, until: null, pill: true };
+    if (timing.until !== null && timing.until <= ev.now) {
+        s.activities = rest;
+        return;
+    }
+    s.activities = [...rest, { key: ev.key, kind: ev.kind ?? null, data: ev.data, at, ...timing }];
 }
 
 function applyConfig(s, cfg) {
@@ -314,6 +373,16 @@ export function step(state, ev, config = {}) {
     case 'hover':
         onHover(s, ev, cfg);
         break;
+    case 'expand':
+        onExpand(s, ev, cfg);
+        break;
+    case 'drag-over':
+        onDragOver(s, ev, cfg);
+        break;
+    case 'tab':
+        if (s.dashboard && TABS.includes(ev.tab))
+            s.dashboard = { ...s.dashboard, tab: ev.tab };
+        break;
     case 'click':
         onClick(s, ev, cfg, effects);
         break;
@@ -342,14 +411,7 @@ export function step(state, ev, config = {}) {
     return { state: s, effects };
 }
 
-function topActivity(s) {
-    let best = null;
-    for (const a of s.activities) {
-        if (!best || a.priority > best.priority || (a.priority === best.priority && a.at >= best.at))
-            best = a;
-    }
-    return best;
-}
+const topActivity = s => pillActivity(s.activities, s.now);
 
 /**
  * What to draw.
@@ -369,16 +431,26 @@ export function view(state) {
         return make('expanded', 'notification', 'notification',
             { notificationId: state.current.id, badge });
     }
-    if (state.dashboard)
-        return make('expanded', 'dashboard', 'dashboard', { badge, activity: topActivity(state) });
+    if (state.dashboard) {
+        return make('expanded', 'dashboard', 'dashboard', {
+            badge,
+            activity: topActivity(state),
+            tab: state.dashboard.tab ?? TABS[0],
+            pinned: state.dashboard.by !== 'hover',
+            dropping: state.dragOver,
+            activities: rankActivities(state.activities, state.now),
+        });
+    }
     if (state.current) {
         return state.current.compact
             ? make('compact', 'notification', 'compact', { notificationId: state.current.id, badge })
             : make('expanded', 'notification', 'notification', { notificationId: state.current.id, badge });
     }
     const activity = topActivity(state);
-    if (activity)
-        return make('live-activity', 'activity', 'live-activity', { activity });
+    if (activity) {
+        const size = { ...SIZES['live-activity'], w: pillWidth(activity.kind) };
+        return { ...make('live-activity', 'activity', 'live-activity', { activity }), size };
+    }
     return make('idle', null, 'idle');
 }
 
@@ -391,6 +463,9 @@ export function nextDeadline(state) {
         times.push(state.current.until);
     if (state.dashboard && state.dashboard.until !== null)
         times.push(state.dashboard.until);
+    const expiry = nextActivityExpiry(state.activities, state.now);
+    if (expiry !== null)
+        times.push(expiry);
     return times.length ? Math.min(...times) : null;
 }
 
