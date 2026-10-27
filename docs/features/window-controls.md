@@ -47,12 +47,25 @@ Optionally, real windows lose their own titlebar buttons.
 | Key | Type | Default |
 |---|---|---|
 | `show-window-controls` | b | existing |
-| `window-controls-scope` | s: `all` \| `maximized` \| `fullscreen` | `all` |
-| `window-controls-position` | s: `system` \| `left` \| `right` | `left` |
+| `window-controls-scope` | s: `all` \| `maximized` \| `fullscreen` | `maximized` |
+| `window-controls-side` | s: `right` \| `left`, top bar and app titlebars | `right` |
 | `remove-titlebar-buttons` | b | `true` |
-| `app-buttons-position` | s: `right` \| `left` (controls off) | `right` |
+| `app-buttons-set` | s: `all` \| `close`, the apps' own buttons | `all` |
 | `app-buttons-style` | s: `gnome` \| `macos` (controls off) | `gnome` |
-| `app-buttons-set` | s: `all` \| `close` (controls off) | `all` |
+| `hide-maximized-titlebars` | b: plain title bars of maximized windows (X11 frames, GTK 3 without header bar) | `false` |
+
+Round 2: scope `maximized` means: a window with no controls of its own (Mutter draws its title bar,
+`Meta.Window.decorated`) always has them in the top bar; a window with its own keeps them until it
+is maximized, full screen or touching the top bar (its frame top is the work area top, or it holds a
+Kiwi tile whose top is the work area top, see `zoneTouchesTop`). While a dragged window moves, its state
+waits for the drop. The controls on the top bar go with the app's own taken off: the WM
+`button-layout` (global, owned through core/originals) loses its buttons while the focused window's
+controls are on the top bar; the GTK CSD sheet also hides maximized header bars per window. Limits:
+GTK has no tiled state Kiwi can set (Mutter's `meta_window_tile` is not introspected, `Meta.Window`
+has only `get_tile_match`), so the layout trick is the per-window alternative; other windows lose
+their buttons while that window has focus. `window-controls-position` and `app-buttons-position`
+are deprecated and migrated into `window-controls-side` (`system` takes the side of the user's own
+layout).
 
 `show-window-controls-fullscreen-only` gets migrated to `window-controls-scope=fullscreen`.
 `app-buttons-style` is migrated once from `show-window-controls`: `macos` when the user had

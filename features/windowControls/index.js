@@ -1,17 +1,23 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // macOS-style close / minimize / maximize buttons in the top bar. They act on the focused
-// window and show for every focused window by default (setting: window-controls-scope).
+// window. Setting window-controls-scope, default 'maximized': a window with no controls of its
+// own (Mutter draws its title bar) always has them here; one with its own (a header bar) keeps
+// them there until it is maximized, full screen or touching the top bar (a tile whose top is the
+// work area's top, or a window dragged against the bar). Then they move here and the app's own
+// are taken off, for the window that has focus.
 // Uses the PNG icon sets when app window buttons are enabled, otherwise system symbolic
 // icons. Where they sit comes from PanelLayout.
 //
 // Minimize and maximize are offered for every window, whatever it advertises (owner request):
 // see _minimize() / _maximize() for what is done when mutter would refuse.
 //
-// Titlebar-button removal for real windows: while the controls show for all windows and
-// remove-titlebar-buttons is on, ButtonLayoutOwner replaces the WM button-layout with one
-// without buttons (saved in saved-button-layout, restored exactly on disable / toggle-off).
-// The GTK CSS in gtkThemeManager.js is used for the maximized / fullscreen scopes, where
-// floating windows keep their buttons (see titlebarHideSheet for why not for 'all').
+// The apps' own titlebars: ButtonLayoutOwner owns the WM button-layout while this runs (the
+// user's layout is saved by core/originals and restored exactly on disable). It holds the apps'
+// buttons on the chosen side (window-controls-side), or the layout without buttons where the
+// top bar has them instead (remove-titlebar-buttons): always for scope 'all'; for the maximized
+// and fullscreen scopes only while the focused window has a server-side frame (Mutter draws
+// it from the global layout). The GTK CSS in gtkTheme.js hides the buttons of client-side
+// windows in those states (see titlebarHideSheet for why not for 'all').
 //
 // The green button (macOS): a click goes full screen (windows-green-click 'fullscreen', the
 // macOS default, in its own Space while that feature runs) or zooms ('zoom'); Alt-click does
@@ -38,13 +44,14 @@ import { isMaximized, maximizeWindow, unmaximizeWindow } from '../../lib/compat.
 import { PanelLayout } from '../../core/panelLayout.js';
 import { isHelperWindowInfo } from '../../core/desktopModel.js';
 import { WindowState } from '../../core/windowState.js';
+import { zoneTouchesTop } from '../../core/tileActions.js';
 
 import { IconCatalog } from './icons.js';
 import {
-    parseButtonLayout, resolvePlacement, shouldShow, resolveIcon,
-    ownsButtonLayout, planMinimize, planMaximize, planGreenClick, centerIn, sameRect,
+    placementFor, shouldShow, resolveIcon, hidesTitlebarButtons, titlebarLayout, touchesTopBar, planMinimize, planMaximize, planGreenClick, centerIn, sameRect,
 } from './model.js';
 import { GreenMenu } from './greenMenu.js';
+import { X11Titlebars } from './x11Titlebars.js';
 import { ButtonLayoutOwner, WM_SCHEMA } from './buttonLayout.js';
 
 const BUTTONS = ['minimize', 'maximize', 'close'];
@@ -142,7 +149,7 @@ class WindowControlsIndicator extends PanelMenu.Button {
                     this._disarmGreenMenu();
                     if (this._holdReached) {
                         this._holdReached = false;
-                        this._onGreenMenu();
+                        this._onGreenMenu(false);
                     }
                 }
             });
@@ -238,7 +245,7 @@ class WindowControlsIndicator extends PanelMenu.Button {
                 this._skipClick = true;
                 return GLib.SOURCE_REMOVE;
             }
-            this._onGreenMenu();
+            this._onGreenMenu(true);
             return GLib.SOURCE_REMOVE;
         }, { name: 'kiwi green menu' });
     }
@@ -458,6 +465,10 @@ export class WindowControlsFeature {
         this._closeDelayToken = 0;
         this._wasFullscreen = false;
         this._layoutOwner = null;
+        this._hidden = false;   // the layout Kiwi holds has no buttons
+        this._onPanel = false;  // the focused window's controls belong in the top bar
+        this._touching = false; // the focused window's top edge is against the top bar
+        this._moving = false;   // the focused window is being dragged: its state waits for the drop
         this._filled = new Map(); // window -> frame rect before Kiwi filled the work area
     }
 
@@ -473,7 +484,12 @@ export class WindowControlsFeature {
 
         // The cleanup registry runs LIFO: this release runs after the indicator is gone and
         // before this._wm is dropped.
-        this._layoutOwner = new ButtonLayoutOwner(this._ctx.originals, this._wm, () => this._applyPlacement(false));
+        this._layoutOwner = new ButtonLayoutOwner(this._ctx.originals, this._wm, () => {},
+            original => titlebarLayout(original, {
+                hide: this._hidden,
+                side: ks.string('window-controls-side'),
+                set: ks.string('app-buttons-set'),
+            }));
         cleanup.add(() => {
             this._layoutOwner.release();
             this._layoutOwner = null;
@@ -494,7 +510,7 @@ export class WindowControlsFeature {
             // hidden in the middle of its own click gesture stops taking presses (seen on
             // GNOME 50.6 with the green button)
             onAction: name => cleanup.idle(() => this._act(name), { name: 'kiwi window control' }),
-            onGreenMenu: () => this._openGreenMenu(),
+            onGreenMenu: viaHover => this._openGreenMenu(viaHover),
             // With the green menu off, the green button's hover goes out as an event so Split
             // View can offer its own menu; with it on, the green menu offers Split View itself
             onHover: (actor, hovered) => {
@@ -523,7 +539,9 @@ export class WindowControlsFeature {
         });
         cleanup.add(() => (this._greenMenu = null));
 
-        this._syncLayoutOwner();
+        this._hidden = this._wantsHidden();
+        this._layoutOwner.sync(true);
+        new X11Titlebars(ks, cleanup).enable();
         this._indicator.setMacosIcons(ks.bool('enable-app-window-buttons'));
         this._indicator.setSmall(ks.string('button-size') === 'small');
         this._indicator.setTrafficStyle(ks.string('windows-traffic-style'));
@@ -537,15 +555,25 @@ export class WindowControlsFeature {
 
         ks.watch('enable-app-window-buttons', () => this._indicator.setMacosIcons(ks.bool('enable-app-window-buttons')));
         ks.watch('button-size', () => this._indicator.setSmall(ks.string('button-size') === 'small'));
-        ks.watch('window-controls-position', () => this._applyPlacement(false));
-        ks.watch('window-controls-scope', () => {
-            this._syncLayoutOwner();
-            this._update();
+        ks.watch('window-controls-side', () => {
+            this._layoutOwner.reapply();
+            this._applyPlacement(false);
         });
-        ks.watch('remove-titlebar-buttons', () => this._syncLayoutOwner());
-        cleanup.connect(this._wm, 'changed::button-layout', () => {
-            if (!this._layoutOwner?.owning)
-                this._applyPlacement(false);
+        ks.watch('app-buttons-set', () => this._layoutOwner.reapply());
+        ks.watch('window-controls-scope', () => this._update());
+        ks.watch('remove-titlebar-buttons', () => this._update());
+        // A tile changes whether the window touches the top bar
+        this._ctx.events.on('window-tiled', () => this._onGeometry(), cleanup);
+        // A window being dragged keeps the controls it had until it is dropped
+        cleanup.connect(global.display, 'grab-op-begin', (_d, win, op) => {
+            if (win === this._win && (op === Meta.GrabOp.MOVING || op === Meta.GrabOp.MOVING_UNCONSTRAINED))
+                this._moving = true;
+        });
+        cleanup.connect(global.display, 'grab-op-end', () => {
+            if (!this._moving)
+                return;
+            this._moving = false;
+            this._onGeometry();
         });
 
         cleanup.connect(global.display, 'notify::focus-window', () => this._onFocusChanged());
@@ -562,25 +590,31 @@ export class WindowControlsFeature {
         this._win = null;
     }
 
-    _syncLayoutOwner() {
-        this._layoutOwner?.sync(ownsButtonLayout({
-            showOnPanel: true,
+    // Should the WM button-layout have no buttons for the focused window now?
+    _wantsHidden() {
+        return hidesTitlebarButtons({
             remove: this._ks.bool('remove-titlebar-buttons'),
             scope: this._ks.string('window-controls-scope'),
-        }));
-        if (this._indicator)
-            this._applyPlacement(false);
+            onPanel: this._onPanel,
+        });
+    }
+
+    _syncTitlebars() {
+        const hidden = this._wantsHidden();
+        if (hidden === this._hidden)
+            return;
+        this._hidden = hidden;
+        this._layoutOwner?.reapply();
     }
 
     _applyPlacement(initial) {
         if (!this._indicator)
             return;
-        // While Kiwi owns button-layout, 'system' follows the user's saved layout.
-        const layout = resolvePlacement(this._ks.string('window-controls-position'),
-            parseButtonLayout(this._layoutOwner?.original ?? this._wm.get_string('button-layout')));
+        const layout = placementFor(this._ks.string('window-controls-side'));
         this._indicator.setOrder(layout.buttons);
 
-        // Left: just before the menu bar's app name and menus. Right: the last slot of the panel.
+        // Left: just before the menu bar's app name and menus. Right: the far right of the bar,
+        // after the clock
         const spec = layout.side === 'left'
             ? { box: 'left', anchor: { before: ['kiwi-menubar-apps'], fallback: 'last' } }
             : { box: 'right', anchor: { last: true } };
@@ -605,7 +639,31 @@ export class WindowControlsFeature {
             for (const sig of ['notify::maximized-horizontally', 'notify::maximized-vertically',
                 'notify::fullscreen', 'notify::title'])
                 this._winCleanup.connect(win, sig, () => this._update());
+            for (const sig of ['position-changed', 'size-changed'])
+                this._winCleanup.connect(win, sig, () => this._onGeometry());
         }
+        this._moving = false;
+        this._touching = this._touchesTopBar(win);
+        this._update();
+    }
+
+    // Does the window's top edge sit against the top bar? A tile of the engine whose top is the
+    // work area's top counts even with margins between tile and bar.
+    _touchesTopBar(win) {
+        if (!win || win.minimized)
+            return false;
+        const tiling = this._ctx.features.instance('window-tiling');
+        return zoneTouchesTop(tiling?.zoneOf(win)) ||
+            touchesTopBar(win.get_frame_rect(), win.get_work_area_current_monitor());
+    }
+
+    _onGeometry() {
+        if (this._moving)
+            return;
+        const touching = this._touchesTopBar(this._win);
+        if (touching === this._touching)
+            return;
+        this._touching = touching;
         this._update();
     }
 
@@ -624,14 +682,18 @@ export class WindowControlsFeature {
             excluded = isHelperWindowInfo({ title: win.get_title(), appName: app?.get_name() ?? null });
         }
 
-        const visible = shouldShow({
+        const state = {
             scope: this._ks.string('window-controls-scope'),
             hasWindow: normal,
             maximized,
             fullscreen,
-            overview: Main.overview.visible,
+            touching: normal && this._touching,
+            noOwnControls: normal && win.decorated,
             excluded,
-        });
+        };
+        // The overview hides the controls but does not give the apps' buttons back
+        this._onPanel = shouldShow({ ...state, overview: false });
+        const visible = this._onPanel && !Main.overview.visible;
 
         // Minimize and maximize are forced for every window (see _minimize / _maximize).
         indicator.setWindowState({
@@ -644,6 +706,7 @@ export class WindowControlsFeature {
             },
         });
         indicator.visible = visible;
+        this._syncTitlebars();
 
         if (visible && fullscreen) {
             if (!this._wasFullscreen)
@@ -718,7 +781,7 @@ export class WindowControlsFeature {
         win.make_fullscreen();
     }
 
-    _openGreenMenu() {
+    _openGreenMenu(viaHover) {
         const win = global.display.focus_window;
         if (!win || !this._greenMenu || this._greenMenu.isOpen)
             return;
@@ -735,7 +798,7 @@ export class WindowControlsFeature {
                 dynamic: Meta.prefs_get_dynamic_workspaces(),
             },
             monitors: { count: global.display.get_n_monitors(), current: win.get_monitor() },
-        });
+        }, { closeOnLeave: viaHover });
     }
 
     _greenMenuAction(action, arg) {

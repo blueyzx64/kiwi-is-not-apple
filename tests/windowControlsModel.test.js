@@ -1,11 +1,13 @@
 // Run: gjs -m tests/windowControlsModel.test.js
 import {
-    parseButtonLayout, resolvePlacement, shouldShow,
+    parseButtonLayout, placementFor, shouldShow,
     titlebarHideSheet, resolveIcon, gtkSheets,
     stripControlButtons, ownsButtonLayout, planMinimize, planMaximize, centerIn, sameRect,
-    appButtonsLayout, appButtonsMacos,
+    appButtonsLayout, appButtonsMacos, hidesTitlebarButtons, titlebarLayout, touchesTopBar,
+    parseMotifHints, undecoratedHints, motifArgs, hidesFrameTitlebar,
 } from '../features/windowControls/model.js';
 import { ButtonLayoutOwner, WM_SCHEMA } from '../features/windowControls/buttonLayout.js';
+import { zoneTouchesTop } from '../core/tileActions.js';
 import { OriginalsStore, STORE_KEY, restoreStale, originalId } from '../core/originals.js';
 import { isHelperWindowInfo } from '../core/desktopModel.js';
 import { createJobQueue } from '../lib/jobQueue.js';
@@ -45,20 +47,37 @@ test('duplicates and junk are dropped', () =>
 test('empty string', () =>
     eq(parseButtonLayout('').side, 'right'));
 
-// --- resolvePlacement
-const gnome = parseButtonLayout('appmenu:minimize,maximize,close');
-const mac = parseButtonLayout('close,minimize,maximize:');
-test('system follows layout', () => eq(resolvePlacement('system', gnome), gnome));
-test('same side keeps the user order', () =>
-    eq(resolvePlacement('right', gnome), { buttons: ['minimize', 'maximize', 'close'], side: 'right' }));
-test('forced left on a right layout uses macOS order', () =>
-    eq(resolvePlacement('left', gnome), { buttons: ['close', 'minimize', 'maximize'], side: 'left' }));
-test('forced right on a left layout uses GNOME order', () =>
-    eq(resolvePlacement('right', mac), { buttons: ['minimize', 'maximize', 'close'], side: 'right' }));
-test('unknown position acts like system', () => eq(resolvePlacement('x', mac), mac));
-test('default left on stock GNOME 50 (appmenu:close) shows the trio on the left', () =>
-    eq(resolvePlacement('left', parseButtonLayout('appmenu:close')),
-        { buttons: ['close', 'minimize', 'maximize'], side: 'left' }));
+// --- placementFor
+test('right: GNOME order, close at the edge', () =>
+    eq(placementFor('right'), { buttons: ['minimize', 'maximize', 'close'], side: 'right' }));
+test('left: macOS order', () =>
+    eq(placementFor('left'), { buttons: ['close', 'minimize', 'maximize'], side: 'left' }));
+test('anything else is the default, right', () => eq(placementFor('system').side, 'right'));
+
+// --- hidesTitlebarButtons / titlebarLayout
+const hide = o => hidesTitlebarButtons({ remove: true, scope: 'maximized', onPanel: false, ...o });
+test('scope all always hides (remove on)', () => eq(hide({ scope: 'all' }), true));
+test('remove off never hides', () => {
+    eq(hide({ scope: 'all', remove: false }), false);
+    eq(hide({ onPanel: true, remove: false }), false);
+});
+test('maximized / fullscreen scope: hides while the focused window\'s controls are on the panel', () => {
+    eq(hide({ onPanel: true }), true);
+    eq(hide({ onPanel: false }), false);
+    eq(hide({ scope: 'fullscreen', onPanel: true }), true);
+});
+test('titlebarLayout: hidden strips, shown puts the apps\' buttons on the side', () => {
+    eq(titlebarLayout('appmenu:close', { hide: true, side: 'right', set: 'all' }), 'appmenu:');
+    eq(titlebarLayout('appmenu:close', { hide: false, side: 'right', set: 'all' }), 'appmenu:minimize,maximize,close');
+    eq(titlebarLayout('appmenu:close', { hide: false, side: 'left', set: 'all' }), 'close,minimize,maximize:appmenu');
+    eq(titlebarLayout('appmenu:close', { hide: false, side: 'right', set: 'close' }), 'appmenu:close');
+});
+test('titlebarLayout: hide then show again gives the same layout (the original is never changed)', () => {
+    const orig = 'icon,appmenu:minimize,maximize,close';
+    const a = titlebarLayout(orig, { hide: false, side: 'right', set: 'all' });
+    titlebarLayout(orig, { hide: true, side: 'right', set: 'all' });
+    eq(titlebarLayout(orig, { hide: false, side: 'right', set: 'all' }), a);
+});
 
 // --- isExcludedWindow
 test('plain window is fine', () => eq(isHelperWindowInfo({ title: 'Docs', appName: 'Files' }), false));
@@ -74,6 +93,22 @@ test('all: not maximized still shows', () => eq(shouldShow({ ...base, maximized:
 test('no window hides', () => eq(shouldShow({ ...base, hasWindow: false }), false));
 test('overview hides', () => eq(shouldShow({ ...base, overview: true }), false));
 test('excluded hides', () => eq(shouldShow({ ...base, excluded: true }), false));
+test('maximized scope: a window with no controls of its own always shows', () =>
+    eq(shouldShow({ ...base, scope: 'maximized', noOwnControls: true }), true));
+test('maximized scope: touching the top bar shows', () =>
+    eq(shouldShow({ ...base, scope: 'maximized', touching: true }), true));
+test('fullscreen scope ignores touching and server-side frames', () =>
+    eq(shouldShow({ ...base, scope: 'fullscreen', touching: true, noOwnControls: true }), false));
+test('touchesTopBar: against the work area top, with a little slack', () => {
+    eq(touchesTopBar({ y: 32 }, { y: 32 }), true);
+    eq(touchesTopBar({ y: 34 }, { y: 32 }), true);
+    eq(touchesTopBar({ y: 35 }, { y: 32 }), false);
+    eq(touchesTopBar(null, { y: 32 }), false);
+});
+test('which tiles touch the top', () => {
+    eq(['left', 'right', 'top', 'top-left', 'top-right', 'fill'].map(zoneTouchesTop), [true, true, true, true, true, true]);
+    eq(['bottom', 'bottom-left', 'bottom-right', 'center', null].map(zoneTouchesTop), [false, false, false, false, false]);
+});
 test('maximized scope: floating window hides', () => eq(shouldShow({ ...base, scope: 'maximized' }), false));
 test('maximized scope: maximized shows', () => eq(shouldShow({ ...base, scope: 'maximized', maximized: true }), true));
 test('maximized scope: fullscreen shows', () => eq(shouldShow({ ...base, scope: 'maximized', fullscreen: true }), true));
@@ -282,6 +317,11 @@ test('app buttons: idempotent on its own output', () => {
 });
 test('app buttons: unknown position falls back to right', () =>
     eq(AB('appmenu:close', 'middle', 'all'), 'appmenu:minimize,maximize,close'));
+test('hide title bars option adds the plain GTK3 sheet only, never for GTK4', () => {
+    const c = { showOnPanel: true, remove: true, scope: 'maximized', enableAppButtons: false, hideTitlebars: true };
+    eq(gtkSheets(cfg(c), '3'), ['hide-titlebar3.css', 'hide-titlebar-plain3.css']);
+    eq(gtkSheets(cfg(c), '4'), ['hide-titlebar4.css']);
+});
 test('appButtonsMacos: controls on, apps keep buttons -> enable-app-window-buttons', () => {
     eq(appButtonsMacos({ showOnPanel: true, scope: 'maximized', enableAppButtons: true, style: 'gnome' }), true);
     eq(appButtonsMacos({ showOnPanel: true, scope: 'fullscreen', enableAppButtons: false, style: 'macos' }), false);
@@ -335,6 +375,50 @@ test('owner reapply while not owning does nothing', () => {
     const wm = wmSettings({ 'button-layout': 'appmenu:close' });
     new ButtonLayoutOwner(new OriginalsStore(fakeSettings({ [STORE_KEY]: '' })), wm, () => {}, () => 'x:y').reapply();
     eq(wm.values['button-layout'], 'appmenu:close');
+});
+test('owner follows hide on and off and restores the user layout exactly', () => {
+    const kiwi = fakeSettings({ [STORE_KEY]: '' });
+    const wm = wmSettings({ 'button-layout': 'appmenu:close' });
+    let hidden = false;
+    const o = new ButtonLayoutOwner(new OriginalsStore(kiwi), wm, () => {},
+        orig => titlebarLayout(orig, { hide: hidden, side: 'right', set: 'all' }));
+    o.sync(true);
+    eq(wm.values['button-layout'], 'appmenu:minimize,maximize,close');
+    hidden = true;
+    o.reapply();
+    eq(wm.values['button-layout'], 'appmenu:');
+    hidden = false;
+    o.reapply();
+    eq(wm.values['button-layout'], 'appmenu:minimize,maximize,close');
+    eq(saved(kiwi), 'appmenu:close');
+    o.release();
+    eq(wm.values['button-layout'], 'appmenu:close');
+    eq(saved(kiwi), '');
+});
+test('motif hints: parse what xprop prints', () => {
+    eq(parseMotifHints('_MOTIF_WM_HINTS(_MOTIF_WM_HINTS) = 0x2, 0x0, 0x1, 0x0, 0x0\n'), [2, 0, 1, 0, 0]);
+    eq(parseMotifHints('_MOTIF_WM_HINTS(_MOTIF_WM_HINTS) = 2, 0, 0, 0, 0'), [2, 0, 0, 0, 0]);
+    eq(parseMotifHints('_MOTIF_WM_HINTS:  not found.'), null);
+    eq(parseMotifHints(''), null);
+    eq(parseMotifHints(null), null);
+});
+test('motif hints: no decorations, everything else kept', () => {
+    eq(undecoratedHints(null), [2, 0, 0, 0, 0]);
+    eq(undecoratedHints([1, 5, 1, 0, 0]), [3, 5, 0, 0, 0]);
+});
+test('motif args set or remove the property', () => {
+    eq(motifArgs('0x1a', [2, 0, 0, 0, 0]).slice(0, 3), ['xprop', '-id', '0x1a']);
+    eq(motifArgs('0x1a', [2, 0, 0, 0, 0]).at(-1), '2, 0, 0, 0, 0');
+    eq(motifArgs('0x1a', null), ['xprop', '-id', '0x1a', '-remove', '_MOTIF_WM_HINTS']);
+});
+test('frame title bar goes only for an X11 frame, maximized or full screen, option on', () => {
+    const on = { enabled: true, serverSide: true, x11: true, maximized: true, fullscreen: false };
+    eq(hidesFrameTitlebar(on), true);
+    eq(hidesFrameTitlebar({ ...on, enabled: false }), false);
+    eq(hidesFrameTitlebar({ ...on, serverSide: false }), false);
+    eq(hidesFrameTitlebar({ ...on, x11: false }), false);
+    eq(hidesFrameTitlebar({ ...on, maximized: false }), false);
+    eq(hidesFrameTitlebar({ ...on, maximized: false, fullscreen: true }), true);
 });
 try {
     const q = createJobQueue(() => {});

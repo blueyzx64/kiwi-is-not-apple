@@ -2,7 +2,8 @@
 // Owns org.gnome.desktop.wm.preferences button-layout, so every titlebar follows Kiwi: GTK 3,
 // GTK 4 and libadwaita, Chromium/Electron (GTK titlebar) and Mutter's server-side frames.
 // Two users, never at the same time (the feature registry stops one before starting the other):
-// - the panel window controls, for every window: the layout without its buttons;
+// - the panel window controls: the layout without its buttons while the top bar shows them for
+//   the windows concerned, else the apps' own buttons on the chosen side (titlebarLayout);
 // - AppButtonsFeature (appButtons.js), while the top-bar controls are off: the apps' own
 //   buttons on the chosen side (appButtonsLayout).
 //
@@ -23,7 +24,7 @@ export class ButtonLayoutOwner extends SettingOwner {
      * @param {object} wmSettings Gio.Settings of org.gnome.desktop.wm.preferences
      * @param {() => void} [onOriginalChanged] the user changed the layout while Kiwi owns it
      * @param {(original: string) => string} [transform] the layout Kiwi sets for a given
-     *   original; default: the original without its buttons (top-bar controls)
+     *   original; default: the original without its buttons
      */
     constructor(store, wmSettings, onOriginalChanged = () => {}, transform = stripControlButtons) {
         super(store, wmSettings, WM_KEY, { type: 's', transform, onOriginalChanged });

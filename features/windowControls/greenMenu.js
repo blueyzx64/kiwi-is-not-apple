@@ -22,58 +22,10 @@ import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
-import { ARRANGEMENTS, ZONES } from '../../core/tileActions.js';
+import { PICKER_SECTIONS } from '../../core/tileActions.js';
 import { MENU_CLOSE_ARGS } from '../../lib/compat.js';
 import { Glass } from '../../lib/glass.js';
-
-const GLYPH_W = 26;
-const GLYPH_H = 18;
-const GLYPH_INSET = 2;   // border (1px) + 1px air inside the glyph frame
-const PANE_GAP = 2;
-
-const N_ = s => s;
-
-const MOVE_RESIZE = [
-    ['left', N_('Left')], ['right', N_('Right')], ['top', N_('Top')], ['bottom', N_('Bottom')],
-    ['top-left', N_('Top Left')], ['top-right', N_('Top Right')],
-    ['bottom-left', N_('Bottom Left')], ['bottom-right', N_('Bottom Right')],
-];
-const FILL_ARRANGE = [
-    ['fill', N_('Fill')],
-    ['arrange-left-right', N_('Left & Right')], ['arrange-right-left', N_('Right & Left')],
-    ['arrange-top-bottom', N_('Top & Bottom')], ['arrange-quarters', N_('Quarters')],
-];
-
-/** The panes a glyph draws: the first is the window, the others ghosts of the next windows. */
-function panesOf(action) {
-    if (action in ZONES)
-        return [ZONES[action]];
-    const name = action.replace(/^arrange-/, '');
-    return (ARRANGEMENTS[name] ?? []).map(z => ZONES[z]);
-}
-
-function buildGlyph(action) {
-    const frame = new St.Widget({
-        style_class: 'kiwi-tile-glyph', width: GLYPH_W, height: GLYPH_H,
-        layout_manager: new Clutter.FixedLayout(),
-    });
-    const iw = GLYPH_W - 2 * GLYPH_INSET;
-    const ih = GLYPH_H - 2 * GLYPH_INSET;
-    // Inner edges give up half a gap each, so neighbouring panes stay apart
-    const edge = (frac, len, end) =>
-        Math.round(GLYPH_INSET + frac * len + (frac > 0 && frac < 1 ? (end ? -PANE_GAP / 2 : PANE_GAP / 2) : 0));
-    panesOf(action).forEach((f, i) => {
-        const x0 = edge(f.x, iw, false);
-        const x1 = edge(f.x + f.w, iw, true);
-        const y0 = edge(f.y, ih, false);
-        const y1 = edge(f.y + f.h, ih, true);
-        const pane = new St.Widget({ style_class: i === 0 ? 'kiwi-tile-pane' : 'kiwi-tile-pane ghost' });
-        pane.set_position(x0, y0);
-        pane.set_size(Math.max(1, x1 - x0), Math.max(1, y1 - y0));
-        frame.add_child(pane);
-    });
-    return frame;
-}
+import { buildGlyph } from '../../lib/tileGlyphs.js';
 
 export class GreenMenu {
     /**
@@ -125,14 +77,17 @@ export class GreenMenu {
      * @param {boolean} s.canFullscreen
      * @param {{count: number, active: number, current: number, dynamic: boolean}} s.workspaces
      * @param {{count: number, current: number}} s.monitors
+     * @param {{closeOnLeave?: boolean}} [opts] closeOnLeave: a menu opened by hovering closes when
+     *   the pointer leaves the green button and the menu (as on macOS), so it cannot keep the top
+     *   bar out over a full-screen window
      */
-    open(s) {
+    open(s, { closeOnLeave = false } = {}) {
         const menu = this._menu;
         const _ = this._;
         menu.removeAll();
         if (s.tiling) {
-            this._glyphSection(_('Move & Resize'), MOVE_RESIZE.slice(0, 4), MOVE_RESIZE.slice(4));
-            this._glyphSection(_('Fill & Arrange'), FILL_ARRANGE);
+            for (const section of PICKER_SECTIONS)
+                this._glyphSection(_(section.title), ...section.rows);
             menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
             menu.addAction(_('Center'), () => this._onAction('center'));
             const back = menu.addAction(_('Return to Previous Size'), () => this._onAction('restore'));
@@ -174,6 +129,32 @@ export class GreenMenu {
         if (sw > 0)
             menu.setSourceAlignment(Math.min(Math.max((tx + tw / 2 - sx) / sw, 0), 1));
         menu.open(true);
+        if (closeOnLeave)
+            this._closeWhenPointerLeaves();
+    }
+
+    // The menu's grab sends no hover to the button, so the pointer is looked at directly: on
+    // every motion while the menu is open, until it closes
+    _closeWhenPointerLeaves() {
+        const menu = this._menu;
+        const inside = actor => {
+            const [px, py] = global.get_pointer();
+            const [x, y] = actor.get_transformed_position();
+            const [w, h] = actor.get_transformed_size();
+            return px >= x && px < x + w && py >= y && py < y + h;
+        };
+        const motion = global.stage.connect('captured-event', (_stage, event) => {
+            if (event.type() === Clutter.EventType.MOTION && this.isOpen &&
+                !inside(this._target) && !inside(menu.actor))
+                this.close();
+            return Clutter.EVENT_PROPAGATE;
+        });
+        const closed = menu.connect('open-state-changed', (_m, open) => {
+            if (open)
+                return;
+            global.stage.disconnect(motion);
+            menu.disconnect(closed);
+        });
     }
 
     // A section: its header (which names the hovered glyph) and one or two rows of glyphs
