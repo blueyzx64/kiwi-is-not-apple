@@ -3,7 +3,8 @@ import {
     KINDS, activityTiming, rankActivities, pillActivity, nextActivityExpiry, detectCode, addToShelf,
     removeFromShelf, parseUriList, parseGnomeCopiedFiles, parsePlainFiles, displayName, batteryChange,
     UPOWER, connectedHeadphones, newlyConnected, downloadSummary, formatBytes, nextEvent, minutesUntil,
-    formatCountdown, formatElapsed, tabDirection, nowRows, pillWidth, SHELF_LIMIT,
+    formatCountdown, formatElapsed, tabDirection, nowRows, pillWidth, SHELF_LIMIT, DROP_FILE_TYPES, inDropZone,
+    dropZone,
 } from '../features/notch/model.js';
 
 let failed = 0;
@@ -104,7 +105,7 @@ test('headphones', () => {
 test('downloads', () => {
     eq(downloadSummary([], []), null);
     eq(downloadSummary([{ appId: 'firefox', progress: 0.5 }], [{ name: 'iso.img.part', bytes: 9 }]),
-        { label: 'iso.img', fraction: 0.5, bytes: null, count: 2 });
+        { label: 'iso.img', fraction: 0.5, bytes: null, count: 1 });
     eq(downloadSummary([{ appId: 'x', progress: 1 }], [{ name: 'a.crdownload', bytes: 2000 }]),
         { label: 'a', fraction: null, bytes: 2000, count: 1 });
     eq(formatBytes(740000), '740 KB');
@@ -134,5 +135,16 @@ test('countdowns and tabs', () => {
     eq(nowRows(1, 5), { activities: 1, notifications: 1, more: 4 });
     eq(nowRows(0, 2), { activities: 0, notifications: 2, more: 0 });
     eq(nowRows(4, 2), { activities: 3, notifications: 0, more: 2 });
+});
+test('drop: uri-list first, the zone grows around a small pill', () => {
+    eq(DROP_FILE_TYPES[0][0], 'text/uri-list');
+    eq(DROP_FILE_TYPES[0][1]('file:///etc/hostname\r\n'), ['file:///etc/hostname']);
+    const z = dropZone({ x: 545, y: 0, w: 190, h: 32 }, { x: 0, y: 0, width: 1280 });
+    eq(z, { x: 430, y: 0, w: 420, h: 72 });
+    eq(inDropZone(z, 640, 16), true);
+    eq(inDropZone(z, 640, 80), false);
+    eq(inDropZone(null, 1, 1), false);
+    const open = dropZone({ x: 316, y: 0, w: 648, h: 192 }, { x: 0, y: 0, width: 1280 });
+    eq(open, { x: 300, y: 0, w: 680, h: 208 });
 });
 if (failed) { print(`${failed} failed`); imports.system.exit(1); }

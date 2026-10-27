@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The three tabs of the expanded notch, all on one 648x192 shape so switching never resizes:
 //   Now      the media hero (or a large clock), then live activities and recent notifications
-//   Tray     the file shelf (and the clipboard column when notch-show-clipboard is on)
+//   Tray     the file shelf, a drop target while files are dragged over the notch (and the
+//            clipboard column when notch-show-clipboard is on)
 //   Widgets  calendar day, weather, quick controls (Do Not Disturb, microphone, timers)
 // Builders only: no state. `env` carries gettext, the handlers and the 1 s refresh list:
 //   {_, h, live: Function[], alive: () => boolean, clockFormat: () => string}
@@ -260,13 +261,16 @@ export function nowTab(env, ctx) {
 export function trayTab(env, ctx) {
     const body = new St.BoxLayout({ style_class: 'kiwi-notch-tab-body kiwi-notch-tab-tray', x_expand: true, y_expand: true });
     const width = ctx.clipboard ? WIDTH.inner - WIDTH.clipboard - 20 : WIDTH.inner;
-    const shelf = column('kiwi-notch-shelf', width);
+    const shelf = column(`kiwi-notch-shelf${ctx.dropping ? ' kiwi-notch-shelf-dropping' : ''}`, width);
     const uris = ctx.shelf.uris;
     const selected = uris.includes(ctx.selected) ? ctx.selected : null;
 
     // Toolbar: what you can do with the selection, or how to add files
     const bar = new St.BoxLayout({ style_class: 'kiwi-notch-shelf-bar' });
-    if (selected) {
+    if (ctx.dropping) {
+        bar.add_child(icon(themed('folder-download-symbolic'), 16, 'kiwi-notch-glyph kiwi-notch-tint-accent'));
+        bar.add_child(label(env._('Drop to add to the Shelf'), 'kiwi-notch-shelf-selected', { x_expand: true }));
+    } else if (selected) {
         const info = ctx.shelf.info(selected);
         bar.add_child(label(info.name, 'kiwi-notch-shelf-selected', { x_expand: true }));
         const act = (iconName, name, fn) => bar.add_child(button({
@@ -297,7 +301,7 @@ export function trayTab(env, ctx) {
     if (!uris.length) {
         const empty = new St.BoxLayout({ style_class: 'kiwi-notch-shelf-empty', orientation: Clutter.Orientation.VERTICAL, y_expand: true });
         empty.add_child(icon(themed('folder-download-symbolic'), 24, 'kiwi-notch-shelf-empty-icon'));
-        empty.add_child(label(env._('Copy files in Files, then Add from Clipboard. Downloads and screenshots land here too.'),
+        empty.add_child(label(env._('Drop files here, or copy them and Add from Clipboard'),
             'kiwi-notch-empty-text kiwi-notch-shelf-hint', { x_align: Clutter.ActorAlign.CENTER }));
         shelf.add_child(empty);
     } else {

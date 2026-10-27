@@ -2,13 +2,14 @@
 // The file shelf (Tray tab): links to files, kept in the Kiwi key `notch-shelf`, newest first.
 // The files themselves are never copied, moved or deleted.
 //
-// How files get here on GNOME 50 / Wayland (see docs/features/notch.md, "File shelf"): a drag
-// from an app does not reach Shell actors, so the shelf takes
+// How files get here on GNOME 50 / Wayland (docs/features/notch.md, "File shelf"):
+//   - dropped on the notch from an app (drop.js reads the drag's DND selection);
 //   - "Add from Clipboard": files copied in Files (x-special/gnome-copied-files or
 //     text/uri-list) or a copied path;
 //   - finished downloads (notch-shelf-downloads) and new screenshots (notch-shelf-screenshots).
-// And gives them back with Open, Show in Files, Copy (a text/uri-list on the clipboard, which
-// Files and GTK apps paste as the file) and Remove, since dragging out is not possible either.
+// Dragging out of the Shell into an app is not possible (a Shell actor cannot start a Wayland
+// drag), so items give themselves back with Open, Show in Files, Copy (a text/uri-list on the
+// clipboard, which Files and GTK apps paste as the file) and Remove.
 
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';

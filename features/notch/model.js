@@ -181,6 +181,31 @@ export const CLIPBOARD_FILE_TYPES = Object.freeze([
     ['text/plain', parsePlainFiles],
 ]);
 
+/** The order to read a drag's mimetypes in (Meta.SelectionType.SELECTION_DND) */
+export const DROP_FILE_TYPES = Object.freeze([
+    ['text/uri-list', parseUriList],
+    ['x-special/gnome-copied-files', parseGnomeCopiedFiles],
+    ['text/plain;charset=utf-8', parsePlainFiles],
+]);
+
+/** Is (x, y) inside `zone` ({x, y, w, h}, or null for none)? */
+export function inDropZone(zone, x, y) {
+    return !!zone && x >= zone.x && y >= zone.y && x < zone.x + zone.w && y < zone.y + zone.h;
+}
+
+/**
+ * Where a drag counts as "on the notch": the island plus a margin, and never smaller than a
+ * generous band at the top centre while the notch is small (a 190x32 pill is a hard target).
+ * @param {{x, y, w, h}} island stage coordinates
+ * @param {{x, y, width}} monitor
+ */
+export function dropZone(island, monitor, { margin = 16, minW = 420, minH = 72 } = {}) {
+    const w = Math.max(island.w + 2 * margin, minW);
+    const h = Math.max(island.h + margin, minH);
+    const cx = island.x + island.w / 2;
+    return { x: Math.round(cx - w / 2), y: monitor.y, w: Math.round(w), h: Math.round(h) };
+}
+
 /** The file name of a link, decoded ("My%20File.pdf" -> "My File.pdf") */
 export function displayName(uri) {
     const path = String(uri ?? '').replace(/[?#].*$/, '').replace(/\/+$/, '');
@@ -251,7 +276,8 @@ export const PARTIAL_FILE = /\.(part|crdownload|download|partial|opdownload)$/i;
  */
 export function downloadSummary(apps, partials) {
     const bars = apps.filter(a => Number.isFinite(a.progress) && a.progress >= 0 && a.progress < 1);
-    const count = bars.length + partials.length;
+    // A browser shows both a progress bar and a partial file for the same download
+    const count = Math.max(bars.length, partials.length);
     if (!count)
         return null;
     if (bars.length) {

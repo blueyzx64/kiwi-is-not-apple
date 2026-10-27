@@ -49,6 +49,7 @@ export function initialState(now = 0) {
         dnd: false,
         fullscreen: false,
         hover: false,
+        dragOver: false,    // a drag from an app is over the notch (drop.js)
         current: null,      // {id, urgency, forFeedback, at, compact, until, hovered, remaining}
         pending: [],        // same shape without timing, newest first within an urgency
         activities: [],     // [{key, kind, priority, until, pill, data, at}] see model.js KINDS
@@ -215,14 +216,32 @@ function onHover(s, ev, cfg) {
     }
     if (s.dashboard) {
         const leave = s.dashboard.by === 'hover' ? cfg.hoverLeaveMs : cfg.dashboardLeaveMs;
-        s.dashboard = { ...s.dashboard, until: hover ? null : s.now + leave };
+        s.dashboard = { ...s.dashboard, until: hover || s.dragOver ? null : s.now + leave };
+    }
+}
+
+// A file drag over the notch opens the Tray to drop on; it closes like a hovered one when the
+// drag moves away, and stays a little longer after a drop so the new item is seen.
+function onDragOver(s, ev, cfg) {
+    s.dragOver = !!ev.value;
+    if (s.dragOver) {
+        if (s.current && isCritical(s.current))
+            return;
+        if (!s.dashboard)
+            openDashboard(s, cfg, 'hover', 'tray');
+        s.dashboard = { ...s.dashboard, tab: 'tray', until: null };
+        return;
+    }
+    if (s.dashboard && !s.hover) {
+        const leave = ev.dropped ? cfg.dashboardLeaveMs : cfg.hoverLeaveMs;
+        s.dashboard = { ...s.dashboard, until: s.now + leave };
     }
 }
 
 function openDashboard(s, cfg, by, tab) {
     const leave = by === 'hover' ? cfg.hoverLeaveMs : cfg.dashboardLeaveMs;
     s.dashboard = {
-        until: s.hover ? null : s.now + leave,
+        until: s.hover || s.dragOver ? null : s.now + leave,
         openedAt: s.now,
         by,
         tab: TABS.includes(tab) ? tab : TABS[0],
@@ -357,6 +376,9 @@ export function step(state, ev, config = {}) {
     case 'expand':
         onExpand(s, ev, cfg);
         break;
+    case 'drag-over':
+        onDragOver(s, ev, cfg);
+        break;
     case 'tab':
         if (s.dashboard && TABS.includes(ev.tab))
             s.dashboard = { ...s.dashboard, tab: ev.tab };
@@ -415,6 +437,7 @@ export function view(state) {
             activity: topActivity(state),
             tab: state.dashboard.tab ?? TABS[0],
             pinned: state.dashboard.by !== 'hover',
+            dropping: state.dragOver,
             activities: rankActivities(state.activities, state.now),
         });
     }

@@ -68,6 +68,7 @@ prefs.js metadata.json stylesheet.css schemas/ po/`). `make pack-check` verifies
 | `layout` | `core/layout.js` LayoutService (`acquire(cleanup)`, `claim()`, `workArea()`) |
 | `motion` | `core/motion.js` Motion (`ease`, `spring`, `env`) |
 | `originals` | `core/originals.js` OriginalsStore (give it to a `SettingOwner`) |
+| `timers` | `core/timers.js` TimerService (`startTimer({seconds, label})`, `pause/resume/cancel(id)`, `list()`, `remaining(t)`) |
 
 ## 3. core/
 
@@ -85,10 +86,13 @@ prefs.js metadata.json stylesheet.css schemas/ po/`). `make pack-check` verifies
 | `windowState.js` | why a window is not in its normal place (`staged`, ...) | `WindowState.set/has/list/watch`, `interceptMinimize`, `setStageActive` |
 | `notificationRouter.js` | banners to the notch or stock, shared `{count, dnd}` | `setBannerSink`, `pinBanners`, `connect`, `state`, `setDnd` |
 | `mprisWatcher.js` | one MPRIS source for the extension | `MprisWatcher.acquire(cleanup, gettext)` |
+| `timersModel.js` / `timers.js` | Kiwi's own countdown timers (wall clock, stored in `timers-state`, survive the lock screen); one alarm timeout, no tick | `ctx.timers.startTimer({seconds, label})` -> id, `pause`, `resume`, `cancel`, `list`, `remaining`; events `timers-changed`, `timer-finished` |
 
 Events (`EVENTS` in `core/events.js`): `window-added`, `window-changed`, `window-removed`,
 `window-focused`, `app-focused`, `workspaces-changed`, `monitors-changed`, `work-area-changed`,
-`motion-changed`, `feature-changed`, `minimize-requested`.
+`motion-changed`, `feature-changed`, `minimize-requested`, `timers-changed`, `timer-finished`,
+`recording-started`, `recording-stopped` (emitted by the notch from the Shell's screenshot UI until
+a recording owner emits them).
 
 ## 4. lib/
 
@@ -117,7 +121,7 @@ Events (`EVENTS` in `core/events.js`): `window-added`, `window-changed`, `window
 | `menuBar/` | `menu-bar` | the Activities button policy now; the macOS menu bar in phase 1 |
 | `calendar/` | `calendar`, `quick-settings-notifications`, `dnd-button` | date menu on the right as a card; notification list in Quick Settings; Kiwi's Do Not Disturb (beaten by `control-center`) |
 | `controlCenter/` | `control-center` | Quick Settings restyled |
-| `notch/` | `notch` | banners, media, OSD, dashboard |
+| `notch/` | `notch` | banners, live activities, OSD; hover/click opens Now / Tray / Widgets tabs. `stateMachine.js` (queue, shape, tabs) and `model.js` (activity priority, code detection, shelf, derivations) are pure; `sources/` feed activities (UPower, BlueZ, core timers, recording, calendar server, downloads, one-time codes, mic and weather); `shelf.js` + `drop.js` (files dropped from apps via the DND selection); `view.js`, `pills.js`, `tabs.js`, `ui.js` draw |
 | `spotlight/` | `spotlight` | Super tap, providers |
 | `clipboard/` | `clipboard-history` | history, popover, Quick Paste |
 | `stageManager/` | `stage-manager`, `stage-manager-shortcut` | strip, sets, flights (rebuilt in phase 4) |

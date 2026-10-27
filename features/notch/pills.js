@@ -168,8 +168,14 @@ export function row(activity, env) {
     return box;
 }
 
-/** Kinds whose pill or row text changes every second while shown */
-export function needsTick(activity) {
-    return activity.kind === 'recording' || (activity.kind === 'timer' && activity.data?.state === 'running') ||
-        activity.kind === 'event-soon';
+/**
+ * How often a pill's text changes while shown (ms), or null when it never does: countdowns
+ * and elapsed time every second, "in 12 min" twice a minute.
+ */
+export function tickMs(activity) {
+    if (activity.kind === 'recording' || (activity.kind === 'timer' && activity.data?.state === 'running'))
+        return 1000;
+    if (activity.kind === 'event-soon')
+        return 30000;
+    return null;
 }

@@ -36,7 +36,7 @@ import { SIZES } from './stateMachine.js';
 import { cardSize } from './dashboardModel.js';
 import { tabDirection, TABS } from './model.js';
 import { label, icon, themed, button, artwork, track } from './ui.js';
-import { pill, needsTick } from './pills.js';
+import { pill, tickMs } from './pills.js';
 import { nowTab, trayTab, widgetsTab, DASH_SIZE } from './tabs.js';
 
 // Springs in SwiftUI terms (core/motionModel.js): grow with a slight overshoot, shrink without
@@ -77,6 +77,7 @@ export class NotchView {
         this._dash = null;           // {page, tabs: Map(tab -> button), body, tab, bodySig}
         this._barTimer = 0;
         this._liveTimer = 0;
+        this._liveMs = null;         // the current pill's refresh interval (pills.js tickMs)
         this._springs = [];          // core/motion handles of the shape
         this._fade = null;
         this._size = SIZES.idle;
@@ -423,6 +424,7 @@ export class NotchView {
         const old = this._page;
         this._page = null;
         this._dash = null;
+        this._liveMs = null;
         this._stopTimers();
         if (old)
             this._retire(old, shapeChanged);
@@ -442,7 +444,11 @@ export class NotchView {
         page.set_size(size.w, size.h);
         this._island.add_child(page);
         this._centerPages();
-        this._startLive(page, live);
+        // A dashboard's refreshers live with its tab body (_fillDashboard)
+        if (this._dash)
+            this._startLive(page, this._dash.live);
+        else
+            this._startLive(page, live, this._liveMs ?? LIVE_TICK_MS);
         if (shapeChanged) {
             // The content arrives once the shape is nearly there; a slight drop from above
             // reads as coming out of the notch.
@@ -462,7 +468,7 @@ export class NotchView {
         if (dashboard) {
             const acts = (vm.activities ?? []).map(a => [a.key, a.kind, a.data]);
             const tab = vm.tab;
-            dash = [tab, vm.pinned, ctx.dnd];
+            dash = [tab, vm.pinned, vm.dropping, ctx.dnd];
             if (tab === 'now')
                 dash.push(media, acts, ctx.count, (ctx.recent ?? []).map(r => [r.title, r.app, r.when, r.body]));
             else if (tab === 'tray')
@@ -497,7 +503,7 @@ export class NotchView {
     }
 
     // The old page fades out quickly while the shape changes, and takes no more clicks.
-    _retire(old, fade) {
+    _retire(old, fade, extra = {}) {
         const walk = a => {
             if (a instanceof St.Button)
                 a.reactive = false;
@@ -508,7 +514,7 @@ export class NotchView {
             old.destroy();
             return;
         }
-        this._motion.ease(old, { opacity: 0 }, {
+        this._motion.ease(old, { opacity: 0, ...extra }, {
             duration: 'micro', curve: 'enter',
             onDone: () => {
                 if (!this._destroyed && old.get_parent())
@@ -583,7 +589,7 @@ export class NotchView {
         };
         let body;
         try {
-            body = vm.tab === 'tray' ? trayTab(env, ctx)
+            body = vm.tab === 'tray' ? trayTab(env, { ...ctx, dropping: !!vm.dropping })
                 : vm.tab === 'widgets' ? widgetsTab(env, ctx.widgets)
                     : nowTab(env, { ...ctx, activities: vm.activities });
         } catch (e) {
@@ -601,8 +607,7 @@ export class NotchView {
             old.destroy();
             return;
         }
-        this._retire(old, true);
-        this._motion.ease(old, { translation_x: -dir * TAB_SLIDE }, { duration: 'short', curve: 'standard' }, this._anim);
+        this._retire(old, true, { translation_x: -dir * TAB_SLIDE });
         body.opacity = 0;
         body.translation_x = dir * TAB_SLIDE;
         this._motion.ease(body, { opacity: 255, translation_x: 0 }, { duration: 'medium', curve: 'emphasized' }, this._anim);
@@ -655,8 +660,9 @@ export class NotchView {
         return box;
     }
 
-    // Runs every function in `fns` now and then every second while `page` is on screen.
-    _startLive(page, fns) {
+    // Runs every function in `fns` now and then every `ms` (default a second) while `page` is
+    // on screen.
+    _startLive(page, fns, ms = LIVE_TICK_MS) {
         if (!fns.length)
             return;
         const run = () => fns.forEach(fn => {
@@ -667,7 +673,7 @@ export class NotchView {
             }
         });
         run();
-        this._liveTimer = this._cleanup.timeout(LIVE_TICK_MS, () => {
+        this._liveTimer = this._cleanup.timeout(ms, () => {
             if (this._destroyed || this._page !== page)
                 return GLib.SOURCE_REMOVE;
             run();
@@ -698,7 +704,8 @@ export class NotchView {
             return row;
         }
         const page = pill(activity, { _: this._, live, onAction: this._h.onActivityAction });
-        if (!needsTick(activity))
+        this._liveMs = tickMs(activity);
+        if (this._liveMs === null)
             live.length = 0;
         return page;
     }

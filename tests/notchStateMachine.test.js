@@ -455,6 +455,19 @@ test('kinds: an update keeps the alert clock, fresh restarts it; quiet kinds sta
     eq(view(state).activities.map(a => a.key), ['b']);
 });
 
+test('a file drag over the notch opens the Tray and holds it; a drop keeps it a little longer', () => {
+    let { state } = run([{ type: 'drag-over', value: true, now: 0 }]);
+    eq(view(state).tab, 'tray');
+    eq(view(state).dropping, true);
+    eq(nextDeadline(state), null);
+    ({ state } = step(state, { type: 'drag-over', value: false, dropped: true, now: 100 }));
+    eq(nextDeadline(state), 100 + DEFAULT_CONFIG.dashboardLeaveMs);
+    ({ state } = run([{ type: 'click', now: 0 }, { type: 'drag-over', value: true, now: 1 },
+        { type: 'drag-over', value: false, now: 2 }]));
+    eq(view(state).tab, 'tray', 'an open dashboard switches to the Tray');
+    eq(nextDeadline(state), 2 + DEFAULT_CONFIG.hoverLeaveMs);
+});
+
 print(failed ? `${failed} FAILED` : 'all passed');
 if (failed)
     imports.system.exit(1);

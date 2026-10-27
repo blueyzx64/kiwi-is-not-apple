@@ -36,6 +36,8 @@ import {
 import { seekTarget } from './dashboardModel.js';
 import { NotchView } from './view.js';
 import { Shelf } from './shelf.js';
+import { watchDrops } from './drop.js';
+import { dropZone } from './model.js';
 import { watchPower } from './sources/power.js';
 import { watchBluetooth } from './sources/bluetooth.js';
 import { watchTimers } from './sources/timers.js';
@@ -145,6 +147,22 @@ export class NotchFeature {
 
         this._shelf = new Shelf(cleanup, ks, () => this._sync());
         this._widgets = watchWidgets(cleanup, () => this._sync());
+        // Files dragged from apps onto the notch land on the shelf (drop.js explains how)
+        watchDrops(cleanup, {
+            zone: () => {
+                const a = this._view.actor;
+                const monitor = Main.layoutManager.primaryMonitor;
+                if (!monitor || !a.visible)
+                    return null;
+                const [x, y] = a.get_transformed_position();
+                return dropZone({ x, y, w: a.width, h: a.height }, monitor);
+            },
+            onOver: over => this._dispatch({ type: 'drag-over', value: over }),
+            onDrop: uris => {
+                this._shelf?.add(uris);
+                this._dispatch({ type: 'drag-over', value: false, dropped: true });
+            },
+        });
         cleanup.add(() => {
             this._widgets = null;
             this._shelf = null;

@@ -2093,6 +2093,14 @@
 /* ---- Tray: the file shelf ---- */
 .kiwi-notch-shelf {
     spacing: 8px;
+    border-radius: 16px;
+}
+
+/* a file drag over the notch: the shelf becomes a dashed drop area */
+.kiwi-notch-shelf-dropping {
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 2px dashed rgba(255, 255, 255, 0.35);
+    padding: 4px 8px;
 }
 
 .kiwi-notch-shelf-bar {
