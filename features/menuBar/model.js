@@ -3,8 +3,6 @@
 // About This PC facts, Recent Items, Force Quit rows and the privacy dots. No Shell objects:
 // the adapters in this folder pass plain values in.
 
-import { relativeLuminance } from '../../lib/wallpaperModel.js';
-
 // ---- adaptive look ---------------------------------------------------------------------------
 
 // Black text beats white text on a background brighter than this (equal contrast point)
