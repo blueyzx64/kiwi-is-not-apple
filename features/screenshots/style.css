@@ -3,7 +3,7 @@
    lib/glass.js gives the bar, popover and pill their fill ('overlays' / 'menus'); these are
    the shapes, and the solid look when glass is off. */
 .kiwi-screenshot-toolbar {
-    margin-bottom: 48px;
+    margin-bottom: 12px;
     padding: 6px 8px;
     spacing: 2px;
     border-radius: 18px;

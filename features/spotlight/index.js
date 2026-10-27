@@ -168,6 +168,7 @@ export class SpotlightFeature {
 
     _build(frame) {
         this._view = new SpotlightView({
+            motion: this._ctx.motion,
             gettext: this._,
             onQuery: text => this._search(text),
             onActivate: (item, opts) => this._activate(item, opts),
@@ -243,14 +244,18 @@ export class SpotlightFeature {
 
         // Local providers answer at once, in memory
         this._local = this._results.local(parsed);
-        this._render();
 
         // Providers that talk to other processes stream in after a short debounce
         this._debounce = this._cleanup.timeout(EXTERNAL_DEBOUNCE_MS, () => {
             this._debounce = 0;
-            this._startExternal(parsed);
+            this._startExternal(parsed).then(() => {
+                // No provider to wait for: the filter's empty state can show now
+                if (!this._session)
+                    this._render();
+            });
             return GLib.SOURCE_REMOVE;
         }, { name: 'spotlight-debounce' });
+        this._render();
     }
 
     async _startExternal(parsed) {
@@ -303,7 +308,10 @@ export class SpotlightFeature {
         const byGroup = { ...this._local };
         for (const [group, items] of Object.entries(external))
             byGroup[group] = [...(byGroup[group] ?? []), ...items].sort((a, b) => b.score - a.score);
-        this._view.setSections(buildSections(byGroup, { limits: this._results.limits(parsed) }));
+        // A "/" filter that found nothing says so once every provider has answered
+        const waiting = this._debounce || this._session?.busy;
+        this._view.setSections(buildSections(byGroup, { limits: this._results.limits(parsed) }),
+            { empty: !!parsed.filter && !waiting, waiting: !!waiting });
     }
 
     // ---- browse views, history, scopes

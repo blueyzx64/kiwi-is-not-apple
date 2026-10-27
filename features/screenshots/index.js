@@ -198,7 +198,7 @@ export class Screenshots {
     _startToolbar(s) {
         const driver = this._driver;
         s.toolbar = new ScreenshotToolbar({
-            parent: driver.ui, ks: this._ks, motion: this._ctx.motion, _: this._,
+            parent: driver.ui, ks: this._ks, area: this._primaryWorkArea(), motion: this._ctx.motion, _: this._,
             on: {
                 mode: mode => this._setMode(mode),
                 capture: () => this._toolbarCapture(s),
@@ -340,8 +340,7 @@ export class Screenshots {
             this._commit(pending);
             return;
         }
-        const monitor = Main.layoutManager.primaryIndex;
-        const area = this._layout.workArea(monitor) ?? Main.layoutManager.getWorkAreaForMonitor(monitor);
+        const area = this._primaryWorkArea();
         pending.thumbnail = new FloatingThumbnail({
             file, area, motion: this._ctx.motion, _: this._, destinations: this._destinations(),
             on: {
@@ -354,6 +353,11 @@ export class Screenshots {
                 remove: () => this._remove(pending),
             },
         });
+    }
+
+    _primaryWorkArea() {
+        const monitor = Main.layoutManager.primaryIndex;
+        return this._layout.workArea(monitor) ?? Main.layoutManager.getWorkAreaForMonitor(monitor);
     }
 
     _destinations() {
@@ -442,7 +446,8 @@ export class Screenshots {
 }
 
 function isStockCaptureSource(source) {
-    // Its icon is a Gio.ThemedIcon; Source.iconName does not read it back on GNOME 50
-    return source?.gicon instanceof Gio.ThemedIcon &&
-        source.gicon.get_names().includes('screenshooter-symbolic');
+    // The source's icon is a Gio.ThemedIcon in `icon`. Source.iconName reads `gicon`, which a
+    // Source does not have, so it never answers (GNOME 48-51).
+    return source?.icon instanceof Gio.ThemedIcon &&
+        source.icon.get_names().includes('screenshooter-symbolic');
 }

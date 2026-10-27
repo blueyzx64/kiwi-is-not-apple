@@ -89,7 +89,7 @@ export const STEPS = Object.freeze([
         ],
     },
     {
-        id: 'windows', icon: 'window-restore-symbolic',
+        id: 'windows', icon: 'kiwi-window-controls-symbolic',
         title: N_('Window Controls'),
         body: N_('Close, minimize and zoom for the focused window can sit in the menu bar, at the left, as on a Mac.'),
         controls: [
@@ -97,7 +97,7 @@ export const STEPS = Object.freeze([
         ],
     },
     {
-        id: 'stage-manager', icon: 'view-app-grid-symbolic',
+        id: 'stage-manager', icon: 'kiwi-stage-manager-symbolic',
         title: N_('Stage Manager'),
         body: N_('Keep the window you work in at the centre, with your other apps in a strip at the side. Turn it on or off any time from the Control Center.'),
         controls: [
@@ -114,7 +114,7 @@ export const STEPS = Object.freeze([
         ],
     },
     {
-        id: 'done', icon: 'emblem-ok-symbolic',
+        id: 'done', icon: 'object-select-symbolic',
         title: N_('You’re All Set'),
         body: N_('Everything here, and much more, is in Kiwi Settings. You can run this assistant again from About.'),
         controls: [],
