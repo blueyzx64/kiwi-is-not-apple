@@ -28,6 +28,7 @@ import { EventHub } from './core/events.js';
 import { DesktopService } from './core/desktop.js';
 import { LayoutService } from './core/layout.js';
 import { Motion } from './core/motion.js';
+import { OsdRouter } from './core/osd.js';
 import { OriginalsStore, STORE_KEY, restoreStale } from './core/originals.js';
 import { FEATURES } from './features.js';
 
@@ -46,7 +47,7 @@ const openSettings = schemaId =>
  * gets the same ctx:
  *   extension, settings (Kiwi's Gio.Settings), gettext, features ({instance(id)}),
  *   events (core/events.js), desktop (core/desktop.js), layout (core/layout.js),
- *   motion (core/motion.js), originals (core/originals.js)
+ *   motion (core/motion.js), osd (core/osd.js), originals (core/originals.js)
  */
 export default class KiwiExtension extends Extension {
     enable() {
@@ -71,6 +72,8 @@ export default class KiwiExtension extends Extension {
         this._layout = new LayoutService(this._events);
         this._motion = new Motion(this._events);
         this._motion.start();
+        this._osd = new OsdRouter(this._settings);
+        this._osd.start(this._cleanup);
 
         this._features = new FeatureRegistry(CleanupRegistry, {
             onChange: (id, active) => this._events?.emit('feature-changed', { id, active }),
@@ -91,6 +94,7 @@ export default class KiwiExtension extends Extension {
             desktop: this._desktop,
             layout: this._layout,
             motion: this._motion,
+            osd: this._osd,
             originals: this._originals,
         });
 
@@ -111,7 +115,7 @@ export default class KiwiExtension extends Extension {
         this._layout?.stop();
         this._desktop?.stop();
         this._events?.clear();
-        this._motion = this._layout = this._desktop = this._events = null;
+        this._motion = this._layout = this._desktop = this._events = this._osd = null;
         this._originals = null;
         Glass.configure(null);
         this._settings = null;

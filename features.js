@@ -148,7 +148,8 @@ export const FEATURES = [
     },
     {
         // Pill in the centre of the bar for banners, media and volume. Replaces the stock banners
-        // and OSD (parts switch live on notch-notifications / notch-osd / notch-live-activities).
+        // and OSD (parts switch live on notch-notifications / notch-live-activities; volume and brightness
+        // come from core/osd.js while osd-location is 'notch').
         id: 'notch', setting: 'notch',
         load: async () => (await import('./features/notch/index.js')).NotchFeature,
     },

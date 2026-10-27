@@ -8,7 +8,8 @@
 //   - NotificationRouter.setBannerSink  stock banners go to the notch, history stays in the
 //                                       calendar menu (key notch-notifications)
 //   - MprisWatcher                      media live activity + dashboard (notch-live-activities)
-//   - Main.osdWindowManager._showOsdWindow  volume / brightness OSD (notch-osd)
+//   - ctx.osd sink 'notch'              volume / brightness / backlight OSD, when core/osd.js routes
+//                                       them here (osd-location 'notch', the default)
 //   - PanelLayout.claim 'notch'         room in the centre box
 // Every part undoes itself through the CleanupRegistry; stock banners and OSD come back.
 
@@ -18,7 +19,7 @@ import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
 
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { KiwiSettings } from '../../lib/settings.js';
-import { canDivertOsd, setUnredirectAllowed, requeueBanner, kickTray } from '../../lib/compat.js';
+import { setUnredirectAllowed, requeueBanner, kickTray } from '../../lib/compat.js';
 import { PanelLayout } from '../../core/panelLayout.js';
 import { NotificationRouter } from '../../core/notificationRouter.js';
 import { MprisWatcher } from '../../core/mprisWatcher.js';
@@ -57,7 +58,7 @@ export class NotchFeature {
         this._alive = false;
         this._overFullscreen = false;
         this._deadlineToken = 0;
-        this._parts = { sink: null, osd: null, media: null };
+        this._parts = { sink: null, media: null };
         this._watch = null;
     }
 
@@ -119,14 +120,13 @@ export class NotchFeature {
         // The three features can be switched one by one
         // Each part has its own registry, so switching one never touches the others.
         this._applySink();
-        this._applyOsd();
         this._applyMedia();
+        this._ctx.osd.setSink(cleanup, 'notch', osd => this._showOsd(osd));
         const part = (key, apply) => ks.watch(key, () => {
             apply();
             this._dispatch({ type: 'set', patch: {} });
         });
         part('notch-notifications', () => this._applySink());
-        part('notch-osd', () => this._applyOsd());
         part('notch-live-activities', () => this._applyMedia());
         // The timeout is read from settings on every event; nothing to rebuild.
         ks.watch('notch-timeout', () => this._dispatch({ type: 'set', patch: {} }));
@@ -139,14 +139,14 @@ export class NotchFeature {
     // Idempotent. Registered twice: last in enable() (runs first on a normal dispose) and first
     // (runs last), so a throw half-way through enable() still restores banners, OSD and holds.
     _teardown() {
-        if (!this._alive && !this._parts.sink && !this._parts.osd && !this._parts.media)
+        if (!this._alive && !this._parts.sink && !this._parts.media)
             return;
         // Collect sticky cards first, give the banners back to the stock tray, then queue
         // them there; queued while the sink still existed they would be diverted again.
         const critical = this._notifications ? this._criticalNotifications() : [];
         this._alive = false;
         this._deadlineToken = 0;
-        for (const key of ['sink', 'osd', 'media']) {
+        for (const key of ['sink', 'media']) {
             this._parts[key]?.dispose();
             this._parts[key] = null;
         }
@@ -169,7 +169,7 @@ export class NotchFeature {
         return {
             notifications: ks.bool('notch-notifications'),
             activities: ks.bool('notch-live-activities'),
-            osd: ks.bool('notch-osd'),
+            osd: true,      // what reaches the notch was routed here (core/osd.js); also "Copied"
             normalMs,
             highMs: Math.round(normalMs * HIGH_FACTOR),
         };
@@ -381,30 +381,16 @@ export class NotchFeature {
         this._requeue(critical);
     }
 
-    _applyOsd() {
-        const parts = this._renew('osd');
-        if (this._ks.bool('notch-osd') && canDivertOsd(Main.osdWindowManager)) {
-            const self = this;
-            parts.inject(Main.osdWindowManager, '_showOsdWindow',
-                function (orig, monitorIndex, icon, label, level, maxLevel) {
-                    // Other monitors keep the stock OSD; the notch lives on the primary one.
-                    if (!self._alive || !self._view || monitorIndex !== Main.layoutManager.primaryIndex)
-                        return orig.call(this, monitorIndex, icon, label, level, maxLevel);
-                    try {
-                        self._dispatch({
-                            type: 'osd',
-                            icon,
-                            label,
-                            level: Number.isFinite(level) && level >= 0 ? level : null,
-                            maxLevel: Number.isFinite(maxLevel) && maxLevel > 0 ? maxLevel : null,
-                        });
-                    } catch (e) {
-                        console.error('[Kiwi] notch OSD failed, using the stock one:', e);
-                        return orig.call(this, monitorIndex, icon, label, level, maxLevel);
-                    }
-                    return undefined;
-                });
-        }
+    // A volume / brightness change that core/osd.js routed here. The notch lives on the primary
+    // monitor, where the router only looks.
+    _showOsd({ icon, label, level, maxLevel }) {
+        this._dispatch({
+            type: 'osd',
+            icon,
+            label,
+            level: Number.isFinite(level) && level >= 0 ? level : null,
+            maxLevel: Number.isFinite(maxLevel) && maxLevel > 0 ? maxLevel : null,
+        });
     }
 
     _applyMedia() {
