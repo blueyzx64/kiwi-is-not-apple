@@ -44,6 +44,12 @@ experimental), `menubar-atspi-popovers` (off, experimental).
 
 ## Limits
 
+- **Status of the AT-SPI popover read (experimental, off):** in the Fedora 44 test session
+  Kiwi finds Text Editor on the accessibility bus, walks its window and finds the "Main Menu"
+  button, but the opened popover's items are not found yet (the menu node is not under the
+  button nor marked SHOWING when read). The App menu then simply has no extra items. Needs
+  more work before it can be recommended.
+
 - DBusMenu submenus are told `AboutToShow` only at the top level when the menus are read;
   apps that build deeper submenus lazily show them as they were last built.
 - The AT-SPI popover read is a real open and close for the app: it is hidden from the screen
