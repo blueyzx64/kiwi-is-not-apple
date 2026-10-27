@@ -571,6 +571,72 @@
         <summary>Show clipboard in the notch dashboard</summary>
         <description>Show the latest clipboard entries in the notch dashboard, which opens when you click the notch. Turn it off to keep copied text off the screen while sharing it.</description>
       </key>
+      <key name="notch-hover-expand" type="b">
+        <default>true</default>
+        <summary>Notch opens on hover</summary>
+        <description>Open the notch when the pointer rests on it, like the Dynamic Island apps on macOS. A click still opens it, and keeps it open.</description>
+      </key>
+      <key name="notch-hover-delay" type="i">
+        <default>300</default>
+        <range min="0" max="2000"/>
+        <summary>Notch hover delay (milliseconds)</summary>
+        <description>How long the pointer must rest on the notch before it opens.</description>
+      </key>
+      <key name="notch-activity-battery" type="b">
+        <default>true</default>
+        <summary>Notch: charging and battery</summary>
+        <description>Show charging, low battery and accessory battery in the notch.</description>
+      </key>
+      <key name="notch-activity-bluetooth" type="b">
+        <default>true</default>
+        <summary>Notch: headphones</summary>
+        <description>Show Bluetooth headphones when they connect, with their battery level.</description>
+      </key>
+      <key name="notch-activity-timers" type="b">
+        <default>true</default>
+        <summary>Notch: timers</summary>
+        <description>Show Kiwi timers counting down in the notch.</description>
+      </key>
+      <key name="notch-activity-recording" type="b">
+        <default>true</default>
+        <summary>Notch: screen recording</summary>
+        <description>Show a running screen recording in the notch, with a stop button.</description>
+      </key>
+      <key name="notch-activity-calendar" type="b">
+        <default>true</default>
+        <summary>Notch: next event</summary>
+        <description>Show the next calendar event in the notch from 15 minutes before it starts.</description>
+      </key>
+      <key name="notch-activity-downloads" type="b">
+        <default>true</default>
+        <summary>Notch: downloads</summary>
+        <description>Show download progress in the notch (app progress bars and partial files in Downloads).</description>
+      </key>
+      <key name="notch-copy-codes" type="b">
+        <default>true</default>
+        <summary>Notch: copy one-time codes</summary>
+        <description>When a notification carries a one-time code, offer a Copy button in the notch. Detection runs locally.</description>
+      </key>
+      <key name="notch-shelf-downloads" type="b">
+        <default>true</default>
+        <summary>Shelf: add finished downloads</summary>
+        <description>Put each finished download on the notch shelf.</description>
+      </key>
+      <key name="notch-shelf-screenshots" type="b">
+        <default>true</default>
+        <summary>Shelf: add screenshots</summary>
+        <description>Put each new screenshot on the notch shelf.</description>
+      </key>
+      <key name="notch-shelf" type="as">
+        <default>[]</default>
+        <summary>Notch shelf (internal)</summary>
+        <description>Internal. The file links on the notch shelf, newest first. Only links are kept; the files stay where they are.</description>
+      </key>
+      <key name="timers-state" type="s">
+        <default>'[]'</default>
+        <summary>Timers (internal)</summary>
+        <description>Internal. Kiwi's running and paused timers, so they survive the lock screen and a restart. Written by core/timers.js.</description>
+      </key>
 
       <!-- Deprecated in v3, unused: kept one release so dconf stays valid, then removed. Nothing reads them except the one-shot migrations in lib/migrations.js and lib/cleanup/ (tests/deprecatedKeys.test.js checks). -->
       <key name="panel-transparency" type="b">

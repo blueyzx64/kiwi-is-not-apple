@@ -83,6 +83,11 @@
     background-color: -st-accent-color;
 }
 
+/* the waveform scales its bars (transforms only); 16px is their full height */
+.kiwi-notch-bars {
+    height: 16px;
+}
+
 .kiwi-notch-bars-paused .kiwi-notch-bar {
     background-color: rgba(255, 255, 255, 0.4);
 }
@@ -172,7 +177,8 @@
 /* header band, level with the top bar */
 .kiwi-notch-dash-header {
     height: 32px;
-    padding: 0 14px 0 20px;
+    padding: 0 20px 0 14px;
+    spacing: 8px;
 }
 
 .kiwi-notch-dash-date {
@@ -180,30 +186,6 @@
     font-weight: 600;
     color: rgba(255, 255, 255, 0.6);
     font-feature-settings: "tnum";
-}
-
-/* Do Not Disturb: a small moon in the corner */
-.kiwi-notch-dnd {
-    width: 28px;
-    height: 28px;
-    border-radius: 999px;
-    color: rgba(255, 255, 255, 0.55);
-}
-
-.kiwi-notch-dnd:hover,
-.kiwi-notch-dnd:focus {
-    color: #ffffff;
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
-.kiwi-notch-dnd:checked {
-    color: -st-accent-fg-color;
-    background-color: -st-accent-color;
-}
-
-.kiwi-notch-dash-body {
-    padding: 4px 20px 20px 20px;
-    spacing: 20px;
 }
 
 .kiwi-notch-col {
@@ -405,4 +387,302 @@
 .kiwi-notch-clip-text {
     font-size: 14px;
     color: #ffffff;
+}
+
+/* ---- v3: tints (Apple's dark-mode system colours) ---- */
+.kiwi-notch-glyph { color: #ffffff; }
+.kiwi-notch-tint-accent { color: -st-accent-color; }
+.kiwi-notch-tint-orange { color: #ff9f0a; }
+.kiwi-notch-tint-red { color: #ff453a; }
+.kiwi-notch-tint-green { color: #30d158; }
+.kiwi-notch-tint-blue { color: #0a84ff; }
+
+/* the code itself, in tabular figures with a little tracking */
+.kiwi-notch-code {
+    font-feature-settings: "tnum";
+    letter-spacing: 1px;
+}
+
+/* one action inside the pill: "Copy" for a code, a stop square for a recording */
+.kiwi-notch-pill-action {
+    height: 22px;
+    min-width: 22px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+.kiwi-notch-pill-action:hover,
+.kiwi-notch-pill-action:focus {
+    background-color: rgba(255, 255, 255, 0.28);
+}
+
+.kiwi-notch-pill-action-stop {
+    padding: 0;
+    width: 22px;
+    color: #ff453a;
+    background-color: rgba(255, 69, 58, 0.2);
+}
+
+.kiwi-notch-mini-track {
+    height: 4px;
+    border-radius: 2px;
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.kiwi-notch-mini-fill {
+    border-radius: 2px;
+    background-color: #0a84ff;
+}
+
+/* ---- tabs in the header band ---- */
+.kiwi-notch-tabs {
+    spacing: 2px;
+}
+
+.kiwi-notch-tab {
+    height: 24px;
+    padding: 0 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.kiwi-notch-tab:hover,
+.kiwi-notch-tab:focus {
+    color: #ffffff;
+}
+
+.kiwi-notch-tab:checked {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.14);
+}
+
+.kiwi-notch-tab-body {
+    padding: 4px 20px 20px 20px;
+    spacing: 20px;
+}
+
+/* ---- Now: activity rows share the notification rows' 44px grid ---- */
+.kiwi-notch-activity-row {
+    height: 44px;
+    padding: 0 8px;
+    spacing: 10px;
+}
+
+.kiwi-notch-activity-disc {
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.kiwi-notch-disc-orange { background-color: rgba(255, 159, 10, 0.18); }
+.kiwi-notch-disc-red { background-color: rgba(255, 69, 58, 0.18); }
+.kiwi-notch-disc-green { background-color: rgba(48, 209, 88, 0.18); }
+.kiwi-notch-disc-blue { background-color: rgba(10, 132, 255, 0.2); }
+
+.kiwi-notch-row-action {
+    width: 26px;
+    height: 26px;
+    border-radius: 999px;
+    color: rgba(255, 255, 255, 0.8);
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.kiwi-notch-row-action:hover,
+.kiwi-notch-row-action:focus {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.22);
+}
+
+/* ---- Tray: the file shelf ---- */
+.kiwi-notch-shelf {
+    spacing: 8px;
+}
+
+.kiwi-notch-shelf-bar {
+    height: 26px;
+    spacing: 6px;
+}
+
+.kiwi-notch-shelf-selected {
+    font-size: 13px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.kiwi-notch-chip {
+    height: 24px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.kiwi-notch-chip:hover,
+.kiwi-notch-chip:focus {
+    background-color: rgba(255, 255, 255, 0.24);
+}
+
+.kiwi-notch-button-box {
+    spacing: 6px;
+}
+
+.kiwi-notch-shelf-tile {
+    height: 48px;
+    padding: 4px;
+    border-radius: 12px;
+}
+
+.kiwi-notch-shelf-tile:hover,
+.kiwi-notch-shelf-tile:focus {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.kiwi-notch-shelf-tile-selected {
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+.kiwi-notch-shelf-missing {
+    opacity: 0.45;
+}
+
+.kiwi-notch-shelf-name {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.kiwi-notch-shelf-empty {
+    spacing: 8px;
+    padding-top: 10px;
+}
+
+.kiwi-notch-shelf-empty-icon {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.kiwi-notch-shelf-hint {
+    font-size: 13px;
+}
+
+/* ---- Widgets ---- */
+.kiwi-notch-widget-button {
+    border-radius: 18px;
+}
+
+.kiwi-notch-widget {
+    padding: 10px 12px;
+    spacing: 6px;
+    border-radius: 18px;
+    background-color: rgba(255, 255, 255, 0.07);
+}
+
+.kiwi-notch-widget-button:hover .kiwi-notch-widget,
+.kiwi-notch-widget-button:focus .kiwi-notch-widget {
+    background-color: rgba(255, 255, 255, 0.11);
+}
+
+.kiwi-notch-cal-weekday {
+    font-size: 12px;
+    font-weight: 700;
+    color: #ff453a;
+}
+
+.kiwi-notch-cal-day {
+    font-size: 22px;
+    font-weight: 600;
+    color: #ffffff;
+    font-feature-settings: "tnum";
+}
+
+.kiwi-notch-cal-event {
+    spacing: 8px;
+}
+
+.kiwi-notch-cal-bar {
+    width: 3px;
+    border-radius: 2px;
+    background-color: -st-accent-color;
+}
+
+.kiwi-notch-cal-summary {
+    font-size: 13px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.kiwi-notch-cal-time,
+.kiwi-notch-cal-none,
+.kiwi-notch-wx-summary {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.kiwi-notch-wx-place {
+    font-size: 13px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.kiwi-notch-wx-line {
+    spacing: 8px;
+}
+
+.kiwi-notch-wx-temp {
+    font-size: 26px;
+    font-weight: 500;
+    color: #ffffff;
+}
+
+.kiwi-notch-wx-off {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.kiwi-notch-toggles {
+    spacing: 8px;
+}
+
+.kiwi-notch-toggle-box {
+    spacing: 4px;
+}
+
+.kiwi-notch-toggle {
+    width: 38px;
+    height: 38px;
+    border-radius: 999px;
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.14);
+}
+
+.kiwi-notch-toggle:hover,
+.kiwi-notch-toggle:focus {
+    background-color: rgba(255, 255, 255, 0.24);
+}
+
+.kiwi-notch-toggle:checked {
+    color: -st-accent-fg-color;
+    background-color: -st-accent-color;
+}
+
+.kiwi-notch-toggle-caption {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.kiwi-notch-presets {
+    spacing: 4px;
+    padding-top: 2px;
+}
+
+.kiwi-notch-preset {
+    padding: 0 8px;
+    height: 22px;
+    font-size: 12px;
 }

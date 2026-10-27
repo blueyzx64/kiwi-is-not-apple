@@ -398,6 +398,63 @@ test('recentNotifications: newest first, capped, untimed last in given order', (
     eq(list.map(e => e.id), [1, 2, 3, 4, 5]); // input untouched
 });
 
+test('hover intent opens the dashboard; leaving closes it after hoverLeaveMs', () => {
+    let { state } = run([{ type: 'hover', value: true, now: 0 }, { type: 'expand', now: 300 }]);
+    eq(view(state).content, 'dashboard');
+    eq(view(state).tab, 'now');
+    eq(view(state).pinned, false);
+    ({ state } = step(state, { type: 'hover', value: false, now: 1000 }));
+    eq(nextDeadline(state), 1000 + DEFAULT_CONFIG.hoverLeaveMs);
+    ({ state } = step(state, tick(1000 + DEFAULT_CONFIG.hoverLeaveMs)));
+    eq(state.dashboard, null);
+});
+test('expand needs the pointer and never covers a card', () => {
+    let { state } = run([{ type: 'expand', now: 1 }]);
+    eq(state.dashboard, null, 'pointer already gone');
+    ({ state } = run([{ type: 'notify', id: 1, urgency: URGENCY.NORMAL, now: 0 },
+        { type: 'hover', value: true, now: 1 }, { type: 'expand', now: 2 }]));
+    eq(view(state).content, 'notification');
+});
+test('a click pins a hover-opened dashboard; a second click closes it', () => {
+    let { state } = run([{ type: 'hover', value: true, now: 0 }, { type: 'expand', now: 1 }, { type: 'click', now: 2 }]);
+    eq(view(state).pinned, true);
+    ({ state } = step(state, { type: 'hover', value: false, now: 3 }));
+    eq(nextDeadline(state), 3 + DEFAULT_CONFIG.dashboardLeaveMs);
+    ({ state } = step(state, { type: 'click', now: 4 }));
+    eq(state.dashboard, null);
+});
+test('tabs switch only while the dashboard is open', () => {
+    let { state } = run([{ type: 'click', now: 0 }, { type: 'tab', tab: 'tray', now: 1 }]);
+    eq(view(state).tab, 'tray');
+    ({ state } = step(state, { type: 'tab', tab: 'bogus', now: 2 }));
+    eq(view(state).tab, 'tray');
+    ({ state } = step(state, { type: 'click', now: 3 }));
+    ({ state } = step(state, { type: 'tab', tab: 'widgets', now: 4 }));
+    eq(state.dashboard, null);
+});
+test('kinds: an alert preempts, expires on a tick, and the pill widens for a code', () => {
+    let { state } = run([{ type: 'activity', key: 'media', kind: 'media', data: { t: 1 }, now: 0 },
+        { type: 'activity', key: 'code', kind: 'code', data: { code: '1234' }, now: 10 }]);
+    eq(view(state).activity.key, 'code');
+    eq(view(state).size.w, 300);
+    eq(nextDeadline(state), 30010);
+    ({ state } = step(state, tick(30010)));
+    eq(view(state).activity.key, 'media');
+    eq(state.activities.length, 1);
+    eq(nextDeadline(state), null);
+});
+test('kinds: an update keeps the alert clock, fresh restarts it; quiet kinds stay off the pill', () => {
+    let { state } = run([{ type: 'activity', key: 'c', kind: 'charging-started', data: 1, now: 0 },
+        { type: 'activity', key: 'c', kind: 'charging-started', data: 2, now: 3000 }]);
+    eq(nextDeadline(state), 4000);
+    ({ state } = step(state, { type: 'activity', key: 'c', kind: 'charging-started', data: 3, fresh: true, now: 3500 }));
+    eq(nextDeadline(state), 7500);
+    ({ state } = run([{ type: 'activity', key: 'b', kind: 'charging', data: 1, now: 0 }]));
+    eq(view(state).kind, 'idle');
+    ({ state } = step(state, { type: 'click', now: 1 }));
+    eq(view(state).activities.map(a => a.key), ['b']);
+});
+
 print(failed ? `${failed} FAILED` : 'all passed');
 if (failed)
     imports.system.exit(1);

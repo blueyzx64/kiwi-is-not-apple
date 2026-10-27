@@ -28,13 +28,14 @@ import { EventHub } from './core/events.js';
 import { DesktopService } from './core/desktop.js';
 import { LayoutService } from './core/layout.js';
 import { Motion } from './core/motion.js';
+import { TimerService } from './core/timers.js';
 import { OriginalsStore, STORE_KEY, restoreStale } from './core/originals.js';
 import { FEATURES } from './features.js';
 
 // Keys Kiwi writes itself at run time. No `when` or restartOn reads them, and a write made
 // during a refresh would re-enter the registry, so they do not trigger a pass.
 const KEYS_THAT_NEVER_AFFECT_FEATURES = new Set(['clipboard-recording', 'migrations-done', STORE_KEY,
-    'dock-recent-apps']);
+    'dock-recent-apps', 'timers-state', 'notch-shelf']);
 
 // Schemas whose keys Kiwi may own through core/originals.js
 const openSettings = schemaId =>
@@ -46,7 +47,7 @@ const openSettings = schemaId =>
  * gets the same ctx:
  *   extension, settings (Kiwi's Gio.Settings), gettext, features ({instance(id)}),
  *   events (core/events.js), desktop (core/desktop.js), layout (core/layout.js),
- *   motion (core/motion.js), originals (core/originals.js)
+ *   motion (core/motion.js), originals (core/originals.js), timers (core/timers.js)
  */
 export default class KiwiExtension extends Extension {
     enable() {
@@ -71,6 +72,8 @@ export default class KiwiExtension extends Extension {
         this._layout = new LayoutService(this._events);
         this._motion = new Motion(this._events);
         this._motion.start();
+        this._timers = new TimerService(this._events, this._settings);
+        this._timers.start();
 
         this._features = new FeatureRegistry(CleanupRegistry, {
             onChange: (id, active) => this._events?.emit('feature-changed', { id, active }),
@@ -92,6 +95,7 @@ export default class KiwiExtension extends Extension {
             layout: this._layout,
             motion: this._motion,
             originals: this._originals,
+            timers: this._timers,
         });
 
         // What Kiwi 2.x left in the user's files for features v3 dropped: once, in the
@@ -107,11 +111,12 @@ export default class KiwiExtension extends Extension {
         this._cleanup = null;
         this._features?.stop();
         this._features = null;
+        this._timers?.stop();
         this._motion?.stop();
         this._layout?.stop();
         this._desktop?.stop();
         this._events?.clear();
-        this._motion = this._layout = this._desktop = this._events = null;
+        this._motion = this._layout = this._desktop = this._events = this._timers = null;
         this._originals = null;
         Glass.configure(null);
         this._settings = null;

@@ -30,6 +30,13 @@ export const EVENTS = Object.freeze({
     'work-area-changed': { monitor: 'number' },
     // core/motion.js (Motion)
     'motion-changed': { reducedMotion: 'boolean', animations: 'boolean' },
+    // core/timers.js (TimerService)
+    'timers-changed': { timers: 'object[] see core/timersModel.js' },
+    'timer-finished': { timer: 'object' },
+    // Screen recording started or stopped. Emitted by the notch from the Shell's
+    // screenshotUI 'screencast-in-progress' until a recording owner (L3) emits it.
+    'recording-started': {},
+    'recording-stopped': {},
     // lib/featureRegistry.js, through extension.js: a feature started or stopped
     'feature-changed': { id: 'string', active: 'boolean' },
     // Requests between features (the owner of the policy listens, see features.js)
