@@ -32,7 +32,7 @@ import { WindowState } from '../../core/windowState.js';
 import { MENU_CLOSE_ARGS, isMaximized, unmaximizeWindow } from '../../lib/compat.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { Glass } from '../../lib/glass.js';
-import { isCandidate, menuEntries, splitRects, survivorAfter, thumbnailRects } from './model.js';
+import { isCandidate, menuEntries, preSplitRect, splitRects, survivorAfter, thumbnailRects } from './model.js';
 
 // macOS shows the menu after the pointer rests on the green button a moment
 const HOVER_MS = 450;
@@ -45,8 +45,9 @@ export class SplitView {
         this._ctx = ctx;
         this._cleanup = cleanup;
         this._ = s => ctx.gettext(s);
-        this._pairs = [];          // {a, b, ws, home, reg}
+        this._pairs = [];          // {a, b, ws, home, before, reg}
         this._picker = null;       // {win, side, ws, reg, overlay, grab}
+        this._settling = null;     // CleanupRegistry while a window waits to leave full screen
         this._menu = null;
         this._hover = 0;
     }
@@ -58,6 +59,8 @@ export class SplitView {
         events.on('split-view-requested', ({ window, side }) => this.tile(window, side), cleanup);
         cleanup.add(() => {
             this._closeMenu();
+            this._settling?.dispose();
+            this._settling = null;
             this._cancelPicker({ refullscreen: false });
             for (const pair of [...this._pairs])
                 this._forget(pair);
@@ -164,7 +167,7 @@ export class SplitView {
 
     /** Tile a full-screen window to one half and show the picker on the other. */
     tile(win, side) {
-        if (!win?.is_fullscreen() || this.pairOf(win) || this._picker)
+        if (!win?.is_fullscreen() || this.pairOf(win) || this._picker || this._settling)
             return false;
         const candidates = this._candidates(win);
         if (!candidates.length)
@@ -174,12 +177,26 @@ export class SplitView {
         const ws = win.get_workspace();
         WindowState.set(win, FLAG, true);
         win.unmake_fullscreen();
-        win.move_resize_frame(true, rects.tiled.x, rects.tiled.y, rects.tiled.width, rects.tiled.height);
-        this._showPicker(win, side, ws, rects.other, candidates);
+        // The window's own size comes back with its first resize: that is the size it returns
+        // to when it leaves the pair. The half is only asked for after that.
+        const settle = new CleanupRegistry();
+        this._settling = settle;
+        const place = () => {
+            settle.dispose();
+            this._settling = null;
+            const before = preSplitRect(win.get_frame_rect(), area);
+            win.move_resize_frame(true, rects.tiled.x, rects.tiled.y, rects.tiled.width, rects.tiled.height);
+            this._showPicker(win, side, ws, rects.other, candidates, before);
+        };
+        settle.connect(win, 'size-changed', place);
+        settle.connect(win, 'unmanaged', () => {
+            settle.dispose();
+            this._settling = null;
+        });
         return true;
     }
 
-    _showPicker(win, side, ws, half, candidates) {
+    _showPicker(win, side, ws, half, candidates, before) {
         const _ = this._;
         const reg = new CleanupRegistry();
         const overlay = reg.actor(new St.Widget({
@@ -233,7 +250,7 @@ export class SplitView {
         overlay.grab_key_focus();
         overlay.opacity = 0;
         this._ctx.motion.ease(overlay, { opacity: 255 }, { duration: 'short', curve: 'standard' }, reg);
-        this._picker = { win, side, ws, half, reg };
+        this._picker = { win, side, ws, half, reg, before };
     }
 
     _cancelPicker({ refullscreen }) {
@@ -252,10 +269,11 @@ export class SplitView {
         const picker = this._picker;
         if (!picker)
             return;
-        const { win, ws, half } = picker;
+        const { win, ws, half, before } = picker;
         this._picker = null;
         picker.reg.dispose();
         const home = other.get_workspace();
+        const otherBefore = isMaximized(other) ? null : preSplitRect(other.get_frame_rect(), other.get_work_area_current_monitor());
         WindowState.set(other, FLAG, true);
         if (other.minimized)
             other.unminimize();
@@ -265,7 +283,7 @@ export class SplitView {
             other.change_workspace(ws);
         other.move_resize_frame(true, half.x, half.y, half.width, half.height);
         other.activate(global.get_current_time());
-        this._watch({ a: win, b: other, ws, home });
+        this._watch({ a: win, b: other, ws, home, before: new Map([[win, before], [other, otherBefore]]) });
     }
 
     _watch(pair) {
@@ -309,6 +327,10 @@ export class SplitView {
         }
         if (!closed && home && gone.get_workspace() === pair.ws)
             gone.change_workspace(home);
+        // It leaves at the size it had before the split, not as a half
+        const before = pair.before.get(gone);
+        if (!closed && before && !isMaximized(gone))
+            gone.move_resize_frame(true, before.x, before.y, before.width, before.height);
         if (survivor?.get_compositor_private())
             survivor.make_fullscreen();
     }

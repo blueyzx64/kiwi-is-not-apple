@@ -196,12 +196,12 @@ export function buildNotifications(groups, ctl) {
 }
 
 /**
- * The widgets area: the registered widgets, or placeholders until the widget model (L11)
- * provides some.
+ * The widgets area: the registered widgets, or placeholders while there are none.
  *
  * @param {{id: string, create: function(): Clutter.Actor}[]} widgets ordered
+ * @param {?function(): void} onEdit "Edit Widgets…" (null: no button)
  */
-export function buildWidgets(_, widgets) {
+export function buildWidgets(_, widgets, onEdit = null) {
     const box = new St.BoxLayout({ style_class: 'kiwi-nc-section kiwi-nc-widgets', orientation: Clutter.Orientation.VERTICAL, x_expand: true });
     let added = 0;
     for (const widget of widgets) {
@@ -215,8 +215,17 @@ export function buildWidgets(_, widgets) {
             console.error(`[Kiwi] Notification Center widget ${widget.id} failed:`, e);
         }
     }
-    if (added)
+    if (added) {
+        if (onEdit) {
+            const edit = new St.Button({
+                style_class: 'kiwi-nc-edit-widgets', label: _('Edit Widgets…'), can_focus: true,
+                x_align: Clutter.ActorAlign.CENTER,
+            });
+            edit.connect('clicked', onEdit);
+            box.add_child(edit);
+        }
         return box;
+    }
     const row = new St.BoxLayout({ style_class: 'kiwi-nc-placeholder-row', x_expand: true });
     for (const [icon, text] of [['weather-few-clouds-symbolic', _('Weather')], ['preferences-system-time-symbolic', _('Clock')]]) {
         const tile = new St.BoxLayout({ style_class: 'kiwi-nc-card kiwi-nc-placeholder', orientation: Clutter.Orientation.VERTICAL, x_expand: true });
@@ -225,6 +234,5 @@ export function buildWidgets(_, widgets) {
         row.add_child(tile);
     }
     box.add_child(row);
-    box.add_child(label(_('Widgets arrive with the widget gallery'), 'kiwi-nc-placeholder-note', { x_align: Clutter.ActorAlign.CENTER }));
     return box;
 }

@@ -57,9 +57,18 @@ export class MinimizeEffect {
         this.stats = { animations: 0, frames: 0 };
 
         const wm = global.window_manager;
+        // Only the Shell's own handlers (the oldest of each signal, connected at start-up) are
+        // blocked: a *_matched call would also touch every other handler of the signal, ours and
+        // other extensions' (Mutter then fails its minimize accounting)
         for (const signalId of SIGNALS) {
-            GObject.signal_handlers_block_matched(wm, { signalId });
-            cleanup.add(() => GObject.signal_handlers_unblock_matched(wm, { signalId }));
+            const stock = GObject.signal_handler_find(wm, { signalId });
+            if (!stock)
+                continue;
+            GObject.signal_handler_block(wm, stock);
+            cleanup.add(() => {
+                if (GObject.signal_handler_is_connected(wm, stock))
+                    GObject.signal_handler_unblock(wm, stock);
+            });
         }
         cleanup.connect(wm, 'minimize', (shellwm, actor) => this._play(shellwm, actor, false));
         cleanup.connect(wm, 'unminimize', (shellwm, actor) => this._play(shellwm, actor, true));

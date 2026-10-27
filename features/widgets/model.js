@@ -69,7 +69,7 @@ export function isDrag(dx, dy, threshold = DRAG_THRESHOLD) {
  */
 export function galleryRect(area, scale = 1) {
     const width = Math.min(area.width - 32 * scale, 1080 * scale);
-    const height = Math.min(area.height - 32 * scale, 330 * scale);
+    const height = Math.min(area.height - 32 * scale, 380 * scale);
     return {
         x: Math.round(area.x + (area.width - width) / 2),
         y: Math.round(area.y + area.height - height - 16 * scale),

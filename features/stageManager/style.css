@@ -1,17 +1,9 @@
 /* feature: stage-manager */
-/* One floor under the whole strip: Kiwi glass (lib/glass.js) while Liquid Glass is on, else
-   this plain translucent rounded panel with a rim and a soft shadow. The windows lie on it,
-   tilted toward the stage. */
-.kiwi-stage-shadow {
-    border-radius: 20px;
-    background-color: transparent;
-}
-
+/* The strip has no panel under the entries (macOS Sequoia): the floor is an invisible hover
+   and drop area. Only a dragged stage window lights it up. */
 .kiwi-stage-strip {
     border-radius: 20px;
-    background-color: rgba(255, 255, 255, 0.09);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+    background-color: transparent;
 }
 
 /* An entry is only a hit box: the window clone is its look */
@@ -43,7 +35,7 @@
 
 /* A stage window dragged over the strip: the floor lights up to take it */
 .kiwi-stage-strip:drop {
-    background-color: rgba(255, 255, 255, 0.18);
+    background-color: rgba(255, 255, 255, 0.10);
     border: 2px solid -st-accent-color;
 }
 

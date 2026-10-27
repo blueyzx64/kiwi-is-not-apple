@@ -19,6 +19,9 @@ import { galleryRect } from './model.js';
 
 const SIZE_NAMES = { small: 'S', medium: 'M', large: 'L', extraLarge: 'XL' };
 const PREVIEW_SCALE = 0.5;
+// Every tile shows its preview in the same square slot (a Large widget at preview scale), so
+// tiles, names and size pickers share one baseline; wider previews (Extra Large) shrink to fit.
+const SLOT = pixelSize('large', PREVIEW_SCALE);
 
 export class Gallery {
     /** @param {object} feature DesktopWidgets: host, ctx, _, add(kind, size), addDefaults(), closeGallery() */
@@ -164,32 +167,36 @@ export class Gallery {
         const tiles = this._tiles;
         const sizes = this._feature.host.registry.sizesFor(def.id, 'desktop');
         let size = this._sizes.get(def.id) ?? def.defaultSize;
-        const tile = new St.BoxLayout({ style_class: 'kiwi-widgets-gallery-tile', orientation: Clutter.Orientation.VERTICAL });
-        // The largest preview sets the slot, so switching sizes does not jump the row
-        const big = pixelSize(sizes[sizes.length - 1], PREVIEW_SCALE);
+        const tile = new St.BoxLayout({
+            style_class: 'kiwi-widgets-gallery-tile',
+            orientation: Clutter.Orientation.VERTICAL,
+            y_align: Clutter.ActorAlign.START,
+        });
         const slot = new St.Button({
             style_class: 'kiwi-widgets-gallery-preview',
             accessible_name: `${_('Add')} ${_(def.title)}`,
-            width: Math.max(big.width, pixelSize('medium', PREVIEW_SCALE).width),
-            height: big.height,
+            width: SLOT.width,
+            height: SLOT.height,
             can_focus: true,
         });
         tile.add_child(slot);
         // Live previews at full size, drawn at half scale (so text keeps its proportions)
-        const holder = new St.Widget({ layout_manager: new Clutter.BinLayout() });
+        const holder = new St.Widget({ layout_manager: new Clutter.BinLayout(), width: SLOT.width, height: SLOT.height });
         slot.set_child(holder);
         let preview = null;
         let box = null;
         const show = () => {
             box?.destroy();
             preview = this._feature.host.createView(def.id, { size, config: {} }, tiles);
-            const px = pixelSize(size, PREVIEW_SCALE);
+            const full = pixelSize(size);
+            const fit = Math.min(PREVIEW_SCALE, SLOT.width / full.width, SLOT.height / full.height);
+            const px = pixelSize(size, fit);
             box = new St.Widget({
                 width: px.width, height: px.height,
                 x_align: Clutter.ActorAlign.CENTER, y_align: Clutter.ActorAlign.CENTER,
             });
             preview.actor.reactive = false;
-            preview.actor.set_scale(PREVIEW_SCALE, PREVIEW_SCALE);
+            preview.actor.set_scale(fit, fit);
             box.add_child(preview.actor);
             holder.add_child(box);
             preview.setActive(true);
@@ -209,7 +216,7 @@ export class Gallery {
         caption.add_child(add);
         tile.add_child(caption);
 
-        const picker = new St.BoxLayout({ style_class: 'kiwi-widgets-gallery-sizes' });
+        const picker = new St.BoxLayout({ style_class: 'kiwi-widgets-gallery-sizes', x_align: Clutter.ActorAlign.CENTER });
         const buttons = sizes.map(s => {
             const b = new St.Button({
                 style_class: 'kiwi-widgets-gallery-size',
