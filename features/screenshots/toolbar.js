@@ -120,11 +120,14 @@ export class ScreenshotToolbar {
 
     toggleOptions(open = !this._popover.visible) {
         if (open) {
-            // Line the popover up with the Options button
+            // Line the popover up with the Options button, just above the bar (the popover
+            // rests on the bottom of the monitor, so it moves up by the bar's distance)
             const [bx] = this._optionsButton.get_transformed_position();
-            const [hx] = this.actor.get_transformed_position();
-            this._popover.translation_x = Math.max(0, bx - hx);
-            this._popover.margin_bottom = this._bar.height + this._bar.margin_bottom + 8;
+            const [, barY] = this._bar.get_transformed_position();
+            const [hx, hy] = this.actor.get_transformed_position();
+            const [hw, hh] = this.actor.get_transformed_size();
+            this._popover.translation_x = Math.min(Math.max(0, bx - hx), Math.max(0, hw - this._popover.width));
+            this._popover.translation_y = -(hy + hh - barY + 8);
         }
         this._popover.visible = open;
         this._optionsButton.checked = open;

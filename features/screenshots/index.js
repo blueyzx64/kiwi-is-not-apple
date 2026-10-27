@@ -86,6 +86,10 @@ export class Screenshots {
         cleanup.connect(ui, 'closed', () => this._endSession());
         cleanup.connect(ui, 'notify::screencast-in-progress', () => this._syncRecording());
 
+        // Keep GNOME's "Screenshot captured" banner from showing: the thumbnail replaces it
+        Main.messageTray.getSources().forEach(source => this._watchStockSource(source));
+        cleanup.connect(Main.messageTray, 'source-added', (_t, source) => this._watchStockSource(source));
+
         // Newest first: the UI closes, then a waiting capture is saved and its thumbnail goes
         cleanup.add(() => this._flushPending());
         cleanup.add(() => this._cancelTimed());
@@ -415,19 +419,30 @@ export class Screenshots {
     }
 
     /**
-     * GNOME's "Screenshot captured" banner points at the file before Kiwi moves it, and the
-     * thumbnail replaces it. It is the newest notification with an image of GNOME's
-     * "Screen Capture" source (js/ui/screenshot.js _storeScreenshot, GNOME 50).
+     * GNOME's "Screenshot captured" notification points at the file before Kiwi moves it, and
+     * the thumbnail replaces it. It is the notification with an image from GNOME's "Screen
+     * Capture" source (js/ui/screenshot.js _storeScreenshot, GNOME 50). Marked acknowledged
+     * when it is added, the tray (and the notch) never show it as a banner; _captured() then
+     * removes it.
      */
-    _dropStockBanner() {
-        const source = Main.messageTray.getSources().find(s => {
-            try {
-                return s.iconName === 'screenshooter-symbolic';
-            } catch {
-                return false;
-            }
+    _watchStockSource(source) {
+        if (!isStockCaptureSource(source))
+            return;
+        this._cleanup.connect(source, 'notification-added', (_s, notification) => {
+            if (notification.gicon instanceof St.ImageContent)
+                notification.acknowledged = true;
         });
+    }
+
+    _dropStockBanner() {
+        const source = Main.messageTray.getSources().find(isStockCaptureSource);
         const notification = source?.notifications?.findLast?.(n => n.gicon instanceof St.ImageContent);
         notification?.destroy();
     }
+}
+
+function isStockCaptureSource(source) {
+    // Its icon is a Gio.ThemedIcon; Source.iconName does not read it back on GNOME 50
+    return source?.gicon instanceof Gio.ThemedIcon &&
+        source.gicon.get_names().includes('screenshooter-symbolic');
 }

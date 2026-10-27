@@ -10,6 +10,7 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
+import { DesktopAppInfo } from '../../lib/compat.js';
 import { nameCandidates } from './model.js';
 
 Gio._promisify(Gio.File.prototype, 'move_async');
@@ -90,7 +91,16 @@ export async function showInFiles(file) {
             'org.freedesktop.FileManager1', 'ShowItems', new GLib.Variant('(ass)', [[file.get_uri()], '']),
             null, Gio.DBusCallFlags.NONE, -1, null);
     } catch (e) {
-        console.warn(`${LOG} Show in Files failed: ${e.message}`);
+        // No FileManager1 service: open the folder in the default file manager, as GNOME's
+        // own screenshot notification does
+        const app = Gio.AppInfo.get_default_for_type('inode/directory', false);
+        try {
+            if (!app)
+                throw e;
+            app.launch([file.get_parent()], global.create_app_launch_context(0, -1));
+        } catch (err) {
+            console.warn(`${LOG} Show in Files failed: ${err.message}`);
+        }
     }
 }
 
@@ -98,7 +108,7 @@ export async function showInFiles(file) {
 export function openInViewer(file) {
     const ctx = global.create_app_launch_context(0, -1);
     try {
-        const app = VIEWERS.map(id => Gio.DesktopAppInfo.new(id)).find(Boolean);
+        const app = VIEWERS.map(id => DesktopAppInfo.new(id)).find(Boolean);
         if (app)
             app.launch([file], ctx);
         else

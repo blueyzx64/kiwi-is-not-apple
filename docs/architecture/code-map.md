@@ -92,7 +92,8 @@ Events (`EVENTS` in `core/events.js`): `window-added`, `window-changed`, `window
 `window-focused`, `app-focused`, `workspaces-changed`, `monitors-changed`, `work-area-changed`,
 `motion-changed`, `feature-changed`, `minimize-requested`, `notification-center-requested`
 (the clock), `app-hide-requested` and `window-tile-requested` (app-menu commands for the
-window manager; the menu bar runs a fallback when nobody listens).
+window manager; the menu bar runs a fallback when nobody listens), `recording-started` /
+`recording-stopped` (screenshots; for the notch's recording live activity).
 
 ## 4. lib/
 
@@ -131,6 +132,7 @@ window manager; the menu bar runs a fallback when nobody listens).
 | `shellBehaviour/` | `shell-behaviour` | swipes stop at workspaces; no hot corner |
 | `fullscreenSpace/` | `move-window-to-new-workspace` | full screen in its own Space (kept as in 2.x) |
 | `dock/` | `dock` | Kiwi's own dock: favourites, running and recent apps, minimized windows, Downloads stack (`stack.js`), Trash (`trash.js`), menus (`appMenu.js`), Open at Login (`autostart.js`); an edge claim in core/layout; keeps Dash to Dock off (`dashToDock.js`); `iconRect(appId)` / `minimizeTarget(win)` for Genie |
+| `screenshots/` | `screenshots` | Shift+Super+3/4/5 on GNOME's own screenshot UI (`uiDriver.js`, the only file touching `Main.screenshotUI`): the glass toolbar with Options (`toolbar.js`), the Timer (`countdown.js`), the floating thumbnail (`thumbnail.js`), moving GNOME's file to the Save to folder under its macOS name (`files.js`), Other Location via the portal (`folderPicker.js`); emits `recording-started/stopped`. The thumbnail cannot be dragged into apps (the Shell cannot start a drag into Wayland clients) |
 | `appearance/` | `appearance`, `popup-menu-styling` | Auto Light/Dark (owns `color-scheme` through core/originals), accent (`accent-color`) and highlight colours (`scheme.js`, `model.js`); accent menus (`index.js`; the GTK app fixes are in `gtk-theme`) |
 
 Shared-resource rules (defined once in `features.js`): `window-controls`/`app-buttons` are

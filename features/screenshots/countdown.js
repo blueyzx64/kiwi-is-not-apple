@@ -37,7 +37,7 @@ export class Countdown {
         if (parent)
             parent.add_child(this._host);
         else
-            Main.layoutManager.addTopChrome(this._host, { affectsInputRegion: false });
+            Main.layoutManager.addTopChrome(this._host);
         this._cleanup.actor(this._host);
         this._glass = Glass.attach(this._pill, { surface: 'overlays', role: 'content' });
         this._cleanup.add(() => this._glass.destroy());
