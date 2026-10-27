@@ -84,7 +84,7 @@ class WindowControlsIndicator extends PanelMenu.Button {
      * tells it what to show.
      */
     _init({ catalog, settings, cleanup, motion, onAction, onGreenMenu, onHover, gettext: _ }) {
-        super._init(0.0, 'window-controls', true);
+        super._init(0.0, _('Window Controls'), true);
         this.add_style_class_name('kiwi-window-controls-indicator');
         this._catalog = catalog;
         this._settings = settings;
@@ -113,6 +113,7 @@ class WindowControlsIndicator extends PanelMenu.Button {
             const button = new St.Button({
                 style_class: `window-control-button ${name}`,
                 track_hover: true,
+                can_focus: true,
                 accessible_name: { close: _('Close'), minimize: _('Minimize'), maximize: _('Maximize') }[name],
             });
             this._buttons[name] = button;

@@ -8,6 +8,7 @@
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 
+import * as A11y from '../../lib/a11y.js';
 import { ModalSurface } from '../../lib/modalSurface.js';
 import { addRow, ageText, longPreview, sectionLabel, sizeText } from './view.js';
 
@@ -28,6 +29,7 @@ export class QuickPaste {
         cleanup.add(ctl.connectChanged(() => this._modal.isOpen && this._refresh()));
         this._modal = new ModalSurface(cleanup, {
             id: 'quick-paste',
+            accessibleName: _('Clipboard History'),
             width: WIDTH,
             height: HEIGHT,
             position: 'center',
@@ -59,7 +61,7 @@ export class QuickPaste {
         const _ = this._;
         this._query = '';
         const entry = new St.Entry({
-            style_class: 'kiwi-qp-search', hint_text: _('Search Clipboard'), can_focus: true, x_expand: true,
+            style_class: 'kiwi-qp-search', hint_text: _('Search Clipboard'), accessible_name: _('Search Clipboard'), can_focus: true, x_expand: true,
         });
         entry.clutter_text.connect('text-changed', () => {
             this._query = entry.get_text();
@@ -164,6 +166,7 @@ export class QuickPaste {
             }
         }
         const entry = this._selected ? this._ctl.get(this._selected) : null;
+        A11y.describeSelection(ui.entry, ui.list.get_children().find(r => r.entryId === this._selected)?.accessible_name);
         ui.previewBox.destroy_all_children();
         if (!entry) {
             ui.meta.text = '';

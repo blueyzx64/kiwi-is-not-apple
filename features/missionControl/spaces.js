@@ -194,6 +194,7 @@ export class SpacesBar {
             const [w, h] = t.get_transformed_size();
             d.label.text = labels[i].label;
             d.label.accessible_name = labels[i].label;
+            d.close.accessible_name = this._host._('Remove %s').replace('%s', labels[i].label);
             // Measured at its natural width: a width set earlier would be read back as that
             // width, and a label narrowed while its Space slid would stay narrow
             d.label.set_width(-1);
@@ -228,7 +229,7 @@ export class SpacesBar {
 
     _decorate(t) {
         const cleanup = new CleanupRegistry();
-        const label = cleanup.actor(new St.Label({ style_class: 'kiwi-mc-space-label', reactive: true, track_hover: true }));
+        const label = cleanup.actor(new St.Label({ style_class: 'kiwi-mc-space-label', reactive: true, track_hover: true, can_focus: true }));
         label.clutter_text.ellipsize = Pango.EllipsizeMode.END;
         const close = cleanup.actor(new St.Button({
             style_class: 'kiwi-mc-space-close',
@@ -249,6 +250,16 @@ export class SpacesBar {
         cleanup.connect(close, 'clicked', () => this._removeSpace(t.metaWorkspace));
         cleanup.connect(close, 'notify::hover', () => this._syncClose());
         cleanup.connect(label, 'notify::hover', () => this._setHovered(label.hover ? t : this._hovered));
+        // Keyboard: a focused label stands for its Space (the pointer's hover), and Delete removes it
+        cleanup.connect(label, 'key-focus-in', () => this._setHovered(t));
+        cleanup.connect(label, 'key-focus-out', () => this._setHovered(null));
+        cleanup.connect(label, 'key-press-event', (_a, event) => {
+            const sym = event.get_key_symbol();
+            if ((sym !== Clutter.KEY_Delete && sym !== Clutter.KEY_BackSpace) || !d.removable)
+                return Clutter.EVENT_PROPAGATE;
+            this._removeSpace(t.metaWorkspace);
+            return Clutter.EVENT_STOP;
+        });
         // Watch this thumbnail (it slides and collapses when Spaces come and go)
         cleanup.connect(t, 'notify::allocation', () => this.queueSync());
         // The slide-in and slide-out scale the thumbnail without reallocating it

@@ -11,6 +11,7 @@
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 
+import * as A11y from '../../lib/a11y.js';
 import { Glass } from '../../lib/glass.js';
 import { MODES, TIMERS, normalizeDestination, normalizeTimer } from './model.js';
 
@@ -62,8 +63,11 @@ export class ScreenshotToolbar {
             style_class: 'kiwi-screenshot-toolbar',
             x_align: Clutter.ActorAlign.CENTER, y_align: Clutter.ActorAlign.END,
             x_expand: true, y_expand: true, reactive: true,
+            accessible_name: _('Screenshot'), accessible_role: A11y.Role.TOOL_BAR,
         });
         this.actor.add_child(this._bar);
+        // Tab and the arrow keys walk the toolbar
+        global.focus_manager.add_group(this._bar);
         this._build();
         this._glass = Glass.attach(this._bar, { surface: 'overlays', role: 'content' });
 
@@ -132,12 +136,15 @@ export class ScreenshotToolbar {
     }
 
     _createPopover() {
+        const _ = this._;
         this._popover = new St.BoxLayout({
             style_class: 'kiwi-screenshot-options',
             orientation: Clutter.Orientation.VERTICAL,
             x_align: Clutter.ActorAlign.START, y_align: Clutter.ActorAlign.END,
             x_expand: true, y_expand: true, reactive: true, visible: false,
+            accessible_name: _('Options'), accessible_role: A11y.Role.MENU,
         });
+        global.focus_manager.add_group(this._popover);
         this.actor.add_child(this._popover);
         this._buildOptions();
         this._popoverGlass = Glass.attach(this._popover, { surface: 'menus', role: 'content' });
@@ -182,7 +189,7 @@ export class ScreenshotToolbar {
             box.add_child(new St.Label({ text: _(info.label), style_class: 'kiwi-screenshot-mode-label' }));
             const button = this._button({
                 style_class: 'kiwi-screenshot-mode', accessible_name: _(info.a11y),
-                toggle_mode: true, child: box,
+                toggle_mode: true, child: box, accessible_role: A11y.Role.TOGGLE_BUTTON,
             });
             button.connect('clicked', () => {
                 button.checked = this._mode === mode;
@@ -198,7 +205,7 @@ export class ScreenshotToolbar {
         optBox.add_child(new St.Icon({ icon_name: 'pan-down-symbolic', icon_size: 12 }));
         this._optionsButton = this._button({
             style_class: 'kiwi-screenshot-options-button', accessible_name: _('Options'),
-            toggle_mode: true, child: optBox, y_align: Clutter.ActorAlign.CENTER,
+            toggle_mode: true, child: optBox, accessible_role: A11y.Role.TOGGLE_BUTTON, y_align: Clutter.ActorAlign.CENTER,
         });
         this._optionsButton.connect('clicked', () => this.toggleOptions());
         this._bar.add_child(this._optionsButton);
@@ -222,6 +229,7 @@ export class ScreenshotToolbar {
         box.add_child(label);
         const row = this._button({
             style_class: 'kiwi-screenshot-options-row', accessible_name: text, child: box, x_expand: true,
+            accessible_role: A11y.Role.CHECK_MENU_ITEM,
         });
         row.connect('clicked', activate);
         this._optionRows.push({ row, check, label, isOn });
@@ -261,10 +269,7 @@ export class ScreenshotToolbar {
         for (const { row, check, isOn } of this._optionRows) {
             const on = isOn();
             check.opacity = on ? 255 : 0;
-            if (on)
-                row.add_style_pseudo_class('checked');
-            else
-                row.remove_style_pseudo_class('checked');
+            row.checked = on;
         }
         const folder = this._ks.string('screenshots-other-folder');
         this._otherRow.label.text = folder

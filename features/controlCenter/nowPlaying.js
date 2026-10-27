@@ -6,6 +6,7 @@ import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import St from 'gi://St';
 
+import * as A11y from '../../lib/a11y.js';
 import { Glass } from '../../lib/glass.js';
 import { MprisWatcher } from '../../core/mprisWatcher.js';
 
@@ -42,7 +43,7 @@ export class NowPlaying {
         });
         text.add_child(this._title);
         text.add_child(this._artist);
-        this._playPause = this._button('media-playback-start-symbolic', gettext('Play or pause'),
+        this._playPause = this._button('media-playback-start-symbolic', gettext('Play'),
             () => this._current()?.playPause());
         this._next = this._button('media-skip-forward-symbolic', gettext('Next track'),
             () => this._current()?.next());
@@ -99,9 +100,11 @@ export class NowPlaying {
             this._title.text = player.trackTitle ?? '';
             this._artist.text = (player.trackArtists ?? []).join(', ');
             this._art.gicon = this._artIcon(player);
-            this._playPause.child.icon_name = player.isPlaying()
+            const playing = player.isPlaying();
+            this._playPause.child.icon_name = playing
                 ? 'media-playback-pause-symbolic' : 'media-playback-start-symbolic';
-            this._next.reactive = player.canGoNext;
+            this._playPause.accessible_name = playing ? this._gettext('Pause') : this._gettext('Play');
+            A11y.setEnabled(this._next, player.canGoNext);
         }
         this._show(show);
     }

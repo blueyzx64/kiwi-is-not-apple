@@ -16,6 +16,7 @@ import Clutter from 'gi://Clutter';
 import Pango from 'gi://Pango';
 import St from 'gi://St';
 
+import * as A11y from '../../lib/a11y.js';
 import { pinMode, setPin } from '../../lib/menuBarPins.js';
 import {
     addControl, control, gallery, moveControl, nextSize, packRows, pinOf, removeControl, setSize,
@@ -35,10 +36,15 @@ function iconButton(iconName, name, onClick, { checked = null, sensitive = true 
         toggle_mode: checked !== null,
         child: new St.Icon({ icon_name: iconName, icon_size: SMALL_ICON }),
     });
-    if (checked !== null)
+    if (checked !== null) {
         button.checked = checked;
-    if (!sensitive)
+        button.accessible_role = A11y.Role.TOGGLE_BUTTON;
+    }
+    if (!sensitive) {
+        // Neither clickable nor a dead tab stop
+        A11y.setEnabled(button, false);
         button.add_style_pseudo_class('insensitive');
+    }
     button.connect('clicked', () => onClick());
     return button;
 }
@@ -98,6 +104,7 @@ export class ControlsEditor {
         this._search = new St.Entry({
             style_class: 'kiwi-cc-editor-search',
             hint_text: _('Search Controls'),
+            accessible_name: _('Search Controls'),
             can_focus: true,
             x_expand: true,
             primary_icon: new St.Icon({ icon_name: 'edit-find-symbolic', icon_size: SMALL_ICON }),

@@ -53,7 +53,9 @@ export function buildDateWidget(_, now, weekStart) {
     });
     grid.weeks.forEach((week, row) => week.forEach((cell, column) => {
         const classes = ['kiwi-nc-month-day', cell.inMonth ? '' : 'kiwi-nc-month-other', cell.today ? 'kiwi-nc-month-today' : ''];
-        layout.attach(label(String(cell.day), classes.join(' ').trim(), { x_align: Clutter.ActorAlign.CENTER }), column, row + 1, 1, 1);
+        // Today is marked by colour: say it too
+        const opts = { x_align: Clutter.ActorAlign.CENTER, ...cell.today ? { accessible_name: _('%d, today').replace('%d', String(cell.day)) } : {} };
+        layout.attach(label(String(cell.day), classes.join(' ').trim(), opts), column, row + 1, 1, 1);
     }));
     box.add_child(table);
     return box;

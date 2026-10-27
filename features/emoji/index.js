@@ -59,6 +59,7 @@ export class EmojiPicker {
         });
         this._modal = new ModalSurface(cleanup, {
             id: 'emoji',
+            accessibleName: _('Emoji & Symbols'),
             width: WIDTH,
             height: HEIGHT,
             position: 'at',

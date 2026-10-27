@@ -101,6 +101,7 @@ export class SpotlightFeature {
 
         this._modal = new ModalSurface(cleanup, {
             id: 'spotlight',
+            accessibleName: gettext('Spotlight'),
             width: WIDTH,
             position: 'top',
             offsetTop: OFFSET_TOP,

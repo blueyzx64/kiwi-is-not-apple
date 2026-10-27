@@ -15,6 +15,7 @@ import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { getMixerControl } from 'resource:///org/gnome/shell/ui/status/volume.js';
 
+import * as A11y from '../../lib/a11y.js';
 import { Glass } from '../../lib/glass.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { PILL, TRACK_WIDTH, VISIBLE_MS, deviceLabel, pillContent, pillPosition } from './model.js';
@@ -118,7 +119,8 @@ export class OsdPill {
         else
             v.icon.gicon = osd.icon;
         v.caption.text = content.caption;
-        v.pill.accessible_name = content.accessibleName;
+        // An alert: a screen reader speaks the new level without the focus moving
+        A11y.name(v.pill, content.accessibleName, A11y.Role.ALERT);
         v.pill.set_style_class_name(content.muted ? 'kiwi-osd-pill kiwi-osd-muted' : 'kiwi-osd-pill');
         const width = Math.round(TRACK_WIDTH * content.fill);
         const { motion } = this._ctx;

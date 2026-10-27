@@ -28,6 +28,7 @@ import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
+import * as A11y from '../../lib/a11y.js';
 import { WindowState } from '../../core/windowState.js';
 import { MENU_CLOSE_ARGS, isMaximized, unmaximizeWindow } from '../../lib/compat.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
@@ -201,6 +202,7 @@ export class SplitView {
         const reg = new CleanupRegistry();
         const overlay = reg.actor(new St.Widget({
             name: 'kiwi-split-picker', style_class: 'kiwi-split-picker', reactive: true, can_focus: true,
+            accessible_name: _('Choose a Window'), accessible_role: A11y.Role.DIALOG,
             layout_manager: new Clutter.FixedLayout(),
             x: half.x, y: half.y, width: half.width, height: half.height,
         }));
@@ -228,6 +230,7 @@ export class SplitView {
             overlay.add_child(label);
         });
         Main.layoutManager.uiGroup.add_child(overlay);
+        global.focus_manager.add_group(overlay);
         const grab = Main.pushModal(overlay, { actionMode: Shell.ActionMode.POPUP });
         reg.add(() => Main.popModal(grab));
         reg.connect(overlay, 'key-press-event', (_a, event) => {

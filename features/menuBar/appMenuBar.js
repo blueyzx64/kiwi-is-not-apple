@@ -151,7 +151,7 @@ class KiwiHelpSearchItem extends PopupMenu.PopupBaseMenuItem {
     _init(hint) {
         super._init({ reactive: false, can_focus: false, style_class: 'kiwi-menubar-search-item' });
         this.entry = new St.Entry({
-            hint_text: hint, can_focus: true, x_expand: true,
+            hint_text: hint, accessible_name: hint, can_focus: true, x_expand: true,
             style_class: 'kiwi-menubar-search',
         });
         this.add_child(this.entry);

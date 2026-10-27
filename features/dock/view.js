@@ -19,6 +19,7 @@ import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as DND from 'resource:///org/gnome/shell/ui/dnd.js';
 
+import * as A11y from '../../lib/a11y.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { Glass } from '../../lib/glass.js';
 import { dropIndex, isHorizontal } from './model.js';
@@ -92,6 +93,8 @@ export class DockView {
             style_class: 'kiwi-dock',
             orientation: horizontal ? Clutter.Orientation.HORIZONTAL : Clutter.Orientation.VERTICAL,
             reactive: true,
+            accessible_name: this._host.gettext('Dock'),
+            accessible_role: A11y.Role.TOOL_BAR,
         });
         this.pill.set_style(`border-radius: ${m.radius}px; padding: ${m.padding}px;`);
         // The glass's drop shadow is drawn by a host right behind the pill, same rect
@@ -115,7 +118,12 @@ export class DockView {
             handleDragOver: (source, _actor, x, y) => this._host.dragOverDock(source, horizontal ? x : y),
             acceptDrop: (source, _actor, x, y) => this._host.dropOnDock(source, horizontal ? x : y),
         };
-        reg.connect(this.frame, 'notify::hover', () => this._host.dockHovered(this.frame.hover));
+        // Keyboard: Ctrl+Alt+Tab lists the dock, Tab and the arrows walk the icons, and keyboard
+        // focus inside keeps an auto-hidden dock up like the pointer does
+        A11y.focusGroup(reg, this.frame, this._host.gettext('Dock'), 'user-desktop-symbolic');
+        const dockUp = () => this.frame.hover || this.frame.contains(global.stage.key_focus);
+        reg.connect(this.frame, 'notify::hover', () => this._host.dockHovered(dockUp()));
+        reg.connect(global.stage, 'notify::key-focus', () => this._host.dockHovered(dockUp()));
         reg.connect(this.edge, 'notify::hover', () => this._host.edgeHovered(this.edge.hover));
         // A relayout moves icons: the minimize targets follow (not per frame: allocation only)
         reg.connect(this.pill, 'notify::allocation', () => this._host.dockRelayout());

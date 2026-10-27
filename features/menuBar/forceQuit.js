@@ -16,6 +16,7 @@ import Clutter from 'gi://Clutter';
 import Shell from 'gi://Shell';
 import St from 'gi://St';
 
+import * as A11y from '../../lib/a11y.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { formatAccel } from '../../core/appMenus/model.js';
 import { ModalSurface } from '../../lib/modalSurface.js';
@@ -38,7 +39,7 @@ export class ForceQuit {
         this._relaunch = new Map(); // Shell.App -> signal token, waiting for it to stop
         cleanup.add(() => this._relaunch.clear());
         this._modal = new ModalSurface(cleanup, {
-            id: 'force-quit', width: 420, height: 460, position: 'center', radius: 22,
+            id: 'force-quit', accessibleName: _('Force Quit Applications'), width: 420, height: 460, position: 'center', radius: 22,
             styleClass: 'kiwi-force-quit',
             build: frame => this._build(frame),
             onClosed: () => {
@@ -191,7 +192,8 @@ export class ForceQuit {
             }
             const button = new St.Button({
                 child: box, can_focus: true, x_expand: true, x_align: Clutter.ActorAlign.FILL,
-                style_class: 'kiwi-force-quit-row', accessible_name: info.name,
+                style_class: 'kiwi-force-quit-row', accessible_role: A11y.Role.RADIO_BUTTON,
+                accessible_name: info.notResponding ? `${info.name}, ${this._('not responding')}` : info.name,
             });
             button.connect('clicked', () => this.select(info.id));
             button.connect('key-focus-in', () => this.select(info.id));
@@ -205,10 +207,7 @@ export class ForceQuit {
 
     _paint() {
         for (const r of this._rows ?? []) {
-            if (r.id === this._selected)
-                r.button.add_style_pseudo_class('checked');
-            else
-                r.button.remove_style_pseudo_class('checked');
+            r.button.checked = r.id === this._selected;
         }
         const any = !!this._selected;
         this._quitButton.reactive = this._relaunchButton.reactive = any;

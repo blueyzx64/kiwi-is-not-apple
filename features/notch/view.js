@@ -32,6 +32,7 @@ import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as Util from 'resource:///org/gnome/shell/misc/util.js';
 
+import * as A11y from '../../lib/a11y.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { SIZES } from './stateMachine.js';
 import { cardSize } from './dashboardModel.js';
@@ -111,9 +112,19 @@ export class NotchView {
             clip_to_allocation: true,
             width: SIZES.idle.w,
             height: SIZES.idle.h,
+            accessible_name: gettext('Notch'),
+            accessible_role: A11y.Role.PANEL,
         });
-        this._island.set_accessible_name?.(gettext('Notch'));
         Main.layoutManager.addTopChrome(this._island);
+        // Keyboard entry: Ctrl+Alt+Tab lists the notch; choosing it opens the dashboard (which
+        // takes the key focus), where Tab and the arrows walk the tabs and buttons
+        A11y.focusGroup(cleanup, this._island, gettext('Notch'), 'view-pin-symbolic', {
+            focus: () => {
+                if (!this._pinned)
+                    this._h.onClick?.();
+                this._island.navigate_focus(null, St.DirectionType.TAB_FORWARD, false);
+            },
+        });
         cleanup.add(() => {
             this._destroyed = true;
             this._page = null;
@@ -548,6 +559,7 @@ export class NotchView {
                 styleClass: 'kiwi-notch-tab', text: names[tab], accessibleName: names[tab],
                 toggle: tab === vm.tab, onClick: () => this._h.onTab(tab),
             });
+            b.accessible_role = A11y.Role.PAGE_TAB;
             buttons.set(tab, b);
             tabs.add_child(b);
         }
@@ -805,9 +817,11 @@ export class NotchView {
         const card = new St.BoxLayout({
             style_class: 'kiwi-notch-card',
             orientation: Clutter.Orientation.VERTICAL,
+            accessible_role: A11y.Role.NOTIFICATION,
         });
         if (!notification)
             return card;
+        card.accessible_name = [notification.source?.title, notification.title].filter(Boolean).join(': ');
 
         const header = new St.BoxLayout({ style_class: 'kiwi-notch-card-header' });
         header.add_child(icon(this._notificationIcon(notification), 20, 'kiwi-notch-card-icon'));
