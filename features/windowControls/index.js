@@ -15,7 +15,7 @@
 //
 // The green button (macOS): a click goes full screen (windows-green-click 'fullscreen', the
 // macOS default, in its own Space while that feature runs) or zooms ('zoom'); Alt-click does
-// the other one. Hovering over it or pressing and holding opens the Fill & Arrange menu
+// the other one. Hovering over it or pressing and holding it (the menu opens on release) opens the Fill & Arrange menu
 // (greenMenu.js); its tiles go to the tiling engine through the 'window-tile-requested' event.
 //
 // Look (windows-traffic-style): 'glass' draws the macOS 27 glass beads in CSS (a gradient bead,
@@ -98,6 +98,7 @@ class WindowControlsIndicator extends PanelMenu.Button {
         this._greenMenu = true;
         this._greenTimer = 0;
         this._skipClick = false;
+        this._holdReached = false;
         this._order = [];
         this._state = { maximized: false, fullscreen: false, can: { minimize: true, maximize: true, close: true } };
         this._closeLocked = false;
@@ -134,6 +135,10 @@ class WindowControlsIndicator extends PanelMenu.Button {
                     this._armGreenMenu(GREEN_HOLD_MS);
                 } else {
                     this._disarmGreenMenu();
+                    if (this._holdReached) {
+                        this._holdReached = false;
+                        this._onGreenMenu();
+                    }
                 }
             });
             // macOS mode: hovering one button shows the glyphs on all three
@@ -220,11 +225,14 @@ class WindowControlsIndicator extends PanelMenu.Button {
             const button = this._buttons.maximize;
             if (!button || !(viaHold ? button.pressed : button.hover))
                 return GLib.SOURCE_REMOVE;
-            if (viaHold)
+            if (viaHold) {
+                // Opened on release: a menu grab taken in the middle of the press leaves the
+                // button's click gesture waiting for a release that never comes, and it then
+                // ignores every later press (GNOME 50.6). The release is not a click.
+                this._holdReached = true;
                 this._skipClick = true;
-            // The menu's grab takes the rest of this press: end it on the button, or the
-            // button would wait for a release that never comes and miss the next click
-            button.fake_release();
+                return GLib.SOURCE_REMOVE;
+            }
             this._onGreenMenu();
             return GLib.SOURCE_REMOVE;
         }, { name: 'kiwi green menu' });
@@ -493,7 +501,7 @@ export class WindowControlsFeature {
 
         // Disposed before the indicator (LIFO): the menu is anchored to its green button
         this._greenMenu = new GreenMenu({
-            source: this._indicator.greenButton, gettext, cleanup,
+            source: this._indicator, target: this._indicator.greenButton, gettext, cleanup,
             onAction: (action, arg) => this._greenMenuAction(action, arg),
         });
         cleanup.add(() => (this._greenMenu = null));

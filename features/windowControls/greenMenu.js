@@ -78,13 +78,18 @@ function buildGlyph(action) {
 export class GreenMenu {
     /**
      * @param {object} opts
-     * @param {Clutter.Actor} opts.source the green button
+     * @param {Clutter.Actor} opts.source the indicator the menu hangs from. Not the green
+     *   button itself: a St.Button that is a menu source stops taking presses after the menu
+     *   grab ends (seen on GNOME 50.6), as panel menus always hang from their PanelMenu.Button
+     * @param {Clutter.Actor} opts.target the green button the arrow points at
      * @param {Function} opts.gettext
      * @param {(action: string, arg?: number) => void} opts.onAction tiling actions, or
      *   'fullscreen' | 'zoom' | 'workspace' (arg index) | 'monitor' (arg index)
      * @param {import('../../lib/disposables.js').CleanupRegistry} opts.cleanup
      */
-    constructor({ source, gettext, onAction, cleanup }) {
+    constructor({ source, target, gettext, onAction, cleanup }) {
+        this._source = source;
+        this._target = target;
         this._ = gettext;
         this._onAction = onAction;
         this._menu = new PopupMenu.PopupMenu(source, 0.5, St.Side.TOP);
@@ -161,6 +166,13 @@ export class GreenMenu {
             }
             menu.addMenuItem(sub);
         }
+        // Point the arrow at the green button
+        const [sx] = this._source.get_transformed_position();
+        const [tx] = this._target.get_transformed_position();
+        const sw = this._source.get_transformed_size()[0];
+        const tw = this._target.get_transformed_size()[0];
+        if (sw > 0)
+            menu.setSourceAlignment(Math.min(Math.max((tx + tw / 2 - sx) / sw, 0), 1));
         menu.open(true);
     }
 
