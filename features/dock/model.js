@@ -51,6 +51,8 @@ export function readConfig(get) {
         runningDots: get.bool('dock-running-dots'),
         minimizeToApp: get.bool('dock-minimize-to-app'),
         downloads: get.bool('dock-downloads'),
+        // The Launchpad tile shows while Launchpad itself is on
+        launchpad: get.bool('dock-launchpad') && get.bool('launchpad'),
         stackView: STACK_VIEWS.includes(view) ? view : 'automatic',
     });
 }
@@ -99,7 +101,7 @@ export function pushRecent(recents, appId, max = RECENT_MAX) {
 
 /**
  * What the dock shows, in order (macOS):
- *   pinned apps | separator | running unpinned and recent apps | separator | minimized
+ *   Launchpad | pinned apps | separator | running unpinned and recent apps | separator | minimized
  *   windows, Downloads, Trash
  * With recents off, running unpinned apps follow the pinned ones with no separator.
  *
@@ -110,10 +112,13 @@ export function pushRecent(recents, appId, max = RECENT_MAX) {
  * @param {boolean} p.showRecents
  * @param {number[]} [p.minimized] window ids that get their own tile
  * @param {boolean} [p.downloads] show the Downloads stack
- * @returns {object[]} {kind: 'app'|'separator'|'window'|'downloads'|'trash', id, ...}
+ * @param {boolean} [p.launchpad] show the Launchpad tile first
+ * @returns {object[]} {kind: 'launchpad'|'app'|'separator'|'window'|'downloads'|'trash', id, ...}
  */
-export function dockItems({ pinned, running, recents, showRecents, minimized = [], downloads = true }) {
+export function dockItems({ pinned, running, recents, showRecents, minimized = [], downloads = true, launchpad = false }) {
     const items = [];
+    if (launchpad)
+        items.push({ kind: 'launchpad', id: 'launchpad' });
     const live = new Set(running);
     const pinnedSet = new Set(pinned);
     for (const id of pinned)

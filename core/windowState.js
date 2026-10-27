@@ -9,6 +9,8 @@
 //   isolatedFullscreen  reserved: a full-screen window in its own Space (phase 3)
 //   tiled               reserved: the tiling engine holds a restore rect for it (phase 1)
 //   parkedInDock        reserved: the dock owns its minimize (phase 1)
+//   splitView           one of a full-screen Split View pair (features/splitView): it left
+//                       full screen on purpose and stays in that Space
 //
 //   import { WindowState } from '../../core/windowState.js';
 //   WindowState.set(win, 'staged', true);          // true if the flag changed
@@ -24,7 +26,7 @@
 // No gi imports: runs under `gjs -m` in tests. A window is any object; if it has
 // connect/disconnect, its flags are dropped on 'unmanaged' by track().
 
-export const FLAGS = Object.freeze(['staged', 'isolatedFullscreen', 'tiled', 'parkedInDock']);
+export const FLAGS = Object.freeze(['staged', 'isolatedFullscreen', 'tiled', 'parkedInDock', 'splitView']);
 
 export class WindowStateRegistry {
     constructor() {

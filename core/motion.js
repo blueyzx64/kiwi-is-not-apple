@@ -84,7 +84,10 @@ export class Motion {
      * @param {Clutter.Actor} actor
      * @param {object} props target values (GObject property names, e.g. scale_x)
      * @param {{duration?: number|string, curve?: string, spring?: string|object,
-     *   delay?: number, onDone?: (finished: boolean) => void}} [request]
+     *   delay?: number, repeat?: number, autoReverse?: boolean,
+     *   onDone?: (finished: boolean) => void}} [request] repeat: extra runs (-1 forever), with
+     *   autoReverse running every other one backwards (a wobble); a repeat that only moves is
+     *   dropped to its end value under reduced motion like any transform
      * @param {{add: Function, release?: Function}} [owner] cancels it on dispose
      * @returns {{cancel: Function, running: boolean}}
      */
@@ -127,6 +130,8 @@ export class Motion {
             ...animate,
             duration: plan.duration,
             delay: request.delay ?? 0,
+            repeatCount: request.repeat ?? 0,
+            autoReverse: !!request.autoReverse,
             mode: Clutter.AnimationMode[plan.mode],
             onStopped: isFinished => finish(isFinished),
         });

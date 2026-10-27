@@ -81,13 +81,26 @@ export const FEATURES = [
         load: async () => (await import('./features/clipboard/index.js')).ClipboardHistory,
     },
     {
-        // Top-bar button and Super+D slide the windows aside; hands off to Stage Manager's
-        // toggleDesktop() while that runs (looked up through ctx.features)
+        // Top-bar button, Super+D and a click on empty wallpaper slide the windows aside; hands
+        // off to Stage Manager's toggleDesktop() while that runs (looked up through ctx.features)
         id: 'show-desktop',
         when: ctx => bool(ctx, 'show-desktop-button') ||
-            ctx.settings.get_strv('show-desktop-shortcut').length > 0,
+            ctx.settings.get_strv('show-desktop-shortcut').length > 0 ||
+            ctx.settings.get_string('click-wallpaper-reveals-desktop') !== 'never',
+        keys: ['show-desktop-button', 'click-wallpaper-reveals-desktop'],
         restartOn: ['show-desktop-shortcut'],
         load: async () => (await import('./features/showDesktop/index.js')).ShowDesktop,
+    },
+    {
+        // Full-screen app grid with folders and jiggle delete; GNOME's folders and order are
+        // its data. Takes Super+A from GNOME's app grid while on (core/originals).
+        id: 'launchpad', setting: 'launchpad',
+        load: async () => (await import('./features/launchpad/index.js')).Launchpad,
+    },
+    {
+        // Full screen Split View on the green button; builds on full screen as its own Space
+        id: 'split-view', setting: 'split-view',
+        load: async () => (await import('./features/splitView/index.js')).SplitView,
     },
     {
         // Super tap / shortcut opens Spotlight; the clipboard rows come from clipboard-history

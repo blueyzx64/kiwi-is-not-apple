@@ -214,6 +214,12 @@ test('reveal: leaving the edge before the delay disarms it', () => {
     eq([r.wantsTimer, r.settle()], [false, false]);
 });
 
+test('dockItems: the Launchpad tile comes first when asked', () => {
+    const items = dockItems({ pinned: ['a'], running: [], recents: [], showRecents: false, launchpad: true });
+    eq(items[0], { kind: 'launchpad', id: 'launchpad' });
+    eq(dockItems({ pinned: ['a'], running: [], recents: [], showRecents: false })[0].kind, 'app');
+});
+
 if (failed) {
     print(`${failed} failed`);
     imports.system.exit(1);

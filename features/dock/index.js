@@ -44,12 +44,14 @@ import { DockView } from './view.js';
 import { AppItem, SeparatorItem, WindowItem } from './items.js';
 import { DownloadsItem, installerFor } from './stack.js';
 import { TrashItem } from './trash.js';
+import { LaunchpadItem } from './launchpad.js';
 import { DockMenu, altHeld, fillAppMenu, isAltKey } from './appMenu.js';
 import { readAutostart, setAutostart } from './autostart.js';
 import { keepOtherDocksOff } from './dashToDock.js';
 
 const LAYOUT_KEYS = ['dock-position', 'dock-icon-size'];
-const CONTENT_KEYS = ['dock-show-recents', 'dock-running-dots', 'dock-minimize-to-app', 'dock-downloads'];
+const CONTENT_KEYS = ['dock-show-recents', 'dock-running-dots', 'dock-minimize-to-app', 'dock-downloads',
+    'dock-launchpad', 'launchpad'];
 const HIDE_KEYS = ['dock-autohide', 'dock-autohide-delay'];
 // Pushing against the edge reveals an auto-hidden dock: the same pressure as the Shell's hot
 // corner (ui/layout.js HOT_CORNER_PRESSURE_THRESHOLD / _TIMEOUT)
@@ -234,6 +236,7 @@ export class Dock {
             showRecents: this.config.showRecents,
             minimized: this._minimized,
             downloads: this.config.downloads,
+            launchpad: this.config.launchpad,
         });
         this._view.setItems(items, spec => this._createItem(spec));
         this._queueGeometry();
@@ -261,6 +264,8 @@ export class Dock {
             return new DownloadsItem(this, spec);
         case 'trash':
             return new TrashItem(this, spec);
+        case 'launchpad':
+            return new LaunchpadItem(this, spec);
         default:
             return null;
         }
@@ -350,6 +355,16 @@ export class Dock {
     activateWindow(win) {
         if (win)
             Main.activateWindow(win);
+    }
+
+    /** The Launchpad tile was clicked. */
+    requestLaunchpad() {
+        this._ctx.events.emit('launchpad-requested', { source: 'dock' });
+    }
+
+    /** A file of Kiwi's icons/ folder, or null. */
+    iconFile(name) {
+        return this._ctx.extension?.dir?.get_child('icons').get_child(name) ?? null;
     }
 
     openUri(uri) {

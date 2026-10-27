@@ -41,6 +41,17 @@ export const EVENTS = Object.freeze({
     // policy listens; with no listener the app menu runs a plain fallback itself.
     'app-hide-requested': { appId: 'string|null', mode: "'hide' | 'others' | 'all'" },
     'window-tile-requested': { window: 'Meta.Window', mode: "'left' | 'right'" },
+    // Open or close Launchpad (features/launchpad listens): the dock tile ('dock'), the pinch
+    // gesture ('pinch'), a hot corner ('hot-corner')
+    'launchpad-requested': { source: 'string' },
+    // The green button of the top-bar controls (features/windowControls) was hovered or left;
+    // Split View (features/splitView) offers its menu for a full-screen window
+    'green-button-hover': { window: 'Meta.Window|null', actor: 'Clutter.Actor', hovered: 'boolean' },
+    // Split View: tile a full-screen window to one half and pick its partner (the green menu
+    // emits it; features/splitView acts)
+    'split-view-requested': { window: 'Meta.Window', side: "'left' | 'right'" },
+    // A Split View pair formed (active) or ended (features/splitView)
+    'split-view-changed': { windows: 'Meta.Window[]', active: 'boolean' },
 });
 
 export class EventHub {

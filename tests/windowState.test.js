@@ -42,7 +42,7 @@ class FakeWin {
 }
 
 test('flags are the four from the architecture doc', () =>
-    eq([...FLAGS], ['staged', 'isolatedFullscreen', 'tiled', 'parkedInDock']));
+    eq([...FLAGS], ['staged', 'isolatedFullscreen', 'tiled', 'parkedInDock', 'splitView']));
 test('set and has', () => {
     const r = new WindowStateRegistry();
     const w = {};

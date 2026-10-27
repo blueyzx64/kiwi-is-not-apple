@@ -58,7 +58,7 @@ class WindowControlsIndicator extends PanelMenu.Button {
      * The view: three buttons, their icons and hover look. It owns no policy; the feature
      * tells it what to show.
      */
-    _init({ catalog, settings, cleanup, onAction, gettext: _ }) {
+    _init({ catalog, settings, cleanup, onAction, onHover, gettext: _ }) {
         super._init(0.0, 'window-controls', true);
         this.add_style_class_name('kiwi-window-controls-indicator');
         this._catalog = catalog;
@@ -86,7 +86,11 @@ class WindowControlsIndicator extends PanelMenu.Button {
             cleanup.connect(button, 'destroy', () => {
                 this._buttons[name] = null;
             });
-            cleanup.connect(button, 'notify::hover', () => this._updateIcon(name));
+            cleanup.connect(button, 'notify::hover', () => {
+                this._updateIcon(name);
+                if (name === 'maximize')
+                    onHover?.(button, button.hover);
+            });
             cleanup.connect(button, 'button-press-event', () => {
                 button.add_style_pseudo_class('active');
                 this._updateIcon(name);
@@ -309,6 +313,9 @@ export class WindowControlsFeature {
 
         this._indicator = new WindowControlsIndicator({
             catalog, settings: ks, cleanup, onAction: name => this._act(name),
+            // The green button's hover goes out as an event (Split View offers its menu on it)
+            onHover: (actor, hovered) => this._ctx.events?.emit('green-button-hover',
+                { window: global.display.focus_window ?? null, actor, hovered }),
             gettext: this._ctx.gettext ?? (s => s),
         });
         cleanup.add(() => {
