@@ -36,6 +36,38 @@
     box-shadow: 0 0 2px rgba(0, 0, 0, 0.55);
 }
 
+/* macOS 27: an app running only in the background has a light grey indicator */
+.kiwi-dock-dot.kiwi-dock-dot-background {
+    background-color: rgba(190, 190, 196, 0.55);
+    box-shadow: none;
+}
+
+/* LauncherEntry: the red count at the icon's top right, and a progress bar along its foot */
+.kiwi-dock-badge {
+    min-width: 12px;
+    padding: 1px 5px;
+    border-radius: 999px;
+    background-color: #ff3b30;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    color: #ffffff;
+    font-size: 8.5pt;
+    font-weight: 700;
+    text-align: center;
+}
+
+.kiwi-dock-progress {
+    height: 6px;
+    border-radius: 3px;
+    background-color: rgba(30, 30, 34, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.kiwi-dock-progress-fill {
+    border-radius: 3px;
+    background-color: -st-accent-color;
+}
+
 .kiwi-dock-separator {
     background-color: rgba(255, 255, 255, 0.32);
 }

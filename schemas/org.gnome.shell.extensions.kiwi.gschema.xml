@@ -153,6 +153,52 @@
         <summary>Minimize windows into application icon</summary>
         <description>Minimized windows go into their app's icon. Off: each minimized window gets its own tile next to the Downloads stack.</description>
       </key>
+      <key name="dock-minimize-effect" type="s">
+        <choices>
+          <choice value="genie"/>
+          <choice value="scale"/>
+          <choice value="gnome"/>
+        </choices>
+        <default>'genie'</default>
+        <summary>Minimize windows using</summary>
+        <description>The effect that takes a window into the Dock and back: genie (the magic lamp, the macOS default), scale (a plain shrink) or gnome (GNOME's own). Reduced motion turns both into a fade.</description>
+      </key>
+      <key name="dock-magnification" type="b">
+        <default>false</default>
+        <summary>Magnification</summary>
+        <description>Icons under the pointer grow, with a smooth falloff to their neighbours (off by default, as on macOS).</description>
+      </key>
+      <key name="dock-magnification-size" type="i">
+        <range min="24" max="160"/>
+        <default>96</default>
+        <summary>Magnified icon size</summary>
+        <description>Size in pixels of the icon right under the pointer while magnification is on (never smaller than the Dock's icons).</description>
+      </key>
+      <key name="dock-launch-animation" type="b">
+        <default>true</default>
+        <summary>Animate opening applications</summary>
+        <description>An app's icon bounces while the app starts.</description>
+      </key>
+      <key name="dock-attention-bounce" type="b">
+        <default>true</default>
+        <summary>Bounce when apps need attention</summary>
+        <description>An app's icon bounces when one of its windows asks for attention or the app marks itself urgent.</description>
+      </key>
+      <key name="dock-badges" type="b">
+        <default>true</default>
+        <summary>Show badges and progress on Dock icons</summary>
+        <description>Red counts and progress bars that apps publish through the LauncherEntry D-Bus API (com.canonical.Unity.LauncherEntry).</description>
+      </key>
+      <key name="dock-background-apps" type="b">
+        <default>true</default>
+        <summary>Show apps running in the background</summary>
+        <description>Apps with no window that run in the background (the Background portal list GNOME's Quick Settings show) appear in the Dock with a grey dot.</description>
+      </key>
+      <key name="dock-folders" type="as">
+        <default>[]</default>
+        <summary>Folder stacks</summary>
+        <description>Folders kept in the Dock as stacks, beside the Downloads stack (absolute paths). Drag a folder to the right side of the Dock to add one.</description>
+      </key>
       <key name="dock-downloads" type="b">
         <default>true</default>
         <summary>Downloads stack in the Dock</summary>

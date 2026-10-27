@@ -136,6 +136,14 @@ export const FEATURES = [
         load: async () => (await import('./features/dock/index.js')).Dock,
     },
     {
+        // Genie / Scale minimize into the dock (or any target a provider gives). 'gnome' keeps
+        // GNOME's own effect, so the feature does not run then.
+        id: 'minimize-effect',
+        when: ctx => ctx.settings.get_string('dock-minimize-effect') !== 'gnome',
+        keys: ['dock-minimize-effect'],
+        load: async () => (await import('./features/minimizeEffect/index.js')).MinimizeEffect,
+    },
+    {
         // Stage Manager wins over fullscreen-to-its-own-Space; its saved value is kept
         id: 'stage-manager', setting: 'stage-manager',
         conflictsWith: ['move-window-to-new-workspace'],
