@@ -5,108 +5,12 @@
 
 // ---- adaptive look ---------------------------------------------------------------------------
 
-/** WCAG relative luminance of an sRGB colour (0..255 channels) -> 0..1. */
-export function relativeLuminance(r, g, b) {
-    const lin = c => {
-        const s = c / 255;
-        return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
-    };
-    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
-}
-
 // Black text beats white text on a background brighter than this (equal contrast point)
 export const TEXT_FLIP_LUMINANCE = 0.179;
 // How far past the flip point the band must move before the text flips back (hysteresis)
 export const TEXT_FLIP_HYSTERESIS = 0.04;
 // A band whose luminance spread is wider than this is "mixed": a soft scrim is drawn
 export const MIXED_SPREAD = 0.35;
-
-/** Decode width (px) for placements by ratio: enough for a band of a few dozen rows. */
-export const PROBE_WIDTH = 480;
-
-/** Placements that scale the picture to the monitor (zoom, stretched, scaled, spanned). */
-export const decodesByRatio = option => option !== 'centered' && option !== 'wallpaper';
-
-/**
- * Which part of the wallpaper image lies under the top band of a monitor.
- *
- * @param {{width: number, height: number}} image picture size in pixels
- * @param {{width: number, height: number}} monitor
- * @param {string} option org.gnome.desktop.background picture-options
- * @param {number} band band height in monitor px (the menu bar)
- * @returns {?{x: number, y: number, width: number, height: number}} image rect, or null when
- *   the band shows only the background colour ('none', or bars of 'scaled' / 'centered')
- */
-export function wallpaperBand(image, monitor, option, band) {
-    const { width: iw, height: ih } = image;
-    const { width: mw, height: mh } = monitor;
-    if (!iw || !ih || !mw || !mh || option === 'none')
-        return null;
-    const clampRect = (x, y, w, h) => {
-        const x0 = Math.max(0, Math.floor(x));
-        const y0 = Math.max(0, Math.floor(y));
-        const x1 = Math.min(iw, Math.ceil(x + w));
-        const y1 = Math.min(ih, Math.ceil(y + h));
-        return x1 > x0 && y1 > y0 ? { x: x0, y: y0, width: x1 - x0, height: y1 - y0 } : null;
-    };
-    switch (option) {
-    case 'stretched':
-        return clampRect(0, 0, iw, ih * band / mh);
-    case 'scaled': {
-        // Fit inside: bars of the background colour above and below when the image is wider
-        const s = Math.min(mw / iw, mh / ih);
-        const top = (mh - ih * s) / 2;
-        if (top >= band)
-            return null;
-        return clampRect(0, Math.max(0, -top) / s, iw, (band - Math.max(0, top)) / s);
-    }
-    case 'centered': {
-        const top = (mh - ih) / 2;
-        const left = (mw - iw) / 2;
-        if (top >= band)
-            return null;
-        return clampRect(-left, -top, mw, band - Math.max(0, top));
-    }
-    case 'wallpaper':
-        return clampRect(0, 0, Math.min(iw, mw), Math.min(ih, band));
-    case 'zoom':
-    case 'spanned':
-    default: {
-        // Cover: the image fills the monitor, centred, cropped on one axis
-        const s = Math.max(mw / iw, mh / ih);
-        const cropX = (iw * s - mw) / 2 / s;
-        const cropY = (ih * s - mh) / 2 / s;
-        return clampRect(cropX, cropY, mw / s, band / s);
-    }
-    }
-}
-
-/**
- * Luminance statistics of a rect of RGB(A) pixels, sampling a grid of at most ~grid² points.
- *
- * @param {Uint8Array} pixels
- * @param {{rowstride: number, channels: number}} layout
- * @param {{x, y, width, height}} rect
- * @param {number} [grid] samples per axis
- * @returns {{mean: number, spread: number}} spread = 90th - 10th percentile
- */
-export function bandLuminance(pixels, { rowstride, channels }, rect, grid = 24) {
-    const values = [];
-    const stepX = Math.max(1, Math.floor(rect.width / grid));
-    const stepY = Math.max(1, Math.floor(rect.height / Math.min(grid, rect.height)));
-    for (let y = rect.y; y < rect.y + rect.height; y += stepY) {
-        for (let x = rect.x; x < rect.x + rect.width; x += stepX) {
-            const i = y * rowstride + x * channels;
-            values.push(relativeLuminance(pixels[i], pixels[i + 1], pixels[i + 2]));
-        }
-    }
-    if (!values.length)
-        return { mean: 0, spread: 0, low: 0, high: 0 };
-    values.sort((a, b) => a - b);
-    const mean = values.reduce((s, v) => s + v, 0) / values.length;
-    const at = f => values[Math.min(values.length - 1, Math.floor(f * values.length))];
-    return { mean, spread: at(0.9) - at(0.1), low: at(0.1), high: at(0.9) };
-}
 
 // Text on the wallpaper must reach this contrast ratio (WCAG large-text AA) on the worst part of
 // the band, or the bar falls back to its solid look. Below SCRIM_CONTRAST a scrim helps.

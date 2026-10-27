@@ -11,6 +11,7 @@ import * as dock from './dock.js';
 import * as windows from './windows.js';
 import * as navigation from './navigation.js';
 import * as appearance from './appearance.js';
+import * as keyboard from './keyboard.js';
 import * as about from './about.js';
 import * as stageManagerPrefs from '../../features/stageManager/prefs.js';
 import * as missionControlPrefs from '../../features/missionControl/prefs.js';
@@ -47,6 +48,7 @@ export const SECTIONS = [
         featurePage('control-center', N_('Control Center'), 'preferences-system-symbolic', controlCenterPrefs),
         featurePage('clipboard', N_('Clipboard'), 'edit-paste-symbolic', clipboardPrefs),
         featurePage('screenshots', N_('Screenshots'), 'camera-photo-symbolic', screenshotsPrefs),
+        keyboard,
     ] },
     { title: N_('Look'), pages: [appearance] },
     { title: N_('Kiwi'), pages: [about] },

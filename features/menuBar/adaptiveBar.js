@@ -12,7 +12,7 @@
 //
 // Wallpaper: the picture of org.gnome.desktop.background (picture-uri, or picture-uri-dark
 // in dark style; the picture an XML day/night background shows now, measured again when it
-// changes) is decoded once, in a helper process (wallpaperProbe.js, so a huge picture never
+// changes) is decoded once, in a helper process (lib/wallpaperProbe.js, so a huge picture never
 // stalls the Shell), and the band under the bar is measured (model.js wallpaperBand +
 // bandLuminance). The text colour is judged on the worst part of the band (chooseText); a
 // band where neither colour is readable keeps the solid bar. The result is cached per picture
@@ -27,7 +27,6 @@
 // Shell API: Main.panel, Main.layoutManager (primaryMonitor, panelBox, getWorkAreaForMonitor),
 // Main.overview, global.display grab-op-begin/end, Gio.Subprocess.
 
-import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
@@ -35,13 +34,9 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { WindowState } from '../../core/windowState.js';
 import { isUserFacing } from '../../core/desktopModel.js';
 import { Glass } from '../../lib/glass.js';
-import { isXmlBackground, parseHexColor, wallpaperSource, xmlSlideAt } from '../../lib/wallpaperModel.js';
-import { barLook, chooseText, relativeLuminance, touchesBar } from './model.js';
-import { readText } from './systemInfo.js';
-
-Gio._promisify(Gio.Subprocess.prototype, 'communicate_utf8_async', 'communicate_utf8_finish');
-
-const PROBE = GLib.filename_from_uri(import.meta.url.replace(/[^/]*$/, 'wallpaperProbe.js'))[0];
+import { measureBand, resolveWallpaper } from '../../lib/wallpaperDecode.js';
+import { parseHexColor, relativeLuminance, slideDelayMs, wallpaperSource } from '../../lib/wallpaperModel.js';
+import { barLook, chooseText, touchesBar } from './model.js';
 
 const CLASSES = Object.freeze({
     clear: 'kiwi-menubar-clear', light: 'kiwi-menubar-on-light', dark: 'kiwi-menubar-on-dark',
@@ -239,18 +234,18 @@ export class AdaptiveBar {
         let stats = null;
         if (source.kind === 'file') {
             try {
-                const slide = await this._resolve(source.uri, cancellable);
+                const slide = await resolveWallpaper(source.uri, cancellable);
                 const key = `${slide.uri}|${option}|${monitor.width}x${monitor.height}|${band}`;
                 stats = this._cache.get(key);
                 if (!stats) {
-                    stats = await this._measure(slide.uri, option, monitor, band, cancellable);
+                    stats = await measureBand(slide.uri, option, monitor, band, cancellable);
                     if (cancellable.is_cancelled())
                         return;
                     this._cache.set(key, stats);
                 }
                 if (slide.until !== null) {
                     // A day/night background: measure the next picture when it comes up
-                    this._slideToken = this._cleanup.timeout(Math.max(1000, Math.ceil(slide.until * 1000)), () => {
+                    this._slideToken = this._cleanup.timeout(slideDelayMs(slide.until), () => {
                         this._slideToken = 0;
                         this._sample();
                     }, { name: 'menu bar wallpaper slide' });
@@ -272,38 +267,5 @@ export class AdaptiveBar {
         const [r, g, b] = color ?? parseHexColor(this._bg.get_string('primary-color')) ?? [0, 0, 0];
         const mean = relativeLuminance(r, g, b);
         return { mean, spread: 0, low: mean, high: mean };
-    }
-
-    // The picture to measure: the file itself, or the one an XML day/night background shows now
-    async _resolve(uri, cancellable) {
-        if (!isXmlBackground(uri))
-            return { uri, until: null };
-        const xml = Gio.File.new_for_uri(uri);
-        const slide = xmlSlideAt(await readText(xml.get_path(), cancellable) ?? '', new Date());
-        if (!slide)
-            throw new Error('the background lists no picture');
-        const file = GLib.path_is_absolute(slide.path) ? Gio.File.new_for_path(slide.path)
-            : xml.get_parent().resolve_relative_path(slide.path);
-        return { uri: file.get_uri(), until: slide.until };
-    }
-
-    // Luminance of the band under the bar, measured by wallpaperProbe.js in its own process;
-    // null when the picture does not reach the bar
-    async _measure(uri, option, monitor, band, cancellable) {
-        const proc = new Gio.Subprocess({
-            argv: ['gjs', '-m', PROBE, Gio.File.new_for_uri(uri).get_path(), option,
-                String(monitor.width), String(monitor.height), String(band)],
-            flags: Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE,
-        });
-        proc.init(null);
-        const stop = cancellable.connect(() => proc.force_exit());
-        try {
-            const [out, err] = await proc.communicate_utf8_async(null, cancellable);
-            if (!proc.get_successful())
-                throw new Error(err?.trim() || 'the picture cannot be decoded');
-            return JSON.parse(out);
-        } finally {
-            cancellable.disconnect(stop);
-        }
     }
 }

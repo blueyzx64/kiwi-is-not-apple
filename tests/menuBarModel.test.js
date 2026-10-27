@@ -1,9 +1,10 @@
 // Run: gjs -m tests/menuBarModel.test.js
 import {
-    relativeLuminance, wallpaperBand, bandLuminance, chooseText, touchesBar, barLook, parseOsRelease, parseCpuInfo, parseMemTotal,
+    chooseText, touchesBar, barLook, parseOsRelease, parseCpuInfo, parseMemTotal,
     formatBytes, deviceModel, chassisIcon, gpuNames, parseRecentXbel, forceQuitRows,
-    privacyDots, micApps, confirmationHolds, fillPlaceholders, fitMenus, decodesByRatio,
+    privacyDots, micApps, confirmationHolds, fillPlaceholders, fitMenus,
 } from '../features/menuBar/model.js';
+import { relativeLuminance, wallpaperBand, bandLuminance, decodesByRatio } from '../lib/wallpaperModel.js';
 
 let failed = 0;
 function test(name, fn) {

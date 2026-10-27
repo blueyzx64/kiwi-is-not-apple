@@ -13,6 +13,7 @@ import St from 'gi://St';
 import * as DND from 'resource:///org/gnome/shell/ui/dnd.js';
 
 import { CleanupRegistry } from '../../lib/disposables.js';
+import { IconStyle } from '../../lib/iconStyle.js';
 import { badgeProgress, badgeText } from './model.js';
 
 /** Base of every clickable dock tile: a square St.Button with a centred content box. */
@@ -143,6 +144,9 @@ export class AppItem extends DockItem {
         this._icon.x_align = Clutter.ActorAlign.CENTER;
         this._icon.y_align = Clutter.ActorAlign.CENTER;
         this.content.add_child(this._icon);
+        // Default, Dark, Clear or Tinted (Appearance); the handle goes with the tile
+        const style = IconStyle.apply(this._icon);
+        this.cleanup.add(() => style.destroy());
 
         const side = host.position;
         this._dot = new St.Widget({

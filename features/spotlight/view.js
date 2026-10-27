@@ -12,6 +12,7 @@ import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 import { ensureActorVisibleInScrollView } from 'resource:///org/gnome/shell/misc/animationUtils.js';
 
+import { IconStyle } from '../../lib/iconStyle.js';
 import { SuperTapTracker, flatten, jumpGroup, locate, reselect } from './model.js';
 import { VIEWS, moveIn, viewForDigit } from './queryModel.js';
 
@@ -50,9 +51,13 @@ function N_(s) {
 
 function makeIcon(item, size) {
     const props = { icon_size: size, style_class: 'kiwi-spotlight-icon' };
-    if (item.gicon)
-        return new St.Icon({ ...props, gicon: item.gicon });
-    return new St.Icon({ ...props, icon_name: item.iconName ?? 'application-x-executable' });
+    const icon = item.gicon
+        ? new St.Icon({ ...props, gicon: item.gicon })
+        : new St.Icon({ ...props, icon_name: item.iconName ?? 'application-x-executable' });
+    // App icons follow the icon style (Appearance); it untracks itself when the row goes
+    if (item.kind === 'app')
+        IconStyle.apply(icon);
+    return icon;
 }
 
 export class SpotlightView {

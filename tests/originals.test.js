@@ -48,6 +48,27 @@ test('take saves the original first, release writes it back and forgets it', () 
     eq(k.values[STORE_KEY], '', 'an empty store is an empty key');
     eq(mutter.nHandlers, 0);
 });
+test('a lock (keepStored) leaves the key and the entry; the next owner continues from them', () => {
+    const k = kiwi();
+    const mutter = fake('org.gnome.mutter', { 'edge-tiling': true });
+    const list = fake('org.gnome.shell', { 'enabled-extensions': ['kiwi@kemma', 'dtd@x'] });
+    const a = new OriginalsStore(k);
+    const owner = new SettingOwner(a, mutter, 'edge-tiling', { type: 'b', value: false });
+    const members = new ListMembersOwner(a, list, 'enabled-extensions', ['dtd@x']);
+    owner.sync(true);
+    members.sync(true);
+    a.keepStored = true;
+    owner.release();
+    members.release();
+    eq(mutter.values['edge-tiling'], false, 'not given back');
+    eq(list.values['enabled-extensions'], ['kiwi@kemma'], 'Dash to Dock stays off');
+    const b = new OriginalsStore(k);
+    const again = new SettingOwner(b, mutter, 'edge-tiling', { type: 'b', value: false });
+    again.sync(true);
+    eq(again.original, true, 'the user value, not the forced one');
+    again.release();
+    eq(mutter.values['edge-tiling'], true);
+});
 test('a user change while owned becomes the new original', () => {
     const store = new OriginalsStore(kiwi());
     const wm = fake('org.gnome.desktop.wm.preferences', { 'num-workspaces': 4 });
@@ -167,6 +188,22 @@ test('members: re-added by the user while held is taken out again and returns on
     eq(gs.values['enabled-extensions'], ['a']);
     owner.release();
     eq(gs.values['enabled-extensions'], ['a', DTD]);
+});
+test('members: a change of the list is stripped only when defer runs it, and not after release', () => {
+    const queue = [];
+    const gs = shell(['kiwi@kemma']);
+    const owner = new ListMembersOwner(new OriginalsStore(kiwi()), gs, 'enabled-extensions', [DTD], { defer: fn => queue.push(fn) });
+    owner.sync(true);
+    gs.set_strv('enabled-extensions', ['kiwi@kemma', DTD]);
+    gs.set_strv('enabled-extensions', ['kiwi@kemma', DTD, 'a']);
+    eq(queue.length, 1, 'one strip per burst');
+    eq(gs.values['enabled-extensions'], ['kiwi@kemma', DTD, 'a'], 'untouched meanwhile');
+    queue.shift()();
+    eq(gs.values['enabled-extensions'], ['kiwi@kemma', 'a']);
+    gs.set_strv('enabled-extensions', ['kiwi@kemma', DTD]);
+    owner.release();
+    queue.shift()();
+    eq(gs.values['enabled-extensions'], ['kiwi@kemma', DTD], 'a strip queued before release does nothing');
 });
 test('members: absent member means no store entry and no write', () => {
     const k = kiwi();

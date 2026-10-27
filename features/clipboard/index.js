@@ -8,7 +8,6 @@
 //   because Kiwi tears down when the screen locks. Nothing is recorded while locked.
 // - Everything is registered in the entry's CleanupRegistry; disable() has little left to do.
 
-import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Meta from 'gi://Meta';
@@ -21,10 +20,11 @@ import { PanelLayout } from '../../core/panelLayout.js';
 import { MENU_CLOSE_ARGS } from '../../lib/compat.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { Keybindings, MODAL_MODES } from '../../lib/keybindings.js';
+import { FOCUS_SETTLE_MS, sendPasteChord } from '../../lib/paste.js';
 import { KiwiSettings } from '../../lib/settings.js';
 import {
     DEFAULTS, History, TEXT_MIME, checkDimensions, checkSize, imageDimensions, imageFileName,
-    isBlankText, isPasswordManagerApp, isSecret, looksSecret, makeEntry, mergeLoaded, orphanFiles, pasteChordFor, pickMime, shouldRecord,
+    isBlankText, isPasswordManagerApp, isSecret, looksSecret, makeEntry, mergeLoaded, orphanFiles, pickMime, shouldRecord,
 } from './model.js';
 import { ClipboardPopover } from './popover.js';
 import { QuickPaste } from './quickPaste.js';
@@ -35,8 +35,6 @@ Gio._promisify(Meta.Selection.prototype, 'transfer_async', 'transfer_finish');
 const LOG = '[Kiwi]';
 const SHORTCUT_KEY = 'clipboard-shortcut';
 const SAVE_DELAY_MS = 600;
-const PASTE_DELAY_MS = 160;
-const KEY_GAP_US = 1000;
 const MiB = 1024 * 1024;
 const RAM_IMAGE_BUDGET = 64 * MiB;
 
@@ -515,7 +513,7 @@ export class ClipboardHistory {
             return;
         this._quick?.close();
         this._indicator?.menu.close(MENU_CLOSE_ARGS);
-        this._cleanup.timeout(PASTE_DELAY_MS, () => {
+        this._cleanup.timeout(FOCUS_SETTLE_MS, () => {
             this._sendPaste(prev);
             return GLib.SOURCE_REMOVE;
         }, { name: 'clipboard-paste' });
@@ -546,33 +544,10 @@ export class ClipboardHistory {
         return GLib.SOURCE_REMOVE;
     }
 
-    _device() {
-        const backend = global.stage.context?.get_backend?.() ?? Clutter.get_default_backend();
-        return backend.get_default_seat().create_virtual_device(Clutter.InputDeviceType.KEYBOARD_DEVICE);
-    }
-
     _sendPaste(prev) {
         // Only into the window that had focus, only unlocked, only if it still has focus
-        if (!this._enabled || this._isLocked() || !prev)
-            return;
-        let dev;
-        try {
-            if (!prev.get_compositor_private() || global.display.focus_window !== prev)
-                return;
-            const chord = pasteChordFor(prev.get_wm_class());
-            const keys = chord === 'ctrl-shift-v'
-                ? [Clutter.KEY_Control_L, Clutter.KEY_Shift_L, Clutter.KEY_V]
-                : [Clutter.KEY_Control_L, Clutter.KEY_v];
-            // One device per paste; the local reference is dropped after the key-up
-            dev = this._device();
-            let t = GLib.get_monotonic_time();
-            for (const k of keys)
-                dev.notify_keyval(t += KEY_GAP_US, k, Clutter.KeyState.PRESSED);
-            for (const k of [...keys].reverse())
-                dev.notify_keyval(t += KEY_GAP_US, k, Clutter.KeyState.RELEASED);
-        } catch (e) {
-            console.warn(`${LOG} paste failed: ${e.message}`);
-        }
+        if (this._enabled && !this._isLocked() && prev)
+            sendPasteChord(prev);
     }
 
     // ---- panel icon ----------------------------------------------------------

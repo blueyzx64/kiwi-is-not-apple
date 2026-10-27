@@ -86,6 +86,12 @@ export class OriginalsStore {
     constructor(kiwiSettings) {
         this._gs = kiwiSettings;
         this._holders = new Map();   // id -> number of owners holding it
+        /**
+         * While true, owners leave their keys and entries as they are when they release (the
+         * Shell disables every extension on a screen lock and enables them at unlock: nothing
+         * should flip meanwhile). The next take finds the entry and goes on from it.
+         */
+        this.keepStored = false;
     }
 
     _read() {
@@ -395,7 +401,7 @@ export class SettingOwner {
             return;
         this._owning = false;
         this._forced = undefined;
-        if (this._store.unhold(this._id))
+        if (this._store.unhold(this._id) || this._store.keepStored)
             return;
         putBack(this._gs, this._type, this._key, this._orig.value, this._orig.user);
         this._store.forget(this._id);
@@ -422,12 +428,17 @@ export class ListMembersOwner {
      * @param {object} settings the Gio.Settings that has `key` (it needs schema_id)
      * @param {string} key a string-list ('as') key
      * @param {string[]} members
+     * @param {{defer?: (fn: Function) => void}} [opts] defer: runs the strip that follows a
+     *   change of the key (default: at once). A caller whose list is also read by an asynchronous
+     *   consumer (the Shell enabling extensions) schedules it for after that consumer is done.
      */
-    constructor(store, settings, key, members) {
+    constructor(store, settings, key, members, { defer = fn => fn() } = {}) {
         this._store = store;
         this._gs = settings;
         this._key = key;
         this._members = [...members];
+        this._defer = defer;
+        this._stripQueued = false;
         this._id = originalId(settings.schema_id, key);
         this._owning = false;
         this._mem = [];             // the members taken out, also kept here
@@ -461,13 +472,25 @@ export class ListMembersOwner {
         this._mem = this.held;
         this._store.hold(this._id);
         this._strip();
-        this._changedId = this._gs.connect(`changed::${this._key}`, () => this._strip());
+        this._changedId = this._gs.connect(`changed::${this._key}`, () => this._stripLater());
         this._unwatch = this._store.watch(() => this._saveHeld());
     }
 
     _saveHeld() {
         if (this._owning && this._mem.length && !this._store.get(this._id))
             this._store.set(this._id, 'as', this._mem, { mode: 'members' });
+    }
+
+    // A change of the key: take the members out again once `defer` allows (one strip per burst)
+    _stripLater() {
+        if (this._stripQueued)
+            return;
+        this._stripQueued = true;
+        this._defer(() => {
+            this._stripQueued = false;
+            if (this._owning)
+                this._strip();
+        });
     }
 
     // Save the members now in the list (added to any already stored), then take them out.
@@ -500,7 +523,7 @@ export class ListMembersOwner {
             return;
         this._owning = false;
         const remaining = this._store.unhold(this._id);
-        if (keepStored || remaining)
+        if (keepStored || remaining || this._store.keepStored)
             return;
         const held = this.held;
         this._mem = [];

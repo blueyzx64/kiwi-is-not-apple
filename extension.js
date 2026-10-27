@@ -17,6 +17,7 @@
  */
 
 import Gio from 'gi://Gio';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import { CleanupRegistry } from './lib/disposables.js';
@@ -24,18 +25,20 @@ import { FeatureRegistry } from './lib/featureRegistry.js';
 import { restoreLegacyButtonLayout, runAllMigrations } from './lib/migrations.js';
 import { runCleanup } from './lib/cleanup/index.js';
 import { Glass } from './lib/glass.js';
+import { IconStyle } from './lib/iconStyle.js';
 import { EventHub } from './core/events.js';
 import { DesktopService } from './core/desktop.js';
 import { LayoutService } from './core/layout.js';
 import { Motion } from './core/motion.js';
 import { AppMenuService } from './core/appMenus/service.js';
+import { OsdRouter } from './core/osd.js';
 import { OriginalsStore, STORE_BACKUP_KEY, STORE_KEY, restoreStale } from './core/originals.js';
 import { FEATURES } from './features.js';
 
 // Keys Kiwi writes itself at run time. No `when` or restartOn reads them, and a write made
 // during a refresh would re-enter the registry, so they do not trigger a pass.
 const KEYS_THAT_NEVER_AFFECT_FEATURES = new Set(['clipboard-recording', 'migrations-done', STORE_KEY,
-    STORE_BACKUP_KEY, 'dock-recent-apps', 'screenshots-last-selection']);
+    STORE_BACKUP_KEY, 'dock-recent-apps', 'screenshots-last-selection', 'emoji-recents', 'emoji-skin-tone']);
 
 // Schemas whose keys Kiwi may own through core/originals.js
 const openSettings = schemaId =>
@@ -47,13 +50,20 @@ const openSettings = schemaId =>
  * gets the same ctx:
  *   extension, settings (Kiwi's Gio.Settings), gettext, features ({instance(id)}),
  *   events (core/events.js), desktop (core/desktop.js), layout (core/layout.js),
- *   motion (core/motion.js), originals (core/originals.js), appMenus (core/appMenus/service.js)
+ *   motion (core/motion.js), osd (core/osd.js), originals (core/originals.js), appMenus (core/appMenus/service.js)
  */
+// The Shell disables every extension while the screen is locked and enables it again at unlock
+// (Kiwi has no 'unlock-dialog' session mode: its UI has no place on the lock screen). The GNOME
+// keys it owns and the extensions it holds off stay as they are meanwhile, so an unlock changes
+// nothing and nothing flashes; set by disable(), read by the enable() that follows.
+let _heldAcrossLock = false;
+
 export default class KiwiExtension extends Extension {
     enable() {
         this._cleanup = new CleanupRegistry();
         this._settings = this.getSettings();
         Glass.configure(this._settings);
+        IconStyle.configure(this._settings);
 
         // Before anything reads settings or owns a GNOME key: a migration write during the
         // registry's first pass would re-enter it with half-migrated values, and a GNOME key a
@@ -69,11 +79,14 @@ export default class KiwiExtension extends Extension {
         // disable() at logout, so the entry is there at every login, and giving the member back
         // now would make the Shell enable it just for the dock to remove it again. The dock
         // adopts the entry; whatever nobody adopted is given back once the features have started.
-        try {
-            restoreStale(this._originals, openSettings, { members: 'leave' });
-        } catch (err) {
-            console.error('[Kiwi] could not restore saved GNOME settings:', err);
+        if (!_heldAcrossLock) {
+            try {
+                restoreStale(this._originals, openSettings, { members: 'leave' });
+            } catch (err) {
+                console.error('[Kiwi] could not restore saved GNOME settings:', err);
+            }
         }
+        _heldAcrossLock = false;
         const generation = this._generation = (this._generation ?? 0) + 1;
 
         this._events = new EventHub();
@@ -82,6 +95,8 @@ export default class KiwiExtension extends Extension {
         this._motion = new Motion(this._events);
         this._motion.start();
         this._appMenus = new AppMenuService({ events: this._events, desktop: this._desktop, layout: this._layout });
+        this._osd = new OsdRouter(this._settings);
+        this._osd.start(this._cleanup);
 
         this._features = new FeatureRegistry(CleanupRegistry, {
             onChange: (id, active) => this._events?.emit('feature-changed', { id, active }),
@@ -112,6 +127,7 @@ export default class KiwiExtension extends Extension {
             desktop: this._desktop,
             layout: this._layout,
             motion: this._motion,
+            osd: this._osd,
             originals: this._originals,
             appMenus: this._appMenus,
         });
@@ -133,6 +149,9 @@ export default class KiwiExtension extends Extension {
     }
 
     disable() {
+        _heldAcrossLock = Main.sessionMode.isLocked;
+        if (this._originals)
+            this._originals.keepStored = _heldAcrossLock;
         this._generation++;
         this._cancellable?.cancel();
         this._cancellable = null;
@@ -145,8 +164,9 @@ export default class KiwiExtension extends Extension {
         this._layout?.stop();
         this._desktop?.stop();
         this._events?.clear();
-        this._appMenus = this._motion = this._layout = this._desktop = this._events = null;
+        this._appMenus = this._motion = this._layout = this._desktop = this._events = this._osd = null;
         this._originals = null;
+        IconStyle.configure(null);
         Glass.configure(null);
         this._settings = null;
     }

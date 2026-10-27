@@ -113,5 +113,14 @@ export function buildPrefs({ settings, extension }) {
         labels: [_('Accent Colour'), ...COLOURS.map(([, l]) => _(l))],
     }));
 
-    return [mode, colours];
+    const icons = new Adw.PreferencesGroup({ title: _('Icons') });
+    icons.add(comboRow(settings, {
+        title: _('Icon Style'),
+        subtitle: _('App icons in the dock and Spotlight. Tinted uses the accent colour.'),
+        key: 'appearance-icon-style',
+        values: ['default', 'dark', 'clear', 'tinted'],
+        labels: [_('Default'), _('Dark'), _('Clear'), _('Tinted')],
+    }));
+
+    return [mode, colours, icons];
 }

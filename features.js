@@ -193,8 +193,19 @@ export const FEATURES = [
         load: async () => (await import('./features/stageManager/shortcut.js')).StageManagerShortcut,
     },
     {
+        // Caps Lock and input-source badge at the text caret (lib/caret.js)
+        id: 'input-indicator', setting: 'input-indicator',
+        load: async () => (await import('./features/inputIndicator/index.js')).InputIndicator,
+    },
+    {
+        // Emoji & Symbols popover (Super+Ctrl+Space); types through lib/paste.js
+        id: 'emoji-picker', setting: 'emoji-picker',
+        load: async () => (await import('./features/emoji/index.js')).EmojiPicker,
+    },
+    {
         // Pill in the centre of the bar for banners, media and volume. Replaces the stock banners
-        // and OSD (parts switch live on notch-notifications / notch-osd / notch-live-activities).
+        // and OSD (parts switch live on notch-notifications / notch-live-activities; volume and brightness
+        // come from core/osd.js while osd-location is 'notch').
         id: 'notch', setting: 'notch',
         load: async () => (await import('./features/notch/index.js')).NotchFeature,
     },
@@ -221,5 +232,22 @@ export const FEATURES = [
         id: 'hot-corners',
         when: ctx => HOT_CORNERS.some(c => ctx.settings.get_string(`hot-corner-${c}`) !== 'none'),
         load: async () => (await import('./features/hotCorners/index.js')).HotCorners,
+    },
+    {
+        // The Tahoe volume / brightness pill under the menu bar: a sink of core/osd.js, which
+        // routes each change to the notch or here (osd-location). Off with 'system'.
+        id: 'osd', when: ctx => ctx.settings.get_string('osd-location') !== 'system',
+        keys: ['osd-location'],
+        load: async () => (await import('./features/osd/index.js')).OsdPill,
+    },
+    {
+        // macOS-style glass alerts: the Shell's modal dialogs restyled (theme only)
+        id: 'dialogs', setting: 'dialogs-glass',
+        load: async () => (await import('./features/dialogs/index.js')).Dialogs,
+    },
+    {
+        // Accessibility colour filters on the whole screen (one shader effect on the stage)
+        id: 'color-filters', setting: 'color-filter',
+        load: async () => (await import('./features/colorFilters/index.js')).ColorFilters,
     },
 ];
