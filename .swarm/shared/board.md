@@ -263,3 +263,12 @@ No more installer work: no new pieces (Trash-drag uninstall, fly-to-dock, update
 - FX12 → merged: the AT-SPI ☰ menu works for Text Editor (read, shortcuts, checked state, activation opens a new window, clean close). It stays OFF by default because focus moves into the popover for about 1 s during a read. Not done: submenu pages, Calculator through Kiwi.
 - FX13 → merged: colour filter black wallpaper FIXED (one uiGroup effect with paint-view clip widening, idle cost unchanged) and its CRITICALs gone; Kiwi's own Fedora symbolic mark; shadow tail alpha cut (step 16→3); menuBarItems uses the bounded DBusMenu reader with a shared stripMnemonic. The -nan is a stock Shell bug (overviewControls.js:837). Skipped (in FX13.md): isDark/clamp helpers, magic timeouts, Split View watchdog, toolbar resize, SM jagged edges, CC battery capsule, BlueZ warning.
 - PR #9 merged into main (3f59dfe). All v3 work is on main.
+
+## Round 2: owner test feedback (brief: round2.md)
+- R2A windows (kiwi-r2-windows): controls in the titlebar and in the top bar only when maximized; right side as the default; reliable drag-to-top fill; top-centre layout picker.
+- R2B menu bar (kiwi-r2-menubar): transparent bar by default (solid-on-touch toggle); visible window corners; menus auto-closing; calendar-to-CC hover switching; Spotlight from an open menu; bar, dock and notch hidden on maximized windows; the real Fedora logo recoloured; Alt+Tab → Kiwi switcher.
+- R2C dock (kiwi-r2-dock): bounce and magnify drawn beyond the band; Genie and Scale really funnel into the icon; dock visible with maximized windows.
+- R2D Stage Manager (kiwi-r2-stage): every app reachable (fit plus scroll); crisp thumbnails and flights; no strip drop on resize or left-edge tiling.
+- R2E Mission Control (kiwi-r2-mission): labels and + under the windows during the transition; full-resolution clones mid-gesture; smooth new-Space animation.
+- R2F notch (kiwi-r2-notch): click outside always collapses; smoother transitions; shelf drag-out helper (helpers/, RPM spec).
+- Queued R2G: macOS-style desktop widgets restyle plus desktop icons aligned right (#16).
