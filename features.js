@@ -250,4 +250,9 @@ export const FEATURES = [
         id: 'color-filters', setting: 'color-filter',
         load: async () => (await import('./features/colorFilters/index.js')).ColorFilters,
     },
+    {
+        // Desktop widgets above the wallpaper, below windows (core/widgets is the shared model)
+        id: 'desktop-widgets', setting: 'widgets',
+        load: async () => (await import('./features/widgets/index.js')).DesktopWidgets,
+    },
 ];

@@ -1,0 +1,88 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Batteries: this computer and connected devices (UPower, Bluetooth included) as charge rings.
+
+import Clutter from 'gi://Clutter';
+import St from 'gi://St';
+
+import { batteryLevel, batteryList } from '../data.js';
+import { COLORS, N_, box, canvas, drawRing, icon, label, openSettingsPanel } from './common.js';
+
+const LEVEL_COLOR = { charging: COLORS.green, normal: COLORS.green, low: COLORS.yellow, critical: COLORS.red };
+
+export default {
+    id: 'batteries',
+    title: N_('Batteries'),
+    category: N_('Batteries'),
+    sizes: ['small', 'medium', 'large'],
+    defaultSize: 'small',
+    provider: 'batteries',
+
+    build(view) {
+        const _ = view._;
+        const s = view.scale;
+        const root = view.content;
+        const rows = view.size === 'large';
+        const max = { small: 4, medium: 4, large: 6 }[view.size];
+        const holder = rows
+            ? box('kiwi-widget-column kiwi-widget-batteries', true, { x_expand: true, y_expand: true })
+            : new Clutter.Actor({
+                layout_manager: new Clutter.GridLayout({ column_homogeneous: true, row_homogeneous: true }),
+                x_expand: true, y_expand: true,
+            });
+        root.add_child(holder);
+        const empty = label(_('No batteries'), 'kiwi-widget-caption kiwi-widget-dim');
+        root.add_child(empty);
+
+        const ringSize = Math.round((view.size === 'small' ? 50 : 56) * s);
+        const slots = [];
+        for (let i = 0; i < max; i++) {
+            const state = { percent: 0, level: 'normal' };
+            const ring = canvas(ringSize, ringSize, (cr, w, h, fg) =>
+                drawRing(cr, w, h, state.percent / 100, LEVEL_COLOR[state.level], fg, Math.max(3, 5 * s)));
+            // The device glyph sits in the ring: a sibling over the drawing, not its child
+            const gauge = new St.Widget({ layout_manager: new Clutter.BinLayout(), x_align: Clutter.ActorAlign.CENTER });
+            gauge.add_child(ring);
+            const glyph = icon('battery-symbolic', Math.round(18 * s));
+            glyph.x_align = glyph.y_align = Clutter.ActorAlign.CENTER;
+            gauge.add_child(glyph);
+            const pct = label('', 'kiwi-widget-caption kiwi-widget-strong', { x_align: rows ? Clutter.ActorAlign.END : Clutter.ActorAlign.CENTER });
+            const name = label('', 'kiwi-widget-body', { x_expand: true, y_align: Clutter.ActorAlign.CENTER });
+            const slot = box(rows ? 'kiwi-widget-row kiwi-widget-battery' : 'kiwi-widget-column kiwi-widget-battery', !rows);
+            slot.add_child(gauge);
+            if (rows) {
+                slot.add_child(name);
+                pct.y_align = Clutter.ActorAlign.CENTER;
+            }
+            slot.add_child(pct);
+            if (rows)
+                holder.add_child(slot);
+            else
+                holder.layout_manager.attach(slot, i % (view.size === 'small' ? 2 : 4), Math.floor(i / (view.size === 'small' ? 2 : 4)), 1, 1);
+            slots.push({ slot, ring, glyph, pct, name, state });
+        }
+
+        return {
+            update(d) {
+                const list = batteryList(d?.devices ?? [], _);
+                empty.visible = list.length === 0;
+                slots.forEach((sl, i) => {
+                    const b = list[i];
+                    sl.slot.visible = !!b;
+                    if (!b)
+                        return;
+                    sl.state.percent = b.percent;
+                    sl.state.level = batteryLevel(b.percent, b.charging);
+                    sl.glyph.icon_name = b.charging ? 'battery-full-charging-symbolic' : b.icon;
+                    sl.pct.text = `${b.percent}%`;
+                    sl.name.text = b.name;
+                    sl.slot.accessible_name = `${b.name} ${b.percent}%`;
+                    sl.ring.queue_repaint();
+                });
+            },
+        };
+    },
+
+    open() {
+        openSettingsPanel('power');
+    },
+};

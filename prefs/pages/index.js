@@ -19,6 +19,7 @@ import * as notchPrefs from '../../features/notch/prefs.js';
 import * as spotlightPrefs from '../../features/spotlight/prefs.js';
 import * as controlCenterPrefs from '../../features/controlCenter/prefs.js';
 import * as clipboardPrefs from '../../features/clipboard/prefs.js';
+import * as widgetsPrefs from '../../features/widgets/prefs.js';
 import * as screenshotsPrefs from '../../features/screenshots/prefs.js';
 import { addFeatureGroups } from '../widgets.js';
 
@@ -41,7 +42,8 @@ export const SECTIONS = [
     { title: N_('General'), pages: [general] },
     { title: N_('Desktop'), pages: [menuBar, dock, windows, navigation,
         featurePage('mission-control', N_('Mission Control'), 'view-grid-symbolic', missionControlPrefs),
-        featurePage('stage-manager', N_('Stage Manager'), 'view-app-grid-symbolic', stageManagerPrefs)] },
+        featurePage('stage-manager', N_('Stage Manager'), 'view-app-grid-symbolic', stageManagerPrefs),
+        featurePage('widgets', N_('Widgets'), 'preferences-desktop-apps-symbolic', widgetsPrefs)] },
     { title: N_('Features'), pages: [
         featurePage('notch', N_('Notch'), 'preferences-system-notifications-symbolic', notchPrefs),
         featurePage('spotlight', N_('Spotlight'), 'system-search-symbolic', spotlightPrefs),
