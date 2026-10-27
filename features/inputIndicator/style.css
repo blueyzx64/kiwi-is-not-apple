@@ -2,7 +2,7 @@
 /* The text-cursor badge: a small glass pill under the caret (lib/glass.js gives the fill) */
 .kiwi-input-badge {
     min-width: 14px;
-    padding: 2px 6px;
+    padding: 3px 6px;
     border-radius: 7px;
     font-size: 12px;
     font-weight: 700;
@@ -33,4 +33,7 @@
 }
 .kiwi-input-badge.kiwi-glass-dark.kiwi-input-badge-caps-on {
     color: -st-accent-color;
+}
+.kiwi-input-badge-icon {
+    icon-size: 14px;
 }

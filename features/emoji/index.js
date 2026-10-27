@@ -142,7 +142,7 @@ export class EmojiPicker {
             this._lastInsert = { char, method: 'input-method' };
             return;
         }
-        const saved = await saveClipboard();
+        const saved = await saveClipboard(this._cancellable);
         if (this._cancellable.is_cancelled())
             return;
         setClipboardText(char);

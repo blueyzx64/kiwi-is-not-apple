@@ -10,6 +10,7 @@
 // Without a caret (no IBus, or an app that never reports one) the badge goes by the pointer.
 
 import Clutter from 'gi://Clutter';
+import Gio from 'gi://Gio';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { getInputSourceManager } from 'resource:///org/gnome/shell/ui/status/keyboard.js';
@@ -22,6 +23,7 @@ import {
 } from './model.js';
 
 const STYLES = ['caps-on', 'caps-off', 'source'];
+const CAPS_ICON = 'icons/kiwi-caps-lock-symbolic.svg';
 
 export class InputIndicator {
     constructor(ctx, cleanup) {
@@ -74,15 +76,19 @@ export class InputIndicator {
     _ensureBadge() {
         if (this._badge)
             return this._badge;
-        const badge = this._cleanup.actor(new St.Label({
+        const badge = this._cleanup.actor(new St.BoxLayout({
             style_class: 'kiwi-input-badge', visible: false, opacity: 0, reactive: false,
-            y_align: Clutter.ActorAlign.CENTER,
         }));
-        Main.layoutManager.addTopChrome(badge, { affectsInputRegion: false });
-        this._cleanup.add(() => {
-            if (badge.get_parent())
-                Main.layoutManager.removeChrome(badge);
+        // ⇪ is missing from many UI fonts: Kiwi's own symbolic icon draws it
+        this._capsIcon = new St.Icon({
+            gicon: Gio.FileIcon.new(this._ctx.extension.dir.resolve_relative_path(CAPS_ICON)),
+            style_class: 'kiwi-input-badge-icon', y_align: Clutter.ActorAlign.CENTER,
         });
+        this._label = new St.Label({ style_class: 'kiwi-input-badge-label', y_align: Clutter.ActorAlign.CENTER });
+        badge.add_child(this._capsIcon);
+        badge.add_child(this._label);
+        // Above the windows and the panel, outside the input region: not chrome
+        Main.layoutManager.uiGroup.add_child(badge);
         // Kiwi glass (a fill on the label itself); solid when glass is off
         const glass = Glass.attach(badge, {
             surface: 'overlays', role: 'content', radius: 7,
@@ -102,7 +108,10 @@ export class InputIndicator {
         for (const s of STYLES)
             badge.remove_style_class_name(`kiwi-input-badge-${s}`);
         badge.add_style_class_name(`kiwi-input-badge-${content.style}`);
-        badge.text = content.text;
+        const caps = content.style !== 'source';
+        this._capsIcon.visible = caps;
+        this._label.visible = !caps;
+        this._label.text = caps ? '' : content.text;
         badge.accessible_name = content.style === 'source' ? content.text
             : content.style === 'caps-on' ? this._ctx.gettext('Caps Lock on') : this._ctx.gettext('Caps Lock off');
 
@@ -123,6 +132,7 @@ export class InputIndicator {
         const motion = this._ctx.motion;
         const wasVisible = badge.visible && badge.opacity > 0;
         badge.visible = true;
+        badge.get_parent()?.set_child_above_sibling(badge, null);
         if (!wasVisible) {
             badge.set_scale(0.86, 0.86);
             motion.ease(badge, { scale_x: 1, scale_y: 1 }, { duration: 'short', curve: 'emphasized' }, this._cleanup);
