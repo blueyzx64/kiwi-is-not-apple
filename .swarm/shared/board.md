@@ -3,7 +3,7 @@
 | ID | Model | Package | Worktree / branch | Depends on | Status |
 |---|---|---|---|---|---|
 | P1-menubar | (earlier agent) | Menu bar, logo menu, app menu P1 | kiwi-v3-menubar / v3/p1-menubar | | merged |
-| P1-windows | (earlier agent) | Tiling, green menu, Hide | kiwi-v3-windows / v3/p1-windows | | running |
+| P1-windows | (earlier agent) | Tiling, green menu, Hide | kiwi-v3-windows / v3/p1-windows | | merged |
 | L1 | sonnet | P2 Dock motion & extras: Genie/Scale minimize, bounce, magnification, LauncherEntry badges, grey background-app dots, folder Stacks | kiwi-l1 / v3/l1 | dock merged | merged |
 | L2 | sonnet | P2 System surfaces: Tahoe volume/brightness OSD under the menu bar, centred dialogs, colour filters | kiwi-l2 / v3/l2-surfaces | | started |
 | L3 | sonnet | P2 Screenshot toolbar (Shift+Super+3/4/5) + floating thumbnail | kiwi-l3 / v3/l3-screenshot | | started |
@@ -80,3 +80,4 @@ Deploy conservatively, sized to the scope and type of work. Resume in waves of a
 - L5 → merged (Mission Control on the overview: Spaces bar with +/×/reorder, App Exposé with minimized strip, F3/Ctrl+Up/Ctrl+Down, start on desktop, static Spaces via originals; API `ctx.features.instance('mission-control')`). The conflicts with L1/L7 in dock, schema, tests and code-map were combined by the orchestrator. Limits: no per-display Spaces; you reorder by dragging the label.
 - Resumed L4 (cap 5: P1-windows, L2, L3, FX3, L4).
 - ccr after the L7 merge: run-f44.sh 20 gave 0 Kiwi errors, 8/8 PASS (/tmp/x2/runs/20261027-150951-kiwi-is-not-apple-f44).
+- P1-windows → merged (Sequoia tiling `window-tiling`, green-button menu, Hide `app-hide`, glass traffic lights; core/tileActions.js; events `window-tiled`, `app-hidden`; WindowState `hidden`). Orchestrator follow-up done: with the green menu on, full-screen Left/Right go to Split View (`split-view-requested`), and Split View's own hover menu shows only when the green menu is off. To FX3: the dock must skip `hidden` windows among minimized ones, and the square grey shadow behind the green menu is the same issue as R2 F3. Open: press-and-hold opens on release, not while held; Move to Display is untested (one monitor); tile memory is lost on lock.
