@@ -374,8 +374,8 @@ export class AppMenuBar {
     _setMenus(menus) {
         while (this._buttons.length < menus.length) {
             const b = this._newButton('');
-            // Before the "»" button, which stays last
-            this._strip.insert_child_below(b.container, this._more.container);
+            // _newButton added it last; move it before the "»" button, which stays last
+            this._strip.set_child_below_sibling(b.container, this._more.container);
             this._buttons.push(b);
         }
         this._buttons.forEach((b, i) => {

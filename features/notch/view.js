@@ -86,11 +86,11 @@ export class NotchView {
         this._ears = null;
         this._pinned = false;        // a clicked (pinned) dashboard is open
         this._captureId = 0;         // stage 'captured-event' while pinned
+        this._focusedWindow = null;  // the window that had the input focus when it opened
         this._pressOnSurface = false;
         this._hoverIntent = { enabled: true, delayMs: 300 };
         this._hoverTimer = 0;
         this._anim = new CleanupRegistry();   // owner of running animations, disposed with the view
-        cleanup.add(() => this._anim.dispose());
 
         this.placeholder = new St.Widget({
             style_class: 'kiwi-notch-placeholder',
@@ -125,6 +125,9 @@ export class NotchView {
             Main.layoutManager.removeChrome(this._island);
             this._island.destroy();
         });
+        // Added after the island's cleanup, so it runs before it (newest first): the animations
+        // are cancelled while their actors still exist
+        cleanup.add(() => this._anim.dispose());
 
         cleanup.connect(this._island, 'notify::hover', () => {
             const hover = this._island.hover;
@@ -219,6 +222,11 @@ export class NotchView {
         if (this._captureId || this._destroyed)
             return;
         this._captureId = global.stage.connect('captured-event', (_s, event) => this._onCaptured(event));
+        // The keyboard goes to the island (like a panel menu, minus the grab): the window gives
+        // up the input focus and gets it back when the dashboard closes, unless another one
+        // was focused meanwhile
+        this._focusedWindow = global.display.focus_window;
+        global.display.unset_input_focus(global.get_current_time());
         this._island.grab_key_focus();
     }
 
@@ -227,6 +235,10 @@ export class NotchView {
             return;
         global.stage.disconnect(this._captureId);
         this._captureId = 0;
+        const window = this._focusedWindow;
+        this._focusedWindow = null;
+        if (window && !this._destroyed && !global.display.focus_window)
+            window.activate(global.get_current_time());
     }
 
     _contains(x, y) {

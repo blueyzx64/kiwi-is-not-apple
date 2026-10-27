@@ -18,9 +18,9 @@
 // show while none is registered. The feature registers its own rows of core/widgets views
 // (WIDGET_ROWS); "Edit Widgets…" hands over to the desktop widgets' gallery.
 //
-// Banners: while the column is open no banner shows (the stock tray's bannerBlocked, as the
-// calendar card does, and a router filter for banners that would arrive); what comes in
-// lands in the history list below.
+// Banners: while the column is open a router filter holds back every new banner (stock or
+// notch); it lands in the history list below instead. (The stock tray's bannerBlocked would
+// only queue them, and they would pop up when the column closes.)
 
 import Clutter from 'gi://Clutter';
 import Shell from 'gi://Shell';
@@ -55,7 +55,6 @@ export class NotificationCenter {
         this._content = null;
         this._host = null;
         this._bannerFilter = null;
-        this._bannersWereBlocked = false;
     }
 
     enable() {
@@ -155,8 +154,6 @@ export class NotificationCenter {
     _hideBanners() {
         if (this._bannerFilter)
             return;
-        this._bannersWereBlocked = Main.messageTray.bannerBlocked;
-        Main.messageTray.bannerBlocked = true;
         this._bannerFilter = NotificationRouter.setBannerFilter(null, () => false);
     }
 
@@ -165,7 +162,6 @@ export class NotificationCenter {
             return;
         this._bannerFilter.release();
         this._bannerFilter = null;
-        Main.messageTray.bannerBlocked = this._bannersWereBlocked;
     }
 
     // ---- widgets ---------------------------------------------------------------------------
@@ -176,8 +172,8 @@ export class NotificationCenter {
         const row = new St.BoxLayout({ style_class: 'kiwi-nc-widget-row', x_align: Clutter.ActorAlign.CENTER });
         for (const [kind, size] of specs) {
             const view = this._host.createView(kind, { size, config: {} });
-            const click = new Clutter.ClickAction();
-            click.connect('clicked', () => {
+            const click = new Clutter.ClickGesture();
+            click.connect('recognize', () => {
                 this.close();
                 view.activate();
             });
