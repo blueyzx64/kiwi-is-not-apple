@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Liquid Glass preferences. Adw/Gtk/Gio only (runs in the prefs process, no Shell libs).
-// PAGE says where the page goes; buildPrefs() returns the Adw.PreferencesGroup[].
+// buildPrefs() returns the Adw.PreferencesGroup[]; prefs/pages/ places them on a page.
 
 import Adw from 'gi://Adw';
 import Gio from 'gi://Gio';
@@ -8,10 +8,10 @@ import GLib from 'gi://GLib';
 import Gtk from 'gi://Gtk';
 
 import { MIN_TINT_PERCENT } from '../../lib/glassParams.js';
+import { switchRow } from '../../prefs/widgets.js';
 
 const N_ = s => s;
 
-export const PAGE = { id: 'liquid-glass', title: N_('Liquid Glass'), icon: 'applications-graphics-symbolic' };
 
 const SURFACES = [
     ['panel', N_('Top bar')],
@@ -25,11 +25,6 @@ const BMS_DIRS = [
     '/usr/share/gnome-shell/extensions/blur-my-shell@aunetx',
 ];
 
-function _switchRow(settings, title, subtitle, key) {
-    const row = new Adw.SwitchRow({ title, subtitle });
-    settings.bind(key, row, 'active', Gio.SettingsBindFlags.DEFAULT);
-    return row;
-}
 
 function _scaleRow(settings, title, subtitle, key) {
     const row = new Adw.ActionRow({ title, subtitle });
@@ -105,7 +100,7 @@ export function buildPrefs({ settings, window, extension }) {
         title: _('Liquid Glass'),
         description: _('Translucent shell surfaces with the same rounded shape as the surface itself. No blur, so it is light on the GPU. App windows stay opaque. Turning this off restores solid surfaces.'),
     });
-    const master = _switchRow(settings, _('Liquid Glass'), _('Shell-wide glass style'), 'liquid-glass');
+    const master = switchRow(settings, _('Liquid Glass'), _('Shell-wide glass style'), 'liquid-glass');
     main.add(master);
 
     if (BMS_DIRS.some(dir => GLib.file_test(dir, GLib.FileTest.IS_DIR))) {
@@ -122,7 +117,7 @@ export function buildPrefs({ settings, window, extension }) {
     look.add(_styleRow(settings, _));
     look.add(_scaleRow(settings, _('Frost'), _('Higher makes the glass a little more opaque'), 'liquid-glass-blur'));
     look.add(_scaleRow(settings, _('Tint'), _('Higher keeps text readable over any wallpaper. In Tinted style, values below %d are treated as %d to keep text readable.').replaceAll('%d', String(MIN_TINT_PERCENT)), 'liquid-glass-tint'));
-    look.add(_switchRow(settings, _('Edge highlight'), _('A thin light edge along the top'), 'liquid-glass-highlight'));
+    look.add(switchRow(settings, _('Edge highlight'), _('A thin light edge along the top'), 'liquid-glass-highlight'));
     groups.push(look);
 
     const where = new Adw.PreferencesGroup({ title: _('Surfaces') });

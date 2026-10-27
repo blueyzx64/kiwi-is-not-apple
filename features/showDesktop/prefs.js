@@ -1,63 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Show Desktop preferences. Adw/Gtk/Gio only (runs in the prefs process, no Shell libs).
-// PAGE says where the page goes; buildPrefs() returns the Adw.PreferencesGroup[].
+// buildPrefs() returns the Adw.PreferencesGroup[]; prefs/pages/ places them on a page.
 
 import Adw from 'gi://Adw';
 import Gtk from 'gi://Gtk';
 import Gio from 'gi://Gio';
 
-import { KNOWN_DEFAULTS, findConflicts, normalizeAccel } from '../../lib/keybindingsModel.js';
+import { shortcutRow } from '../../prefs/widgets.js';
 
-const N_ = s => s;
 
-export const PAGE = { id: 'show-desktop', title: N_('Show Desktop'), icon: 'kiwi-show-desktop-symbolic' };
 
 const KEY_SHORTCUT = 'show-desktop-shortcut';
 const SPEEDS = ['fast', 'normal', 'slow'];
 
-function _isAccel(text) {
-    if (!text)
-        return true;                     // empty turns the shortcut off
-    if (!normalizeAccel(text))
-        return false;
-    const [ok] = Gtk.accelerator_parse(text);
-    return ok;
-}
 
-function _shortcutRow(settings, _) {
-    const row = new Adw.EntryRow({ title: _('Shortcut') });
-    const read = () => settings.get_strv(KEY_SHORTCUT)[0] ?? '';
-    row.text = read();
-    const base = row.title;
-    const showNote = () => {
-        const text = row.text.trim();
-        row.remove_css_class('error');
-        let note = '';
-        if (!_isAccel(text)) {
-            row.add_css_class('error');
-            note = _('Not a valid shortcut. Example: <Super>d');
-        } else {
-            const hit = findConflicts([text], KNOWN_DEFAULTS)[0];
-            if (hit)
-                note = _('Also used by GNOME: %s').replace('%s', hit.with);
-        }
-        // An EntryRow has no subtitle, so the note goes in its title
-        row.title = note ? `${base}: ${note}` : base;
-    };
-    row.connect('changed', () => {
-        const text = row.text.trim();
-        showNote();
-        if (_isAccel(text) && text !== read())
-            settings.set_strv(KEY_SHORTCUT, text ? [text] : []);
-    });
-    showNote();
-    const id = settings.connect(`changed::${KEY_SHORTCUT}`, () => {
-        if (read() !== row.text.trim())
-            row.text = read();
-    });
-    row.connect('destroy', () => settings.disconnect(id));
-    return row;
-}
 
 /**
  * @param {{settings: Gio.Settings, window: Adw.PreferencesWindow, extension: object}} args
@@ -76,7 +32,7 @@ export function buildPrefs({ settings, extension }) {
     });
     settings.bind('show-desktop-button', button, 'active', Gio.SettingsBindFlags.DEFAULT);
     main.add(button);
-    main.add(_shortcutRow(settings, _));
+    main.add(shortcutRow(settings, _, { key: KEY_SHORTCUT, title: _('Shortcut'), example: '<Super>d' }));
 
     const speed = new Adw.ComboRow({
         title: _('Animation speed'),

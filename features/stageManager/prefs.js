@@ -1,74 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Stage Manager preferences. Adw/Gtk/Gio only (runs in the prefs process, no Shell libs).
-// PAGE says where the page goes; buildPrefs() returns the Adw.PreferencesGroup[].
+// buildPrefs() returns the Adw.PreferencesGroup[]; prefs/pages/ places them on a page.
 
 import Adw from 'gi://Adw';
 import Gtk from 'gi://Gtk';
 import Gio from 'gi://Gio';
 
-import { KNOWN_DEFAULTS, findConflicts, normalizeAccel } from '../../lib/keybindingsModel.js';
+import { shortcutRow } from '../../prefs/widgets.js';
 
-const N_ = s => s;
 
-export const PAGE = { id: 'stage-manager', title: N_('Stage Manager'), icon: 'view-app-grid-symbolic' };
 
-function _isAccel(text) {
-    if (!text)
-        return true;                     // empty turns the shortcut off
-    if (!normalizeAccel(text))
-        return false;
-    const [ok] = Gtk.accelerator_parse(text);
-    return ok;
-}
 
 const SUGGESTED = '<Control><Super>s';
 
-function _shortcutRow(settings, _, key = 'stage-manager-shortcut', title = null, suggested = SUGGESTED) {
-    const row = new Adw.EntryRow({ title: title ?? _('Toggle shortcut') });
-    const read = () => settings.get_strv(key)[0] ?? '';
-    row.text = read();
-
-    const base = row.title;
-    const showNote = () => {
-        const text = row.text.trim();
-        row.remove_css_class('error');
-        let note = '';
-        if (!_isAccel(text)) {
-            row.add_css_class('error');
-            note = _('Not a valid shortcut. Example: <Control><Super>s');
-        } else {
-            const hit = findConflicts([text], KNOWN_DEFAULTS)[0];
-            if (hit)
-                note = _('Also used by GNOME: %s').replace('%s', hit.with);
-        }
-        // An EntryRow has no subtitle, so the note goes in its title
-        row.title = note ? `${base}: ${note}` : base;
-    };
-    // Offer the suggestion only when nothing known uses it
-    if (suggested && findConflicts([suggested], KNOWN_DEFAULTS).length === 0) {
-        const use = new Gtk.Button({
-            label: _('Use Ctrl+Super+S'), valign: Gtk.Align.CENTER, css_classes: ['flat'],
-        });
-        use.connect('clicked', () => {
-            settings.set_strv(key, [suggested]);
-            row.text = suggested;
-        });
-        row.add_suffix(use);
-    }
-    row.connect('changed', () => {
-        const text = row.text.trim();
-        showNote();
-        if (_isAccel(text))
-            settings.set_strv(key, text ? [text] : []);
-    });
-    showNote();
-    const id = settings.connect(`changed::${key}`, () => {
-        if (read() !== row.text.trim())
-            row.text = read();
-    });
-    row.connect('destroy', () => settings.disconnect(id));
-    return row;
-}
 
 /** A combo row over a string key with fixed values. */
 function _choiceRow(settings, connect, key, title, subtitle, values, labels) {
@@ -107,7 +51,10 @@ export function buildPrefs({ settings, window, extension }) {
     const enabled = new Adw.SwitchRow({ title: _('Show the Stage Manager strip') });
     settings.bind('stage-manager', enabled, 'active', Gio.SettingsBindFlags.DEFAULT);
     main.add(enabled);
-    main.add(_shortcutRow(settings, _));
+    main.add(shortcutRow(settings, _, {
+        key: 'stage-manager-shortcut', title: _('Toggle shortcut'), example: '<Control><Super>s',
+        suggestion: { accel: SUGGESTED, label: _('Use Ctrl+Super+S') },
+    }));
 
     const strip = new Adw.PreferencesGroup({ title: _('Strip') });
 
@@ -188,7 +135,9 @@ export function buildPrefs({ settings, window, extension }) {
     sets.add(_choiceRow(settings, connect, 'stage-manager-new-windows', _('New windows'),
         _('What a newly opened app window does'),
         ['replace', 'join'], [_('Replace the stage'), _('Join the current set')]));
-    sets.add(_shortcutRow(settings, _, 'stage-manager-remove-shortcut', _('Remove from set shortcut'), null));
+    sets.add(shortcutRow(settings, _, {
+        key: 'stage-manager-remove-shortcut', title: _('Remove from set shortcut'), example: '<Control><Super>Down',
+    }));
     const wallpaper = new Adw.SwitchRow({
         title: _('Click wallpaper to show the desktop'),
         subtitle: _('The windows on the stage step into the strip; click again to bring them back'),
@@ -210,10 +159,7 @@ export function buildPrefs({ settings, window, extension }) {
     pausedRow.add_prefix(new Gtk.Image({ icon_name: 'media-playback-pause-symbolic' }));
     paused.add(pausedRow);
     const PAUSES = [
-        [() => settings.get_boolean('minimize-to-dock'), _('Minimize to Dock')],
-        [() => settings.get_boolean('move-window-to-new-workspace'), _('Move Fullscreen to New Workspace')],
-        [() => settings.get_boolean('show-window-title') && settings.get_boolean('show-tiling-title-menu'),
-            _('Tiling title menu')],
+        [() => settings.get_boolean('move-window-to-new-workspace'), _('Full screen in its own Space')],
     ];
     const syncPaused = () => {
         const names = PAUSES.filter(([on]) => on()).map(([, name]) => name);
@@ -221,8 +167,7 @@ export function buildPrefs({ settings, window, extension }) {
         paused.visible = settings.get_boolean('stage-manager') && names.length > 0;
     };
     syncPaused();
-    for (const key of ['stage-manager', 'minimize-to-dock', 'move-window-to-new-workspace',
-        'show-window-title', 'show-tiling-title-menu'])
+    for (const key of ['stage-manager', 'move-window-to-new-workspace'])
         connect(key, syncPaused);
 
     return [main, paused, strip, sets];

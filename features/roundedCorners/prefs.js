@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Rounded corners preferences. Adw/Gtk/Gio only (runs in the prefs process, no Shell libs).
-// PAGE says where the page goes; buildPrefs() returns the Adw.PreferencesGroup[].
+// buildPrefs() returns the Adw.PreferencesGroup[]; prefs/pages/ places them on a page.
 
 import Adw from 'gi://Adw';
 import Gtk from 'gi://Gtk';
@@ -8,9 +8,7 @@ import Gio from 'gi://Gio';
 
 import { RADIUS_MAX, RADIUS_MIN, WHICH_DEFAULT, WHICH_VALUES, normalizeId } from './model.js';
 
-const N_ = s => s;
 
-export const PAGE = { id: 'rounded-corners', title: N_('Rounded Corners'), icon: 'window-restore-symbolic' };
 
 const KEY_LIST = 'rounded-corners-blacklist';
 const KEY_WHICH = 'rounded-corners-which';

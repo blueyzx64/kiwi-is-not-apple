@@ -5,9 +5,7 @@ import Adw from 'gi://Adw';
 import Gio from 'gi://Gio';
 import Gtk from 'gi://Gtk';
 
-const N_ = s => s;
 
-export const PAGE = { id: 'notch', title: N_('Notch'), icon: 'preferences-system-notifications-symbolic' };
 
 /**
  * @param {{settings: Gio.Settings, window: Adw.PreferencesWindow, extension: object}} args
