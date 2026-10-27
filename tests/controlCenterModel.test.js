@@ -3,7 +3,7 @@ import {
     COLUMNS, MORE_HEADER_ID, DISPLAY_HEADER_ID, SOUND_HEADER_ID, SPACER_PREFIX,
     planLayout, place, restoreOrder, batteryTime, BATTERY_STATE,
     KIWI_COLUMNS, KIWI_TOGGLES, kiwiTiles,
-} from '../apps/controlCenter/model.js';
+} from '../features/controlCenter/model.js';
 
 let failed = 0;
 function test(name, fn) {

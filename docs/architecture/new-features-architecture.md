@@ -1,3 +1,7 @@
+> **Superseded in v3.** The layout is now `core/` + `features/` (see `code-map.md` and
+> `conventions.md`); `coordinators/` moved into `core/`. This file is kept for the reasoning
+> behind the 2.x shared layer.
+
 # New-features architecture and change guidelines
 
 > **Summary (read this, stop if it's enough):** the eight planned features

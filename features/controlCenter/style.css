@@ -1,0 +1,484 @@
+/* feature: control-center */
+/* Every rule is scoped by .kiwi-control-center, a class the feature adds to the Quick
+   Settings menu box while it is on. Removing the class restores the stock look.
+   macOS layout: one compact 330px panel, 12px padding, modules are rounded squares
+   (radius 14px, concentric with the 26px panel). The accent is only the small circle
+   behind an active icon. Type: 14px semibold titles, 12px secondary text (the floor).
+   Rows are spaced by item margins, not the grid's row spacing, so a module made of several
+   grid items (the connectivity stack, Display, Sound) can join without a gap:
+     .kiwi-cc-item       every planned item, 8px under it
+     .kiwi-cc-join-next  the item below belongs to the same module: no gap, square bottom
+     .kiwi-cc-join-prev  continues the module above: square top
+   Colours live under .kiwi-cc-calm (off under high contrast, where the stock solid tiles
+   stay) and .kiwi-cc-light (light style). */
+
+.quick-settings.kiwi-control-center {
+    padding: 12px;
+    border-radius: 26px;
+}
+
+.quick-settings.kiwi-control-center .quick-settings-grid {
+    width: 306px;
+    spacing-rows: 0;
+    spacing-columns: 8px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-item {
+    margin-bottom: 8px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-item.kiwi-cc-join-next,
+.quick-settings.kiwi-control-center .quick-settings-system-item.kiwi-cc-item {
+    margin-bottom: 0;
+}
+
+/* ---- tiles: one shape for every toggle ---- */
+.quick-settings.kiwi-control-center .quick-toggle,
+.quick-settings.kiwi-control-center .quick-toggle-has-menu {
+    min-width: 0;
+    max-width: 306px;
+    min-height: 48px;
+    border-radius: 14px;
+}
+
+.quick-settings.kiwi-control-center .quick-toggle-has-menu .quick-toggle,
+.quick-settings.kiwi-control-center .quick-toggle-has-menu .quick-toggle-menu-button {
+    min-height: 0;
+    border-radius: 12px;
+}
+
+.quick-settings.kiwi-control-center .quick-toggle-has-menu .quick-toggle-menu-button {
+    padding: 6px 4px;
+}
+
+.quick-settings.kiwi-control-center .quick-toggle-has-menu .quick-toggle-menu-button StIcon {
+    icon-size: 12px;
+}
+
+.quick-settings.kiwi-control-center .quick-toggle-has-menu .quick-toggle-separator {
+    width: 0;
+}
+
+/* A module made of several items: square where they meet. .kiwi-cc-item raises these
+   above the per-kind radii below (.quick-slider, .kiwi-cc-caption), whatever their order. */
+.quick-settings.kiwi-control-center .kiwi-cc-item.kiwi-cc-join-next,
+.quick-settings.kiwi-control-center .kiwi-cc-item.kiwi-cc-join-next .quick-toggle {
+    border-radius: 14px 14px 0 0;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-item.kiwi-cc-join-prev,
+.quick-settings.kiwi-control-center .kiwi-cc-item.kiwi-cc-join-prev .quick-toggle {
+    border-radius: 0 0 14px 14px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-item.kiwi-cc-join-prev.kiwi-cc-join-next,
+.quick-settings.kiwi-control-center .kiwi-cc-item.kiwi-cc-join-prev.kiwi-cc-join-next .quick-toggle {
+    border-radius: 0;
+}
+
+/* A joined toggle shares its grid row with a right-hand item that has an 8px margin under
+   it; the row is that much taller, so the toggle keeps the extra 8px as padding instead of
+   growing: its icon then lines up with its neighbour's, and every row of the stack is the
+   same height. */
+.quick-settings.kiwi-control-center .quick-toggle.kiwi-cc-item.kiwi-cc-join-next,
+.quick-settings.kiwi-control-center .quick-toggle-has-menu.kiwi-cc-item.kiwi-cc-join-next {
+    padding-bottom: 8px;
+}
+
+.quick-settings.kiwi-control-center .quick-toggle > StBoxLayout {
+    spacing: 8px;
+}
+
+.quick-settings.kiwi-control-center .quick-toggle:ltr > StBoxLayout {
+    padding-left: 8px;
+    padding-right: 2px;
+}
+
+.quick-settings.kiwi-control-center .quick-toggle:rtl > StBoxLayout {
+    padding-right: 8px;
+    padding-left: 2px;
+}
+
+/* The icon sits in a 28px circle; the circle, not the tile, shows "on" */
+.quick-settings.kiwi-control-center .quick-toggle .quick-toggle-icon {
+    icon-size: 16px;
+    padding: 6px;
+    border-radius: 999px;
+}
+
+.quick-settings.kiwi-control-center .quick-toggle .quick-toggle-title {
+    font-size: 10.5pt;
+    font-weight: 600;
+}
+
+.quick-settings.kiwi-control-center .quick-toggle .quick-toggle-subtitle {
+    font-size: 9pt;
+    font-weight: normal;
+}
+
+/* Secondary toggles made icon-only by the feature (1x1): the circle alone, centred */
+.quick-settings.kiwi-control-center .quick-toggle.kiwi-cc-compact > StBoxLayout {
+    padding: 0;
+}
+
+/* ---- captions and sections ---- */
+.quick-settings.kiwi-control-center .kiwi-cc-caption {
+    font-size: 10.5pt;
+    font-weight: 600;
+    padding: 10px 14px 0 14px;
+    border-radius: 14px 14px 0 0;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-section-title {
+    font-size: 9pt;
+    font-weight: 600;
+    padding: 4px 6px 0 6px;
+}
+
+/* ---- sliders: a thick rounded track, like the Display and Sound modules ---- */
+.quick-settings.kiwi-control-center .quick-slider {
+    padding: 6px 12px 12px 8px;
+    border-radius: 14px;
+}
+
+.quick-settings.kiwi-control-center .quick-slider > StBoxLayout {
+    spacing: 4px;
+}
+
+.quick-settings.kiwi-control-center .quick-slider .icon-button {
+    padding: 4px;
+    border-radius: 999px;
+}
+
+.quick-settings.kiwi-control-center .quick-slider .icon-button StIcon {
+    icon-size: 16px;
+}
+
+.quick-settings.kiwi-control-center .quick-slider .slider-bin {
+    padding: 0;
+    border-radius: 999px;
+}
+
+.quick-settings.kiwi-control-center .quick-slider .slider {
+    -barlevel-height: 20px;
+    -slider-handle-radius: 10px;
+    -barlevel-overdrive-separator-width: 0;
+}
+
+/* ---- modules: Now Playing and the Kiwi row ---- */
+.quick-settings.kiwi-control-center .kiwi-cc-module {
+    border-radius: 14px;
+    padding: 10px 12px 12px 12px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-kiwi-head {
+    padding-bottom: 8px;
+    spacing: 8px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-module-title {
+    font-size: 10.5pt;
+    font-weight: 600;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-kiwi-hint {
+    font-size: 9pt;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-kiwi-tile {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 999px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-kiwi-tile:focus {
+    box-shadow: inset 0 0 0 2px st-transparentize(-st-accent-color, 0.2);
+}
+
+/* max-width keeps a long title from widening the whole menu */
+.quick-settings.kiwi-control-center .kiwi-cc-now-playing {
+    min-width: 0;
+    max-width: 306px;
+    min-height: 0;
+    padding: 8px 8px 8px 8px;
+    spacing: 10px;
+    border-radius: 14px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-np-art {
+    border-radius: 8px;
+}
+
+/* No cover and no app icon: a small note in a 36px rounded square */
+.quick-settings.kiwi-control-center .kiwi-cc-np-art-symbolic {
+    padding: 8px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-np-title {
+    font-size: 10.5pt;
+    font-weight: 600;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-np-artist {
+    font-size: 9pt;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-np-button {
+    padding: 7px;
+    border-radius: 999px;
+    background-color: transparent;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-np-button StIcon {
+    icon-size: 16px;
+}
+
+/* ---- footer: one quiet line of small icons ---- */
+.quick-settings.kiwi-control-center .quick-settings-system-item {
+    padding-top: 2px;
+}
+
+.quick-settings.kiwi-control-center .quick-settings-system-item > StBoxLayout {
+    spacing: 2px;
+}
+
+.quick-settings.kiwi-control-center .quick-settings-system-item .icon-button {
+    padding: 7px;
+    border-radius: 999px;
+    background-color: transparent;
+}
+
+.quick-settings.kiwi-control-center .quick-settings-system-item .icon-button StIcon {
+    icon-size: 16px;
+}
+
+.quick-settings.kiwi-control-center .quick-settings-system-item .power-item {
+    min-width: 0;
+    max-width: 9em;
+    min-height: 0;
+    border-radius: 999px;
+    background-color: transparent;
+}
+
+.quick-settings.kiwi-control-center .quick-settings-system-item .power-item .quick-toggle-icon {
+    padding: 0;
+    background-color: transparent;
+}
+
+.quick-settings.kiwi-control-center .quick-settings-system-item .power-item > StBoxLayout {
+    padding-left: 6px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-user {
+    padding: 0 4px;
+}
+
+.quick-settings.kiwi-control-center .kiwi-cc-user .user-icon {
+    icon-size: 24px;
+}
+
+/* Top bar: battery percentage that stays on */
+.kiwi-cc-battery-label {
+    padding-left: 2px;
+}
+
+/* ---- calm palette, dark style ---- */
+.quick-settings.kiwi-cc-calm .quick-toggle,
+.quick-settings.kiwi-cc-calm .quick-toggle:checked,
+.quick-settings.kiwi-cc-calm .quick-toggle-has-menu,
+.quick-settings.kiwi-cc-calm .quick-slider,
+.quick-settings.kiwi-cc-calm .kiwi-cc-caption,
+.quick-settings.kiwi-cc-calm .kiwi-cc-module,
+.quick-settings.kiwi-cc-calm .kiwi-cc-now-playing {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.08);
+    box-shadow: none;
+}
+
+.quick-settings.kiwi-cc-calm .quick-toggle:hover,
+.quick-settings.kiwi-cc-calm .quick-toggle:checked:hover {
+    background-color: rgba(255, 255, 255, 0.13);
+}
+
+.quick-settings.kiwi-cc-calm .quick-toggle:active,
+.quick-settings.kiwi-cc-calm .quick-toggle:checked:active {
+    background-color: rgba(255, 255, 255, 0.18);
+}
+
+.quick-settings.kiwi-cc-calm .quick-toggle:focus,
+.quick-settings.kiwi-cc-calm .quick-toggle-has-menu .quick-toggle-menu-button:focus {
+    box-shadow: inset 0 0 0 2px st-transparentize(-st-accent-color, 0.3);
+}
+
+/* Inside a menu toggle the outer box is the tile: its halves stay flat until hovered */
+.quick-settings.kiwi-cc-calm .quick-toggle-has-menu .quick-toggle,
+.quick-settings.kiwi-cc-calm .quick-toggle-has-menu .quick-toggle:checked,
+.quick-settings.kiwi-cc-calm .quick-toggle-has-menu .quick-toggle-menu-button,
+.quick-settings.kiwi-cc-calm .quick-toggle-has-menu .quick-toggle-menu-button:checked {
+    color: #ffffff;
+    background-color: transparent;
+}
+
+.quick-settings.kiwi-cc-calm .quick-toggle-has-menu .quick-toggle:hover,
+.quick-settings.kiwi-cc-calm .quick-toggle-has-menu .quick-toggle-menu-button:hover,
+.quick-settings.kiwi-cc-calm .quick-toggle-has-menu .quick-toggle-menu-button:checked:hover {
+    background-color: rgba(255, 255, 255, 0.07);
+}
+
+.quick-settings.kiwi-cc-calm .quick-toggle-has-menu .quick-toggle-separator {
+    background-color: transparent;
+}
+
+.quick-settings.kiwi-cc-calm .quick-toggle .quick-toggle-icon,
+.quick-settings.kiwi-cc-calm .kiwi-cc-kiwi-tile {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+/* On: the accent, on the circle only */
+.quick-settings.kiwi-cc-calm .quick-toggle:checked .quick-toggle-icon,
+.quick-settings.kiwi-cc-calm .kiwi-cc-kiwi-tile:checked {
+    color: -st-accent-fg-color;
+    background-color: -st-accent-color;
+}
+
+.quick-settings.kiwi-cc-calm .kiwi-cc-kiwi-tile:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.quick-settings.kiwi-cc-calm .kiwi-cc-kiwi-tile:checked:hover {
+    background-color: st-lighten(-st-accent-color, 6%);
+}
+
+.quick-settings.kiwi-cc-calm .quick-toggle .quick-toggle-subtitle,
+.quick-settings.kiwi-cc-calm .kiwi-cc-kiwi-hint,
+.quick-settings.kiwi-cc-calm .kiwi-cc-np-artist,
+.quick-settings.kiwi-cc-calm .kiwi-cc-section-title {
+    color: rgba(255, 255, 255, 0.62);
+}
+
+.quick-settings.kiwi-cc-calm .kiwi-cc-np-art-symbolic {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.quick-settings.kiwi-cc-calm .kiwi-cc-np-button,
+.quick-settings.kiwi-cc-calm .quick-settings-system-item .icon-button,
+.quick-settings.kiwi-cc-calm .quick-settings-system-item .power-item {
+    color: rgba(255, 255, 255, 0.85);
+    background-color: transparent;
+}
+
+.quick-settings.kiwi-cc-calm .kiwi-cc-np-button:hover,
+.quick-settings.kiwi-cc-calm .quick-settings-system-item .icon-button:hover,
+.quick-settings.kiwi-cc-calm .quick-settings-system-item .power-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Sliders: white fill on a faint track, white knob (the macOS look) */
+.quick-settings.kiwi-cc-calm .quick-slider .slider-bin,
+.quick-settings.kiwi-cc-calm .quick-slider .icon-button {
+    color: rgba(255, 255, 255, 0.85);
+    background-color: transparent;
+}
+
+.quick-settings.kiwi-cc-calm .quick-slider .slider {
+    color: #ffffff;
+    -barlevel-background-color: rgba(255, 255, 255, 0.14);
+    -barlevel-active-background-color: rgba(255, 255, 255, 0.92);
+}
+
+/* ---- calm palette, light style ---- */
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle:checked,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle-has-menu,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-slider,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .kiwi-cc-caption,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .kiwi-cc-module,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .kiwi-cc-now-playing {
+    color: #1d1d1f;
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle:hover,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle:checked:hover {
+    background-color: rgba(0, 0, 0, 0.09);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle:active,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle:checked:active {
+    background-color: rgba(0, 0, 0, 0.13);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle-has-menu .quick-toggle,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle-has-menu .quick-toggle:checked,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle-has-menu .quick-toggle-menu-button,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle-has-menu .quick-toggle-menu-button:checked {
+    color: #1d1d1f;
+    background-color: transparent;
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle-has-menu .quick-toggle:hover,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle-has-menu .quick-toggle-menu-button:hover,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle-has-menu .quick-toggle-menu-button:checked:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle .quick-toggle-icon,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .kiwi-cc-kiwi-tile {
+    color: #1d1d1f;
+    background-color: rgba(0, 0, 0, 0.08);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle:checked .quick-toggle-icon,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .kiwi-cc-kiwi-tile:checked {
+    color: -st-accent-fg-color;
+    background-color: -st-accent-color;
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .kiwi-cc-kiwi-tile:hover {
+    background-color: rgba(0, 0, 0, 0.14);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .kiwi-cc-kiwi-tile:checked:hover {
+    background-color: st-darken(-st-accent-color, 6%);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-toggle .quick-toggle-subtitle,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .kiwi-cc-kiwi-hint,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .kiwi-cc-np-artist,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .kiwi-cc-section-title {
+    color: rgba(0, 0, 0, 0.58);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .kiwi-cc-np-art-symbolic {
+    background-color: rgba(0, 0, 0, 0.08);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .kiwi-cc-np-button,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-settings-system-item .icon-button,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-settings-system-item .power-item,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-slider .slider-bin,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-slider .icon-button {
+    color: rgba(0, 0, 0, 0.75);
+    background-color: transparent;
+}
+
+/* The footer battery is a quick toggle too: no tile and no icon circle in light style
+   either (the light tile rules above would otherwise reach it) */
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-settings-system-item .power-item .quick-toggle-icon {
+    color: rgba(0, 0, 0, 0.75);
+    background-color: transparent;
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .kiwi-cc-np-button:hover,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-settings-system-item .icon-button:hover,
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-settings-system-item .power-item:hover {
+    background-color: rgba(0, 0, 0, 0.07);
+}
+
+.quick-settings.kiwi-cc-calm.kiwi-cc-light .quick-slider .slider {
+    color: #ffffff;
+    -barlevel-background-color: rgba(0, 0, 0, 0.12);
+    -barlevel-active-background-color: #ffffff;
+}

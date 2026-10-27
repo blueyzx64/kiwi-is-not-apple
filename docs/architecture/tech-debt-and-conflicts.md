@@ -7,6 +7,37 @@
 > 4. The highest-risk existing debt: (a) the Firefox/Thunderbird manager can delete a user's own `chrome/` directory, and it runs on default settings even when Firefox styling is off. (b) `~/.config/gtk-*` files are written and removed on every lock. (c) Polling timers run in 5 modules (plus the native GTK3 module). (d) Lifecycle bugs: dead or stale signals, unbounded retries, async callbacks after destroy.
 > 5. Two premises in the brief need correcting. `Shell.BlurEffect` already uses `radius`, the correct name since GNOME 46 (`sigma` is the legacy name), and no `add_actor`/`get_maximized` calls remain. The real version-sensitive spots are listed in §2.3.
 
+> **v3 status (phase 0, 2026-10-27).** The tables below describe the 2.x code at `c2f3d0f`
+> with their 2.x paths (`apps/`, `coordinators/`). In v3:
+> - **Closed by removal** (the module is gone, overhaul plan §3): every row about
+>   `panelTransparency`, `panelHover`, `dockBlur`, `dockColors`, `dockUtils`, `minimizedToDock`,
+>   `downloadsStack`, `launchpadApp`, `mozillaThemeManager` (and its `chrome/` data-loss rows),
+>   `windowTitle`, `windowTiling` drag-restore, `overviewSeamlessZoom`, `overviewWallpaper`,
+>   `skipOverviewOnLogin`, `focusOnOverviewExit`, `reduceWindowAnimations`, `transparentMove`,
+>   `batteryPercentage`, `lockIcon`, `keyboardIndicator`, `mediaPlayback`, the `advanced/`
+>   module (polling, `GTK_MODULES`, prebuilt binary) and the alternative/glass CSS sets. What
+>   they wrote into user files is removed once by `lib/cleanup/` (Kiwi-marked content only).
+> - **Fixed in phase 0:** the 2.x dispatcher modes (`reapply`, `startOnly`) are gone, every
+>   feature is a lazily loaded class; the calendar's 500 ms startup delay and Quick Settings'
+>   100 ms delay are replaced by placement on `child-added` and one bounded
+>   `whenQuickSettingsReady()`; the hard-coded `lookup('kiwi@kemma')` in the Quick Settings
+>   notifications is gone (`ctx.extension`); the Quick Settings `max-height` is composed, not
+>   replaced; the Do Not Disturb hand-off between the Control Center and the legacy button is a
+>   registry conflict instead of a module flag; the GType CSS selector of the window controls is
+>   gone; the GTK theme manager uses the shared async file helpers and the one user-file queue;
+>   duplicated helpers (prefs rows and shortcut entries, Quick Settings readiness, job queues,
+>   window predicates) exist once; the GNOME `button-layout` original is kept by the generic
+>   crash-safe `core/originals.js`; rounded corners no longer re-evaluate every window on each
+>   frame of a drag (`position-changed` dropped); the notch spring sets the actor directly
+>   instead of allocating per frame.
+> - **Still open (phase 1+):** `features/fullscreenSpace` (2.x `moveFullscreenWindow`) still
+>   raises the global `St.Settings.slow_down_factor` and reads `Main.wm._workspaceAnimation`
+>   (kept as is by decision; reworked with Mission Control in phase 3); the clipboard's one sync
+>   `GLib.mkdir_with_parents` in enable (allowed by decision); `gtkTheme.js`'s
+>   `LEGACY_IMPORT_REGEX` should narrow after a release; `session-modes` is still undecided
+>   (R7); the window-state flags `tiled`, `parkedInDock` and `isolatedFullscreen` are reserved
+>   for the tiling engine, the dock and Split View.
+
 ## Table of contents
 
 1. [Conflicts with planned features](#1-conflicts-with-planned-features)

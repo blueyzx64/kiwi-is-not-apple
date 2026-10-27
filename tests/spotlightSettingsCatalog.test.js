@@ -1,6 +1,6 @@
 // Run: gjs -m tests/spotlightSettingsCatalog.test.js
-import { settingsItems, PANELS, KIWI_TOGGLES } from '../apps/spotlight/providers/settingsCatalog.js';
-import { rank, usageBoost } from '../apps/spotlight/model.js';
+import { settingsItems, PANELS, KIWI_TOGGLES } from '../features/spotlight/providers/settingsCatalog.js';
+import { rank, usageBoost } from '../features/spotlight/model.js';
 
 let failed = 0;
 function test(name, fn) {

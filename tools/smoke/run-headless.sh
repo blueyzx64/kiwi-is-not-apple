@@ -21,7 +21,7 @@ if [ -n "${KIWI_SMOKE_SHELL_VERSION:-}" ]; then
   sed -i "s/\"shell-version\": \[/\"shell-version\": [\"$KIWI_SMOKE_SHELL_VERSION\",/" "$E/metadata.json"
 fi
 if [ "${KIWI_SMOKE_SHIM:-0}" = 1 ]; then
-  sed -i 's/extends MessageList.MessageView {/extends (MessageList.MessageView ?? St.BoxLayout) {/' "$E/apps/quickSettingsNotifications.js"
+  sed -i 's/extends MessageList.MessageView {/extends (MessageList.MessageView ?? St.BoxLayout) {/' "$E/features/calendar/notificationList.js"
   grep -rl 'orientation: Clutter.Orientation' "$E" --include=*.js | xargs -r sed -i \
     's/orientation: Clutter.Orientation.VERTICAL/vertical: true/;s/orientation: Clutter.Orientation.HORIZONTAL/vertical: false/'
 fi

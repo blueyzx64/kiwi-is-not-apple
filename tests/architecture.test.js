@@ -1,0 +1,129 @@
+// Run: gjs -m tests/architecture.test.js
+// Rules of the code layout (docs/architecture/conventions.md) that a reviewer would otherwise
+// have to remember:
+//   1. No code reads a deprecated settings key, except the one-shot migrations
+//      (lib/migrations.js, lib/cleanup/).
+//   2. A feature never imports another feature's files (it asks ctx.features or ctx.events);
+//      only prefs pages compose feature prefs.
+//   3. Every St.Button Kiwi builds has an accessible name (or a label).
+//   4. Removed 2.x folders stay gone.
+import GLib from 'gi://GLib';
+import Gio from 'gi://Gio';
+
+let failed = 0;
+function test(name, fn) {
+    try { fn(); print(`ok   ${name}`); } catch (e) { failed++; print(`FAIL ${name}: ${e.message}`); }
+}
+
+const root = GLib.build_filenamev([GLib.path_get_dirname(GLib.filename_from_uri(import.meta.url)[0]), '..']);
+const read = rel => new TextDecoder().decode(Gio.File.new_for_path(`${root}/${rel}`).load_contents(null)[1]);
+const exists = rel => GLib.file_test(`${root}/${rel}`, GLib.FileTest.EXISTS);
+
+// Every .js file the extension ships, relative to the root
+function sources() {
+    const out = [];
+    const walk = dir => {
+        const e = Gio.File.new_for_path(`${root}/${dir}`).enumerate_children('standard::name,standard::type', 0, null);
+        for (let info; (info = e.next_file(null));) {
+            const rel = dir ? `${dir}/${info.get_name()}` : info.get_name();
+            if (info.get_file_type() === Gio.FileType.DIRECTORY)
+                walk(rel);
+            else if (rel.endsWith('.js'))
+                out.push(rel);
+        }
+    };
+    for (const dir of ['lib', 'core', 'features', 'prefs'])
+        walk(dir);
+    return [...out, 'extension.js', 'prefs.js', 'features.js'];
+}
+
+// Keys whose summary starts "(Deprecated, unused)", read block by block
+function deprecatedKeys() {
+    const xml = read('schemas/org.gnome.shell.extensions.kiwi.gschema.xml');
+    const keys = [];
+    for (const m of xml.matchAll(/<key [^>]*name="([^"]+)"[^>]*>([\s\S]*?)<\/key>/g)) {
+        if (/<summary>\(Deprecated, unused\)/.test(m[2]))
+            keys.push(m[1]);
+    }
+    return keys;
+}
+
+test('the schema marks the dropped keys deprecated', () => {
+    const keys = deprecatedKeys();
+    for (const k of ['panel-transparency', 'dock-blur', 'enable-firefox-styling', 'show-window-title',
+        'hide-activities-button', 'focus-new-windows', 'button-type', 'saved-button-layout']) {
+        if (!keys.includes(k))
+            throw new Error(`${k} is not marked deprecated`);
+    }
+});
+
+test('no code reads a deprecated key (migrations aside)', () => {
+    const keys = deprecatedKeys();
+    const allowed = f => f === 'lib/migrations.js' || f.startsWith('lib/cleanup/');
+    const hits = [];
+    for (const f of sources().filter(s => !allowed(s))) {
+        const text = read(f);
+        for (const k of keys) {
+            const re = new RegExp(`(['"\`])${k.replace(/[-]/g, '\\-')}\\1|::${k.replace(/[-]/g, '\\-')}(?![\\w-])`);
+            if (re.test(text))
+                hits.push(`${f}: ${k}`);
+        }
+    }
+    if (hits.length)
+        throw new Error(hits.join('; '));
+});
+
+test('features do not import each other', () => {
+    const hits = [];
+    for (const f of sources().filter(s => s.startsWith('features/') && !s.endsWith('/prefs.js'))) {
+        const own = f.split('/')[1];
+        for (const m of read(f).matchAll(/from '([^']+)'/g)) {
+            const target = GLib.canonicalize_filename(m[1], `${root}/${GLib.path_get_dirname(f)}`)
+                .slice(GLib.canonicalize_filename(root, null).length + 1);
+            const parts = target.split('/');
+            if (parts[0] === 'features' && parts[1] !== own)
+                hits.push(`${f} -> ${target}`);
+        }
+    }
+    if (hits.length)
+        throw new Error(hits.join('; '));
+});
+
+test('every St.Button has an accessible name or a label', () => {
+    const hits = [];
+    for (const f of sources()) {
+        const text = read(f);
+        for (const m of text.matchAll(/new St\.Button\(\{/g)) {
+            // The constructor's object literal, by brace depth
+            let i = m.index + m[0].length;
+            for (let depth = 1; depth && i < text.length; i++)
+                depth += text[i] === '{' ? 1 : text[i] === '}' ? -1 : 0;
+            const props = text.slice(m.index, i);
+            const after = text.slice(i, i + 600);
+            if (!/accessible_name|\blabel\b/.test(props) && !/accessible_name\s*=|set_accessible_name/.test(after))
+                hits.push(`${f}:${text.slice(0, m.index).split('\n').length}`);
+        }
+    }
+    if (hits.length)
+        throw new Error(`unnamed buttons at ${hits.join(', ')}`);
+});
+
+test('the removed 2.x folders are gone', () => {
+    for (const dir of ['apps', 'advanced', 'coordinators', 'css']) {
+        if (exists(dir))
+            throw new Error(`${dir}/ is back`);
+    }
+});
+
+test('every feature folder has an index.js', () => {
+    const e = Gio.File.new_for_path(`${root}/features`).enumerate_children('standard::name', 0, null);
+    for (let info; (info = e.next_file(null));) {
+        if (!exists(`features/${info.get_name()}/index.js`))
+            throw new Error(`features/${info.get_name()} has no index.js`);
+    }
+});
+
+if (failed) {
+    print(`${failed} failed`);
+    imports.system.exit(1);
+}

@@ -1,0 +1,141 @@
+/* feature: spotlight
+   Only kiwi- classes. ModalSurface (lib/modalSurface.js) draws no blur: the frame itself is
+   the backing, a rounded translucent fill with a 1px rim and a soft shadow, dense enough
+   that text stays legible over a white window. Quick Paste shares the .kiwi-modal* rules.
+   Spotlight frame: radius 24 (inline from ModalSurface), padding 8, rows radius 10. The frame
+   is 680px wide (set by ModalSurface). */
+.kiwi-spotlight {
+  padding: 8px;
+  spacing: 0;
+}
+
+.kiwi-spotlight-bar {
+  spacing: 12px;
+  padding: 0 14px;
+  height: 56px;
+}
+
+.kiwi-spotlight-glass-icon {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.kiwi-modal-light .kiwi-spotlight-glass-icon {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.kiwi-spotlight-entry,
+.kiwi-spotlight-entry:focus,
+.kiwi-spotlight-entry:hover {
+  font-size: 22px;
+  min-height: 56px;
+  padding: 0;
+  border: none;
+  box-shadow: none;
+  background-color: transparent;
+  color: #ffffff;
+  caret-color: -st-accent-color;
+  selection-background-color: -st-accent-color;
+  selected-color: -st-accent-fg-color;
+  hint-color: rgba(255, 255, 255, 0.45);
+}
+
+.kiwi-modal-light .kiwi-spotlight-entry,
+.kiwi-modal-light .kiwi-spotlight-entry:focus,
+.kiwi-modal-light .kiwi-spotlight-entry:hover {
+  color: #1d1d1f;
+  hint-color: rgba(0, 0, 0, 0.4);
+}
+
+/* Hairline between the field and the results, as on macOS */
+.kiwi-spotlight-scroll {
+  border-top: 1px solid rgba(255, 255, 255, 0.10);
+  padding-top: 4px;
+  margin: 0 6px;
+}
+
+.kiwi-modal-light .kiwi-spotlight-scroll {
+  border-top: 1px solid rgba(0, 0, 0, 0.10);
+}
+
+.kiwi-spotlight-list {
+  spacing: 1px;
+  padding: 0 0 2px 0;
+}
+
+.kiwi-spotlight-section {
+  font-size: 11px;
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.55);
+  padding: 8px 10px 3px 10px;
+}
+
+.kiwi-modal-light .kiwi-spotlight-section {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.kiwi-spotlight-row {
+  border-radius: 10px;
+  padding: 6px 8px;
+  spacing: 12px;
+}
+
+.kiwi-spotlight-row:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.kiwi-modal-light .kiwi-spotlight-row:hover {
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+.kiwi-spotlight-row:selected,
+.kiwi-spotlight-row:selected:hover,
+.kiwi-modal-light .kiwi-spotlight-row:selected,
+.kiwi-modal-light .kiwi-spotlight-row:selected:hover {
+  background-color: -st-accent-color;
+  color: -st-accent-fg-color;
+}
+
+.kiwi-spotlight-texts {
+  spacing: 1px;
+}
+
+.kiwi-spotlight-title {
+  font-size: 14px;
+}
+
+.kiwi-spotlight-subtitle {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.kiwi-modal-light .kiwi-spotlight-subtitle {
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.kiwi-spotlight-return {
+  font-size: 13px;
+  color: transparent;
+}
+
+.kiwi-spotlight-row:selected .kiwi-spotlight-subtitle,
+.kiwi-spotlight-row:selected .kiwi-spotlight-return,
+.kiwi-modal-light .kiwi-spotlight-row:selected .kiwi-spotlight-subtitle,
+.kiwi-modal-light .kiwi-spotlight-row:selected .kiwi-spotlight-return {
+  color: -st-accent-fg-color;
+}
+
+/* Top hit: larger */
+.kiwi-spotlight-top {
+  padding: 8px 8px;
+}
+
+.kiwi-spotlight-top .kiwi-spotlight-title {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+/* Calculator result reads as a big number */
+.kiwi-spotlight-calc .kiwi-spotlight-title {
+  font-size: 22px;
+  font-weight: 600;
+}

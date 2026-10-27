@@ -3,7 +3,7 @@ import {
     DEFAULTS, overlaps, thumbFit, cropThumb, stackLayers, cardTilt, fitCount, stripLayout,
     pointRect, clonePose, balancedFit, edgeZone, stageArea, fitToStage, centerOnStage, stripShown, StageModel, focusRoot, isExempt, edgeBarrier,
     dropZone, dropZoneRect, tileOrder, tilePlan, settleTiles, scaleMs, workspaceDirection, isClick,
-} from '../apps/stageManager/model.js';
+} from '../features/stageManager/model.js';
 
 let failed = 0;
 function test(name, fn) {

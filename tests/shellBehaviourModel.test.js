@@ -1,5 +1,5 @@
 // Run: gjs -m tests/shellBehaviourModel.test.js
-import { clampSnapPoints } from '../apps/shellBehaviour/model.js';
+import { clampSnapPoints } from '../features/shellBehaviour/model.js';
 
 let failed = 0;
 function test(name, fn) {

@@ -3,59 +3,31 @@
 
 # <img width="48" height="48" alt="kiwi_logo" src="https://github.com/user-attachments/assets/f7820666-899a-46b8-b022-d5349bb1731b" /> Kiwi (is not Apple)
 
-Kiwi is a GNOME Shell extension that mimics various macOS features. This extension provides a collection of small quality-of-life functionalities such as moving windows to new workspaces, adding the username to the quick menu, focusing launched windows, and more.
+Kiwi brings the macOS desktop to GNOME: traffic-light window controls, Spotlight, a Control Center, a notification notch, Stage Manager, clipboard history and more, in one design language. Every feature can be turned off, and the defaults follow macOS.
 
 <img src="https://extensions.gnome.org/extension-data/screenshots/screenshot_8276_to4T5k0.png" />
 
-## Panel
+## Features
 
-- **Panel Transparency**: Make the top panel transparent, with optional blur and opaque mode when a window is maximized.
-- **Show Panel in Fullscreen on Hover**: Show the panel when the mouse is near the top edge in fullscreen. Bugged for GTK4 apps.
-- **Show Window Title**: Display the current window title in the top panel, with a tiling layouts menu.
-- **Move Calendar to Right**: Move the calendar to the right side and move notifications and media controls to Quick Settings.
-- **Battery Percentage**: Show battery percentage in the top bar when below 20%.
-- **Caps Lock and Num Lock**: Show a Caps Lock and Num Lock icon in the top panel.
-- **Custom Do Not Disturb Button**: Replace the system Do Not Disturb button with Kiwi's own.
-- **Hide Activities Button**: Hide the Activities button in the top panel.
-- **Add Username**: Add the username to the quick settings menu.
-- **Panel Styling**: Tighter button spacing, smaller status icons, no dropdown arrows and a transparent panel in the overview.
-- **Menu and App Styling**: Narrower shell menu items with accent colored hover and selection, plus GTK/Adwaita app fixes.
-- **Style Keyboard Indicator**: Uppercase and border the keyboard/input source indicator, or hide it.
+- **Window controls**: close, minimize and maximize as macOS traffic lights in the top bar for the focused window (apps lose their own titlebar buttons; your GNOME button layout is saved and restored exactly), or in the apps' own titlebars, macOS or GNOME style.
+- **Spotlight**: tap Super to search apps, files, settings, the clipboard and the web, and to calculate.
+- **Control Center**: Quick Settings in a macOS layout, with toggles for Kiwi's features.
+- **Notification notch**: notifications, Now Playing, volume and brightness in a pill at the top centre.
+- **Stage Manager** (off by default, as on macOS): recent apps in a strip at the screen edge; sets, side by side, click the wallpaper to show the desktop.
+- **Clipboard history** with Quick Paste (history saved in `~/.local/share/kiwi/clipboard/`; the shortcut is empty by default).
+- **Show Desktop**: a top-bar button and Super+D slide the windows aside.
+- **Liquid Glass**: translucent top bar, menus and overlays.
+- **Rounded window corners**, **full screen in its own Space**, the **calendar card** with notifications in Quick Settings, and overview swipes that stop at the workspaces.
 
-## Dock
+Coming next (the v3 plan): the macOS menu bar with app menus, Kiwi's own dock with Genie, Mission Control, tiling and the app switcher.
 
-These features work only when [Dash to Dock](https://extensions.gnome.org/extension/307/) is installed and enabled (except Launchpad Application). Fedora Workstation does not ship it by default. Without it, these features stay off.
-
-- **Minimize Windows to Dock**: Park minimized windows as thumbnails after the apps and before the trash, macOS style.
-- **Downloads Folder in Dock**: Add a Downloads folder before the trash that fans its newest files out over the desktop, macOS stack style.
-- **Launchpad Application**: Add a custom Launchpad icon to the dock that opens the application overview.
-- **Dock Styling**: Tighter icon spacing, no icon highlight and darker icons while pressed.
-- **Dock Blur**: Blur the background behind the dock.
-- **Adaptive Dock Colors**: Flip running indicators and separators between light and dark to suit whatever is behind the dock.
-
-## Buttons
-
-- **macOS Window Buttons**: Replace window control buttons with macOS style. Default, Alternative and Glass styles in two sizes, plus Firefox and Thunderbird styling.
-- **Show Window Controls on Panel**: Move window controls to the top panel for maximized windows and remove their titlebars for maximum space.
-
-## Options
-
-- **Overview Wallpaper**: Use the current wallpaper, dimmed, as overview background.
-- **Seamless Overview Zoom**: Zoom the whole desktop, including the strip behind the panel, in and out of the overview.
-- **Focus on Overview Exit**: Focus the window under the cursor when leaving the overview, like macOS Mission Control.
-- **Skip to Desktop**: Do not show the overview when logging in.
-- **Hide Minimized Windows**: Hide minimized windows in the overview.
-- **Move Window to New Workspace**: Move fullscreen windows to a new workspace.
-- **Reduce App Animations**: Mimic macOS window opening and closing with a subtle scale and fade.
-- **Focus New Windows**: Focus newly launched windows instead of showing window-ready notifications.
-- **Transparent Move**: Make windows slightly transparent while moving.
-- **Multilingual UI**: Fully translatable interface, easy to extend via `po/` files.
+### Removed in v3
+The Dash to Dock add-ons, Firefox and Thunderbird theming, the GTK3 hover module (`advanced/`), the small panel tweaks (transparency, styling, lock icons, username, keyboard indicator, battery percentage), the window and overview tweaks, the window title and the panel media menu. On first start Kiwi removes what it had written for them into your files (the Kiwi block in `userChrome.css`, its `user.js` line, its `gtk.css` imports and its `environment.d` entry), and nothing else.
 
 <details>
 <summary><H2>Recommended Gnome Shell Extensions</H2> <b>(click to open)</b></summary>
 
 - [**Kiwi Menu**](https://extensions.gnome.org/extension/8697/) by kem-a (Me)
-- [**Dash to Dock**](https://extensions.gnome.org/extension/307/) by michele_g
 - [**Superbar**](https://github.com/Furkan-rgb/superbar) by Furkan-rgb
 - [**Compiz alike magic lamp effect**](https://extensions.gnome.org/extension/3740/) by hermes83
 - [**AppIndicator Support**](https://extensions.gnome.org/extension/615/) by 3v1n0
@@ -64,7 +36,7 @@ These features work only when [Dash to Dock](https://extensions.gnome.org/extens
 - [**Weather or Not**](https://extensions.gnome.org/extension/5660/) by somepaulo
 </details>
 
-## New in this version
+## Release notes (2.x)
 
 All of these are on by default unless noted, and each can be turned off in Kiwi's preferences or from the Kiwi section of the Control Center.
 
@@ -105,7 +77,7 @@ Kiwi supports **GNOME Shell 50**, tested on **Fedora 44 Workstation** (Wayland).
 sudo dnf install git make gettext
 ```
 
-`gnome-extensions` already comes with GNOME Shell. For the Dash to Dock features, also install [Dash to Dock](https://extensions.gnome.org/extension/307/) (optional).
+`gnome-extensions` already comes with GNOME Shell.
 
 ### 2. Back up your current Kiwi settings (optional, for rolling back)
 
@@ -135,13 +107,12 @@ You can also use the Extensions app. To open Kiwi's preferences, run `gnome-exte
 
 ### What you get on first login
 
-All new features are on by default. Each one can be turned off in preferences.
+The defaults follow macOS; each feature can be turned off in preferences.
 
 - Close, minimize and maximize sit on the left of the top bar.
-- The top bar hides automatically. Push the pointer against the top edge to bring it back.
-- A tap on Super opens Spotlight. The overview is still on the hot corner, Super+A and the Activities button.
+- A tap on Super opens Spotlight. The overview is still on Super+A and the touchpad gesture.
 - Notifications, volume and brightness show in the notch at the top centre.
-- Stage Manager and clipboard history are on. Clipboard history has no shortcut until you set one in preferences.
+- Clipboard history is on, with no shortcut until you set one in preferences. Stage Manager is off until you turn it on (Control Center or preferences).
 
 ### Update
 
@@ -174,13 +145,12 @@ Then log out and back in. To restore your old settings, run `dconf load /org/gno
 
 ### For developers
 
-`make check` runs lint, the schema check and the unit tests. `make smoke` starts a headless GNOME Shell and turns Kiwi on and off many times to catch errors, without touching your session (see `tools/smoke/README.md`).
+`make check` runs lint, the schema check, the stylesheet check and the unit tests; `make pack-check` packs the zip and checks its contents. The code layout is described in `docs/architecture/code-map.md` and `docs/architecture/conventions.md`. `make smoke` starts a headless GNOME Shell and turns Kiwi on and off many times to catch errors, without touching your session (see `tools/smoke/README.md`).
 
 ## Known Issues
 
 - in multimonitor setup sometimes max number of workspaces are created. See issue #49.
 - *move to fullscreen* can behave unexpectedly due to built in GNOME dynamic workspace management. Disabling it might help.
-- Advanced triple button hover effect will not work for GTK3 flatpak apps due to sandboxing
 - Window controls in the top bar hide the titlebar buttons of GTK client-side decorated windows only. Windows drawn by the compositor (server-side decorations, some Qt/X11 apps) keep their own buttons. Flatpak GTK apps need the overrides under *Flatpak theming* for the hide-titlebar CSS to apply.
 - Electron apps now by default have wayland enabled which causes to use CSD and thus many title bar issues, like blurry icons or completely different window control icons. There is no CSS fix. Workaround (runs the app under Xwayland): avoid forced Wayland, or pass `--ozone-platform=x11`.
 - similarly to electron apps also KDE apps by default uses CSD on wayland causing the same issues. Workaround (runs the app under Xwayland): set the environment variable `QT_QPA_PLATFORM=xcb`.
@@ -192,7 +162,6 @@ Run this command to override `xdg-config` and theme window control buttons for F
 ```sh
 flatpak override --user --filesystem=xdg-config/gtk-3.0:ro
 flatpak override --user --filesystem=xdg-config/gtk-4.0:ro
-flatpak override --user --filesystem=xdg-config/environment.d/:ro
 flatpak override --user --filesystem=$HOME/.local/share/gnome-shell/extensions/kiwi@kemma/:ro
 ```
 </details>
@@ -200,11 +169,3 @@ flatpak override --user --filesystem=$HOME/.local/share/gnome-shell/extensions/k
 ## Contributing Translations
 
 Want to help translate Kiwi to your language? See the [translation guide](translating/README.md) for instructions.
-
-## Advanced
-
-The `advanced/` folder contains additional features that cannot be distributed through the GNOME Extensions platform due to security policies:
-
-- **Titlebuttons Hover Effect**: Provides macOS-like hover effects for window controls for GTK3 apps
-- Requires manual compilation and installation
-- See [advanced/README.md](advanced/README.md) for detailed installation instructions

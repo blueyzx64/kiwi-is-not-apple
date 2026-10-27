@@ -1,0 +1,58 @@
+/* feature: window-controls (traffic lights in the top bar) */
+.window-controls-box {
+  spacing: 11px;  /* normal_size */
+  margin: 0;
+  padding: 0;
+}
+
+.window-controls-box.small-size {
+  spacing: 10px;  /* small_size */
+}
+
+/* Window control button icon sizing (GNOME Shell panel, not GTK headerbars)
+ * NOTE: This controls the macOS-style panel buttons created by index.js
+ */
+.window-control-icon {
+  icon-size: 16px; /* normal_size */
+}
+
+.window-controls-box.small-size .window-control-icon {
+  icon-size: 14px; /* small_size */
+}
+
+/* Remove background on window controls container hover */
+.kiwi-window-controls-indicator.panel-button:hover,
+.kiwi-window-controls-indicator.panel-button:active,
+.kiwi-window-controls-indicator.panel-button:focus {
+  background-color: transparent !important;
+  background: none !important;
+  box-shadow: none !important;
+}
+
+/* System mode: symbolic icons follow panel style */
+.window-controls-box.system-mode {
+  spacing: 4px;
+}
+
+.window-controls-box.system-mode .window-control-button {
+  padding: 4px;
+  border-radius: 99px;
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+.window-controls-box.system-mode .window-control-button.close:hover,
+.window-controls-box.system-mode .window-control-button.minimize:hover,
+.window-controls-box.system-mode .window-control-button.maximize:hover {
+  background-color: rgba(128, 128, 128, 0.25) !important;
+}
+
+.window-controls-box.system-mode .window-control-button.close:active,
+.window-controls-box.system-mode .window-control-button.minimize:active,
+.window-controls-box.system-mode .window-control-button.maximize:active {
+  background-color: rgba(128, 128, 128, 0.40) !important;
+}
+
+.window-controls-box.system-mode .window-control-icon {
+  icon-size: 16px;
+}

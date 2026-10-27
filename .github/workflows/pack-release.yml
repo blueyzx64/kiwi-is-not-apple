@@ -25,12 +25,10 @@ jobs:
         name: Pack extension and set asset name
         run: |
           set -euo pipefail
-          # lib/, coordinators/ and features.js arrive with the new-features work;
-          # gnome-extensions pack fails on a missing source, so add only what exists.
-          extra=(--extra-source=icons --extra-source=apps --extra-source=css)
-          for src in lib coordinators features.js; do
-            if [ -e "$src" ]; then extra+=("--extra-source=$src"); fi
-          done
+          # Every source folder the zip needs (CLAUDE.md: new folders go here and in the Makefile)
+          extra=(--extra-source=icons --extra-source=lib --extra-source=core
+                 --extra-source=features --extra-source=prefs --extra-source=features.js)
+          tools/build-css.sh --check
           gnome-extensions pack "${extra[@]}" --podir=po .
           # find the generated shell-extension zip (kiwi@kemma.shell-extension.zip)
           zipfile=$(ls -1 *shell-extension.zip | head -n1)
