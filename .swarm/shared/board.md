@@ -27,8 +27,8 @@
 |---|---|---|
 | H1 | Unit-test hardening: core/events + core/layout models | merged |
 | H2 | Unit-test hardening: core/desktop + core/motion models | merged |
-| H3 | Unit-test hardening: core/originals (incl. ListMembersOwner, crash restore) | started |
-| H4 | Verify on GNOME 50 source: the reduced-motion key and the notification-grouping API | queued |
+| H3 | Unit-test hardening: core/originals (incl. ListMembersOwner, crash restore) | merged |
+| H4 | Verify on GNOME 50 source: the reduced-motion key and the notification-grouping API | started |
 | H5 | Verify: Input Capture portal, localsearch xattr tags, Clocks timer D-Bus, Night Light location keys | queued |
 | H6 | SVG icon set for new features (symbolic, GNOME style): show-desktop, logo-kiwi, mission-control, launchpad, stage-manager, notification-center, widgets | queued |
 | H7 | Accessibility audit: accessible names and keyboard focus for every new Kiwi actor (report only) | queued |
@@ -41,8 +41,8 @@
 Concurrency cap: 20 agents at once (environment limit). H2–H12 are queued and start as slots free.
 
 ## Open findings to fix (orchestrator triage)
-- F1 (H2): `core/motionModel resolve(req, {reducedMotion:true})` with no `animations` field is treated as animations OFF. It should default to animations on.
-- F2 (H2): `core/desktopModel windows({minimized:true})` doesn't filter (only `false` does); it should return only minimized windows.
-- F3 (H2): `upsertWindow(id, {appId: undefined})` stores undefined instead of keeping the default.
+- ✅ F1 (H2, fixed by H3): `core/motionModel resolve(req, {reducedMotion:true})` with no `animations` field is treated as animations OFF. It should default to animations on.
+- ✅ F2 (H2, fixed by H3): `core/desktopModel windows({minimized:true})` doesn't filter (only `false` does); it should return only minimized windows.
+- ✅ F3 (H2, fixed by H3): `upsertWindow(id, {appId: undefined})` stores undefined instead of keeping the default.
 - F4 (H1): EventHub snapshots listeners per emit, so an owner released mid-emit still receives that emit (acceptable, documented).
 - F5 (H1): a layout claim with `stack:false` and `reserve:'soft'` doesn't shrink the work area (intended: soft means no strut).
