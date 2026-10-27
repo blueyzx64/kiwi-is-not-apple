@@ -18,6 +18,7 @@ import { trackProgress, seekTarget, formatClock } from './dashboardModel.js';
 export { DASH_SIZE } from './dashboardModel.js';
 import { nowRows } from './model.js';
 import { row as activityRow } from './pills.js';
+import { dragIconName } from './shelfHelperModel.js';
 
 const WIDTH = Object.freeze({ hero: 340, list: 248, clipboard: 196, inner: 608 });
 const SHELF_VISIBLE = 8;
@@ -334,6 +335,7 @@ export function trayTab(env, ctx) {
             x_expand: true,
         });
         const perRow = 4;
+        const tiles = [];
         uris.slice(0, SHELF_VISIBLE).forEach((uri, i) => {
             const info = ctx.shelf.info(uri);
             const tile = new St.Button({
@@ -348,8 +350,10 @@ export function trayTab(env, ctx) {
             tile.set_child(box);
             tile.connect('clicked', () => env.h.onShelf(uri === selected ? 'open' : 'select', uri));
             grid.layout_manager.attach(tile, i % perRow, Math.floor(i / perRow), 1, 1);
+            tiles.push({ actor: tile, uri, icon: dragIconName(info.gicon) });
         });
         shelf.add_child(grid);
+        env.shelf = { grid, tiles };
         if (uris.length > SHELF_VISIBLE)
             bar.insert_child_at_index(label(`+${uris.length - SHELF_VISIBLE}`, 'kiwi-notch-badge'), 0);
     }

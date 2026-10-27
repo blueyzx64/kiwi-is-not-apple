@@ -9,7 +9,7 @@ EXTRA_FLAGS := $(addprefix --extra-source=,$(EXTRA))
 # Shell styles: stylesheet.css is built from these (and committed)
 CSS_SRC := styles/base.css $(sort $(wildcard features/*/style.css))
 
-.PHONY: all css css-check pack pack-check pot install uninstall test lint schema-check check clean smoke
+.PHONY: all css css-check pack pack-check pot install uninstall test lint schema-check check clean smoke helper-rpm helper-install
 
 all: check
 
@@ -61,6 +61,27 @@ schema-check:
 		glib-compile-schemas --strict --targetdir="$$d" schemas; r=$$?; rm -rf "$$d"; exit $$r
 
 check: lint schema-check css-check test
+
+# The shelf drag-out helper is its own package (not in the extension zip): make helper-rpm
+# builds dist/helper/RPMS/noarch/kiwi-shelf-helper-*.rpm (needs rpmbuild)
+HELPER_DIR  := helpers/kiwi-shelf-helper
+HELPER_NAME := kiwi-shelf-helper
+HELPER_VER  := $(shell sed -n 's/^Version:[[:space:]]*//p' $(HELPER_DIR)/$(HELPER_NAME).spec)
+HELPER_TOP  := $(CURDIR)/$(DISTDIR)/helper
+
+helper-rpm:
+	rm -rf $(HELPER_TOP)
+	mkdir -p $(HELPER_TOP)/SOURCES $(HELPER_TOP)/stage/$(HELPER_NAME)-$(HELPER_VER)
+	cp $(HELPER_DIR)/kiwi-shelf-helper.js $(HELPER_DIR)/org.kiwi.ShelfHelper.desktop \
+		$(HELPER_TOP)/stage/$(HELPER_NAME)-$(HELPER_VER)/
+	tar -C $(HELPER_TOP)/stage -czf $(HELPER_TOP)/SOURCES/$(HELPER_NAME)-$(HELPER_VER).tar.gz $(HELPER_NAME)-$(HELPER_VER)
+	rpmbuild -bb --define "_topdir $(HELPER_TOP)" --define "dist %{nil}" $(HELPER_DIR)/$(HELPER_NAME).spec
+	@ls $(HELPER_TOP)/RPMS/*/*.rpm
+
+# Install the same files for the current user (no root): ~/.local/bin and ~/.local/share/applications
+helper-install:
+	install -Dm0755 $(HELPER_DIR)/kiwi-shelf-helper.js $(HOME)/.local/bin/kiwi-shelf-helper
+	install -Dm0644 $(HELPER_DIR)/org.kiwi.ShelfHelper.desktop $(HOME)/.local/share/applications/org.kiwi.ShelfHelper.desktop
 
 clean:
 	rm -rf $(DISTDIR)
