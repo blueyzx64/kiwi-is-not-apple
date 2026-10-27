@@ -72,7 +72,9 @@ export class Dialogs {
         shadow.add_constraint(new Clutter.BindConstraint({ source: card, coordinate: Clutter.BindCoordinate.ALL }));
         dialog.dialogLayout.insert_child_below(shadow, card);
         reg.actor(shadow);
-        const glass = Glass.attach(card, { surface: 'overlays', role: 'content', shadow });
+        // The Shell paints its dialogs dark in both styles: the colour scheme decides, not the card's text
+        const isDark = () => St.Settings.get().color_scheme !== St.SystemColorScheme.PREFER_LIGHT;
+        const glass = Glass.attach(card, { surface: 'overlays', role: 'content', shadow, isDark });
         reg.add(() => glass.destroy());
 
         const iconName = dialogIcon(dialogKind(card.style_class), dialog._type ?? null);

@@ -59,6 +59,8 @@ export class UserRow {
 
         const rename = () => {
             this._cluster.accessible_name = _userName(user);
+            // No picture: the stock avatar is an empty circle, so it stays out
+            this._cluster.visible = !user.is_loaded || !!user.get_icon_file();
         };
         rename();
         const update = () => this._updateTime();

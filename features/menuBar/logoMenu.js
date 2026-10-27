@@ -158,7 +158,9 @@ class KiwiLogoMenu extends PanelMenu.Button {
     }
 });
 
+// Symbolic names only: the full-colour logo does not follow the bar's text colour, so it
+// vanishes on a wallpaper of its own colour (the Fedora blue on a blue one)
 function logoNames(logo) {
-    return [`${logo}-symbolic`, logo.replace(/-icon$/, '-symbolic'), logo, 'start-here-symbolic'];
+    return [`${logo}-symbolic`, logo.replace(/-icon$/, '-symbolic'), 'start-here-symbolic'];
 }
 

@@ -509,6 +509,11 @@ export class WindowControlsFeature {
         });
         // Added to the status area so the panel tracks (and removes) it; PanelLayout places it.
         Main.panel.addToStatusArea('window-controls', this._indicator, 0, 'left');
+        // The indicator is no menu source, but the panel put its dummy menu in the menu manager,
+        // and it shares its source actor with the green menu: with the green menu open, the
+        // pointer entering the button made the manager "switch" to the dummy menu, whose grab
+        // nothing ever closed (Main.modalCount stuck at 1, shortcuts dead)
+        Main.panel.menuManager.removeMenu(this._indicator.menu);
 
         // Disposed before the indicator (LIFO): the menu is anchored to its green button
         this._greenMenu = new GreenMenu({

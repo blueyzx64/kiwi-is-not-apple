@@ -139,6 +139,13 @@ test('classes: scheme, surface, role, motion', () => {
     eq(hostClasses(resolve(snap({ liquid: false }), env(), 'menus')), []);
 });
 
+test('a content surface writes its rim inline, over the theme outer shadow', () => {
+    ok(fillStyle(resolve(snap(), env({ dark: true }), 'menus')).includes('box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.22)'), 'dark rim');
+    ok(fillStyle(resolve(snap(), env({ dark: false }), 'menus')).includes('rgba(255, 255, 255, 0.95)'), 'light rim');
+    ok(!fillStyle(resolve(snap(), env(), 'panel')).includes('box-shadow'), 'a bar keeps the stylesheet');
+    ok(fillStyle(resolve(snap({ increaseContrast: true }), env(), 'menus')).includes('box-shadow: none'), 'contrast: no rim');
+});
+
 test('fragments are fenced, so they come off wherever they ended up', () => {
     const f = fillStyle(resolve(snap(), env(), 'menus'), 24);
     ok(f.includes('border-radius: 24px;'), 'radius');
