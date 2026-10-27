@@ -13,6 +13,7 @@ import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 
 import { CleanupRegistry } from '../../lib/disposables.js';
+import { RANKS } from '../../core/desktopLayers.js';
 import { rectOf } from '../../core/widgets/model.js';
 import { isDrag } from './model.js';
 
@@ -46,6 +47,7 @@ export class DesktopLayer {
         });
         this._outline = new St.Widget({ style_class: 'kiwi-widget-outline', visible: false, reactive: false });
         this.actor.add_child(this._outline);
+        feature.desktopLayers.stack(this._cleanup, { id: 'widgets', rank: RANKS.widgets, actor: this.actor });
     }
 
     get cards() {

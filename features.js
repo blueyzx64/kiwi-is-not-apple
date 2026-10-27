@@ -285,6 +285,12 @@ export const FEATURES = [
         load: async () => (await import('./features/widgets/index.js')).DesktopWidgets,
     },
     {
+        // The Finder desktop: the files of ~/Desktop as icons from the top-right corner, below the
+        // widgets. Steps aside itself while Desktop Icons NG (DING) is enabled (see its header).
+        id: 'desktop-icons', setting: 'desktop-icons',
+        load: async () => (await import('./features/desktopIcons/index.js')).DesktopIcons,
+    },
+    {
         // The Setup Assistant, offered once (features/onboarding/model.js): runs only while
         // it has never been offered, opens the preferences, then stops
         id: 'onboarding', when: ctx => ctx.settings.get_string('onboarding') === 'new',

@@ -36,11 +36,11 @@ export default {
         const s = view.scale;
         const root = view.content;
         const state = { cpu: 0, mem: 0, history: [] };
-        const ringSize = Math.round(52 * s);
+        const ringSize = Math.round(54 * s);
         const gauge = (title, key, color) => {
             const col = box('kiwi-widget-column kiwi-widget-gauge', true, { x_expand: true });
             const ring = canvas(ringSize, ringSize, (cr, w, h, fg) => drawRing(cr, w, h, state[key], color, fg, Math.max(3, 6 * s)));
-            const value = label('', 'kiwi-widget-body kiwi-widget-strong');
+            const value = label('', 'kiwi-widget-title');
             col.add_child(ring);
             col.add_child(value);
             col.add_child(label(title, 'kiwi-widget-caption kiwi-widget-dim'));

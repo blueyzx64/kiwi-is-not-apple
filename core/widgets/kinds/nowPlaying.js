@@ -33,7 +33,7 @@ export default {
         const s = view.scale;
         const root = view.content;
         const small = view.size === 'small';
-        const artSize = Math.round((small ? 64 : 108) * s);
+        const artSize = Math.round((small ? 64 : 138) * s);
         const art = new St.Bin({ style_class: 'kiwi-widget-artwork', width: artSize, height: artSize });
         let artUrl = null;
         // Local art is a background (rounded by CSS); remote art loads as a FileIcon through
@@ -52,8 +52,8 @@ export default {
                 style_class: 'kiwi-widget-art-icon',
             }));
         };
-        const title = label('', 'kiwi-widget-body kiwi-widget-strong');
-        const artist = label('', 'kiwi-widget-caption kiwi-widget-dim');
+        const title = label('', 'kiwi-widget-headline');
+        const artist = label('', 'kiwi-widget-body kiwi-widget-dim');
         const act = fn => () => {
             const p = view.provider;
             if (p)

@@ -21,20 +21,17 @@ import St from 'gi://St';
 
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { Glass } from '../../lib/glass.js';
-import { SIZES, CELL, GAP } from './model.js';
+import { SIZE_PX } from './model.js';
 
-/** Card radius at scale 1: macOS widgets are about 22 pt. */
-export const RADIUS = 22;
-/** Inner padding; content corners are concentric (RADIUS - PADDING). */
-export const PADDING = 14;
+/** Card radius at scale 1: a macOS widget's corner is about 24 pt on a 170 pt card. */
+export const RADIUS = 24;
+/** Inner padding (macOS 16 pt); content corners are concentric (RADIUS - PADDING). */
+export const PADDING = 16;
 
 /** Pixel size of a size class. */
 export function pixelSize(size, scale = 1) {
-    const s = SIZES[size];
-    return {
-        width: (s.cols * (CELL + GAP) - GAP) * scale,
-        height: (s.rows * (CELL + GAP) - GAP) * scale,
-    };
+    const s = SIZE_PX[size];
+    return { width: s.width * scale, height: s.height * scale };
 }
 
 export class WidgetView {

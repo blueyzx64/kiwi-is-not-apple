@@ -17,6 +17,7 @@ https://claude.ai/artifact/PJTdauCxK1VKQvpXditZpz (private to the repo owner unt
 | 6 | Control Center | [control-center.md](control-center.md) | M | Merged, untested on Shell |
 | 7 | ~~Auto-hide top bar~~ | [autohide-top-bar.md](autohide-top-bar.md) | S–M | **Removed** (UX round 1): the top bar houses the notch, so it stays on screen |
 | 8 | Stage Manager | [stage-manager.md](stage-manager.md) | L | Merged, untested on Shell |
+| 9 | Desktop icons | [desktop-icons.md](desktop-icons.md) | M | Round 2 |
 
 Status words: *Merged, untested on Shell* means the code is on the integration branch and passes
 `bash tests/run.sh` and eslint, but nobody has run it on a real GNOME Shell yet. Features may still carry deferred parts; see the spec's Settings or Interactions section.

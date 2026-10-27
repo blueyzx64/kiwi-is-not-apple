@@ -1,6 +1,6 @@
 // Run: gjs -m tests/widgetsModel.test.js
 import {
-    SIZES, SIZE_ORDER, DEFAULT_WIDGETS, ProviderPool, WidgetRegistry, Emitter, gridFor, rectOf, snap, fits,
+    SIZES, SIZE_ORDER, SIZE_PX, CELL, GAP, DEFAULT_WIDGETS, ProviderPool, WidgetRegistry, Emitter, gridFor, rectOf, snap, fits,
     collides, nearestFree, findSlot, addItem, removeItem, moveItem, resizeItem, setConfig, fitItems,
     parseLayout, serializeLayout, monitorKey, stepSize, sizeUnits, newId,
 } from '../core/widgets/model.js';
@@ -13,7 +13,7 @@ function eq(a, b, msg = '') {
     if (JSON.stringify(a) !== JSON.stringify(b))
         throw new Error(`${msg} expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`);
 }
-const AREA = { x: 0, y: 32, width: 1280, height: 768 };
+const AREA = { x: 0, y: 32, width: 1440, height: 928 };
 const grid = gridFor(AREA, 1);
 const spec = (kind, size) => ({ kind, size, monitor: 'm0' });
 
@@ -28,19 +28,31 @@ test('size classes follow Sonoma', () => {
 });
 
 test('the grid hangs from the top right and counts cells', () => {
-    // 1280 wide: floor((1280 - 40 + 16) / 176) = 7 cells; 768 high: floor((768 - 40 + 16) / 176) = 4
+    // 1440 wide: floor((1440 - 40 + 24) / 194) = 7 cells; 928 high: floor((928 - 40 + 24) / 194) = 4
     eq(grid.units, { w: 14, h: 8 });
     eq(grid.y, 52);
-    eq(grid.x + 7 * 176 - 16, 1280 - 20);
+    eq(grid.x + 7 * 194 - 24, 1440 - 20);
     const r = rectOf({ x: 0, y: 0, size: 'medium' }, grid);
-    eq([r.width, r.height], [336, 160]);
-    const big = rectOf({ x: 4, y: 2, size: 'extraLarge' }, grid);
-    eq([big.width, big.height], [688, 336]);
+    eq([r.width, r.height], [364, 170]);
+});
+
+test('sizes are the macOS ones: 170, 364 x 170, 364 x 382, 715 x 382', () => {
+    eq([SIZE_PX.small, SIZE_PX.medium, SIZE_PX.large, SIZE_PX.extraLarge].map(s => [s.width, s.height]),
+        [[170, 170], [364, 170], [364, 382], [715, 382]]);
+    eq(2 * CELL + GAP, SIZE_PX.medium.width, 'a medium is two smalls and the gap');
+    const edge = grid.x + grid.units.w * grid.unit - GAP;
+    const big = rectOf({ x: 6, y: 2, size: 'extraLarge' }, grid);
+    eq([big.width, big.height], [715, 382]);
+    eq(big.x + big.width, edge, 'an extra-large card sits against the right edge of its footprint');
+    const large = rectOf({ x: 10, y: 0, size: 'large' }, grid);
+    eq(large.x + large.width, edge);
+    const scaled = rectOf({ x: 0, y: 0, size: 'small' }, gridFor(AREA, 2));
+    eq([scaled.width, scaled.height], [340, 340]);
 });
 
 test('the grid scales with the UI scale and always has one cell', () => {
     const g2 = gridFor({ x: 0, y: 0, width: 2560, height: 1440 }, 2);
-    eq(g2.cell, 320);
+    eq(g2.cell, 340);
     const tiny = gridFor({ x: 0, y: 0, width: 50, height: 50 }, 1);
     eq(tiny.units, { w: 2, h: 2 });
 });

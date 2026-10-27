@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Desktop widgets (Sonoma): widgets on the desktop, above the wallpaper and below windows.
 //
-// - One DesktopLayer (layer.js) per monitor in global.window_group, right above the
-//   Shell's background group, or above the desktop-icons window (DING) when there is one.
+// - One DesktopLayer (layer.js) per monitor in global.window_group, stacked by
+//   core/desktopLayers.js above the wallpaper (and above the desktop icons, Kiwi's or DING's).
+//   The cards' rectangles are published there, so Kiwi's desktop icons flow around them.
 // - Drag a widget to place it on the snapping grid (Ctrl loosens it); right-click for its
 //   size, its options and Remove; "Edit Widgets…" (the wallpaper's menu, or editWidgets()
 //   for the Notification Center) opens the gallery (gallery.js).
@@ -16,18 +17,17 @@
 //   second screen's widgets come back with it. Nothing is placed by default (as Sonoma);
 //   the gallery and the prefs offer "Add Default Widgets".
 //
-// Shell API (private, checked on 50.6): Main.layoutManager._backgroundGroup (layout.js),
-// Main.layoutManager._bgManagers[i].backgroundActor._backgroundMenu (backgroundMenu.js),
+// Shell API (private, checked on 50.6): the wallpaper menu (lib/backgroundMenu.js),
 // global.backend.get_monitor_manager() for connector names.
 
-import Meta from 'gi://Meta';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
-import { CleanupRegistry } from '../../lib/disposables.js';
-import { Glass } from '../../lib/glass.js';
+import { addBackgroundMenuItems } from '../../lib/backgroundMenu.js';
+import { openContextMenu } from '../../lib/contextMenu.js';
 import { KiwiSettings } from '../../lib/settings.js';
+import { DesktopLayers } from '../../core/desktopLayers.js';
 import { Widgets } from '../../core/widgets/index.js';
 import {
     DEFAULT_WIDGETS, addItem, fitItems, gridFor, moveItem, monitorKey, parseLayout, rectOf,
@@ -62,6 +62,8 @@ export class DesktopWidgets {
         this.host = Widgets.acquire(cleanup, ctx.gettext);
         this._desktop = ctx.desktop.acquire(cleanup);
         this._layout = ctx.layout.acquire(cleanup);
+        this.desktopLayers = DesktopLayers.acquire(cleanup);
+        this._reserve = this.desktopLayers.reserve(cleanup, 'widgets');
         this._gallery = new Gallery(this);
         cleanup.add(() => this.closeGallery());
         cleanup.add(() => this._closeMenu());
@@ -76,8 +78,6 @@ export class DesktopWidgets {
         cleanup.connect(Main.overview, 'showing', sync);
         cleanup.connect(Main.overview, 'hidden', sync);
         cleanup.connect(St.Settings.get(), 'notify::high-contrast', () => this._syncLook());
-        // Keep the layer right above the wallpaper (and DING) when Mutter restacks windows
-        cleanup.connect(global.display, 'restacked', () => this._restack());
 
         cleanup.add(() => this._destroyLayers());
         this._rebuild();
@@ -188,44 +188,33 @@ export class DesktopWidgets {
             this._layers.get(index)?.replace(id);
     }
 
-    openMenu(layer, card, [x, y]) {
+    openMenu(layer, card, coords) {
         this._closeMenu();
         const _ = this._;
-        Main.layoutManager.setDummyCursorGeometry(x, y, 0, 0);
-        const menu = new PopupMenu.PopupMenu(Main.layoutManager.dummyCursor, 0, St.Side.TOP);
-        menu.actor.add_style_class_name('kiwi-widgets-menu');
-        Main.uiGroup.add_child(menu.actor);
-        const manager = new PopupMenu.PopupMenuManager(layer.actor);
-        manager.addMenu(menu);
-        const glass = Glass.attachMenu(menu);
-        const reg = new CleanupRegistry();
-        reg.add(() => {
-            glass.destroy();
-            menu.destroy();
-        });
-        this._menu = reg;
-
         const { item, view } = card;
-        for (const s of this.host.registry.sizesFor(item.kind)) {
-            const mi = menu.addAction(_(SIZE_LABELS[s]), () => this.resize(item.id, s));
-            mi.setOrnament(s === item.size ? PopupMenu.Ornament.CHECK : PopupMenu.Ornament.NONE);
-        }
-        const options = view.menuItems();
-        if (options.length) {
-            menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-            for (const o of options) {
-                const mi = menu.addAction(o.label, () => this._commit(setConfig(this.items, item.id, o.apply())));
-                mi.setOrnament(o.active ? PopupMenu.Ornament.CHECK : PopupMenu.Ornament.NONE);
-            }
-        }
-        menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        menu.addAction(_('Edit Widgets…'), () => this.editWidgets());
-        menu.addAction(_('Remove Widget'), () => this.remove(item.id));
-        reg.connect(menu, 'open-state-changed', (_m, open) => {
-            if (!open && this._menu === reg)
-                this._cleanup.idle(() => this._closeMenu(reg), { name: 'kiwi-widgets-menu' });
+        this._menu = openContextMenu(this._cleanup, {
+            source: layer.actor,
+            coords,
+            styleClass: 'kiwi-widgets-menu',
+            onClosed: reg => this._closeMenu(reg),
+            build: menu => {
+                for (const s of this.host.registry.sizesFor(item.kind)) {
+                    const mi = menu.addAction(_(SIZE_LABELS[s]), () => this.resize(item.id, s));
+                    mi.setOrnament(s === item.size ? PopupMenu.Ornament.CHECK : PopupMenu.Ornament.NONE);
+                }
+                const options = view.menuItems();
+                if (options.length) {
+                    menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+                    for (const o of options) {
+                        const mi = menu.addAction(o.label, () => this._commit(setConfig(this.items, item.id, o.apply())));
+                        mi.setOrnament(o.active ? PopupMenu.Ornament.CHECK : PopupMenu.Ornament.NONE);
+                    }
+                }
+                menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+                menu.addAction(_('Edit Widgets…'), () => this.editWidgets());
+                menu.addAction(_('Remove Widget'), () => this.remove(item.id));
+            },
         });
-        menu.open(true);
     }
 
     _closeMenu(reg = this._menu) {
@@ -299,6 +288,7 @@ export class DesktopWidgets {
     _syncLayers() {
         if (!this._keys)
             return;
+        const reserved = [];
         Main.layoutManager.monitors.forEach((m, index) => {
             const key = this._keyOf(index);
             const mine = this.items.filter(i => i.monitor === key);
@@ -312,38 +302,19 @@ export class DesktopWidgets {
             }
             if (!layer) {
                 layer = new DesktopLayer(this, { index, key, x: m.x, y: m.y, width: m.width, height: m.height });
-                global.window_group.add_child(layer.actor);
                 this._layers.set(index, layer);
             }
             const grid = this._gridOf(index);
             // What does not fit this screen any more moves, in the view only; the stored
             // layout keeps the user's positions until they move something
-            layer.sync(fitItems(mine, grid), grid);
+            const fitted = fitItems(mine, grid);
+            layer.sync(fitted, grid);
+            // The desktop icons flow around the cards
+            reserved.push(...fitted.map(i => rectOf(i, grid)));
         });
-        this._restack();
+        this._reserve.set(reserved);
         this._syncState();
         this._gallery?.sync();
-    }
-
-    // Above the background group, or above the topmost desktop-icons (DING) window
-    _restack() {
-        if (!this._layers.size)
-            return;
-        const wg = global.window_group;
-        let below = Main.layoutManager._backgroundGroup ?? null;
-        for (const a of global.get_window_actors()) {
-            if (a.meta_window?.get_window_type() === Meta.WindowType.DESKTOP && a.get_parent() === wg)
-                below = a;
-        }
-        for (const layer of this._layers.values()) {
-            if (below && below.get_parent() === wg) {
-                if (layer.actor.get_previous_sibling() !== below)
-                    wg.set_child_above_sibling(layer.actor, below);
-                below = layer.actor;
-            } else if (wg.get_child_at_index(1) !== layer.actor) {
-                wg.set_child_at_index(layer.actor, 1);
-            }
-        }
     }
 
     // ---- state: layout, look, liveness ----------------------------------------------------------
@@ -392,32 +363,12 @@ export class DesktopWidgets {
     // ---- "Edit Widgets…" in the wallpaper's menu ------------------------------------------------
 
     _addBackgroundMenus(cleanup) {
-        const added = new CleanupRegistry();
-        cleanup.add(() => added.dispose());
-        const addAll = () => {
-            added.dispose();
-            for (const bgm of Main.layoutManager._bgManagers ?? []) {
-                added.connect(bgm, 'changed', () => cleanup.idle(addAll, { name: 'kiwi-widgets-bgmenu' }));
-                const menu = bgm.backgroundActor?._backgroundMenu;
-                if (!menu)
-                    continue;
-                const item = new PopupMenu.PopupMenuItem(this._('Edit Widgets…'));
-                item.connect('activate', () => this.editWidgets());
-                // The Shell destroys the menu with its background actor
-                let gone = false;
-                item.connect('destroy', () => {
-                    gone = true;
-                });
-                // After "Change Background…", as macOS puts it after "Change Wallpaper…"
-                menu.addMenuItem(item, 1);
-                added.add(() => {
-                    if (!gone)
-                        item.destroy();
-                });
-            }
-        };
-        // The Shell rebuilds the background actors (and their menus) after a monitor change
-        cleanup.connect(Main.layoutManager, 'monitors-changed', () => cleanup.idle(addAll, { name: 'kiwi-widgets-bgmenu' }));
-        addAll();
+        addBackgroundMenuItems(cleanup, (menu, at) => {
+            const item = new PopupMenu.PopupMenuItem(this._('Edit Widgets…'));
+            item.connect('activate', () => this.editWidgets());
+            // After "Change Background…", as macOS puts it after "Change Wallpaper…"
+            menu.addMenuItem(item, at.afterStock);
+            return [item];
+        });
     }
 }
