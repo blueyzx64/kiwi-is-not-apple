@@ -152,4 +152,9 @@ export const FEATURES = [
         id: 'notch', setting: 'notch',
         load: async () => (await import('./features/notch/index.js')).NotchFeature,
     },
+    {
+        // Shift+Super+3/4/5, the toolbar and the floating thumbnail, on GNOME's own screenshot UI
+        id: 'screenshots', setting: 'screenshots',
+        load: async () => (await import('./features/screenshots/index.js')).Screenshots,
+    },
 ];

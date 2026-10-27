@@ -439,6 +439,76 @@
         <description>How fast the windows slide aside and back: fast, normal or slow.</description>
       </key>
 
+      <!-- Screenshots (features/screenshots) -->
+      <key name="screenshots" type="b">
+        <default>true</default>
+        <summary>macOS screenshot shortcuts, toolbar and thumbnail</summary>
+        <description>Shift+Super+3 captures the screen, Shift+Super+4 an area or window, Shift+Super+5 opens the toolbar. They drive GNOME's own screenshot UI; Print and the other GNOME shortcuts stay as they are.</description>
+      </key>
+      <key name="screenshots-shortcut-screen" type="as">
+        <default>['&lt;Shift&gt;&lt;Super&gt;3']</default>
+        <summary>Capture Entire Screen shortcut</summary>
+        <description>Takes a screenshot of the whole screen at once. Empty means no shortcut.</description>
+      </key>
+      <key name="screenshots-shortcut-selection" type="as">
+        <default>['&lt;Shift&gt;&lt;Super&gt;4']</default>
+        <summary>Capture Selected Portion shortcut</summary>
+        <description>Drag an area to capture it; press Space to pick a window instead. Empty means no shortcut.</description>
+      </key>
+      <key name="screenshots-shortcut-toolbar" type="as">
+        <default>['&lt;Shift&gt;&lt;Super&gt;5']</default>
+        <summary>Screenshot toolbar shortcut</summary>
+        <description>Opens the toolbar with the capture and recording modes and Options. While a recording runs, it stops the recording. Empty means no shortcut.</description>
+      </key>
+      <key name="screenshots-save-to" type="s">
+        <choices>
+          <choice value="pictures"/>
+          <choice value="desktop"/>
+          <choice value="documents"/>
+          <choice value="clipboard"/>
+          <choice value="other"/>
+        </choices>
+        <default>'pictures'</default>
+        <summary>Save screenshots to</summary>
+        <description>Pictures/Screenshots (GNOME's own folder), the Desktop, Documents, only the clipboard, or another folder. macOS saves to the Desktop.</description>
+      </key>
+      <key name="screenshots-other-folder" type="s">
+        <default>''</default>
+        <summary>Other screenshot folder</summary>
+        <description>The folder used when Save to is Other Location.</description>
+      </key>
+      <key name="screenshots-timer" type="i">
+        <range min="0" max="10"/>
+        <default>0</default>
+        <summary>Screenshot timer in seconds</summary>
+        <description>Waits this long after you click Capture or Record in the toolbar. Kiwi uses 0 (none), 5 or 10.</description>
+      </key>
+      <key name="screenshots-thumbnail" type="b">
+        <default>true</default>
+        <summary>Show a floating thumbnail</summary>
+        <description>After a capture a small preview slides in at the bottom right. The file is saved to your chosen folder after 5 seconds, or at once when you swipe the preview to the right.</description>
+      </key>
+      <key name="screenshots-remember-selection" type="b">
+        <default>true</default>
+        <summary>Remember the last selection</summary>
+        <description>Starts the next area selection where the last one was.</description>
+      </key>
+      <key name="screenshots-show-pointer" type="b">
+        <default>false</default>
+        <summary>Show the mouse pointer in captures</summary>
+        <description>Includes the pointer in screenshots and recordings.</description>
+      </key>
+      <key name="screenshots-macos-names" type="b">
+        <default>true</default>
+        <summary>Name files like macOS</summary>
+        <description>Names screenshots "Screenshot 2026-03-09 at 08.05.07" instead of GNOME's "Screenshot From ...".</description>
+      </key>
+      <key name="screenshots-last-selection" type="ai">
+        <default>[]</default>
+        <summary>Last screenshot selection</summary>
+        <description>The x, y, width and height of the last selected area. Kiwi writes it.</description>
+      </key>
+
       <!-- Clipboard history (features/clipboard) -->
       <key name="clipboard-history" type="b">
         <default>true</default>
