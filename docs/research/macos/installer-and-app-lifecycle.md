@@ -634,3 +634,6 @@ Plan, in priority order:
 - [appimage-builder: AppImage updates (zsync, gh-releases-zsync)](https://appimage-builder.readthedocs.io/en/latest/advanced/updates.html)
 - [appimageupdate (Rust)](https://docs.rs/crate/appimageupdate/latest)
 - [openSUSE bug: .flatpakref via gnome-software --local-filename](https://lists.opensuse.org/archives/list/bugs@lists.opensuse.org/thread/VNDTTHEEAZN4F2D5DJAQBMCE4IWO465Q)
+
+## Orchestrator verification (2026-10-27)
+Checked against the Fedora 44 repositories (`dnf repoquery --requires gnome-software` in a Fedora 44 root). GNOME Software on F44 requires `dnf5daemon-server` (>= 5.4.2), `dnf5daemon-server-polkit` and `libdnf5-plugin-appstream`, not PackageKit. The installer should treat **dnf5daemon as its primary RPM backend on Fedora 44**, and PackageKit only as a fallback. Whether a fresh Workstation install still pulls in PackageKit through another package remains unverified.
