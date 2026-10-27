@@ -6,7 +6,7 @@
 // with the xprop tool (there is no Mutter API for it); without xprop nothing happens.
 // Client-side windows (GTK header bars, libadwaita) are never touched here.
 //
-// Shell API: Meta.Window (decorated, client_type, get_description = the X window id of an X11
+// Shell API: Meta.Window (decorated, get_client_type, get_description = the X window id of an X11
 // window), global.display 'window-created', Gio.Subprocess.
 
 import Gio from 'gi://Gio';
@@ -14,6 +14,8 @@ import Meta from 'gi://Meta';
 
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { hidesFrameTitlebar, motifArgs, parseMotifHints, undecoratedHints } from './model.js';
+
+const isX11 = win => win.get_client_type() === Meta.WindowClientType.X11;
 
 const run = (argv, flags = Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE) => {
     try {
@@ -51,7 +53,7 @@ export class X11Titlebars {
     }
 
     _track(win) {
-        if (this._tracked.has(win) || win.client_type !== Meta.WindowClientType.X11)
+        if (this._tracked.has(win) || !isX11(win))
             return;
         const reg = new CleanupRegistry();
         this._tracked.set(win, reg);
@@ -69,7 +71,7 @@ export class X11Titlebars {
         const want = hidesFrameTitlebar({
             enabled: this._ks.bool('hide-maximized-titlebars'),
             serverSide: win.decorated,
-            x11: win.client_type === Meta.WindowClientType.X11,
+            x11: isX11(win),
             maximized: win.maximized_horizontally && win.maximized_vertically,
             fullscreen: win.is_fullscreen(),
         });

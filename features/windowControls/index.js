@@ -149,7 +149,7 @@ class WindowControlsIndicator extends PanelMenu.Button {
                     this._disarmGreenMenu();
                     if (this._holdReached) {
                         this._holdReached = false;
-                        this._onGreenMenu();
+                        this._onGreenMenu(false);
                     }
                 }
             });
@@ -245,7 +245,7 @@ class WindowControlsIndicator extends PanelMenu.Button {
                 this._skipClick = true;
                 return GLib.SOURCE_REMOVE;
             }
-            this._onGreenMenu();
+            this._onGreenMenu(true);
             return GLib.SOURCE_REMOVE;
         }, { name: 'kiwi green menu' });
     }
@@ -510,7 +510,7 @@ export class WindowControlsFeature {
             // hidden in the middle of its own click gesture stops taking presses (seen on
             // GNOME 50.6 with the green button)
             onAction: name => cleanup.idle(() => this._act(name), { name: 'kiwi window control' }),
-            onGreenMenu: () => this._openGreenMenu(),
+            onGreenMenu: viaHover => this._openGreenMenu(viaHover),
             // With the green menu off, the green button's hover goes out as an event so Split
             // View can offer its own menu; with it on, the green menu offers Split View itself
             onHover: (actor, hovered) => {
@@ -781,7 +781,7 @@ export class WindowControlsFeature {
         win.make_fullscreen();
     }
 
-    _openGreenMenu() {
+    _openGreenMenu(viaHover) {
         const win = global.display.focus_window;
         if (!win || !this._greenMenu || this._greenMenu.isOpen)
             return;
@@ -798,7 +798,7 @@ export class WindowControlsFeature {
                 dynamic: Meta.prefs_get_dynamic_workspaces(),
             },
             monitors: { count: global.display.get_n_monitors(), current: win.get_monitor() },
-        });
+        }, { closeOnLeave: viaHover });
     }
 
     _greenMenuAction(action, arg) {

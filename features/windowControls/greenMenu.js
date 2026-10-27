@@ -17,6 +17,7 @@
 // Shell API: PopupMenu.PopupMenu / PopupBaseMenuItem / PopupSubMenuMenuItem, Main.uiGroup,
 // Main.panel.menuManager (keyboard navigation and the grab).
 
+import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
@@ -29,10 +30,10 @@ import { buildGlyph } from '../../lib/tileGlyphs.js';
 export class GreenMenu {
     /**
      * @param {object} opts
-     * @param {import('gi://Clutter').Actor} opts.source the indicator the menu hangs from. Not the green
+     * @param {Clutter.Actor} opts.source the indicator the menu hangs from. Not the green
      *   button itself: a St.Button that is a menu source stops taking presses after the menu
      *   grab ends (seen on GNOME 50.6), as panel menus always hang from their PanelMenu.Button
-     * @param {import('gi://Clutter').Actor} opts.target the green button the arrow points at
+     * @param {Clutter.Actor} opts.target the green button the arrow points at
      * @param {Function} opts.gettext
      * @param {(action: string, arg?: number) => void} opts.onAction tiling actions, or
      *   'fullscreen' | 'zoom' | 'workspace' (arg index) | 'monitor' (arg index)
@@ -76,8 +77,11 @@ export class GreenMenu {
      * @param {boolean} s.canFullscreen
      * @param {{count: number, active: number, current: number, dynamic: boolean}} s.workspaces
      * @param {{count: number, current: number}} s.monitors
+     * @param {{closeOnLeave?: boolean}} [opts] closeOnLeave: a menu opened by hovering closes when
+     *   the pointer leaves the green button and the menu (as on macOS), so it cannot keep the top
+     *   bar out over a full-screen window
      */
-    open(s) {
+    open(s, { closeOnLeave = false } = {}) {
         const menu = this._menu;
         const _ = this._;
         menu.removeAll();
@@ -125,6 +129,32 @@ export class GreenMenu {
         if (sw > 0)
             menu.setSourceAlignment(Math.min(Math.max((tx + tw / 2 - sx) / sw, 0), 1));
         menu.open(true);
+        if (closeOnLeave)
+            this._closeWhenPointerLeaves();
+    }
+
+    // The menu's grab sends no hover to the button, so the pointer is looked at directly: on
+    // every motion while the menu is open, until it closes
+    _closeWhenPointerLeaves() {
+        const menu = this._menu;
+        const inside = actor => {
+            const [px, py] = global.get_pointer();
+            const [x, y] = actor.get_transformed_position();
+            const [w, h] = actor.get_transformed_size();
+            return px >= x && px < x + w && py >= y && py < y + h;
+        };
+        const motion = global.stage.connect('captured-event', (_stage, event) => {
+            if (event.type() === Clutter.EventType.MOTION && this.isOpen &&
+                !inside(this._target) && !inside(menu.actor))
+                this.close();
+            return Clutter.EVENT_PROPAGATE;
+        });
+        const closed = menu.connect('open-state-changed', (_m, open) => {
+            if (open)
+                return;
+            global.stage.disconnect(motion);
+            menu.disconnect(closed);
+        });
     }
 
     // A section: its header (which names the hovered glyph) and one or two rows of glyphs
