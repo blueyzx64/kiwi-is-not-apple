@@ -183,6 +183,7 @@ export class NotchFeature {
                 const [x, y] = a.get_transformed_position();
                 return dropZone({ x, y, w: a.width, h: a.height }, monitor);
             },
+            ignore: () => !!this._shelfHelper?.dragging,
             onOver: over => this._dispatch({ type: 'drag-over', value: over }),
             onDrop: uris => {
                 this._shelf?.add(uris);

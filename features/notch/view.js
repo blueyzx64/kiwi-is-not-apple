@@ -104,6 +104,7 @@ export class NotchView {
         this._plate = null;
         this._dragging = false;      // a drag from the shelf is running
         this._layout = null;         // shelfLayout() as last reported
+        this._shelfLater = 0;        // stage 'after-update' token: measure a new shelf once laid out
         this._hoverIntent = { enabled: true, delayMs: 300 };
         this._hoverTimer = 0;
         this._anim = new CleanupRegistry();   // owner of running animations, disposed with the view
@@ -360,10 +361,35 @@ export class NotchView {
     _reportShelf() {
         if (this._destroyed)
             return;
+        // A Tray body rebuilt this frame (a selection, an added file) has no allocation yet:
+        // measured now, its tiles sit at 0,0 and the helper's window would leave them. Measure
+        // once the stage has laid it out.
+        const grid = this._dash?.current?.shelf?.grid;
+        if (grid?.mapped && !grid.has_allocation()) {
+            if (!this._shelfLater) {
+                this._shelfLater = this._cleanup.connect(global.stage, 'after-update', () => {
+                    this._cleanup.release(this._shelfLater);
+                    this._shelfLater = 0;
+                    this._reportShelf();
+                });
+            }
+            return;
+        }
         this._layout = this._shelfLayout();
         if (!this._layout)
             this.setShelfDrag(false);
+        this._applyShelfInput();
         this._h.onShelfLayout?.(this._layout);
+    }
+
+    // The current tiles take presses only while the helper's window is not under them. A rebuilt
+    // body brings new tiles, reactive by default, which would sit over the helper's window.
+    _applyShelfInput() {
+        this._dash?.current?.shelf?.tiles.forEach(t => {
+            t.actor.reactive = !this._shelfDrag;
+        });
+        if (this._shelfDrag)
+            this._syncPlate();
     }
 
     /** @param {boolean} on a drag from the shelf is running: nothing of the notch may sit on the windows */
@@ -398,9 +424,7 @@ export class NotchView {
             return;
         this._shelfDrag = on;
         this._island.reactive = !on;
-        this._dash?.current?.shelf?.tiles.forEach(t => {
-            t.actor.reactive = !on;
-        });
+        this._applyShelfInput();
         if (on)
             this._hoverSrc.island = false;
         this._syncPlate();

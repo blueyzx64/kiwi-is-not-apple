@@ -23,7 +23,8 @@ import { DROP_FILE_TYPES, inDropZone } from './model.js';
 /**
  * @param {CleanupRegistry} cleanup
  * @param {{zone: () => {x: number, y: number, w: number, h: number}|null,
- *   onOver: (over: boolean) => void, onDrop: (uris: string[]) => void}} target
+ *   onOver: (over: boolean) => void, onDrop: (uris: string[]) => void,
+ *   ignore?: () => boolean}} target ignore: the running drag is the notch's own (from the shelf)
  */
 export function watchDrops(cleanup, target) {
     const dnd = global.backend?.get_dnd?.();
@@ -33,7 +34,7 @@ export function watchDrops(cleanup, target) {
     const cancellable = new Gio.Cancellable();
     cleanup.add(() => cancellable.cancel());
 
-    let drag = null;   // {over, uris: string[]|null, reading, dropped}
+    let drag = null;   // {over, uris: string[]|null, reading, dropped, own}
     let zone = null;   // the drop zone, measured once per change of the notch's shape
 
     const read = () => {
@@ -71,12 +72,21 @@ export function watchDrops(cleanup, target) {
         target.onOver(over);
     };
 
+    const fresh = () => ({ over: false, uris: null, reading: false, dropped: false, own: false });
     cleanup.connect(dnd, 'dnd-enter', () => {
-        drag = { over: false, uris: null, reading: false, dropped: false };
+        drag = fresh();
         zone = null;
     });
     cleanup.connect(dnd, 'dnd-position-change', (_d, x, y) => {
-        drag ??= { over: false, uris: null, reading: false, dropped: false };
+        drag ??= fresh();
+        // A tile dragged out of the shelf starts on the notch and may be dropped on a window
+        // under the dashboard (one touching the top bar): never a drop onto the shelf. Kept for
+        // the whole drag, as the helper may report its end before 'dnd-leave'.
+        drag.own ||= !!target.ignore?.();
+        if (drag.own) {
+            setOver(false);
+            return;
+        }
         zone ??= target.zone();
         setOver(inDropZone(zone, x, y));
     });
