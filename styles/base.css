@@ -182,12 +182,17 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
 .kiwi-card {
   border-radius: 18px;
   padding: 12px;
-  background-color: rgba(255, 255, 255, 0.06);
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+/* Light: a whiter tile on the grey glass, as macOS draws its widgets and banners */
 .kiwi-glass-light .kiwi-card,
 .kiwi-modal-light .kiwi-card,
-.kiwi-light .kiwi-card { background-color: rgba(0, 0, 0, 0.045); }
+.kiwi-light .kiwi-card {
+  background-color: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
 
 .kiwi-glass-contrast .kiwi-card,
 .kiwi-modal-opaque .kiwi-card { border: 1px solid rgba(255, 255, 255, 0.45); }
@@ -345,6 +350,29 @@ StEntry.kiwi-search-field StLabel.hint-text {
 .kiwi-modal-light StEntry.kiwi-search-field StLabel.hint-text,
 .kiwi-light StEntry.kiwi-search-field StLabel.hint-text { color: rgba(0, 0, 0, 0.4); }
 
+/* A field that is its own capsule (an StEntry with a primary_icon: Launchpad, the Control
+   Center editor): the same borderless text on a quiet capsule fill, no focus ring */
+StEntry.kiwi-search-field.kiwi-search-capsule-filled,
+StEntry.kiwi-search-field.kiwi-search-capsule-filled:hover,
+StEntry.kiwi-search-field.kiwi-search-capsule-filled:focus {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.kiwi-glass-light StEntry.kiwi-search-field.kiwi-search-capsule-filled,
+.kiwi-glass-light StEntry.kiwi-search-field.kiwi-search-capsule-filled:focus,
+.kiwi-modal-light StEntry.kiwi-search-field.kiwi-search-capsule-filled,
+.kiwi-modal-light StEntry.kiwi-search-field.kiwi-search-capsule-filled:focus,
+.kiwi-light StEntry.kiwi-search-field.kiwi-search-capsule-filled,
+.kiwi-light StEntry.kiwi-search-field.kiwi-search-capsule-filled:focus { background-color: rgba(0, 0, 0, 0.06); }
+
+StEntry.kiwi-search-field StIcon { color: rgba(255, 255, 255, 0.6); padding-right: 6px; }
+
+.kiwi-glass-light StEntry.kiwi-search-field StIcon,
+.kiwi-modal-light StEntry.kiwi-search-field StIcon,
+.kiwi-light StEntry.kiwi-search-field StIcon { color: rgba(0, 0, 0, 0.5); }
+
 .kiwi-glass-contrast StEntry.kiwi-search-field StLabel.hint-text,
 .kiwi-modal-opaque StEntry.kiwi-search-field StLabel.hint-text { color: rgba(255, 255, 255, 0.75); }
 
@@ -387,6 +415,97 @@ StEntry.kiwi-search-field StLabel.hint-text {
 
 .kiwi-toolbar-button:focus,
 .kiwi-row:focus { box-shadow: inset 0 0 0 2px -st-accent-color; }
+
+/* ---- pill button: a small capsule text button on a panel ("Clear All", "Edit Widgets…",
+   "Edit Controls…"); push button: a dialog/alert button, radius 8, the default one in the
+   accent ---- */
+.kiwi-pill-button {
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 9pt;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.kiwi-pill-button:hover,
+.kiwi-pill-button:focus { background-color: rgba(255, 255, 255, 0.2); }
+
+.kiwi-push-button {
+  min-height: 28px;
+  padding: 4px 16px;
+  border-radius: 8px;
+  font-size: 10.5pt;
+  font-weight: normal;
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+.kiwi-push-button:hover { background-color: rgba(255, 255, 255, 0.22); }
+
+.kiwi-glass-light .kiwi-pill-button,
+.kiwi-modal-light .kiwi-pill-button,
+.kiwi-light .kiwi-pill-button,
+.kiwi-glass-light .kiwi-push-button,
+.kiwi-modal-light .kiwi-push-button,
+.kiwi-light .kiwi-push-button { color: #1d1d1f; background-color: rgba(0, 0, 0, 0.07); }
+
+.kiwi-glass-light .kiwi-pill-button:hover,
+.kiwi-glass-light .kiwi-pill-button:focus,
+.kiwi-modal-light .kiwi-pill-button:hover,
+.kiwi-modal-light .kiwi-pill-button:focus,
+.kiwi-light .kiwi-pill-button:hover,
+.kiwi-glass-light .kiwi-push-button:hover,
+.kiwi-modal-light .kiwi-push-button:hover,
+.kiwi-light .kiwi-push-button:hover { background-color: rgba(0, 0, 0, 0.12); }
+
+.kiwi-push-button.kiwi-push-button-default,
+.kiwi-glass-light .kiwi-push-button.kiwi-push-button-default,
+.kiwi-modal-light .kiwi-push-button.kiwi-push-button-default,
+.kiwi-light .kiwi-push-button.kiwi-push-button-default {
+  color: -st-accent-fg-color;
+  background-color: -st-accent-color;
+}
+
+.kiwi-push-button.kiwi-push-button-default:hover { background-color: st-lighten(-st-accent-color, 6%); }
+
+.kiwi-glass-contrast .kiwi-pill-button,
+.kiwi-glass-contrast .kiwi-push-button,
+.kiwi-modal-opaque .kiwi-pill-button,
+.kiwi-modal-opaque .kiwi-push-button { border: 1px solid rgba(255, 255, 255, 0.45); }
+
+.kiwi-pill-button:focus,
+.kiwi-push-button:focus { box-shadow: inset 0 0 0 2px -st-accent-color; }
+
+/* ---- menu: Kiwi's panel menus (lib/menuGlass.js puts .kiwi-menu on the BoxPointer).
+   Radius 12 with 5 px padding, items radius 7 (concentric); the highlighted item is the
+   row selection (a calmer accent, label-coloured text), as macOS highlights menu items. The
+   popup-menu-styling feature's !important accent still wins while it is on. ---- */
+.kiwi-menu .popup-menu-content {
+  border-radius: 12px;
+  padding: 5px;
+}
+
+.kiwi-menu .popup-menu-item {
+  border-radius: 7px;
+}
+
+.kiwi-menu .popup-menu-item:selected,
+.kiwi-menu .popup-menu-item:selected:hover,
+.kiwi-menu .popup-menu-item:selected:active {
+  background-color: st-transparentize(-st-accent-color, 0.25);
+  color: -st-accent-fg-color;
+}
+
+.kiwi-glass-light.kiwi-menu .popup-menu-item:selected,
+.kiwi-menu .kiwi-glass-light .popup-menu-item:selected {
+  background-color: st-transparentize(-st-accent-color, 0.12);
+}
+
+.kiwi-menu .kiwi-glass-contrast .popup-menu-item:selected,
+.kiwi-menu .kiwi-glass-solid .popup-menu-item:selected {
+  background-color: -st-accent-color;
+}
 
 /* ---- hairline separator between the field and the list, or between groups ---- */
 .kiwi-separator { height: 1px; background-color: rgba(255, 255, 255, 0.1); }
@@ -444,10 +563,8 @@ StEntry.kiwi-search-field StLabel.hint-text {
 .kiwi-clip-filter:focus,
 .kiwi-clip-recording:focus,
 .kiwi-stage-card:focus,
-.kiwi-launchpad-search:focus,
 .kiwi-launchpad-delete:focus,
 .kiwi-cc-editor-text-button:focus,
-.kiwi-cc-editor-search:focus,
 .kiwi-cc-np-button:focus,
 .window-control-button:focus,
 .kiwi-widgets-gallery-search:focus,

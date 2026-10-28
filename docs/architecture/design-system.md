@@ -38,6 +38,9 @@ with 8 px padding holds 18 px cards; a 18 px card with 8 px padding holds 10 px 
 | `.kiwi-search-glyph` | The magnifier: secondary colour |
 | `.kiwi-toolbar-button` | Circular 32 px button: a faint fill, the row hover fill, the accent when `:checked`, the shared focus ring |
 | `.kiwi-secondary-text` / `.kiwi-tertiary-text` | 60 % / 40 % of the label colour (55 % / 40 % on light) |
+| `.kiwi-pill-button` | A small capsule text button on a panel ("Clear All", "Edit Widgets…", "Edit Controls…", "Reset") |
+| `.kiwi-push-button` (+ `-default`) | A dialog/alert button: radius 8, padding 4/16; the default one in the accent |
+| `.kiwi-menu` | Kiwi's panel menus (`lib/menuGlass.js` adds it): radius 12, padding 5, items radius 7, the highlighted item in the row selection accent |
 | `.kiwi-separator` | A 1 px hairline |
 | `.kiwi-text-display/-title/-headline/-body/-callout/-caption` | The type scale |
 
@@ -61,11 +64,38 @@ Kiwi's glass has no blur, so what is behind a surface shows through by `1 − al
 | Role | Alpha (Clear → Tinted) | Use |
 |---|---|---|
 | `bar` | 0.67 → 0.90 | Menu bar, dock, Stage Manager floor: icons on it |
-| `content` | 0.90 → 0.97 | Menus, Control Center, the calendar card: over the desktop |
+| `content` | 0.94 → 0.98 | Menus, Control Center, the calendar card, the clipboard popover (they open over windows too, so a diff line no longer reads as a band) |
 | `overlay` | 0.975 → 0.99 | Above windows: every `ModalSurface` (Spotlight, Notification Center, Quick Paste, emoji, Force Quit, About), Launchpad, the switcher, HUDs, Hover Text, dialogs. A busy window (a diff, a terminal) stays under ~2/255 per channel instead of showing through as coloured bands |
 
 Pass it as `Glass.attach(actor, { surface: 'overlays', role: 'overlay' })`. Every role keeps
 the 4.5:1 text floor; Reduce Transparency and Increase Contrast make all of them opaque.
+
+## Who uses what
+
+| Surface | Adopted |
+|---|---|
+| Spotlight | capsule bar (`-capsule`, `-field`, `-glyph`, display type), toolbar buttons, section headers, rows, icon wells M/L/XL, secondary text; overlay glass, radius 28 |
+| Launchpad | search `.kiwi-search-field.kiwi-search-capsule-filled` (glass radius capsule); folder panel and delete alert radius 26, overlay glass; alert text and `.kiwi-push-button` |
+| Notification Center | `.kiwi-card`, `.kiwi-pill-button`, `.kiwi-push-button` (actions), type scale, `.kiwi-section-header` (group titles); radius 26, overlay glass |
+| Control Center | editor: `.kiwi-pill-button`, the capsule search field, gallery `.kiwi-section-header` and `.kiwi-row`; `.kiwi-light` marker. Its own module system stays (radius 26, padding 12 → modules 14, concentric) |
+| Calendar card | radius 18 (card), events and messages radius 10; `.kiwi-light` marker |
+| Panel menus (`MenuGlass`) | `.kiwi-menu` |
+| Accessibility Shortcuts | radius 26, `.kiwi-row` rows, `.kiwi-text-title`; HUD and Keyboard Viewer overlay glass, radii 12 / 18 |
+| Dialogs | radius 26, overlay glass, type scale, push-button shape |
+| OSD, Hover Text, App switcher | overlay glass; Hover Text radius 18; captions in pt |
+
+### Still to migrate
+
+These were being changed elsewhere when the system landed; adopt in a follow-up:
+
+| Where | Change |
+|---|---|
+| `features/clipboard` (popover `view.js`, `popover.js`, `quickPaste.js`) | `kiwi-clip-row` → add `.kiwi-row` and drop its own hover/`:selected` colours (it uses the full accent); `kiwi-clip-sub`/`-time` → `.kiwi-secondary-text`, `.kiwi-text-caption`; `kiwi-clip-section` → `.kiwi-section-header`; `kiwi-clip-search` and `kiwi-qp-search` → `.kiwi-search-field.kiwi-search-capsule-filled` (radius 999, drop border/fill); `kiwi-clip-filter` chips → `.kiwi-pill-button`; Quick Paste buttons → `.kiwi-push-button`; row icons in `wellClasses('M')`; the popover is `attachMenu({ surface: 'overlays' })` — keep `content` (now 0.94–0.98) or pass `role: 'overlay'` |
+| `features/widgets` (gallery) | `kiwi-widgets-gallery-search` → the capsule search field classes; `-chip`/`-pill` → `.kiwi-pill-button`; `-title` → `.kiwi-text-title`; `-row` → `.kiwi-row`; glass `role: 'overlay'`, radius `RADIUS.panel` |
+| `core/widgets` (cards in the Notification Center and on the desktop) | `RADIUS = 24` → `RADIUS.card` (18) inside the Notification Center so its cards match `.kiwi-card`; titles `.kiwi-text-headline`, secondary lines `.kiwi-secondary-text`; glass `role: 'overlay'` on the desktop |
+| `features/dock` | stack panel (`stack.js`): `kiwi-dock-stack-title` → `.kiwi-section-header`, list entries `.kiwi-row`, radius `RADIUS.card`; app menu (`appMenu.js`): add `.kiwi-menu` to the menu actor (or use `MenuGlass`) |
+| `features/missionControl` | `kiwi-mc-space-label` and `kiwi-mc-expose-title` → `.kiwi-text-callout`/`-caption`; close buttons → `.kiwi-toolbar-button` |
+| `features/notch` | dashboard cards `kiwi-notch-card` → `.kiwi-card` look on the dark island (radius 18); `kiwi-notch-dash-header`/`-card-header` → `.kiwi-section-header`; recent/clock rows `.kiwi-row`; widget/art buttons `.kiwi-toolbar-button`; secondary lines `.kiwi-secondary-text` (the island is always dark, so no light marker) |
 
 ## Adopting it in a feature
 
