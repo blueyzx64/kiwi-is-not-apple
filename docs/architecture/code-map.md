@@ -124,6 +124,7 @@ pinch, hot corner), `split-view-changed` (Split View), `recording-started` /
 | `menuBarPins.js` | the `menubar-pinned` contract (Always / When Active / Never) for the Control Center editor, the prefs and menu-bar-items |
 | `batteryModel.js` | battery time from UPower values (user row, Battery item) |
 | `keepHidden.js` | keep a Shell actor hidden while a feature runs, give back its wanted visibility |
+| `caret.js` (+`caretModel.js`) | the focused app's text caret from the IBus panel service (`Caret.acquire(cleanup).rect`, `watch(cleanup, fn)` after each report and focus change) |
 | `jobQueue.js` | promise queue (`createJobQueue`) |
 | `launcherEntry.js` (+`Model`) | `com.canonical.Unity.LauncherEntry` badges, progress, urgent (entries go with their sender) |
 | `backgroundApps.js` (+`Model`) | the Background portal's `org.freedesktop.background.Monitor` list; `stop(app)` |
@@ -165,7 +166,8 @@ pinch, hot corner), `split-view-changed` (Split View), `recording-started` /
 | `appearance/` | `appearance`, `popup-menu-styling` | Auto Light/Dark (owns `color-scheme` through core/originals), accent (`accent-color`) and highlight colours (`scheme.js`, `model.js`); accent menus (`index.js`; the GTK app fixes are in `gtk-theme`) |
 | `typography/` | `typography` | macOS text rendering (`macos-text-rendering`: owns `font-hinting` none and `font-antialiasing` grayscale) and the macOS font (`macos-font`: SF Pro, else Inter, at the user's size for `font-name` and `document-font-name`, SF Mono for `monospace-font-name`); families from `fc-list` in a subprocess, font dirs watched; prefs offer Inter through PackageKit |
 | `osd/` | `osd` | the Tahoe volume / brightness / keyboard backlight pill under the Control Center button (glass, core/motion), a `ctx.osd` sink; output name and mute from the Shell's Gvc mixer |
-| `dialogs/` | `dialogs` | the Shell's modal dialogs (auth, end session, Run, others) as glass alerts: icon on top, natural-width buttons at the right, accent default; `ModalDialog.prototype.open` injection, undone on close and disable |
+| `dialogs/` | `dialogs` | the Shell's modal dialogs (auth, end session, Run, others) as glass alerts: icon on top, natural-width buttons at the right, accent default; `ModalDialog.prototype.open` injection, undone on close and disable. `capsLock.js`: ⇪ inside password fields while Caps Lock is on (`dialogs-caps-lock-icon`), the Shell's CapsLockWarning line kept hidden |
+| `inputIndicator/` | `input-indicator`, `caps-lock-switch`, `input-per-window`, `input-key-action` | `index.js`: Sonoma badges at the caret (⇪ stays and follows the caret while Caps Lock is on; input source and opt-in Caps-off badges fade; never in Shell password fields); `capsSwitch.js`: a Caps Lock tap switches Latin ↔ non-Latin source, hold keeps Caps Lock (tap/hold from the core idle monitor); `perWindow.js`: owns `org.gnome.desktop.input-sources per-window` (core/originals); `inputKey.js`: one key changes the source or opens Emoji & Symbols; pure `model.js` |
 | `colorFilters/` | `color-filters` | greyscale, protanopia / deuteranopia / tritanopia corrections and colour tint: one shader effect (a colour matrix as uniforms) on `global.stage` |
 
 Shared-resource rules (defined once in `features.js`): `app-buttons` alone owns `button-layout`; `control-center` beats `dnd-button`; `stage-manager` beats

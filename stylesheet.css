@@ -1810,6 +1810,11 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
   background-color: st-lighten(-st-accent-color, 8%);
 }
 
+/* ⇪ inside a password field while Caps Lock is on (capsLock.js; a child of the ModalDialog) */
+.kiwi-dialog-caps-lock {
+  color: rgba(255, 255, 255, 0.72);
+}
+
 /* ==== features/dock/style.css ==== */
 
 /* feature: dock */

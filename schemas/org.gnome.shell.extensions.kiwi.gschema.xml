@@ -661,12 +661,47 @@
       <key name="input-indicator-caps-lock" type="b">
         <default>true</default>
         <summary>Caps Lock indicator</summary>
-        <description>Show the Caps Lock badge at the text cursor when Caps Lock is turned on or off.</description>
+        <description>Show ⇪ at the text cursor while Caps Lock is on (macOS Sonoma). It stays under the cursor and follows it until Caps Lock is turned off.</description>
+      </key>
+      <key name="input-indicator-caps-off" type="b">
+        <default>false</default>
+        <summary>Caps Lock off indicator</summary>
+        <description>Also show a muted ⇪ for a moment when Caps Lock is turned off. macOS shows nothing then.</description>
       </key>
       <key name="input-indicator-source" type="b">
         <default>true</default>
         <summary>Input source indicator</summary>
         <description>Show the new input source (for example EN or DE) at the text cursor when it changes.</description>
+      </key>
+      <key name="input-caps-lock-switch" type="b">
+        <default>false</default>
+        <summary>Caps Lock switches the input source</summary>
+        <description>With a Latin and a non-Latin input source (for example English and Russian, or Chinese), a tap of Caps Lock switches between them and leaves Caps Lock off; hold it to turn Caps Lock on (macOS "Use the Caps Lock key to switch to and from ABC").</description>
+      </key>
+      <key name="input-per-window" type="s">
+        <choices>
+          <choice value="system"/>
+          <choice value="document"/>
+          <choice value="global"/>
+        </choices>
+        <default>'system'</default>
+        <summary>Input source per window</summary>
+        <description>'document' switches to each window's own input source automatically (macOS "Automatically switch to a document's input source"); 'global' uses one source everywhere; 'system' leaves GNOME's per-window setting as it is.</description>
+      </key>
+      <key name="input-key-action" type="s">
+        <choices>
+          <choice value="none"/>
+          <choice value="input-source"/>
+          <choice value="emoji"/>
+        </choices>
+        <default>'none'</default>
+        <summary>Press the input key to</summary>
+        <description>What the input key (input-key-shortcut) does, like the macOS Globe (fn) key: 'input-source' switches to the previous input source, 'emoji' shows Emoji and Symbols, 'none' does nothing.</description>
+      </key>
+      <key name="input-key-shortcut" type="as">
+        <default>[]</default>
+        <summary>Input key</summary>
+        <description>The key for input-key-action, for example Menu or F13 (a single key, like the macOS Globe key) or a chord. Empty means none.</description>
       </key>
       <key name="emoji-picker" type="b">
         <default>true</default>
@@ -1562,6 +1597,11 @@
         <default>true</default>
         <summary>Glass system dialogs</summary>
         <description>Restyle the Shell's modal dialogs (authentication, log out, restart and shut down, Run a Command) as macOS-style glass alerts: an icon on top, buttons at the right, the default one in the accent colour.</description>
+      </key>
+      <key name="dialogs-caps-lock-icon" type="b">
+        <default>true</default>
+        <summary>Caps Lock in password fields</summary>
+        <description>While glass dialogs are on, show ⇪ inside the password field of the Shell's password dialogs when Caps Lock is on, instead of the "Caps lock is on" line under it (macOS).</description>
       </key>
 
       <!-- Colour filters (features/colorFilters) -->

@@ -12,6 +12,36 @@ const END_SESSION_ICONS = Object.freeze({
 });
 
 /**
+ * Where the ⇪ goes inside a password field (macOS: at the trailing edge, before the field's
+ * own button such as the Shell's show-password eye). Rects are in the same coordinates.
+ *
+ * @param {{x, y, width, height}} entry the password entry
+ * @param {?{x, y, width, height}} button the entry's trailing icon, when visible
+ * @param {{width: number, height: number}} icon
+ * @param {number} [inset] px from the trailing edge (or the button)
+ * @returns {{x: number, y: number}}
+ */
+export function capsIconPosition(entry, button, icon, inset = 8) {
+    const right = button ? button.x - inset / 2 : entry.x + entry.width - inset;
+    return {
+        x: Math.round(right - icon.width),
+        y: Math.round(entry.y + (entry.height - icon.height) / 2),
+    };
+}
+
+/**
+ * Which password field shows the ⇪: the one with the keyboard focus, else the first that is
+ * on screen (macOS shows it in the field you type into).
+ *
+ * @param {{focused: boolean, shown: boolean}[]} fields
+ * @returns {number} an index, or -1
+ */
+export function capsIconField(fields) {
+    const focused = fields.findIndex(f => f.focused && f.shown);
+    return focused >= 0 ? focused : fields.findIndex(f => f.shown);
+}
+
+/**
  * Which Shell dialog a card is, from the style classes of its `.modal-dialog` box.
  *
  * @param {string} styleClass the box's style_class

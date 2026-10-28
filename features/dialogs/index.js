@@ -2,7 +2,8 @@
 // Centred dialogs, macOS style: every Shell modal dialog (authentication, log out / restart /
 // shut down, Run a Command, and other extensions' ModalDialogs) opens as a faux glass card
 // with an icon on top and its buttons at the right, the default one in the accent colour.
-// Theme only: the dialogs' own logic, keys and buttons are untouched.
+// Theme only: the dialogs' own logic, keys and buttons are untouched. Password dialogs show
+// ⇪ inside the field while Caps Lock is on (capsLock.js, dialogs-caps-lock-icon).
 //
 // Each open dialog is "dressed" when it opens and undressed when it closes, or on disable
 // (which also restores any dialog open at that moment). Dialogs that are kept between opens
@@ -18,6 +19,7 @@ import * as ModalDialog from 'resource:///org/gnome/shell/ui/modalDialog.js';
 
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { Glass } from '../../lib/glass.js';
+import { dressCapsLock } from './capsLock.js';
 import { dialogIcon, dialogKind } from './model.js';
 
 const ICON_SIZE = 56;
@@ -27,6 +29,12 @@ export class Dialogs {
         this._ctx = ctx;
         this._cleanup = cleanup;
         this._dressed = new Map();     // ModalDialog -> CleanupRegistry
+        this._capsIcons = new Map();   // ModalDialog -> its ⇪ (St.Icon)
+    }
+
+    /** The ⇪ of a dressed password dialog, or null (for the harness). */
+    capsIconOf(dialog) {
+        return this._capsIcons.get(dialog) ?? null;
     }
 
     enable() {
@@ -85,6 +93,15 @@ export class Dialogs {
             });
             dialog.contentLayout.insert_child_at_index(icon, 0);
             reg.actor(icon);
+        }
+
+        // ⇪ in the password field instead of the "Caps lock is on" line (capsLock.js)
+        if (this._ctx.settings.get_boolean('dialogs-caps-lock-icon')) {
+            const caps = dressCapsLock(dialog, reg, this._ctx);
+            if (caps) {
+                this._capsIcons.set(dialog, caps.icon);
+                reg.add(() => this._capsIcons.delete(dialog));
+            }
         }
 
         // Buttons at their natural width, at the right, like an NSAlert

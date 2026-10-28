@@ -214,6 +214,23 @@ export const FEATURES = [
         load: async () => (await import('./features/inputIndicator/index.js')).InputIndicator,
     },
     {
+        // Caps Lock tap switches between a Latin and a non-Latin input source (macOS ABC switch)
+        id: 'caps-lock-switch', setting: 'input-caps-lock-switch',
+        load: async () => (await import('./features/inputIndicator/capsSwitch.js')).CapsLockSwitch,
+    },
+    {
+        // Input source per window (macOS "a document's input source"); owns GNOME's per-window
+        id: 'input-per-window', when: ctx => ctx.settings.get_string('input-per-window') !== 'system',
+        load: async () => (await import('./features/inputIndicator/perWindow.js')).InputPerWindow,
+    },
+    {
+        // One key changes the input source or shows Emoji & Symbols (macOS Globe key)
+        id: 'input-key-action',
+        when: ctx => ctx.settings.get_string('input-key-action') !== 'none' &&
+            ctx.settings.get_strv('input-key-shortcut').length > 0,
+        load: async () => (await import('./features/inputIndicator/inputKey.js')).InputKeyAction,
+    },
+    {
         // Emoji & Symbols popover (Super+Ctrl+Space); types through lib/paste.js
         id: 'emoji-picker', setting: 'emoji-picker',
         load: async () => (await import('./features/emoji/index.js')).EmojiPicker,
