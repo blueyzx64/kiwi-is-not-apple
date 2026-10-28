@@ -31,6 +31,8 @@
 //
 // Effects (in this order within one dispatch):
 //   {type: 'strip', ws}                   the strip of workspace ws changed: redraw it
+//   {type: 'tile', left, right}           a new set was built: these windows take the left half of
+//                                         the stage, those the right half (before the show flights)
 //   {type: 'hide', ids, animate}          these windows leave the stage (fly to their entry)
 //   {type: 'show', ids, animate}          these come onto it (fly from their entry), lead last
 //   {type: 'unminimize', id}              Mutter minimized it; it lives in the strip instead
@@ -190,7 +192,7 @@ export class StageMachine {
      */
     dispatch(event) {
         this._fx = { strip: new Set(), timers: [], cancels: [], focus: undefined, unminimize: [],
-            desktop: null, animate: event.animate ?? true };
+            desktop: null, tile: null, animate: event.animate ?? true };
         this._hiddenBefore = new Set(this.hidden());
         const now = event.now ?? 0;
         const handler = HANDLERS[event.type];
@@ -290,6 +292,8 @@ export class StageMachine {
             return;
         }
         this._reclassify(id, now);
+        if (next.maximized && !old.maximized && this._member.has(id))
+            this._splitOnMaximize(id, now);
     }
 
     _onRemove(e, now) {
@@ -389,6 +393,25 @@ export class StageMachine {
             this._fx.focus = null;
         else
             this._fx.focus = this._lead(space.stage);
+    }
+
+    // The strip entry `dragged` was dropped on the strip entry `target` (`side`: where the
+    // dragged windows go): they become one set, open on the stage, and are tiled side by side.
+    _onGroup(e, now) {
+        const from = this._entries.get(e.dragged);
+        const into = this._entries.get(e.target);
+        if (!from || !into || from === into || from.ws !== into.ws)
+            return;
+        const space = this._space(into.ws);
+        if (space.stage === from.id || space.stage === into.id)
+            return;
+        const side = e.side === 'right' ? 'right' : 'left';
+        const dragged = [...from.windows];
+        const target = [...into.windows];
+        space.quietUntil = now + QUIET_MS;
+        this._merge(from, into);
+        this._switchTo(into, 'swap');
+        this._fx.tile = side === 'left' ? { left: dragged, right: target } : { left: target, right: dragged };
     }
 
     _onToggleDesktop(e, now) {
@@ -702,6 +725,26 @@ export class StageMachine {
             this._fx.focus = entry.windows[0];
     }
 
+    // A window of the set on the stage was maximized: it stays on the stage alone, and the
+    // others leave for the strip as one entry of their own. Unmaximizing does not regroup.
+    _splitOnMaximize(id, now) {
+        const entry = this._entries.get(this._member.get(id));
+        const space = this._space(entry.ws);
+        if (space.stage !== entry.id || entry.windows.length < 2)
+            return;
+        const others = entry.windows.filter(x => x !== id);
+        const own = this._newEntry(entry.ws, others);
+        own.set = entry.set && others.length > 1;
+        for (const x of others)
+            this._member.set(x, own.id);
+        entry.windows = [id];
+        entry.set = false;
+        space.strip.unshift(own.id);
+        space.quietUntil = now + QUIET_MS;
+        this._fx.strip.add(entry.ws);
+        this._fx.focus = id;
+    }
+
     // Minimize: the window goes to the strip. Alone on the stage, its whole entry goes and the
     // stage stays empty (the desktop and the strip show); in a set, it gets its own entry.
     _minimize(id, now) {
@@ -728,6 +771,8 @@ export class StageMachine {
         const out = [];
         for (const ws of fx.strip)
             out.push({ type: 'strip', ws });
+        if (fx.tile)
+            out.push({ type: 'tile', ...fx.tile });
         const after = new Set(this.hidden());
         const hide = [...after].filter(id => !this._hiddenBefore.has(id));
         const show = [...this._hiddenBefore].filter(id => !after.has(id) && this._windows.has(id));
@@ -825,6 +870,7 @@ const HANDLERS = Object.freeze({
     'minimize': StageMachine.prototype._onMinimize,
     'remove-from-set': StageMachine.prototype._onRemoveFromSet,
     'move-to-entry': StageMachine.prototype._onMoveToEntry,
+    'group': StageMachine.prototype._onGroup,
     'toggle-desktop': StageMachine.prototype._onToggleDesktop,
     'cycle': StageMachine.prototype._onCycle,
     'slot': StageMachine.prototype._onSlot,

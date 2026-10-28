@@ -277,3 +277,30 @@ export function slotAt(slots, point) {
     return slots.findIndex(s => point.x >= s.x && point.x < s.x + s.width &&
         point.y >= s.y && point.y < s.y + s.height);
 }
+
+/**
+ * The stage: the work area beside the strip's band, inset by `margin`. Entries dropped here
+ * join the set; windows of a new set are tiled in its halves.
+ * @param {rect} workArea
+ * @param {?rect} floor the strip's floor (null: the whole work area)
+ * @param {'left'|'right'} side the strip's side
+ */
+export function stageArea(workArea, floor, side, margin = 12) {
+    const left = floor && side === 'left' ? floor.x + floor.width + margin : workArea.x + margin;
+    const right = floor && side !== 'left' ? floor.x - margin : workArea.x + workArea.width - margin;
+    return { x: left, y: workArea.y + margin, width: Math.max(1, right - left), height: Math.max(1, workArea.height - 2 * margin) };
+}
+
+/** The two halves of an area, `gap` apart, in whole pixels. */
+export function halves(area, gap = 12) {
+    const w = Math.floor((area.width - gap) / 2);
+    return {
+        left: { x: area.x, y: area.y, width: w, height: area.height },
+        right: { x: area.x + area.width - w, y: area.y, width: w, height: area.height },
+    };
+}
+
+/** Which half of a card the pointer is over: where a dragged entry will be placed. */
+export function groupSide(point, card) {
+    return point.x < card.x + card.width / 2 ? 'left' : 'right';
+}

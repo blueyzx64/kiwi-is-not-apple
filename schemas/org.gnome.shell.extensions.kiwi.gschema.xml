@@ -813,6 +813,11 @@
         <summary>Show recent apps</summary>
         <description>Show the strip of recent apps beside the stage. Off keeps it hidden until the pointer pushes against the screen edge (macOS "Show recent apps in Stage Manager").</description>
       </key>
+      <key name="stage-manager-strip-background" type="b">
+        <default>true</default>
+        <summary>Strip background</summary>
+        <description>Draw a soft glass panel behind the strip of recent apps, so it reads apart from the app windows behind it. Off leaves the entries floating on the desktop (as macOS does).</description>
+      </key>
       <key name="stage-manager-next-shortcut" type="as">
         <default>['&lt;Super&gt;&lt;Alt&gt;Page_Down']</default>
         <summary>Next set shortcut</summary>
