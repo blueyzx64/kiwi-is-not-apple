@@ -185,6 +185,11 @@ export class ClipboardHistory {
         this._ks.setBool('clipboard-recording', !!on);
     }
 
+    /** core/motion.js, for the list's scrolling and scrollbar fades. */
+    get motion() {
+        return this._ctx.motion ?? null;
+    }
+
     get shortcut() {
         return this._ks.strv(SHORTCUT_KEY)[0] ?? '';
     }

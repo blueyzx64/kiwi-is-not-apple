@@ -1,16 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Quick Paste: a centred glass window (ModalSurface). List on the left, large preview on the
 // right, Paste and Pin under the preview, keyboard hints in the footer. Enter pastes into
-// the window that had focus before it opened.
-//   Up/Down  move      Enter  paste      Ctrl+P  pin      Ctrl+D  remove      Esc  close
-//   typing   searches (the entry keeps key focus)
+// the window that had focus before it opened. Opened by clipboard-shortcut (Super+V).
+//   Up/Down  move (the list scrolls to keep the selection in view)   Left/Right  category tab
+//   Enter  paste      Ctrl+P  pin      Ctrl+D  remove      Esc  close
+//   typing   searches (the entry keeps key focus; Shift/Ctrl/Alt+Left/Right edit the text)
 
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 
 import * as A11y from '../../lib/a11y.js';
 import { ModalSurface } from '../../lib/modalSurface.js';
-import { addRow, ageText, longPreview, sectionLabel, sizeText } from './view.js';
+import { stepFilter, stepSelection } from './model.js';
+import {
+    ListScroller, addRow, ageText, buildFilterTabs, longPreview, navAction, sectionLabel, sizeText,
+} from './view.js';
 
 const WIDTH = 780;
 const HEIGHT = 460;
@@ -23,6 +27,7 @@ export class QuickPaste {
         this._ctl = ctl;
         this._ = _;
         this._query = '';
+        this._filter = 'all';
         this._order = [];       // entry ids in list order
         this._selected = null;
         this._ui = null;
@@ -41,6 +46,7 @@ export class QuickPaste {
                 this._ui = null;
                 this._order = [];
                 this._query = '';
+                this._filter = 'all';
             },
         });
     }
@@ -60,6 +66,7 @@ export class QuickPaste {
     _build(frame) {
         const _ = this._;
         this._query = '';
+        this._filter = 'all';
         const entry = new St.Entry({
             style_class: 'kiwi-qp-search', hint_text: _('Search Clipboard'), accessible_name: _('Search Clipboard'), can_focus: true, x_expand: true,
         });
@@ -71,6 +78,10 @@ export class QuickPaste {
         entry.clutter_text.connect('activate', () => this._paste());
         frame.add_child(entry);
 
+        const tabs = buildFilterTabs(_, id => this._setFilter(id));
+        tabs.actor.add_style_class_name('kiwi-qp-filters');
+        frame.add_child(tabs.actor);
+
         const body = new St.BoxLayout({ style_class: 'kiwi-qp-body', x_expand: true, y_expand: true });
         frame.add_child(body);
 
@@ -78,9 +89,13 @@ export class QuickPaste {
             style_class: 'kiwi-qp-list', width: LIST_WIDTH, y_expand: true, overlay_scrollbars: true,
             hscrollbar_policy: St.PolicyType.NEVER, vscrollbar_policy: St.PolicyType.AUTOMATIC,
         });
-        const list = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, x_expand: true });
+        // The list's right padding is the overlay scrollbar's gutter (ListScroller)
+        const list = new St.BoxLayout({
+            style_class: 'kiwi-clip-list', orientation: Clutter.Orientation.VERTICAL, x_expand: true,
+        });
         scroll.set_child(list);
         body.add_child(scroll);
+        const scroller = new ListScroller(scroll, this._ctl.motion);
 
         const side = new St.BoxLayout({
             style_class: 'kiwi-qp-side', orientation: Clutter.Orientation.VERTICAL, x_expand: true, y_expand: true,
@@ -104,10 +119,10 @@ export class QuickPaste {
 
         frame.add_child(new St.Label({
             style_class: 'kiwi-qp-hints',
-            text: _('↑↓ Select    ↵ Paste    Ctrl+P Pin    Ctrl+D Remove    Esc Close'),
+            text: _('↑↓ Select    ←→ Category    ↵ Paste    Ctrl+P Pin    Ctrl+D Remove    Esc Close'),
         }));
 
-        this._ui = { entry, list, scroll, previewBox, meta, pin };
+        this._ui = { entry, tabs, list, scroll, scroller, previewBox, meta, pin };
         this._refresh();
         return entry.clutter_text;
     }
@@ -118,7 +133,8 @@ export class QuickPaste {
             return;
         const _ = this._;
         const ctl = this._ctl;
-        const { pinned, recent } = ctl.view({ query: this._query });
+        ui.tabs.sync(this._filter, ctl.filterTabs());
+        const { pinned, recent } = ctl.view({ filter: this._filter, query: this._query });
         const all = [...pinned, ...recent].slice(0, MAX_ROWS);
         this._order = all.map(e => e.id);
         if (!this._order.includes(this._selected))
@@ -160,7 +176,7 @@ export class QuickPaste {
                 continue;
             if (row.entryId === this._selected) {
                 row.add_style_pseudo_class('selected');
-                this._scrollTo(row);
+                ui.scroller.reveal(row);
             } else {
                 row.remove_style_pseudo_class('selected');
             }
@@ -207,25 +223,20 @@ export class QuickPaste {
             .filter(Boolean).join(' · ');
     }
 
-    _scrollTo(row) {
-        const adj = this._ui.scroll.vadjustment ?? this._ui.scroll.get_vadjustment?.();
-        if (!adj)
-            return;
-        const top = row.get_y();
-        const bottom = top + row.get_height();
-        if (top < adj.value)
-            adj.value = top;
-        else if (bottom > adj.value + adj.page_size)
-            adj.value = bottom - adj.page_size;
-    }
-
     _move(delta) {
-        if (!this._order.length)
+        const next = stepSelection(this._order.indexOf(this._selected), delta, this._order.length);
+        if (next < 0)
             return;
-        const at = this._order.indexOf(this._selected);
-        const next = Math.min(this._order.length - 1, Math.max(0, (at < 0 ? 0 : at) + delta));
         this._selected = this._order[next];
         this._syncSelection();
+    }
+
+    _setFilter(id) {
+        if (id === this._filter)
+            return;
+        this._filter = id;
+        this._selected = null;
+        this._refresh();
     }
 
     _paste() {
@@ -244,21 +255,31 @@ export class QuickPaste {
         const text = this._ui?.entry.clutter_text;
         if (text?.has_preedit?.())
             return Clutter.EVENT_PROPAGATE;
+        switch (navAction(event)) {
+        case 'up':
+            this._move(-1);
+            return Clutter.EVENT_STOP;
+        case 'down':
+            this._move(1);
+            return Clutter.EVENT_STOP;
+        case 'pageUp':
+            this._move(-5);
+            return Clutter.EVENT_STOP;
+        case 'pageDown':
+            this._move(5);
+            return Clutter.EVENT_STOP;
+        case 'left':
+            this._setFilter(stepFilter(this._filter, -1));
+            return Clutter.EVENT_STOP;
+        case 'right':
+            this._setFilter(stepFilter(this._filter, 1));
+            return Clutter.EVENT_STOP;
+        default:
+            break;
+        }
         const sym = event.get_key_symbol();
         const ctrl = (event.get_state() & Clutter.ModifierType.CONTROL_MASK) !== 0;
         switch (sym) {
-        case Clutter.KEY_Up:
-            this._move(-1);
-            return Clutter.EVENT_STOP;
-        case Clutter.KEY_Down:
-            this._move(1);
-            return Clutter.EVENT_STOP;
-        case Clutter.KEY_Page_Up:
-            this._move(-5);
-            return Clutter.EVENT_STOP;
-        case Clutter.KEY_Page_Down:
-            this._move(5);
-            return Clutter.EVENT_STOP;
         case Clutter.KEY_p:
         case Clutter.KEY_P:
             if (!ctrl)
