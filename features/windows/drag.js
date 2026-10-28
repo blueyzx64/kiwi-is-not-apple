@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Drag tiling (macOS 15): while a window is dragged by its title bar, the zone under the
 // pointer (model.js hitZone: edges, corners, the menu bar, or anywhere near a side while Alt is
-// held) shows a translucent faux-glass outline of the tile, behind the dragged window.
-// Releasing over it tiles the window. Dragging a tiled window away gives it back its
-// pre-tile size first.
+// held) shows a filled preview of the tile behind the dragged window: a translucent rounded
+// rect tinted with the accent colour, with a clear border and a soft shadow. It grows out of
+// the window's own frame and springs from zone to zone (by transform: model.js
+// previewTransform). Its look follows the colour scheme, Increase Contrast and Reduce
+// Transparency (lib/glass.js watch); under reduced motion it only fades. Releasing over it
+// tiles the window. Dragging a tiled window away gives it back its pre-tile size first.
 //
 // Near the top centre the snap bar (snapBar.js, Windows 11 Snap Layouts) takes over: a handle,
 // then a row of layouts; the zone under the pointer is previewed like an edge zone, and
@@ -18,6 +21,7 @@
 // dragged window's actor), Main.layoutManager.monitors.
 
 import Clutter from 'gi://Clutter';
+import Graphene from 'gi://Graphene';
 import GLib from 'gi://GLib';
 import Meta from 'gi://Meta';
 import St from 'gi://St';
@@ -27,7 +31,9 @@ import { getPointerWatcher } from 'resource:///org/gnome/shell/ui/pointerWatcher
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { Glass } from '../../lib/glass.js';
 import { ZONES } from '../../core/tileActions.js';
-import { EDGE_PX, dropZone, hitZone, needsDwell } from './model.js';
+import {
+    EDGE_PX, dropZone, hitZone, needsDwell, previewClasses, previewTransform, previewVisualRect,
+} from './model.js';
 import { SnapBar } from './snapBar.js';
 
 // How long the pointer rests against an edge before the outline shows (no modifier)
@@ -36,6 +42,11 @@ const DWELL_MS = 150;
 // window below the bar, so the window's own position-changed stops once the pointer is past
 // that: it cannot be what tells Kiwi the pointer reached the top edge.
 const POINTER_POLL_MS = 16;
+
+// The preview's flight: quick and critically damped, as Sequoia's (about 0.25 s)
+const PREVIEW_SPRING = Object.freeze({ response: 0.24, damping: 1 });
+const PREVIEW_CLASSES = ['kiwi-tile-preview-light', 'kiwi-tile-preview-dark',
+    'kiwi-tile-preview-contrast', 'kiwi-tile-preview-opaque'];
 
 const MOVE_OPS = new Set([Meta.GrabOp.MOVING, Meta.GrabOp.MOVING_UNCONSTRAINED]);
 
@@ -72,14 +83,19 @@ export class TileDrag {
         const cleanup = this._cleanup;
         this._preview = cleanup.actor(new St.Widget({
             style_class: 'kiwi-tile-preview', visible: false, reactive: false, opacity: 0,
+            pivot_point: new Graphene.Point({ x: 0, y: 0 }),
         }));
-        // Kiwi's faux glass (overlays surface); style.css keeps a plain outline when glass is off
-        // The outline follows the colour scheme (its own text colour says nothing: it has none)
-        const st = St.Settings.get();
-        const glass = Glass.attach(this._preview, {
-            surface: 'overlays', radius: 12, isDark: () => st.color_scheme !== St.SystemColorScheme.PREFER_LIGHT,
+        // Light/dark, Increase Contrast and Reduce Transparency, as every Kiwi surface follows
+        // them (the look itself is style.css: an accent fill, not the neutral glass tint)
+        Glass.watch(cleanup, ({ env }) => {
+            const want = previewClasses(env);
+            for (const c of PREVIEW_CLASSES) {
+                if (want.includes(c))
+                    this._preview.add_style_class_name(c);
+                else
+                    this._preview.remove_style_class_name(c);
+            }
         });
-        cleanup.add(() => glass.destroy());
         this._snap = new SnapBar(this._ctx, cleanup);
         cleanup.connect(global.display, 'grab-op-begin', (_d, win, op) => this._begin(win, op));
         cleanup.connect(global.display, 'grab-op-end', (_d, win) => this._end(win));
@@ -236,24 +252,38 @@ export class TileDrag {
             return;
         const preview = this._preview;
         this._anim?.cancel();
-        if (!this._shown) {
-            // Grow out of the window's own frame, behind it
-            const parent = actor.get_parent();
-            if (preview.get_parent() !== parent) {
-                preview.get_parent()?.remove_child(preview);
-                parent.add_child(preview);
-            }
-            parent.set_child_below_sibling(preview, actor);
-            const f = this._win.get_frame_rect();
-            preview.set_position(f.x, f.y);
-            preview.set_size(f.width, f.height);
+        this._anim = null;
+        // Behind the dragged window, in its parent
+        const parent = actor.get_parent();
+        if (preview.get_parent() !== parent) {
+            preview.get_parent()?.remove_child(preview);
+            parent.add_child(preview);
+        }
+        parent.set_child_below_sibling(preview, actor);
+        let from;
+        if (preview.visible) {
+            // Between zones, or back while fading out: from wherever it is drawn now
+            from = previewVisualRect(
+                { x: preview.x, y: preview.y, width: preview.width, height: preview.height },
+                preview);
+        } else {
+            // Grow out of the window's own frame
+            from = this._win.get_frame_rect();
             preview.opacity = 0;
             preview.show();
         }
         this._shown = zone;
-        this._anim = this._ctx.motion.springs(preview, {
-            x: rect.x, y: rect.y, width: rect.width, height: rect.height,
-        }, { spring: 'smooth' }, this._cleanup);
+        preview.set_position(rect.x, rect.y);
+        preview.set_size(rect.width, rect.height);
+        if (this._ctx.motion.env.reducedMotion) {
+            // No movement or scaling: it appears in place, with the fade below
+            Object.assign(preview, { translation_x: 0, translation_y: 0, scale_x: 1, scale_y: 1 });
+        } else {
+            Object.assign(preview, previewTransform(from, rect));
+            this._anim = this._ctx.motion.springs(preview, {
+                translation_x: 0, translation_y: 0, scale_x: 1, scale_y: 1,
+            }, { spring: PREVIEW_SPRING }, this._cleanup);
+        }
         this._fade?.cancel();
         this._fade = this._ctx.motion.spring(preview, 'opacity', 255, { spring: 'quick' }, this._cleanup);
     }
@@ -267,8 +297,11 @@ export class TileDrag {
         this._fade = this._ctx.motion.spring(preview, 'opacity', 0, {
             spring: 'quick',
             onDone: finished => {
-                if (finished && !this._shown)
+                if (finished && !this._shown) {
+                    this._anim?.cancel();
+                    this._anim = null;
                     preview.hide();
+                }
             },
         }, this._cleanup);
     }

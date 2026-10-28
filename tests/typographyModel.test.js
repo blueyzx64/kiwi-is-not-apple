@@ -1,6 +1,7 @@
 // Run: gjs -m tests/typographyModel.test.js
 import {
-    MACOS_RENDERING, fontSize, parseFcList, pickFamily, plan, withFamily,
+    HIDPI_SUBPIXEL, MACOS_RENDERING, SMOOTHING, STANDARD_GRAYSCALE, STANDARD_RENDERING, UI_FAMILIES, fontSize, parseFcList, pickFamily, plan,
+    renderingFor, withFamily,
 } from '../features/typography/model.js';
 
 let failed = 0;
@@ -46,6 +47,56 @@ test('the user\'s size is kept, styles in the family dropped', () => {
 
 test('macOS rendering: unhinted, grayscale', () => {
     eq(MACOS_RENDERING, { 'font-hinting': 'none', 'font-antialiasing': 'grayscale' });
+});
+
+test('UI font: SF Pro Text (the small optical size) before the SF Pro variable font', () => {
+    eq(UI_FAMILIES[0], 'SF Pro Text');
+    eq(plan(['SF Pro', 'SF Pro Display', 'SF Pro Text', 'Inter Variable']).ui, 'SF Pro Text');
+    eq(plan(['SF Pro', 'SF Pro Display', 'Inter Variable']).ui, 'SF Pro');
+    eq(plan(['SF Pro Display', 'Inter Variable']).ui, 'Inter Variable');
+});
+
+test('Automatic: slight + subpixel at scale 1, unhinted grayscale on HiDPI', () => {
+    eq(STANDARD_RENDERING, { 'font-hinting': 'slight', 'font-antialiasing': 'rgba' });
+    const low = renderingFor({ scales: [1] });
+    eq([low.hinting, low.antialiasing, low.dpi, low.hidpi], ['slight', 'rgba', 96, false]);
+    eq(low.values, STANDARD_RENDERING);
+    const hi = renderingFor({ scales: [2] });
+    eq([hi.hinting, hi.antialiasing, hi.dpi, hi.hidpi], ['none', 'grayscale', 192, true]);
+    eq(hi.values, MACOS_RENDERING);
+    // Fractional: 1.25 is a standard screen, 1.5 and up HiDPI
+    eq(renderingFor({ scales: [1.25] }).hinting, 'slight');
+    eq(renderingFor({ scales: [1.5] }).hinting, 'none');
+    eq(renderingFor({ scales: [1.75] }).antialiasing, 'grayscale');
+    // Same tables every time: the adapter compares them by identity
+    if (renderingFor({ scales: [1] }).values !== renderingFor({ scales: [1.25] }).values)
+        throw new Error('values must be the shared frozen table');
+});
+
+test('Font Smoothing: subpixel and grayscale force the antialiasing, hinting follows density', () => {
+    eq(renderingFor({ scales: [1], smoothing: 'grayscale' }).values, STANDARD_GRAYSCALE);
+    eq(renderingFor({ scales: [2], smoothing: 'grayscale' }).values, MACOS_RENDERING);
+    eq(renderingFor({ scales: [1], smoothing: 'subpixel' }).values, STANDARD_RENDERING);
+    eq(renderingFor({ scales: [2], smoothing: 'subpixel' }).values, HIDPI_SUBPIXEL);
+    eq(renderingFor({ scales: [1], smoothing: 'bogus' }).values, STANDARD_RENDERING);
+    eq(renderingFor({ scales: [2], smoothing: undefined }).values, MACOS_RENDERING);
+    eq(SMOOTHING, ['automatic', 'subpixel', 'grayscale']);
+});
+
+test('rendering: the least dense monitor decides; text scaling counts as density', () => {
+    eq(renderingFor({ scales: [2, 1] }).hinting, 'slight');
+    eq(renderingFor({ scales: [2, 1.5] }).hinting, 'none');
+    eq(renderingFor({ scales: [1], textScale: 1.25 }).hinting, 'slight');
+    eq(renderingFor({ scales: [1], textScale: 1.5 }).hinting, 'none');
+    eq(renderingFor({ scales: [1.25], textScale: 1.25 }).dpi, 150);
+});
+
+test('rendering: no or bad input falls back to a standard screen', () => {
+    eq(renderingFor({ scales: [] }).hinting, 'slight');
+    eq(renderingFor({}).hinting, 'slight');
+    eq(renderingFor().hinting, 'slight');
+    eq(renderingFor({ scales: [0, NaN, -1] }).dpi, 96);
+    eq(renderingFor({ scales: [2], textScale: 0 }).dpi, 192);
 });
 
 if (failed) {

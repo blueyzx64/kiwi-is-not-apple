@@ -5000,13 +5000,42 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
 
 /* feature: window-tiling */
 
-/* The drag outline. lib/glass.js gives it Kiwi's faux glass (overlays surface); this is the
- * plain translucent outline it keeps when glass is off. No box-shadow: St draws the blurred
- * shadow of a resizing actor as a rectangle. It sits just below the dragged window. */
+/* The drop preview (drag.js): a translucent rounded fill tinted with the accent colour, a
+ * clear accent border and a soft shadow, just below the dragged window. Its size changes only
+ * when the zone does (it flies by transform), so St renders the rounded shadow once per zone.
+ * The shadow is made from the fill's alpha, so it stays soft and does not darken the wallpaper
+ * much through the fill. Classes from lib/glass.js env: -light/-dark (colour scheme),
+ * -contrast (Increase Contrast or high contrast), -opaque (Reduce Transparency). */
 .kiwi-tile-preview {
-  border-radius: 12px;
-  background-color: rgba(240, 240, 244, 0.28);
-  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 14px;
+  border: 2px solid st-transparentize(-st-accent-color, 0.1);
+  background-color: st-transparentize(st-mix(-st-accent-color, #1c1c1e, 55%), 0.5);
+  box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.45);
+}
+
+.kiwi-tile-preview.kiwi-tile-preview-dark {
+  border-color: st-transparentize(st-mix(-st-accent-color, #ffffff, 60%), 0.05);
+  background-color: st-transparentize(st-mix(-st-accent-color, #1c1c1e, 55%), 0.5);
+}
+
+.kiwi-tile-preview.kiwi-tile-preview-light {
+  border-color: st-transparentize(-st-accent-color, 0.08);
+  background-color: st-transparentize(st-mix(-st-accent-color, #ffffff, 40%), 0.5);
+  box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.32);
+}
+
+/* Reduce Transparency: a nearly solid fill (the dragged window still sits on top of it) */
+.kiwi-tile-preview.kiwi-tile-preview-opaque.kiwi-tile-preview-dark {
+  background-color: st-transparentize(st-mix(-st-accent-color, #242428, 35%), 0.08);
+}
+
+.kiwi-tile-preview.kiwi-tile-preview-opaque.kiwi-tile-preview-light {
+  background-color: st-transparentize(st-mix(-st-accent-color, #f6f6f8, 30%), 0.08);
+}
+
+/* Increase Contrast: a thicker, fully opaque accent edge */
+.kiwi-tile-preview.kiwi-tile-preview-contrast {
+  border: 3px solid -st-accent-color;
 }
 
 /* The snap bar of the drag (snapBar.js, Windows 11 Snap Layouts). lib/glass.js gives the bar its

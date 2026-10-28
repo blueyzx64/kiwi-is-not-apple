@@ -8,7 +8,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Gtk from 'gi://Gtk';
 
-import { switchRow } from '../../prefs/widgets.js';
+import { comboRow, switchRow } from '../../prefs/widgets.js';
 import { INTER_PACKAGE, MONO_FAMILIES, UI_FAMILIES, pickFamily } from './model.js';
 
 // GNOME Software's session service: it asks before installing anything
@@ -32,14 +32,23 @@ export function buildPrefs({ settings, extension }) {
         description: _('Fonts and text rendering for the whole desktop, like macOS. Your own choices come back when these go off.'),
     });
     group.add(switchRow(settings, _('macOS Text Rendering'),
-        _('Smooth, unhinted letters with grayscale antialiasing, as on a Mac'),
+        _('Set for your screen: light hinting with smooth subpixel edges on standard screens, unhinted as on a Mac on HiDPI screens'),
         'macos-text-rendering'));
+    const smoothing = comboRow(settings, {
+        title: _('Font Smoothing'),
+        subtitle: _('Automatic: subpixel on standard screens, grayscale on HiDPI. Grayscale avoids colour fringes. GTK 4 apps always use grayscale'),
+        key: 'macos-font-smoothing',
+        values: ['automatic', 'subpixel', 'grayscale'],
+        labels: [_('Automatic'), _('Subpixel'), _('Grayscale')],
+    });
+    settings.bind('macos-text-rendering', smoothing, 'sensitive', Gio.SettingsBindFlags.GET);
+    group.add(smoothing);
     const font = switchRow(settings, _('macOS Font'), '', 'macos-font');
     group.add(font);
 
     const install = new Adw.ActionRow({
         title: _('Install Inter'),
-        subtitle: _('The open typeface drawn after San Francisco. SF Pro is used instead when you install it yourself.'),
+        subtitle: _('The open typeface drawn after San Francisco. SF Pro Text (or SF Pro) is used instead when you install it yourself.'),
     });
     const button = new Gtk.Button({ label: _('Install'), valign: Gtk.Align.CENTER });
     button.add_css_class('suggested-action');
@@ -53,7 +62,7 @@ export function buildPrefs({ settings, extension }) {
         const mono = pickFamily(families, MONO_FAMILIES);
         font.subtitle = ui
             ? (mono ? _('Uses %s, and %s for code').replace('%s', ui).replace('%s', mono) : _('Uses %s').replace('%s', ui))
-            : _('Needs SF Pro or Inter: install one to use it');
+            : _('Needs SF Pro Text, SF Pro or Inter: install one to use it');
         install.visible = !ui;
     };
     sync();

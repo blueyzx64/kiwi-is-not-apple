@@ -2,6 +2,7 @@
 import {
     ZONES, ARRANGEMENTS, parseAction, zoneRect, centerRect, placeIn, hitZone, dropZone, planArrangement, needsDwell, nearRect,
     untileRect, rectChanged, TileBook, SHORTCUTS, pickBindable, TILE_MARGIN, EDGE_PX,
+    previewTransform, previewVisualRect, previewClasses, titleMenuItems,
 } from '../features/windows/model.js';
 import { planHide, HiddenApps, HIDE_MODES } from '../features/windows/hideModel.js';
 import { EVENTS } from '../core/events.js';
@@ -312,6 +313,45 @@ test('HiddenApps survives a disable through toJSON/from', () => {
     const back = HiddenApps.from(h.toJSON(), id => id !== 3);
     eq(back.toJSON(), [['ed', [1]], ['files', [2]]]);
     eq(HiddenApps.from([['x', [9]]], () => false).apps(), []);
+});
+
+test('drop preview: drawn from the window frame by a transform that springs to identity', () => {
+    const zone = zoneRect('left', AREA);
+    const frame = { x: 300, y: 200, width: 320, height: 348 };
+    const t = previewTransform(frame, zone);
+    eq(t, { translation_x: 300, translation_y: 168, scale_x: 0.5, scale_y: 0.5 });
+    eq(previewVisualRect(zone, t), frame);
+    eq(previewVisualRect(zone, { translation_x: 0, translation_y: 0, scale_x: 1, scale_y: 1 }), zone);
+    // Mid-flight to another zone: from where it is drawn now
+    const mid = previewVisualRect(zone, { translation_x: 150, translation_y: 84, scale_x: 0.75, scale_y: 0.75 });
+    const next = zoneRect('top-right', AREA);
+    eq(previewVisualRect(next, previewTransform(mid, next)), mid);
+    // Degenerate sizes never give a zero or infinite scale
+    eq(previewTransform({ x: 0, y: 0, width: 0, height: 10 }, { x: 0, y: 0, width: 10, height: 0 }).scale_x, 1);
+});
+
+test('title bar Move & Resize: every action parses; restore only when there is a previous size', () => {
+    eq(titleMenuItems({ tileable: false, canRestore: true }), null);
+    const items = titleMenuItems({ tileable: true, canRestore: false });
+    const actions = items.filter(i => !i.separator).map(i => i.action);
+    for (const a of actions) {
+        if (!parseAction(a))
+            throw new Error(`${a} is not a tiling action`);
+    }
+    eq(actions.slice(0, 4), ['left', 'right', 'top', 'bottom']);
+    eq(actions.includes('restore'), false);
+    const withRestore = titleMenuItems({ tileable: true, canRestore: true });
+    eq(withRestore.at(-1).action, 'restore');
+    // Every entry has a label, except plain separators
+    eq(withRestore.filter(i => !i.separator && !i.label).length, 0);
+});
+
+test('drop preview: classes follow the colour scheme, Increase Contrast, Reduce Transparency', () => {
+    eq(previewClasses({ dark: true }), ['kiwi-tile-preview-dark']);
+    eq(previewClasses({ dark: false }), ['kiwi-tile-preview-light']);
+    eq(previewClasses({ dark: false, contrast: true, opaque: true }),
+        ['kiwi-tile-preview-light', 'kiwi-tile-preview-contrast', 'kiwi-tile-preview-opaque']);
+    eq(previewClasses(undefined), ['kiwi-tile-preview-dark']);
 });
 
 if (failed) {

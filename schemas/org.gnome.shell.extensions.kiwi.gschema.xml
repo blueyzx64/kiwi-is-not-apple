@@ -450,7 +450,7 @@
       <key name="windows-tile-drag-modifier" type="b">
         <default>true</default>
         <summary>Hold Alt while dragging windows to tile</summary>
-        <description>While Alt (the macOS Option key) is held during a drag, the half outlines show at once, without reaching the edge.</description>
+        <description>While Alt (the macOS Option key) is held during a drag, the half previews show at once, without reaching the edge.</description>
       </key>
       <key name="windows-tile-margins" type="b">
         <default>false</default>
@@ -663,12 +663,18 @@
       <key name="macos-text-rendering" type="b">
         <default>true</default>
         <summary>macOS text rendering</summary>
-        <description>Draw text unhinted with grayscale antialiasing, as macOS does. Sets GNOME's font-hinting and font-antialiasing while Kiwi runs and gives yours back when it stops. Choosing another rendering in GNOME Tweaks turns this off.</description>
+        <description>Render text for the screen in use: on HiDPI screens (scale 1.5 and up) unhinted with grayscale antialiasing, as a Retina Mac does; on standard screens slightly hinted with subpixel antialiasing, the ClearType-like look that is sharp and smooth at about 96 dpi (Font Smoothing can change the antialiasing). Re-chosen when monitors or text scaling change. Sets GNOME's font-hinting and font-antialiasing while Kiwi runs and gives yours back when it stops. Choosing another rendering in GNOME Tweaks turns this off.</description>
+      </key>
+      <key name="macos-font-smoothing" type="s">
+        <choices><choice value="automatic"/><choice value="subpixel"/><choice value="grayscale"/></choices>
+        <default>'automatic'</default>
+        <summary>Font smoothing</summary>
+        <description>The antialiasing macOS text rendering uses. "automatic": subpixel on standard screens, grayscale on HiDPI screens. "subpixel": subpixel everywhere (the colour order is GNOME's font-rgba-order). "grayscale": grayscale everywhere, no colour fringes. GTK 4 apps always draw grayscale.</description>
       </key>
       <key name="macos-font" type="b">
         <default>true</default>
         <summary>macOS font</summary>
-        <description>Use SF Pro when installed, else Inter, as the interface and document font at your own size (and SF Mono as the monospace font when installed). Nothing changes while neither is installed. Your fonts come back when this goes off or Kiwi stops; choosing another font in GNOME Tweaks turns this off.</description>
+        <description>Use SF Pro Text when installed (the optical size Apple draws below 20 pt), else SF Pro, else Inter, as the interface and document font at your own size (and SF Mono as the monospace font when installed). Nothing changes while neither is installed. Your fonts come back when this goes off or Kiwi stops; choosing another font in GNOME Tweaks turns this off.</description>
       </key>
       <key name="appearance-icon-style" type="s">
         <choices>
@@ -1931,8 +1937,8 @@
       </key>
       <key name="show-tiling-title-menu" type="b">
         <default>true</default>
-        <summary>(Deprecated, unused) Add Tiling Layouts to the Window Title Menu</summary>
-        <description>Add window tiling layouts to the menu opened from the window title in the panel. Available for any focused window, including windows that are not maximized.</description>
+        <summary>Move &amp; Resize in the title bar menu</summary>
+        <description>Add macOS 15's green-button tiles (halves, quarters, Fill, Center, Fill &amp; Arrange, Return to Previous Size) as a Move &amp; Resize submenu of the menu a window's title bar opens on right-click or Alt+Space. The green button itself is drawn by the app, so the Shell cannot open a menu when it is hovered. Needs Tile Windows.</description>
       </key>
       <key name="panel-hover-fullscreen" type="b">
         <default>true</default>

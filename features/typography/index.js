@@ -1,8 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Typography (registry id 'typography', always running; each part has its own key):
-// - macOS text rendering (macos-text-rendering): unhinted glyphs with grayscale antialiasing,
-//   as macOS draws them. Owns org.gnome.desktop.interface font-hinting and font-antialiasing.
-// - macOS font (macos-font): SF Pro when installed, else Inter, for the interface and
+// - macOS text rendering (macos-text-rendering): hinting and antialiasing chosen by screen
+//   density (model.js renderingFor) and the Font Smoothing choice (macos-font-smoothing):
+//   Automatic is slight hinting with subpixel antialiasing on a standard ~96 dpi screen
+//   (ClearType-like; unhinted text is blurry there) and unhinted grayscale on HiDPI, as macOS
+//   draws on Retina. Re-chosen when the monitors, the text scaling or the choice change. Owns
+//   org.gnome.desktop.interface font-hinting and font-antialiasing (font-rgba-order stays the
+//   user's). Leaves font-rendering alone: at its default ('automatic') GTK 4 always draws
+//   slight + grayscale, and 'manual' would not give it subpixel either (see model.js).
+// - macOS font (macos-font): SF Pro Text when installed (else SF Pro), else Inter, for the interface and
 //   document fonts at the user's own size; SF Mono for the monospace font when installed.
 //   Owns font-name, document-font-name (and monospace-font-name). Nothing is set while
 //   neither family is installed; installing one (the preferences offer Inter) applies it.
@@ -15,13 +21,14 @@
 
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import { KiwiSettings } from '../../lib/settings.js';
 import { SettingOwner } from '../../core/originals.js';
-import { MACOS_RENDERING, parseFcList, plan, withFamily } from './model.js';
+import { parseFcList, plan, renderingFor, withFamily } from './model.js';
 
 const IFACE_SCHEMA = 'org.gnome.desktop.interface';
-const KEYS = { rendering: 'macos-text-rendering', font: 'macos-font' };
+const KEYS = { rendering: 'macos-text-rendering', smoothing: 'macos-font-smoothing', font: 'macos-font' };
 const FONT_DIRS = () => ['/usr/share/fonts', GLib.build_filenamev([GLib.get_user_data_dir(), 'fonts'])];
 /** An install writes many files: one scan after the burst. */
 const RESCAN_DELAY_MS = 2000;
@@ -38,6 +45,7 @@ export class Typography {
         this._rendering = [];   // SettingOwners of the rendering keys
         this._fonts = [];       // SettingOwners of the font keys
         this._plan = { ui: null, mono: null };
+        this._renderingNow = renderingFor({ scales: [1] });
         this._cancellable = null;
         this._rescan = 0;
     }
@@ -55,7 +63,13 @@ export class Typography {
         });
 
         this._ks.watch(KEYS.rendering, () => this._syncRendering());
+        this._ks.watch(KEYS.smoothing, () => this._syncDensity());
         this._ks.watch(KEYS.font, () => this._syncFonts());
+        // Monitor scales are not part of core/desktop's MonitorInfo: read them from the
+        // layout manager, which re-emits monitors-changed on a scale change too
+        cleanup.connect(Main.layoutManager, 'monitors-changed', () => this._syncDensity());
+        cleanup.connect(this._iface, 'changed::text-scaling-factor', () => this._syncDensity());
+        this._renderingNow = this._measure();
         this._syncRendering();
         this._watchFontDirs();
         this._scan();
@@ -68,6 +82,33 @@ export class Typography {
     /** What the font part uses now (tests, harness). */
     get families() {
         return { ...this._plan };
+    }
+
+    /** The rendering chosen for the screens now (harness): {hinting, antialiasing, dpi, hidpi}. */
+    get rendering() {
+        const { hinting, antialiasing, dpi, hidpi } = this._renderingNow;
+        return { hinting, antialiasing, dpi, hidpi };
+    }
+
+    _measure() {
+        // Main.layoutManager.monitors[i].geometry_scale: the logical scale (fractional allowed)
+        const scales = (Main.layoutManager.monitors ?? []).map(m => m.geometry_scale ?? 1);
+        return renderingFor({
+            scales,
+            textScale: this._iface.get_double('text-scaling-factor'),
+            smoothing: this._ks.string(KEYS.smoothing),
+        });
+    }
+
+    _syncDensity() {
+        const next = this._measure();
+        if (next.values === this._renderingNow.values) {
+            this._renderingNow = next;
+            return;
+        }
+        this._renderingNow = next;
+        for (const owner of this._rendering)
+            owner.reapply();
     }
 
     _releaseAll(owners) {
@@ -94,8 +135,9 @@ export class Typography {
         }
         if (this._rendering.length)
             return;
-        for (const [key, value] of Object.entries(MACOS_RENDERING)) {
-            const owner = this._own(key, { value }, KEYS.rendering);
+        for (const key of Object.keys(this._renderingNow.values)) {
+            // Read at every (re)apply: the density may have changed since
+            const owner = this._own(key, { transform: () => this._renderingNow.values[key] }, KEYS.rendering);
             owner.sync(true);
             this._rendering.push(owner);
         }
