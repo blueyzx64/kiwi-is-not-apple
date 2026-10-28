@@ -37,7 +37,7 @@ import {
 import { seekTarget } from './dashboardModel.js';
 import { NotchView } from './view.js';
 import { Shelf } from './shelf.js';
-import { ShelfHelper } from './shelfHelper.js';
+import { DragHelper } from '../../lib/dragHelper.js';
 import { watchDrops } from './drop.js';
 import { dropZone } from './model.js';
 import { watchPower } from './sources/power.js';
@@ -152,7 +152,7 @@ export class NotchFeature {
 
         this._shelf = new Shelf(cleanup, ks, () => this._sync(), this._ctx.events);
         // Dragging a tile out of the shelf: the helper (if installed) puts a window over the tiles
-        this._shelfHelper = new ShelfHelper(cleanup, {
+        this._shelfHelper = new DragHelper(cleanup, {
             onClick: uri => this._shelfAction(uri === this._selected ? 'open' : 'select', uri),
             onHover: on => this._view.setHelperHover(on),
             onDrag: on => this._view.setDragging(on),

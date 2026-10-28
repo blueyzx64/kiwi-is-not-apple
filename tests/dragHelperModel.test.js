@@ -1,6 +1,6 @@
-// Run: gjs -m tests/shelfHelperModel.test.js
-// features/notch/shelfHelperModel.js: talking to the shelf drag-out helper.
-import { HELPER, CLEAR_LINE, isHelperWindow, layoutOf, parseEvent, pointerOnNotch, dragIconName } from '../features/notch/shelfHelperModel.js';
+// Run: gjs -m tests/dragHelperModel.test.js
+// lib/dragHelperModel.js: talking to the drag-out helper (notch shelf, dock stacks).
+import { DROP, HELPER, CLEAR_LINE, dropPlan, isHelperWindow, layoutOf, parseEvent, pointerOnNotch, dragIconName } from '../lib/dragHelperModel.js';
 
 let failed = 0;
 function test(name, fn) {
@@ -60,6 +60,32 @@ test('drag icon: first themed name, else empty', () => {
     eq(dragIconName({ get_names: () => ['text-x-generic', 'text-x'] }), 'text-x-generic');
     eq(dragIconName({}), '');
     eq(dragIconName(null), '');
+});
+
+const MON = { x: 0, y: 0, width: 1920, height: 1080 };
+const inside = (b, [x, y]) => x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h;
+
+test('drop plan: press on the helper beside the drop point, path ends on the point', () => {
+    const p = dropPlan({ x: 700, y: 400 }, MON);
+    eq(p.box, { x: 728, y: 388, w: DROP.size, h: DROP.size });
+    eq(inside(p.box, p.press), true, 'press on the helper');
+    eq(p.path.length, DROP.steps);
+    eq(p.path[p.path.length - 1], [700, 400]);
+    // The drop point itself is not under the helper: the drop goes to what lies there
+    eq(inside(p.box, [700, 400]), false);
+    // Past GTK's drag threshold before the end
+    const [x0, y0] = p.press;
+    const [x1, y1] = p.path[1];
+    eq(Math.hypot(x1 - x0, y1 - y0) > 8, true);
+});
+
+test('drop plan: at the right edge the helper goes left; it stays on the monitor', () => {
+    const p = dropPlan({ x: 1915, y: 1078 }, MON);
+    eq(p.box.x + p.box.w <= 1920 && p.box.y + p.box.h <= 1080, true, 'on the monitor');
+    eq(p.box.x < 1915, true, 'to the left');
+    eq(inside(p.box, [1915, 1078]), false);
+    const second = dropPlan({ x: 20, y: 5 }, { x: 1920, y: 0, width: 1280, height: 1024 });
+    eq(second.box.x >= 1920 && second.box.y >= 0, true, 'second monitor');
 });
 
 if (failed)

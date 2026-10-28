@@ -18,7 +18,7 @@ import { trackProgress, seekTarget, formatClock } from './dashboardModel.js';
 export { DASH_SIZE } from './dashboardModel.js';
 import { nowRows } from './model.js';
 import { row as activityRow } from './pills.js';
-import { dragIconName } from './shelfHelperModel.js';
+import { dragIconName } from '../../lib/dragHelperModel.js';
 
 const WIDTH = Object.freeze({ hero: 340, list: 248, clipboard: 196, inner: 608 });
 const SHELF_VISIBLE = 8;

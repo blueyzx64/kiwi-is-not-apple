@@ -8,7 +8,7 @@
 //     text/uri-list) or a copied path;
 //   - finished downloads (notch-shelf-downloads) and new screenshots (notch-shelf-screenshots).
 // Dragging out of the Shell into an app is not possible for a Shell actor (it cannot start a
-// Wayland drag). With the separate kiwi-shelf-helper package installed, shelfHelper.js puts the
+// Wayland drag). With the separate kiwi-shelf-helper package installed, lib/dragHelper.js puts the
 // helper's window over the tiles and the drag starts there. Either way items also give
 // themselves back with Open, Show in Files, Copy (a text/uri-list on the clipboard, which Files
 // and GTK apps paste as the file) and Remove.

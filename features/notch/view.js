@@ -328,7 +328,7 @@ export class NotchView {
 
     // ---- shelf drag-out -------------------------------------------------------------------
     // A Shell actor cannot start a Wayland drag, so index.js runs the shelf helper
-    // (shelfHelper.js), whose transparent window goes exactly over the shelf's tiles. Once
+    // (lib/dragHelper.js), whose transparent window goes exactly over the shelf's tiles. Once
     // that window is placed, setShelfDrag(true) lets presses on the tiles fall through to it:
     // the island and the tiles stop taking input there, an input plate under the island takes
     // over everywhere else on the dashboard (clicks and hover), and the outside-click layer

@@ -6,8 +6,7 @@
 // Where a window goes:
 //   1. a target provider (setTargetProvider: Stage Manager sends windows to its strip)
 //   2. the dock (ctx.features.instance('dock').minimizeTarget(win)): its app icon or the
-//      minimized-window slot; on restore, the window's icon geometry (the dock keeps it on
-//      the window's own tile)
+//      minimized-window slot; on restore dock.restoreSource(win), the same place
 //   3. the window's icon geometry, set by whatever dock runs
 // With no target, or for windows another feature set aside (core/windowState flags), GNOME's
 // own effect runs: Kiwi animates only the windows it chose.
@@ -31,7 +30,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import { KiwiSettings } from '../../lib/settings.js';
 import { WindowState } from '../../core/windowState.js';
-import { GenieEffect } from './genie.js';
+import { GENIE_PAD, GenieEffect } from './genie.js';
 import { chooseMode, genieFrame, genieOpacity, readConfig, scaleTarget } from './model.js';
 
 const EFFECT_NAME = 'kiwi-genie';
@@ -104,9 +103,11 @@ export class MinimizeEffect {
                 console.error('[Kiwi] minimize effect: target provider failed:', e.message);
             }
         }
+        // The dock's live layout: the app's icon (pinned or running only, magnified or not)
+        // or the window's tile; a restore comes out of the same place
         const dock = this._ctx.features.instance('dock');
-        if (dock && !restoring) {
-            const rect = dock.minimizeTarget(win);
+        if (dock) {
+            const rect = restoring ? dock.restoreSource?.(win) : dock.minimizeTarget(win);
             if (rect)
                 return { rect, edge: dock.position };
         }
@@ -220,15 +221,17 @@ export class MinimizeEffect {
         }
         const rect = { x: actor.x, y: actor.y, width: actor.width, height: actor.height };
         const t = target.rect;
-        // The container the funnel is drawn in: the window and the target, in whole pixels
-        const x1 = Math.floor(Math.min(rect.x, t.x));
-        const y1 = Math.floor(Math.min(rect.y, t.y));
+        // The container the funnel is drawn in: the window and the target, in whole pixels,
+        // with a transparent border the funnel's filtered edges fade into
+        const x1 = Math.floor(Math.min(rect.x, t.x)) - GENIE_PAD;
+        const y1 = Math.floor(Math.min(rect.y, t.y)) - GENIE_PAD;
         const reach = {
             x: x1, y: y1,
-            width: Math.ceil(Math.max(rect.x + rect.width, t.x + t.width)) - x1,
-            height: Math.ceil(Math.max(rect.y + rect.height, t.y + t.height)) - y1,
+            width: Math.ceil(Math.max(rect.x + rect.width, t.x + t.width)) + GENIE_PAD - x1,
+            height: Math.ceil(Math.max(rect.y + rect.height, t.y + t.height)) + GENIE_PAD - y1,
         };
-        const effect = new GenieEffect(genieFrame(target.edge, rect, t), reach);
+        const scale = global.display.get_monitor_scale(win.get_monitor());
+        const effect = new GenieEffect(genieFrame(target.edge, rect, t), reach, scale);
         const container = new Clutter.Actor({ x: reach.x, y: reach.y, width: reach.width, height: reach.height });
         container.add_child(new Clutter.Clone({
             source: actor, x: rect.x - reach.x, y: rect.y - reach.y, width: rect.width, height: rect.height,
