@@ -23,7 +23,7 @@
 6. [Phased plan](#6-phased-plan)
 7. [Coding rules for every change](#7-coding-rules-for-every-change)
 8. [Testing matrix](#8-testing-matrix)
-9. [Open questions for the owner](#9-open-questions-for-the-owner)
+9. [Open questions for the owner](#9-owner-decisions-answered)
 
 Skills to load while working: `gnome-shell-extension` (Shell APIs, version facts),
 `gjs` (the language), `clean-architecture` (layering details), `apple-design` (look and

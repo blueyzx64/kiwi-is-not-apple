@@ -1,52 +1,16 @@
 # Liquid Glass
 
-## 1. Summary
-A shell-wide frosted, translucent style for the top bar, menus, Control Center,
-notifications and the notch's surroundings, dock, Spotlight, Clipboard and the Stage
-Manager strip. One switch turns it all off.
+## What it does
+One translucent look for Kiwi's surfaces: a tint with a soft sheen, a thin rim and a shadow. Plain transparency, **no blur**, so it costs little. Registry id `liquid-glass` (key `liquid-glass`, on). Code: `lib/glass.js` (the service), `features/liquidGlass/`, CSS in `styles/base.css`.
 
-## 2. Locked decisions
-- **UX round 1 (owner, Fedora 44):** plain transparency only. No blur and no shader layers.
-  The glass is a translucent fill on the surface actor itself (`kiwi-glass-*` classes), so
-  it follows the surface's own rounded corners; a separate layer behind a rounded surface
-  showed as a rectangle. The Blur slider now sets frost (a little more opacity); the
-  performance and refraction keys stay in the schema but do nothing. Sections below that
-  describe blur layers are history.
-- It must be possible to turn it off. Off means solid surfaces that look the same as today.
-- It covers shell surfaces only. App windows stay opaque on GNOME 48–50. GNOME 51's
-  Mutter adds `global.compositor.set_background_blur_params()` (background-effect
-  protocol). Blur behind app windows on 51 is a **possible v2**: investigate it, don't promise it.
-- It takes over the existing Panel Blur and Dock Blur while it is on, so there is never a
-  double blur.
+## Use
+- **Surfaces (`liquid-glass-surfaces`, default `panel`, `menus`, `dock`, `overlays`):** menu bar; menus, Control Center and calendar; dock; Spotlight, clipboard and the Stage Manager floor.
+- **Clear to Tinted (`glass-tint`, 0):** Clear is more see-through, Tinted more opaque and easier to read.
+- **`glass-wallpaper-tint` (on):** a little of the wallpaper's average colour shows through. **`glass-noise` (off):** a faint grain instead of the top-to-bottom sheen.
+- **Accessibility:** `glass-reduce-transparency` (opaque, no wallpaper tint), `glass-increase-contrast` (opaque, flat, strong borders), `glass-show-borders` (all off). GNOME's High Contrast also makes Kiwi surfaces solid.
+- Off gives every surface its solid theme colour.
 
-## 3. UI
-- Layers, from the back: blur of what is behind → tint (light or dark, following
-  `color-scheme`) → a 1px inner highlight on the top edge → a soft drop shadow.
-  St draws only **one** `box-shadow` per element, so the highlight and the drop shadow go
-  on separate actors (a wrapper plus an inner child). `lib/glass.js` builds that structure.
-- Style: **Tinted** (default, easier to read) or **Clear**.
-- Corner radii are concentric (inner radius = outer − padding). Exact tokens are in the `apple-design` skill and override the canvas mock-ups.
-- Refraction at the edges (GLSL) is **experimental and off by default**. GNOME 51 removed
-  `Shell.GLSLEffect` and moved `Clutter.ShaderEffect` to Cogl snippets, so refraction needs
-  a per-version path in `lib/compat.js` (see the `gnome-shell-extension` skill's
-  `blur-shaders-and-effects.md`).
-- Performance mode blurs a still copy of the wallpaper instead of the live screen.
-  It turns on automatically in Power Saver when the user chose that.
-
-## 4. Settings (proposed)
-`liquid-glass` b=true · `liquid-glass-style` s=`tinted` · `liquid-glass-blur` i=30 ·
-`liquid-glass-tint` i=55 · `liquid-glass-highlight` b=true · `liquid-glass-refraction` b=false ·
-`liquid-glass-surfaces` as=`['panel','menus','dock','overlays']` · `liquid-glass-performance` b=false ·
-`liquid-glass-off-in-powersave` b=true
-
-## 5. Interactions
-- When Blur my Shell is detected, show a notice in the preferences. Never fight it at runtime.
-  Its master branch now ships its own "Liquid Glass" effect, so the two overlap directly.
-- Every new surface (features 3–8) must take its style from the shared glass helper
-  (`lib/glass.js`, see the architecture doc), never its own copy.
-- Accessibility: honour high-contrast. When it is on, use solid surfaces.
-
-## 6. Acceptance
-- [ ] Toggling it on and off at runtime leaves no effects, actors or CSS classes behind.
-- [ ] Text contrast is ≥ 4.5:1 over the worst-case wallpaper in Tinted style.
-- [ ] No frame drops on Intel integrated graphics with all surfaces on, in Performance mode.
+## Limits
+- The glass is a fill on the surface actor itself (`kiwi-glass-*` classes), so it follows rounded corners. App windows stay opaque.
+- Another extension that blurs the same surfaces overlaps with it; use one of them per surface. Kiwi never changes that extension.
+- The older blur keys remain in the schema as deprecated and unused.

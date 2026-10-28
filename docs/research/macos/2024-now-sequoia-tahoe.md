@@ -60,7 +60,7 @@ overhaul plan §2 and §5.8). Every Liquid Glass entry below says how to imitate
   - **Later 15.x:** Mail categorisation, more languages, the Sketch style in Image Playground.
 - **Hardware:** Apple Silicon and some Intel Macs. Apple Intelligence needs an M1 or later.
 - **Also changed:** you can no longer Control-click to bypass Gatekeeper for unsigned apps. Users now go through
-  Privacy & Security, then Open Anyway. This matters for the installer study (`installer-and-app-lifecycle.md`).
+  Privacy & Security, then Open Anyway.
 
 ### macOS 26 Tahoe (version 26, 2025)
 - **Dates:** announced at WWDC on 9 June 2025, released on 15 September 2025. Latest update: 26.7.1

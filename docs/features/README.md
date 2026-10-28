@@ -1,46 +1,34 @@
-# Planned features: locked specs
+# Kiwi features
 
-> **Read this page first.** It lists every planned feature in one line each. Open a
-> feature file only when you are working on that feature. Each feature file has the
-> same sections in the same order, so you can jump straight to the one you need.
+One page per area: what it does, how to use it, its settings with defaults, its limits and the main code. Every feature can be turned off in Kiwi's preferences. Defaults are read from `schemas/org.gnome.shell.extensions.kiwi.gschema.xml`; feature ids are in `features.js`.
 
-Interactive design canvas (source of truth for the look):
-https://claude.ai/artifact/PJTdauCxK1VKQvpXditZpz (private to the repo owner until shared)
+| Area | Page | Registry ids |
+|---|---|---|
+| Menu bar, status items | [menu-bar.md](menu-bar.md) | `menu-bar`, `menu-bar-items`, `calendar`, `quick-settings-notifications`, `dnd-button` |
+| App menus | [app-menus.md](app-menus.md) | `menu-bar` (via `core/appMenus`) |
+| Window controls, green-button menu | [window-controls.md](window-controls.md) | `window-controls`, `app-buttons`, `gtk-theme` |
+| Tiling, Hide, full screen, Split View, Show Desktop | [windows.md](windows.md) | `window-tiling`, `app-hide`, `move-window-to-new-workspace`, `split-view`, `show-desktop` |
+| Rounded corners | [rounded-corners.md](rounded-corners.md) | `rounded-corners` |
+| Dock, Genie and Scale minimize | [dock.md](dock.md) | `dock`, `minimize-effect` |
+| Stage Manager | [stage-manager.md](stage-manager.md) | `stage-manager` |
+| Mission Control, Launchpad, app switcher, gestures, hot corners | [mission-control-launchpad.md](mission-control-launchpad.md) | `mission-control`, `launchpad`, `app-switcher`, `gestures`, `hot-corners`, `shell-behaviour` |
+| Spotlight | [spotlight.md](spotlight.md) | `spotlight` |
+| Clipboard history | [clipboard.md](clipboard.md) | `clipboard-history` |
+| Control Center, Low Power Mode | [control-center.md](control-center.md) | `control-center`, `low-power` |
+| Notification Center, Focus | [notification-center-focus.md](notification-center-focus.md) | `notification-center`, `focus` |
+| Notch | [notch.md](notch.md) | `notch` |
+| Desktop widgets | [widgets.md](widgets.md) | `desktop-widgets` |
+| Desktop icons | [desktop-icons.md](desktop-icons.md) | `desktop-icons` |
+| Screenshots | [screenshots.md](screenshots.md) | `screenshots` |
+| Text cursor badges, Emoji & Symbols | [input.md](input.md) | `input-indicator`, `emoji-picker` |
+| Volume pill, glass dialogs, colour filters | [system-ui.md](system-ui.md) | `osd`, `dialogs`, `color-filters` |
+| Appearance | [appearance.md](appearance.md) | `appearance`, `popup-menu-styling` |
+| Liquid Glass | [liquid-glass.md](liquid-glass.md) | `liquid-glass` |
+| Setup Assistant | [onboarding.md](onboarding.md) | `onboarding` |
 
-| # | Feature | Spec | Size | Status |
-|---|---|---|---|---|
-| 1 | Window controls in the top bar + button-free windows | [window-controls.md](window-controls.md) | S | Merged, untested on Shell |
-| 2 | Liquid Glass (toggleable) | [liquid-glass.md](liquid-glass.md) | M | Merged, untested on Shell |
-| 3 | Clipboard history (popover + Quick Paste) | [clipboard.md](clipboard.md) | M | Merged, untested on Shell |
-| 4 | Spotlight | [spotlight.md](spotlight.md) | M–L | Merged, untested on Shell |
-| 5 | Notification notch | [notch.md](notch.md) | M–L | Merged, untested on Shell (phase 1; see notch.md §4) |
-| 6 | Control Center | [control-center.md](control-center.md) | M | Merged, untested on Shell |
-| 7 | ~~Auto-hide top bar~~ | [autohide-top-bar.md](autohide-top-bar.md) | S–M | **Removed** (UX round 1): the top bar houses the notch, so it stays on screen |
-| 8 | Stage Manager | [stage-manager.md](stage-manager.md) | L | Merged, untested on Shell |
-| 9 | Desktop icons | [desktop-icons.md](desktop-icons.md) | M | Round 2 |
+Related: [code map](../architecture/code-map.md), [how to write a feature](../architecture/conventions.md).
 
-Status words: *Merged, untested on Shell* means the code is on the integration branch and passes
-`bash tests/run.sh` and eslint, but nobody has run it on a real GNOME Shell yet. Features may still carry deferred parts; see the spec's Settings or Interactions section.
-
-Owner decisions that apply to all features:
-- **On by default.** Every new feature ships enabled; users opt out in prefs.
-- **This release: GNOME 50 on Fedora 44 Workstation only.** The 48/49/51 code paths in `lib/compat.js` stay for later releases but are not claimed.
-- Testing on a real desktop is done by the owner from each feature's manual test list.
-
-Out of scope (decided):
-- **Global menus** (File / Edit / View… of the app in the top bar): dropped.
-- **App menu:** the top bar shows only the app icon and name, as today.
-
-Build order: 1 → 2 → 3 → 4 → 7 → 6 → 5 → 8. Liquid Glass comes early so that every
-new surface is built on the shared glass helper from the start.
-
-How to build them: [../architecture/new-features-architecture.md](../architecture/new-features-architecture.md).
-
-## Sections in every spec
-1. **Summary**: what it is, in two lines
-2. **Locked decisions**: settled with the owner; do not change them without asking
-3. **UI**: states, sizes, behaviour
-4. **Settings**: proposed GSettings keys
-5. **Interactions with other features**
-6. **Acceptance checklist**
-- [Rounded window corners](rounded-corners.md): opt-in per-window corner mask (UX round 1).
+Owner decisions that apply to every feature:
+- Features are on by default unless the macOS default is off (Stage Manager, hot corners, magnification, colour filters).
+- This release supports GNOME 50 on Fedora 44 Workstation only. The 48/49/51 code paths in `lib/compat.js` stay for later.
+- Enable and disable are exact mirrors: everything a feature changes is put back.
