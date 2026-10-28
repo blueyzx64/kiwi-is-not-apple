@@ -51,6 +51,7 @@ const MENU_CLASS = 'kiwi-control-center';
 const GLASS_CLASS = 'kiwi-cc-glass';
 const CALM_CLASS = 'kiwi-cc-calm';
 const LIGHT_CLASS = 'kiwi-cc-light';
+const SHARED_LIGHT_CLASS = 'kiwi-light';
 
 export class ControlCenter {
     constructor(ctx, cleanup) {
@@ -184,6 +185,8 @@ export class ControlCenter {
             this._toggleClass(box, CALM_CLASS, !env.highContrast);
             this._toggleClass(box, GLASS_CLASS, Glass.wants('menus', settings) && !env.highContrast);
             this._toggleClass(box, LIGHT_CLASS, !env.dark);
+            // The design system's light marker (styles/base.css), for the shared controls
+            this._toggleClass(box, SHARED_LIGHT_CLASS, !env.dark);
         });
 
         // A destroyed grid (Shell shutdown, rebuilt menu) is never touched again
@@ -268,7 +271,7 @@ export class ControlCenter {
         add(this._nowPlaying.actor, 'now-playing');
 
         const edit = new St.Button({
-            style_class: 'kiwi-cc-edit-controls',
+            style_class: 'kiwi-cc-edit-controls kiwi-pill-button',
             label: gettext('Edit Controls…'),
             can_focus: true,
             x_expand: true,
@@ -527,6 +530,7 @@ export class ControlCenter {
             box?.remove_style_class_name(GLASS_CLASS);
             box?.remove_style_class_name(CALM_CLASS);
             box?.remove_style_class_name(LIGHT_CLASS);
+            box?.remove_style_class_name(SHARED_LIGHT_CLASS);
 
             restoreCompact(this._compact);
             restoreToggleIcons(this._icons);

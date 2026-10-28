@@ -21,6 +21,7 @@ import { indicatorStyle, menuWidth } from './model.js';
 const CARD_CLASS = 'kiwi-datemenu';
 const CARD_CALM_CLASS = 'kiwi-datemenu-calm';      // not under high contrast
 const CARD_LIGHT_CLASS = 'kiwi-datemenu-light';
+const SHARED_LIGHT_CLASS = 'kiwi-light';           // the design system's light marker
 const DOT_ICON = 'icons/message-indicator-symbolic.svg';
 
 export class Calendar {
@@ -93,12 +94,13 @@ export class Calendar {
         const toggle = (name, on) => (on ? box.add_style_class_name(name) : box.remove_style_class_name(name));
         box.add_style_class_name(CARD_CLASS);
         this._cleanup.add(() => {
-            for (const name of [CARD_CLASS, CARD_CALM_CLASS, CARD_LIGHT_CLASS])
+            for (const name of [CARD_CLASS, CARD_CALM_CLASS, CARD_LIGHT_CLASS, SHARED_LIGHT_CLASS])
                 box.remove_style_class_name(name);
         });
         Glass.watch(this._cleanup, ({ env }) => {
             toggle(CARD_CALM_CLASS, !env.highContrast);
             toggle(CARD_LIGHT_CLASS, !env.dark);
+            toggle(SHARED_LIGHT_CLASS, !env.dark);
         });
         for (const item of [dateMenu._clocksItem, dateMenu._weatherItem]) {
             if (item)
