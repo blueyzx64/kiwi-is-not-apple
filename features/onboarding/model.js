@@ -91,7 +91,7 @@ export const STEPS = Object.freeze([
     {
         id: 'windows', icon: 'kiwi-window-controls-symbolic',
         title: N_('Window Controls'),
-        body: N_('Close, minimize and zoom for the focused window can sit in the menu bar, at the left, as on a Mac.'),
+        body: N_('Close, minimize and zoom stay on each window and move to the menu bar, at the right, while the window is maximized or touches the menu bar.'),
         controls: [
             { type: 'switch', key: 'show-window-controls', title: N_('Window Controls in the Menu Bar') },
         ],

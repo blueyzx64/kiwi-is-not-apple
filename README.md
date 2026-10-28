@@ -35,7 +35,7 @@ Each area has a page in [docs/features](docs/features/README.md) with its settin
 ### Mission Control and Launchpad
 - Mission Control (F3, Ctrl+Up) with a Spaces bar you can add to, remove from and reorder, and App Exposé (Ctrl+Down).
 - Launchpad (Super+A, F4) with pages, search, folders and jiggle mode.
-- The app switcher (Super+Tab, and Super+` for the front app's windows), trackpad gestures and hot corners.
+- The app switcher (Super+Tab or Alt+Tab, and Super+` for the front app's windows), trackpad gestures and hot corners.
 
 ### Spotlight
 - A tap of Super opens a search for apps, files, settings, the clipboard, a calculator and the web, with `/` filters, Quick Keys, history, Quick Look and the focused app's menu items.
