@@ -41,7 +41,19 @@ export class ClipboardPopover {
 
         this._build();
         cleanup.connect(menu, 'open-state-changed', (_m, open) => this._onOpen(open));
-        cleanup.add(ctl.connectChanged(() => this._menu.isOpen && this._refresh()));
+        // Rebuild on idle: a change often comes from a row's own Pin or Remove button, and
+        // destroying that button inside its click handler aborts the Shell (Mutter 50)
+        let pending = false;
+        cleanup.add(ctl.connectChanged(() => {
+            if (pending || !this._menu.isOpen)
+                return;
+            pending = true;
+            cleanup.idle(() => {
+                pending = false;
+                if (this._menu.isOpen)
+                    this._refresh();
+            }, { name: 'clipboard-popover-refresh' });
+        }));
         cleanup.add(() => this._detachGlass());
         this._attachGlass();
         // The design system's light marker, so secondary text, pills and the search capsule take

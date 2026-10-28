@@ -129,7 +129,11 @@ export function buildRow(entry, ctl, _, { onActivate, tile = 'M', now = Date.now
         actions.opacity = 255;
     }
     // Pin and Remove show on hover or while the row holds the keyboard selection
+    let gone = false;
+    row.connect('destroy', () => (gone = true));
     const sync = () => {
+        if (gone)
+            return;
         actions.opacity = row.hover || entry.pinned || row.has_style_pseudo_class('selected') ? 255 : 0;
     };
     row.connect('notify::hover', sync);
@@ -177,7 +181,12 @@ function buildCompactRow(entry, ctl, _, { onActivate, tile, now }) {
     box.add_child(actions);
     if (entry.pinned)
         row.add_style_pseudo_class('pinned');
+    // style-changed still fires while the row is torn down, after its labels are disposed
+    let gone = false;
+    row.connect('destroy', () => (gone = true));
     const sync = () => {
+        if (gone)
+            return;
         // Hover only: the keyboard selection keeps its time, so the list stays calm
         const active = row.hover;
         actions.visible = active;

@@ -32,7 +32,18 @@ export class QuickPaste {
         this._order = [];       // entry ids in list order
         this._selected = null;
         this._ui = null;
-        cleanup.add(ctl.connectChanged(() => this._modal.isOpen && this._refresh()));
+        // Rebuild on idle, never inside a row button's click (see popover.js)
+        let pending = false;
+        cleanup.add(ctl.connectChanged(() => {
+            if (pending || !this._modal?.isOpen)
+                return;
+            pending = true;
+            cleanup.idle(() => {
+                pending = false;
+                if (this._modal.isOpen)
+                    this._refresh();
+            }, { name: 'clipboard-quick-paste-refresh' });
+        }));
         this._modal = new ModalSurface(cleanup, {
             id: 'quick-paste',
             accessibleName: _('Clipboard History'),
