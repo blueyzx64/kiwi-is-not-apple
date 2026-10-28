@@ -45,10 +45,16 @@ export class WindowHider {
         actor.remove_transition('opacity');
         actor.opacity = 0;
         Shell.util_set_hidden_from_pick(actor, true);
-        const rec = { opacity, actor, guard: 0 };
+        const rec = { opacity, actor, guard: 0, destroyed: 0 };
         rec.guard = this._cleanup.connect(actor, 'notify::opacity', () => {
             if (actor.opacity !== 0 && !actor.get_transition('opacity'))
                 actor.opacity = 0;
+        });
+        // Mutter can destroy the actor before the window's 'unmanaged' reaches us: drop the
+        // record then, so show() never touches a disposed actor
+        rec.destroyed = this._cleanup.connect(actor, 'destroy', () => {
+            if (this._records.get(win) === rec)
+                this.forget(win);
         });
         this._records.set(win, rec);
         WindowState.set(win, 'staged', true);
@@ -67,6 +73,7 @@ export class WindowHider {
             return null;
         this._records.delete(win);
         this._cleanup.release(rec.guard);
+        this._cleanup.release(rec.destroyed);
         Shell.util_set_hidden_from_pick(rec.actor, false);
         if (!keepTransparent)
             rec.actor.opacity = rec.opacity;
@@ -81,6 +88,7 @@ export class WindowHider {
             return;
         this._records.delete(win);
         this._cleanup.release(rec.guard);
+        this._cleanup.release(rec.destroyed);
         WindowState.set(win, 'staged', false);
     }
 

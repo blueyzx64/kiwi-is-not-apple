@@ -97,14 +97,15 @@ export class Gestures {
         const overview = Main.overview.visible;
         const [dx, dy] = event.get_gesture_motion_delta_unaccelerated();
         const picked = this._tracker.update(dx, dy, swipe ? 1 : event.get_gesture_pinch_scale());
-        if (picked && blocksStock(picked, this._tracker, this._config, { overview }))
+        const naturalScroll = this._touchpad.get_boolean('natural-scroll');
+        if (picked && blocksStock(picked, this._tracker, this._config, { overview, naturalScroll }))
             this._blocking = true;
         const keep = this._blocking || (!swipe && ownsPinch(fingers, this._config))
             ? Clutter.EVENT_STOP : Clutter.EVENT_PROPAGATE;
 
         if (phase === Clutter.TouchpadGesturePhase.END) {
             const sample = this._tracker.finish();
-            const gesture = classify(sample, { naturalScroll: this._touchpad.get_boolean('natural-scroll') });
+            const gesture = classify(sample, { naturalScroll });
             const action = routeGesture(gesture, sample.fingers, this._config, { overview });
             if (action)
                 this._actions.run(action, { source: 'gesture' });

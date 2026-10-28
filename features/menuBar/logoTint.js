@@ -33,6 +33,10 @@ export function tintWithText(icon, cleanup) {
     if (!effect)
         return false;
     const sync = () => {
+        // Before the button is in the stage there is no theme node yet: 'style-changed' comes
+        // once it is added
+        if (!icon.get_stage())
+            return;
         const c = icon.get_theme_node().get_foreground_color();
         [c.red, c.green, c.blue].forEach((v, i) => effect.set_uniform_value(CHANNELS[i], floatUniform(v / 255)));
         effect.queue_repaint();

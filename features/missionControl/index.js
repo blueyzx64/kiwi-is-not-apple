@@ -248,7 +248,17 @@ export class MissionControl {
                 const h = height();
                 return [h, h];
             });
-            actor.hide();
+            // The Shell's startup animation reads the search entry's transformed position: a
+            // hidden actor has none (NaN, a CRITICAL). Zero height until then, hidden after.
+            const lm = Main.layoutManager;
+            if (!lm._startingUp) {
+                actor.hide();
+                return;
+            }
+            const done = c.connect(lm, 'startup-complete', () => {
+                c.release(done);
+                actor.hide();
+            });
         };
         out(controls._searchEntryBin, () => 0);
         out(controls.dash, () => (this._strip?.shown ? STRIP_HEIGHT : 0));

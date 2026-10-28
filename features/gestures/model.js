@@ -150,19 +150,22 @@ export function routeGesture(gesture, fingers, config, { overview }) {
 
 /**
  * Whether Kiwi keeps the rest of a swipe from GNOME's trackers: the user turned that GNOME
- * gesture off. Only on the desktop: in Mission Control the swipes move inside it.
+ * gesture off, or the swipe goes down on the desktop. GNOME's overview tracker can't go below
+ * hidden: it would end at 0 and throw "Invalid overview shown transition from HIDDEN to
+ * HIDING", and with four fingers close the App Exposé Kiwi just opened. Only on the desktop:
+ * in Mission Control the swipes move inside it.
  *
  * @param {?string} orientation the picked orientation
- * @param {{kind: string, fingers: number}} gesture
+ * @param {{kind: string, fingers: number, dy?: number}} gesture dy: the motion so far
  * @param {object} config
- * @param {{overview: boolean}} state
+ * @param {{overview: boolean, naturalScroll?: boolean}} state
  * @returns {boolean}
  */
-export function blocksStock(orientation, { kind, fingers }, config, { overview }) {
+export function blocksStock(orientation, { kind, fingers, dy = 0 }, config, { overview, naturalScroll = true }) {
     if (kind !== 'swipe' || fingers < MIN_FINGERS || overview)
         return false;
     if (orientation === 'vertical')
-        return !config.missionControl;
+        return !config.missionControl || dy * (naturalScroll ? 1 : -1) > 0;
     if (orientation === 'horizontal')
         return !config.spaces;
     return false;

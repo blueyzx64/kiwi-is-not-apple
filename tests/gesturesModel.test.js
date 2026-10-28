@@ -93,6 +93,18 @@ test('GNOME swipes are held back only when turned off, only on the desktop', () 
     eq(blocksStock(null, swipe, off, DESK), false);
 });
 
+test('a swipe down on the desktop never reaches GNOME\'s overview tracker', () => {
+    const up = { kind: 'swipe', fingers: 3, dy: -20 };
+    const down = { kind: 'swipe', fingers: 4, dy: 20 };
+    eq(blocksStock('vertical', up, DEFAULT_CONFIG, DESK), false);
+    eq(blocksStock('vertical', down, DEFAULT_CONFIG, DESK), true);
+    // Without natural scrolling the directions flip, as in classify()
+    eq(blocksStock('vertical', up, DEFAULT_CONFIG, { overview: false, naturalScroll: false }), true);
+    eq(blocksStock('vertical', down, DEFAULT_CONFIG, { overview: false, naturalScroll: false }), false);
+    // In Mission Control a swipe down closes it (GNOME's)
+    eq(blocksStock('vertical', down, DEFAULT_CONFIG, { overview: true }), false);
+});
+
 if (failed) {
     print(`${failed} test(s) failed`);
     imports.system.exit(1);
