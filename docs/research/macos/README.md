@@ -10,6 +10,7 @@ Purpose: a complete, deep catalogue of macOS desktop features from Mojave (2018)
 | `2022-2023-ventura-sonoma.md` | macOS 13 Ventura, 14 Sonoma |
 | `2024-now-sequoia-tahoe.md` | macOS 15 Sequoia, 26 Tahoe, and anything newer that has been announced |
 | `native-apps-and-system-ui.md` | Core system UI and bundled apps, across releases (Finder, Dock, Menu bar, Mission Control, Spotlight, Quick Look, Preview, System Settings, screenshots, …) |
+| `signifiers-and-typing.md` | Signifiers, feedback and typing aids across Catalina → Golden Gate (caret badges, modifiers, pointer, menu/window cues, HUDs), with what replaced what |
 | `porting-matrix.md` | Synthesis: every feature, a recommendation and a phase (written last) |
 
 ## Per-feature template (all files use it)

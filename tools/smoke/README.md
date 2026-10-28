@@ -29,3 +29,22 @@ Noise from missing services (GDM, calendar, polkit, colord, ibus) is ignored.
 
 Not exercised: windows, fullscreen, media players, clipboard. Enable/disable only.
 Not run in CI (needs gnome-shell and D-Bus).
+
+## Scenarios (`KIWI_SMOKE_EXTRA`)
+`KIWI_SMOKE_EXTRA=file tools/smoke/run-headless.sh 0` also installs the harness probe
+(`tools/harness/probe/probe@x2`) and runs `file` once Kiwi is up, with the helpers of
+`scenario-lib.sh`: `P '<js>'` (async JS in the Shell; `inst('<feature-id>')` is a running
+feature), `T name '<js>'` (an assertion whose JS returns "PASS ..." or "FAIL ..."), `key`,
+`keydown`, `keyup` (a virtual keyboard; Clutter keysym names such as `KEY_Caps_Lock`), `gs key
+value` (a Kiwi setting) and `pause s`. Lines starting with `FAIL` make the run exit 1.
+
+```sh
+cat > /tmp/s.sh <<'EOF'
+key KEY_Caps_Lock; pause 0.3
+T caps-badge 'return inst("input-indicator").badge?.style === "caps-on" ? "PASS" : "FAIL";'
+EOF
+KIWI_SMOKE_EXTRA=/tmp/s.sh tools/smoke/run-headless.sh 0
+```
+
+No `dbus-run-session` (Fedora with dbus-broker only): any stand-in that runs the command on a
+private session bus works; link `tools/smoke/dbus-run-session-broker.py` as `dbus-run-session` in a directory first in `PATH`.

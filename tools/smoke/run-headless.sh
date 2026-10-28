@@ -26,6 +26,13 @@ if [ "${KIWI_SMOKE_SHIM:-0}" = 1 ]; then
     's/orientation: Clutter.Orientation.VERTICAL/vertical: true/;s/orientation: Clutter.Orientation.HORIZONTAL/vertical: false/'
 fi
 glib-compile-schemas "$E/schemas" || exit 2
+EXTS="'$UUID'"
+if [ -n "${KIWI_SMOKE_EXTRA:-}" ]; then
+  PE=$W/home/.local/share/gnome-shell/extensions/probe@x2
+  mkdir -p "$PE"; cp "$SRC"/tools/harness/probe/probe@x2/* "$PE/"
+  cat "$SRC/tools/smoke/scenario-lib.sh" "$KIWI_SMOKE_EXTRA" >"$W/extra.sh"
+  EXTS="'$UUID', 'probe@x2'"
+fi
 
 # Fake logind only when the system bus lacks login1 (containers).
 FAKE=
@@ -42,22 +49,28 @@ cat >"$W/inner.sh" <<'IN'
 export HOME=$W/home XDG_CONFIG_HOME=$W/home/.config XDG_DATA_HOME=$W/home/.local/share
 export XDG_CACHE_HOME=$W/home/.cache XDG_RUNTIME_DIR=$W/run GSETTINGS_BACKEND=keyfile
 gsettings set org.gnome.shell disable-user-extensions false
-gsettings set org.gnome.shell enabled-extensions "['$UUID']"
+gsettings set org.gnome.shell enabled-extensions "[$EXTS]"
 gnome-shell --headless --wayland --no-x11 --virtual-monitor 1280x800 >"$W/shell.log" 2>&1 &
 SP=$!
 sleep 12
 D="gdbus call --session --dest org.gnome.Shell --object-path /org/gnome/Shell --method org.gnome.Shell.Extensions"
 $D.ListExtensions >"$W/list.txt" 2>&1
+[ -f "$W/extra.sh" ] && timeout 600 bash "$W/extra.sh" >"$W/scenario.log" 2>&1
 for _ in $(seq 1 "$N"); do $D.DisableExtension "$UUID" >/dev/null 2>&1; sleep 1; $D.EnableExtension "$UUID" >/dev/null 2>&1; sleep 2; done
 kill "$SP"; sleep 2
 IN
-export W N UUID
-timeout $((60 + N * 5)) dbus-run-session -- bash "$W/inner.sh" >"$W/session.log" 2>&1
+export W N UUID EXTS
+EXTRA_S=0; [ -n "${KIWI_SMOKE_EXTRA:-}" ] && EXTRA_S=600
+timeout $((60 + N * 5 + EXTRA_S)) dbus-run-session -- bash "$W/inner.sh" >"$W/session.log" 2>&1
 [ -n "$FAKE" ] && kill "$FAKE" 2>/dev/null
 
 L=$W/shell.log
 echo "== Kiwi smoke: $N toggles; shell: $(gnome-shell --version); log: $L"
 grep -q "GNOME Shell started" "$L" || { echo "Shell did not start; see $L and $W/session.log"; exit 2; }
+if [ -f "$W/scenario.log" ]; then
+  cat "$W/scenario.log"
+  grep -q '^FAIL' "$W/scenario.log" && SFAIL=1
+fi
 grep -q "$UUID" "$W/list.txt" || echo "WARN: $UUID not listed by the Shell (version unsupported? set KIWI_SMOKE_SHELL_VERSION)"
 # Kiwi-related: lines naming the extension dir, [Kiwi], or a CRITICAL/ERROR with a Kiwi stack frame.
 python3 - "$L" "$UUID" <<'PY'
@@ -93,5 +106,6 @@ for (k, m), c in groups.most_common():
 sys.exit(1 if groups else 0)
 PY
 rc=$?
+[ "${SFAIL:-0}" = 1 ] && [ $rc -eq 0 ] && rc=1
 [ "${KIWI_SMOKE_KEEP:-0}" = 1 ] || [ -n "${KIWI_SMOKE_DIR:-}" ] || { [ $rc -eq 0 ] && rm -rf "$W"; }
 exit $rc
