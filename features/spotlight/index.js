@@ -24,6 +24,7 @@ import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import { Keybindings, MODAL_MODES } from '../../lib/keybindings.js';
+import { SEARCH_BAR } from '../../lib/designTokens.js';
 import { KiwiSettings } from '../../lib/settings.js';
 import { ModalSurface } from '../../lib/modalSurface.js';
 
@@ -47,7 +48,8 @@ const LAUNCHPAD_DESKTOP_ID = 'org.gnome.Shell.Extensions.Kiwi.Launchpad.desktop'
 const EXTERNAL_DEBOUNCE_MS = 80;
 const WIDTH = 680;
 const OFFSET_TOP = 140;
-const RADIUS = 26;
+// Empty, the frame is one capsule: the bar plus the frame's padding, radius half of that
+const RADIUS = SEARCH_BAR.height / 2 + SEARCH_BAR.padding;
 
 export class SpotlightFeature {
     constructor(ctx, cleanup) {

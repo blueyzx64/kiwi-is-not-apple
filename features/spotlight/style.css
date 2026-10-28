@@ -1,195 +1,68 @@
 /* feature: spotlight
-   Only kiwi- classes. ModalSurface (lib/modalSurface.js) draws no blur: the frame itself is
-   the backing, a rounded translucent fill with a 1px rim and a soft shadow, dense enough
-   that text stays legible over a white window. Quick Paste shares the .kiwi-modal* rules.
-   Spotlight frame: radius 24 (inline from ModalSurface), padding 8, rows radius 10. The frame
-   is 680px wide (set by ModalSurface). */
+   Only kiwi- classes, and layout only: the look comes from the design system in
+   styles/base.css (.kiwi-search-capsule / -field / -glyph, .kiwi-toolbar-button,
+   .kiwi-section-header, .kiwi-row, .kiwi-icon-well, .kiwi-text-*, .kiwi-secondary-text).
+   The frame is ModalSurface glass at the overlay legibility level: 680 px wide, padding 4,
+   radius 28 (inline), so the empty field is one capsule. The bar is 48 px (designTokens.js
+   SEARCH_BAR). Rows sit 8 px in from the frame edge (4 frame + 4 list), as do the section
+   headers, whose text lines up with the row icons. */
 .kiwi-spotlight {
-  padding: 8px;
+  padding: 4px;
   spacing: 0;
 }
 
 .kiwi-spotlight-bar {
-  spacing: 12px;
-  padding: 0 14px;
-  height: 56px;
-}
-
-.kiwi-spotlight-glass-icon {
-  color: rgba(255, 255, 255, 0.62);
-}
-
-.kiwi-modal-light .kiwi-spotlight-glass-icon {
-  color: rgba(0, 0, 0, 0.5);
-}
-
-.kiwi-spotlight-entry,
-.kiwi-spotlight-entry:focus,
-.kiwi-spotlight-entry:hover {
-  font-size: 22px;
-  min-height: 56px;
-  padding: 0;
-  border: none;
-  box-shadow: none;
-  background-color: transparent;
-  color: #ffffff;
-  caret-color: -st-accent-color;
-  selection-background-color: -st-accent-color;
-  selected-color: -st-accent-fg-color;
-  hint-color: rgba(255, 255, 255, 0.45);
-}
-
-.kiwi-modal-light .kiwi-spotlight-entry,
-.kiwi-modal-light .kiwi-spotlight-entry:focus,
-.kiwi-modal-light .kiwi-spotlight-entry:hover {
-  color: #1d1d1f;
-  hint-color: rgba(0, 0, 0, 0.4);
+  padding: 0 8px 0 14px;
 }
 
 /* Hairline between the field and the results, as on macOS */
 .kiwi-spotlight-scroll {
-  border-top: 1px solid rgba(255, 255, 255, 0.10);
-  padding-top: 4px;
-  margin: 0 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 4px 4px 0 4px;
 }
 
+.kiwi-glass-light .kiwi-spotlight-scroll,
 .kiwi-modal-light .kiwi-spotlight-scroll {
-  border-top: 1px solid rgba(0, 0, 0, 0.10);
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .kiwi-spotlight-list {
   spacing: 1px;
-  padding: 0 0 2px 0;
-}
-
-.kiwi-spotlight-section {
-  font-size: 11px;
-  font-weight: bold;
-  color: rgba(255, 255, 255, 0.55);
-  padding: 8px 10px 3px 10px;
-}
-
-.kiwi-modal-light .kiwi-spotlight-section {
-  color: rgba(0, 0, 0, 0.5);
-}
-
-.kiwi-spotlight-row {
-  border-radius: 10px;
-  padding: 6px 8px;
-  spacing: 12px;
-}
-
-.kiwi-spotlight-row:hover {
-  background-color: rgba(255, 255, 255, 0.08);
-}
-
-.kiwi-modal-light .kiwi-spotlight-row:hover {
-  background-color: rgba(0, 0, 0, 0.06);
-}
-
-.kiwi-spotlight-row:selected,
-.kiwi-spotlight-row:selected:hover,
-.kiwi-modal-light .kiwi-spotlight-row:selected,
-.kiwi-modal-light .kiwi-spotlight-row:selected:hover {
-  background-color: -st-accent-color;
-  color: -st-accent-fg-color;
+  padding: 0 0 4px 0;
 }
 
 .kiwi-spotlight-texts {
   spacing: 1px;
 }
 
-.kiwi-spotlight-title {
-  font-size: 14px;
-}
-
-.kiwi-spotlight-subtitle {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.kiwi-modal-light .kiwi-spotlight-subtitle {
-  color: rgba(0, 0, 0, 0.55);
-}
-
+/* ↵ on the selected row only, in the secondary colour */
 .kiwi-spotlight-return {
-  font-size: 13px;
+  font-size: 10pt;
   color: transparent;
 }
 
-.kiwi-spotlight-row:selected .kiwi-spotlight-subtitle,
-.kiwi-spotlight-row:selected .kiwi-spotlight-return,
-.kiwi-modal-light .kiwi-spotlight-row:selected .kiwi-spotlight-subtitle,
-.kiwi-modal-light .kiwi-spotlight-row:selected .kiwi-spotlight-return {
-  color: -st-accent-fg-color;
+.kiwi-row:selected .kiwi-spotlight-return {
+  color: rgba(255, 255, 255, 0.78);
 }
 
-/* Top hit: larger */
+/* Top hit: a larger well and title */
 .kiwi-spotlight-top {
-  padding: 8px 8px;
+  padding: 8px;
 }
 
-.kiwi-spotlight-top .kiwi-spotlight-title {
-  font-size: 17px;
-  font-weight: 600;
-}
-
-/* Calculator result reads as a big number */
-.kiwi-spotlight-calc .kiwi-spotlight-title {
-  font-size: 22px;
-  font-weight: 600;
-}
-
-/* Tahoe: the browse-view buttons right of the empty field, Super+1..4 */
-.kiwi-spotlight-views {
-  spacing: 4px;
-}
-
-.kiwi-spotlight-view-button {
-  border-radius: 999px;
-  padding: 7px;
-  color: rgba(255, 255, 255, 0.7);
-  background-color: rgba(255, 255, 255, 0.08);
-}
-
-.kiwi-spotlight-view-button:hover {
-  background-color: rgba(255, 255, 255, 0.16);
-}
-
-.kiwi-spotlight-view-button:checked,
-.kiwi-spotlight-view-button:checked:hover {
-  background-color: -st-accent-color;
-  color: -st-accent-fg-color;
-}
-
-.kiwi-modal-light .kiwi-spotlight-view-button {
-  color: rgba(0, 0, 0, 0.62);
-  background-color: rgba(0, 0, 0, 0.06);
-}
-
-.kiwi-modal-light .kiwi-spotlight-view-button:hover {
-  background-color: rgba(0, 0, 0, 0.11);
-}
-
-.kiwi-modal-light .kiwi-spotlight-view-button:checked,
-.kiwi-modal-light .kiwi-spotlight-view-button:checked:hover {
-  background-color: -st-accent-color;
-  color: -st-accent-fg-color;
-}
-
-/* The active "/" filter, as a token chip */
+/* The active "/" filter, as a token chip (the selection's accent) */
 .kiwi-spotlight-chip {
-  font-size: 12px;
+  font-size: 9pt;
   font-weight: 600;
   border-radius: 999px;
-  padding: 3px 10px;
-  background-color: -st-accent-color;
+  padding: 4px 10px;
+  background-color: st-transparentize(-st-accent-color, 0.15);
   color: -st-accent-fg-color;
 }
 
 /* A Quick Key next to its row */
 .kiwi-spotlight-key {
-  font-size: 11px;
+  font-size: 8.25pt;
   font-weight: 600;
   border-radius: 5px;
   padding: 1px 6px;
@@ -197,20 +70,20 @@
   color: rgba(255, 255, 255, 0.75);
 }
 
+.kiwi-glass-light .kiwi-spotlight-key,
 .kiwi-modal-light .kiwi-spotlight-key {
   border: 1px solid rgba(0, 0, 0, 0.25);
   color: rgba(0, 0, 0, 0.6);
 }
 
-.kiwi-spotlight-row:selected .kiwi-spotlight-key {
-  border-color: -st-accent-fg-color;
+.kiwi-row:selected .kiwi-spotlight-key {
+  border-color: rgba(255, 255, 255, 0.78);
   color: -st-accent-fg-color;
 }
 
 /* Apps view: a grid of tiles (Tahoe's Applications) */
 .kiwi-spotlight-grid-row {
   spacing: 4px;
-  padding: 0 2px;
 }
 
 .kiwi-spotlight-tile {
@@ -221,13 +94,13 @@
 }
 
 .kiwi-spotlight-tile-title {
-  font-size: 12px;
   text-align: center;
 }
 
-/* A message row (a view that is empty or turned off) */
-.kiwi-spotlight-note,
-.kiwi-spotlight-note:hover {
+/* A message row (a view that is empty or turned off): not selectable-looking */
+.kiwi-row.kiwi-spotlight-note:hover,
+.kiwi-glass-light .kiwi-row.kiwi-spotlight-note:hover,
+.kiwi-modal-light .kiwi-row.kiwi-spotlight-note:hover {
   background-color: transparent;
 }
 
@@ -237,12 +110,6 @@
 
 /* A "/" filter with no hits */
 .kiwi-spotlight-empty {
-  color: rgba(255, 255, 255, 0.55);
-  font-size: 13px;
-  padding: 14px 10px;
+  padding: 14px 8px;
   text-align: center;
-}
-
-.kiwi-modal-light .kiwi-spotlight-empty {
-  color: rgba(0, 0, 0, 0.5);
 }

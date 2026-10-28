@@ -2,7 +2,7 @@
 import {
     normalize, scoreToken, scoreFields, scoreItem, rank, groupOf, buildSections,
     buildEmptySections, flatten, moveSelection, jumpGroup, locate, reselect, webSearchUrl,
-    looksLikeUrl, SearchSession, TOP_HIT_MIN_SCORE, SuperTapTracker, SUPER_TAP_MAX_MS,
+    looksLikeUrl, rowSubtitle, SearchSession, TOP_HIT_MIN_SCORE, SuperTapTracker, SUPER_TAP_MAX_MS,
 } from '../features/spotlight/model.js';
 
 let failed = 0;
@@ -391,6 +391,14 @@ await atest('byGroup ranks unscored items and keeps scored order', async () => {
     const g = s.byGroup('alp');
     // scored external items keep their score; unscored ones are matched on the query
     eq(g.documents.map(i => i.id), ['2', 'j', 'k']);
+});
+
+test('row subtitle never repeats the title', () => {
+    eq(rowSubtitle({ kind: 'app', title: 'Text Editor', subtitle: 'Text Editor' }, 'Application'), 'Application');
+    eq(rowSubtitle({ kind: 'app', title: 'Cursor', subtitle: 'Text Editor' }, 'Application'), 'Text Editor');
+    eq(rowSubtitle({ kind: 'app', title: 'Files', subtitle: '' }, 'Application'), 'Application');
+    eq(rowSubtitle({ kind: 'setting', title: 'Wi-Fi', subtitle: ' wi-fi ' }, 'Application'), '');
+    eq(rowSubtitle({ kind: 'file', title: 'a.txt', subtitle: '~/Documents' }, 'Application'), '~/Documents');
 });
 
 if (failed > 0)
