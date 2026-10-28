@@ -291,3 +291,4 @@ No more installer work: no new pieces (Trash-drag uninstall, fly-to-dock, update
 - R3C → merged: dock stacks close on any outside click and replay it (event-actor fix), tile toggles, Esc; the gallery has a click catcher with replay; shared lib/outsideClick.js and inputRing.js (the notch, gallery and stacks use them); a 6 px gap above the dock (all edges), pill borders counted. 45 real-pointer asserts pass.
 - R3E → merged: the bar stays clear through overview transitions (0 alpha changes); full-screen edge reveals only after the pointer has left it once; darker accent-tinted bar while revealed over full screen (~10:1); menuPlacement.js aligns every bar menu's leading edge under its item with a 2 px gap.
 - R3G → merged: maximize splits a set (the others go to the strip as one entry); card-onto-card drag groups with left/right half highlights and tiles; strip glass backdrop (setting on). The orchestrator checked c1-hover-left and b4.
+- PR #14 merged (round 3).
