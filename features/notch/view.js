@@ -364,7 +364,22 @@ export class NotchView {
         if (this._destroyed || on === this._dragging)
             return;
         this._dragging = on;
+        this._syncPlate();
         this._syncOutside();
+    }
+
+    // The input plate stands in for the island while the helper's window is under the shelf. Not
+    // during the drag itself: the dashboard sits over the top of the window below (a maximized
+    // window, or one touching the top bar, reaches right under it), and a drop there must reach
+    // that window, so nothing of the notch may take the pointer then.
+    _syncPlate() {
+        if (this._shelfDrag && !this._dragging) {
+            this._plate.place(this._dashboardRect(), this._layout.box);
+            this._plate.restack([...this._ears, this._island]);
+            return;
+        }
+        this._plate.hide();
+        this._hoverSrc.plate = false;
     }
 
     /** @param {boolean} on the helper's window is placed over the tiles (or is gone) */
@@ -379,14 +394,9 @@ export class NotchView {
         this._dash?.current?.shelf?.tiles.forEach(t => {
             t.actor.reactive = !on;
         });
-        if (on) {
-            this._plate.place(this._dashboardRect(), this._layout.box);
-            this._plate.restack([...this._ears, this._island]);
+        if (on)
             this._hoverSrc.island = false;
-        } else {
-            this._plate.hide();
-            this._hoverSrc.plate = false;
-        }
+        this._syncPlate();
         this._emitHover();
         this._syncOutside();
     }
