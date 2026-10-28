@@ -126,6 +126,11 @@ export const FEATURES = [
         load: async () => (await import('./features/appearance/scheme.js')).Appearance,
     },
     {
+        // macOS text rendering and font (each part has its own key)
+        id: 'typography',
+        load: async () => (await import('./features/typography/index.js')).Typography,
+    },
+    {
         id: 'popup-menu-styling', setting: 'popup-menu-styling',
         load: async () => (await import('./features/appearance/index.js')).PopupMenuStyling,
     },
