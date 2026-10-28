@@ -111,7 +111,7 @@ The defaults follow macOS. Each can be changed in preferences.
 - Super (tap) opens Spotlight. F3 or Ctrl+Up opens Mission Control, Ctrl+Down App Exposé, Super+A or F4 Launchpad. Clicking the clock opens the Notification Center.
 - The notch is on and the clock sits at the right.
 - Stage Manager and hot corners are off. No desktop widgets are placed until you add some (right-click the desktop, Edit Widgets).
-- Clipboard history is on and has no shortcut until you set one (Use Super+Shift+V in preferences).
+- Clipboard history is on; Super+V opens Quick Paste. While it runs, GNOME's notification list keeps only Super+M (your own toggle-message-tray value comes back when clipboard history is off).
 
 ## Update
 

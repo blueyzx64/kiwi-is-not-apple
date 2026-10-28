@@ -1420,9 +1420,9 @@
         <description>When off, nothing new is recorded and the existing history is kept.</description>
       </key>
       <key name="clipboard-shortcut" type="as">
-        <default>[]</default>
-        <summary>Quick Paste shortcut</summary>
-        <description>Opens Quick Paste. Empty means no shortcut; prefs has a button for Super+Shift+V.</description>
+        <default>['&lt;Super&gt;v']</default>
+        <summary>Clipboard history shortcut</summary>
+        <description>Opens and closes Quick Paste, the keyboard clipboard history (the top-bar icon opens the popover). While clipboard history runs, GNOME's "Show notification list" shortcut (toggle-message-tray) gives up these keys (Super+V by default, Super+M stays) and gets them back when it stops. Empty means no shortcut.</description>
       </key>
       <key name="clipboard-panel-icon" type="b">
         <default>true</default>

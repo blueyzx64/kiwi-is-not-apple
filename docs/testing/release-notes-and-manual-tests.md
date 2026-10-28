@@ -96,7 +96,7 @@ New features default to ON (owner decision); users opt out in prefs.
   - Kiwi blocks only the Shell's own `overlay-key` handler and restores it on disable.
   - An empty search shows recent apps only. Recent clipboard rows appear only with `spotlight-recent-clipboard` on (default off). Typing still searches the clipboard.
 - **Removed: auto-hide top bar and "show panel on hover in fullscreen".** The top bar is always shown with the stock strut, because it houses the notch. A user who had either on gets the normal bar on the next login; no migration runs and the old keys are ignored.
-- **Clipboard history is saved to disk by default**, in `~/.local/share/kiwi/clipboard/` (directory 0700, files 0600), and reloaded on enable. Password-manager secrets are not recorded, and nothing is recorded while locked. Text that looks like a private key, API token, JWT, card number (Luhn check) or long random token is skipped too (heuristics, not a guarantee). Images over 8192 px a side or 40 Mpx, and SVGs, are not stored. **The shortcut is empty by default** (EGO rule); a prefs button sets Super+Shift+V.
+- **Clipboard history is saved to disk by default**, in `~/.local/share/kiwi/clipboard/` (directory 0700, files 0600), and reloaded on enable. Password-manager secrets are not recorded, and nothing is recorded while locked. Text that looks like a private key, API token, JWT, card number (Luhn check) or long random token is skipped too (heuristics, not a guarantee). Images over 8192 px a side or 40 Mpx, and SVGs, are not stored. **Super+V opens Quick Paste by default**; while clipboard history runs, GNOME's toggle-message-tray keeps only Super+M, and its exact value comes back on disable.
 - **Liquid Glass is ON.** With it on, the old `panel-blur`/`dock-blur` keys do nothing; the surfaces list rules. Old values migrate into that list.
 - **Control Center is ON.**
   - The Quick Settings grid becomes 4 columns with a new order, a user row (avatar, name, battery with time left) and a Now Playing tile.
@@ -214,7 +214,7 @@ Run each item on Fedora 44 Workstation, GNOME 50, in a Wayland session (GNOME 50
 - [ ] Change wallpaper or color scheme. Expected: foreground contrast updates without a stall.
 
 ### Clipboard
-- [ ] Enable the feature. Expected: top-bar icon shows. Click "Use Super+Shift+V" in prefs, then press it. Expected: Quick Paste opens; copied text from 3 apps appears with app names.
+- [ ] Enable the feature. Expected: top-bar icon shows. Press Super+V. Expected: Quick Paste opens (and Super+M still opens the notification list; `gsettings get org.gnome.shell.keybindings toggle-message-tray` shows `['<Super>m']`, and the original value after disabling the feature); copied text from 3 apps appears with app names.
 - [ ] Copy the same text twice. Expected: one row, moved to the top. Pin one, copy 30 others. Expected: pinned stays; the 25-entry cap holds.
 - [ ] Paste from Quick Paste into gedit, Firefox and a terminal. Expected: text lands in the previous window; the terminal gets Ctrl+Shift+V.
 - [ ] Copy a screenshot to the clipboard. Expected: thumbnail shows and pastes into an image editor; images over 8192 px a side or 40 Mpx, and SVGs, are skipped.
@@ -227,7 +227,7 @@ Run each item on Fedora 44 Workstation, GNOME 50, in a Wayland session (GNOME 50
 - [ ] Use Clear History and remove one image. Expected: files gone, pinned entries stay; the image file is deleted.
 - [ ] Open the popover while Quick Paste or the Downloads fan is open. Expected: only one stays; glass blur visible; reduced motion means no fade.
 - [ ] Toggle the feature 20x. Expected: no leftover icon; shortcut dead when off; no journal errors.
-- [ ] Type a bad accelerator in the shortcut field; try Super+V. Expected: bad accel shows red; Super+V shows the GNOME conflict note.
+- [ ] Type a bad accelerator in the shortcut field; try Super+V. Expected: bad accel shows red; Super+V says Kiwi takes it over from GNOME; Super+Space shows the GNOME conflict note.
 
 ### Spotlight
 - [ ] Tap Super, then tap again. Expected: Spotlight opens with no overview flash, then closes.

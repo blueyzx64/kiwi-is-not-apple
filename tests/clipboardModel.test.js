@@ -3,7 +3,7 @@ import {
     DEFAULTS, History, MiB, ageOf, checkSize, classifyText, hasSecretHint, historyFrom,
     imageFileName, isBlankText, isPasswordManagerApp, isSecret, isStoreFileName, makeEntry,
     mergeLoaded, orphanFiles, parseHistory, pasteChordFor, pickMime, previewOf, serializeHistory, shouldRecord,
-    TYPE_ICON, tileIconProps,
+    TYPE_ICON, tileIconProps, FILTERS, matchesFilter, filterTabs, stepFilter, stepSelection, ensureVisible,
 } from '../features/clipboard/model.js';
 
 let failed = 0;
@@ -384,6 +384,57 @@ test('text mime is picked from browser and GTK4 offers (html first)', () => {
 test('only the hint mime marks a secret, not any application/x-* type', () => {
     eq(hasSecretHint(['application/x-moz-nativehtml', 'application/x-qt-image', 'text/plain']), false);
     eq(hasSecretHint(['x-kde-passwordManagerHint', 'text/plain']), true);
+});
+
+/* ---- filter tabs and keyboard ---- */
+test('filterTabs: counts per category, in tab order', () => {
+    const h = new History();
+    h.add(text('hello'));
+    h.add(text('https://x.org'));
+    h.add(text('#ff0000'));
+    h.add(image(77));
+    const tabs = filterTabs(h.items);
+    eq(tabs.map(t => t.id).join(), FILTERS.join());
+    eq(tabs.map(t => t.count).join(), '4,2,1,1');
+    eq(filterTabs([]).map(t => t.count).join(), '0,0,0,0');
+});
+test('matchesFilter agrees with History.view', () => {
+    const h = new History();
+    h.add(text('plain'));
+    h.add(text('https://y.org'));
+    h.add(image(78));
+    for (const f of FILTERS)
+        eq(h.view({ filter: f }).recent.length, h.items.filter(e => matchesFilter(e, f)).length, f);
+    eq(matchesFilter(h.items[0], 'bogus'), true);
+});
+test('stepFilter: Left/Right clamp at the ends', () => {
+    eq(stepFilter('all', 1), 'text');
+    eq(stepFilter('text', 1), 'links');
+    eq(stepFilter('images', 1), 'images');
+    eq(stepFilter('all', -1), 'all');
+    eq(stepFilter('links', -1), 'text');
+    eq(stepFilter('nope', 1), 'text');
+});
+test('stepSelection: clamps, empty list is -1', () => {
+    eq(stepSelection(0, 1, 3), 1);
+    eq(stepSelection(2, 1, 3), 2);
+    eq(stepSelection(0, -1, 3), 0);
+    eq(stepSelection(-1, 1, 3), 0);
+    eq(stepSelection(-1, -1, 3), 0);
+    eq(stepSelection(1, 5, 3), 2);
+    eq(stepSelection(0, 1, 0), -1);
+});
+test('ensureVisible: moves only as far as needed', () => {
+    const adj = { value: 100, pageSize: 200, upper: 1000 };
+    eq(ensureVisible({ top: 150, bottom: 180 }, adj), 100);          // in view
+    eq(ensureVisible({ top: 280, bottom: 320 }, adj), 120);          // below: bottom at page end
+    eq(ensureVisible({ top: 60, bottom: 90 }, adj), 60);             // above: top at page start
+    eq(ensureVisible({ top: 280, bottom: 320 }, adj, 6), 126);       // margin keeps a neighbour
+    eq(ensureVisible({ top: 60, bottom: 90 }, adj, 6), 54);
+    eq(ensureVisible({ top: 2, bottom: 30 }, adj, 6), 0);            // clamped at the top
+    eq(ensureVisible({ top: 960, bottom: 1000 }, adj, 6), 800);      // clamped at upper - page
+    eq(ensureVisible({ top: 300, bottom: 700 }, adj), 300);          // taller than the page: top
+    eq(ensureVisible({ top: 0, bottom: 0 }, { value: 50, pageSize: 200, upper: 100 }), 0);
 });
 
 if (failed) {
