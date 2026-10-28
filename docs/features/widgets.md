@@ -1,10 +1,10 @@
 # Desktop widgets
 
 ## What it does
-Widgets on the desktop, above the wallpaper and below windows. Registry id `desktop-widgets` (key `widgets`, on). The same widget model feeds the Notification Center and the notch's Widgets tab (`core/widgets/`). Code: `features/widgets/`.
+Widgets on the desktop, above the wallpaper and below windows. Registry id `desktop-widgets` (key `widgets`, on). The same widget model feeds the Notification Center and the notch's Widgets tab (`core/widgets/`): each keeps its own ordered list (`notification-center-widget-list`: small, medium or large, two smalls or one medium a row; `notch-widgets`: small or medium, scaled to 0.8 in one strip of four cells, plus the notch's own `notch-controls` tile), edited in place with Edit Widgets… (the Notification Center) or Edit on the Widgets tab (the notch). Their cards are `.kiwi-card` tiles (radius 18) without glass of their own; providers run only while the column is open or the tab is shown. Code: `features/widgets/`.
 
 ## Use
-- Right-click the desktop and choose **Edit Widgets** to open the gallery (also from the Notification Center). Add Default Widgets is offered when the desktop is empty; nothing is placed by default.
+- Right-click the desktop and choose **Edit Widgets** to open the gallery (the Notification Center and the notch edit their own lists). Add Default Widgets is offered when the desktop is empty; nothing is placed by default.
 - Drag a widget to place it on a snapping grid (hold Ctrl for finer placement). Right-click for its size, options and Remove.
 - Built-in kinds (`core/widgets/kinds/`), each in macOS's sizes:
 

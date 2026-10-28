@@ -3,9 +3,10 @@
 //   Now      the media hero (or a large clock), then live activities and recent notifications
 //   Tray     the file shelf, a drop target while files are dragged over the notch (and the
 //            clipboard column when notch-show-clipboard is on)
-//   Widgets  calendar day, weather, quick controls (Do Not Disturb, microphone, timers)
+//   Widgets  core/widgets cards side by side (notch-widgets: any kind, small or medium), and
+//            the notch's own Controls tile (Focus, microphone, timers); Edit shows the chooser
 // Builders only: no state. `env` carries gettext, the handlers and the 1 s refresh list:
-//   {_, h, live: Function[], alive: () => boolean, clockFormat: () => string}
+//   {_, h, live: Function[], alive: () => boolean, clockFormat: () => string, host, views}
 
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
@@ -14,7 +15,10 @@ import * as Util from 'resource:///org/gnome/shell/misc/util.js';
 
 import * as A11y from '../../lib/a11y.js';
 import { label, icon, themed, button, artwork, artButton, track, column, setText } from './ui.js';
-import { trackProgress, seekTarget, formatClock } from './dashboardModel.js';
+import { trackProgress, seekTarget, formatClock, NOTCH_CONTROLS, WIDGET_STRIP } from './dashboardModel.js';
+import { buildChooser } from '../../core/widgets/chooser.js';
+import { fitStrip, fitsStrip } from '../../core/widgets/model.js';
+import { pixelSize } from '../../core/widgets/view.js';
 export { DASH_SIZE } from './dashboardModel.js';
 import { nowRows, presentation } from './model.js';
 import { row as activityRow, iconWell } from './pills.js';
@@ -24,6 +28,7 @@ const WIDTH = Object.freeze({ hero: 340, list: 248, clipboard: 196, inner: 608 }
 const SHELF_VISIBLE = 8;
 const TIMER_PRESETS = [1, 5, 15];
 const SEEK_STEP_S = 5;      // a Left / Right press on the scrubber
+const N_ = s => s;         // marked for translation; the chooser translates it
 
 function mediaColumn(env, media, width, live) {
     const col = column('kiwi-notch-media', width);
@@ -43,7 +48,7 @@ function mediaColumn(env, media, width, live) {
     });
     text.add_child(label(media.title || env._('Unknown title'), 'kiwi-notch-media-title'));
     if (media.artist)
-        text.add_child(label(media.artist, 'kiwi-notch-media-artist'));
+        text.add_child(label(media.artist, 'kiwi-notch-media-artist kiwi-secondary-text'));
     top.add_child(text);
     if (media.appIcon) {
         top.add_child(new St.Icon({
@@ -56,8 +61,8 @@ function mediaColumn(env, media, width, live) {
     // The scrubber, when the player reports a length (and then a position)
     const hasLength = Number.isFinite(media.length) && media.length > 0;
     const scrub = new St.BoxLayout({ style_class: 'kiwi-notch-scrub', visible: hasLength, opacity: 0 });
-    const elapsed = label('', 'kiwi-notch-scrub-time');
-    const remaining = label('', 'kiwi-notch-scrub-time kiwi-notch-scrub-remaining');
+    const elapsed = label('', 'kiwi-notch-scrub-time kiwi-secondary-text');
+    const remaining = label('', 'kiwi-notch-scrub-time kiwi-notch-scrub-remaining kiwi-secondary-text');
     const bar = track('kiwi-notch-scrub-track', 'kiwi-notch-scrub-fill', 4, 0);
     // A click on the bar seeks there. It is a button so the press stays with it and does
     // not count as a click on the notch (which would close the dashboard).
@@ -149,11 +154,11 @@ function clockColumn(env, width, live) {
     const col = column('kiwi-notch-clock', width);
     const row = new St.BoxLayout({ style_class: 'kiwi-notch-clock-row' });
     const time = new St.Label({ style_class: 'kiwi-notch-clock-time' });
-    const suffix = new St.Label({ style_class: 'kiwi-notch-clock-suffix', y_align: Clutter.ActorAlign.END });
+    const suffix = new St.Label({ style_class: 'kiwi-notch-clock-suffix kiwi-secondary-text', y_align: Clutter.ActorAlign.END });
     row.add_child(time);
     row.add_child(suffix);
     col.add_child(row);
-    const day = label('', 'kiwi-notch-clock-date');
+    const day = label('', 'kiwi-notch-clock-date kiwi-secondary-text');
     col.add_child(day);
     live.push(() => {
         const now = GLib.DateTime.new_now_local();
@@ -171,13 +176,13 @@ function listColumn(env, ctx) {
     const col = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, x_expand: true });
     const recent = ctx.recent ?? [];
     if (!recent.length && ctx.empty) {
-        col.add_child(label(env._('No notifications'), 'kiwi-notch-empty-text kiwi-notch-list-empty', {
+        col.add_child(label(env._('No notifications'), 'kiwi-notch-empty-text kiwi-notch-list-empty kiwi-secondary-text', {
             x_align: Clutter.ActorAlign.CENTER,
         }));
     }
     for (const item of recent) {
         const b = new St.Button({
-            style_class: 'kiwi-notch-card-row kiwi-notch-recent',
+            style_class: 'kiwi-notch-card-row kiwi-notch-recent kiwi-row',
             can_focus: true,
             x_expand: true,
             x_align: Clutter.ActorAlign.FILL,
@@ -191,11 +196,11 @@ function listColumn(env, ctx) {
         const line = new St.BoxLayout({ style_class: 'kiwi-notch-recent-line' });
         line.add_child(label(item.title, 'kiwi-notch-recent-title', { x_expand: true }));
         if (item.when)
-            line.add_child(label(item.when, 'kiwi-notch-recent-time'));
+            line.add_child(label(item.when, 'kiwi-notch-recent-time kiwi-secondary-text'));
         text.add_child(line);
         const body = (item.body ?? '').replace(/\s+/g, ' ').trim();
         if (body || item.app) {
-            const sub = label('', 'kiwi-notch-recent-sub');
+            const sub = label('', 'kiwi-notch-recent-sub kiwi-secondary-text');
             // Like the card: the body may carry markup (Rhythmbox sends
             // "by <i>Artist</i>"); fixMarkup keeps the allowed tags and escapes the rest.
             try {
@@ -229,12 +234,12 @@ function listColumn(env, ctx) {
 // Clipboard history (null while the clipboard feature or its notch option is off)
 function clipboardColumn(env, entries, width) {
     const col = column('kiwi-notch-clipboard', width);
-    col.add_child(label(env._('Clipboard'), 'kiwi-notch-caption'));
+    col.add_child(label(env._('Clipboard'), 'kiwi-notch-caption kiwi-section-header'));
     if (!entries.length)
-        col.add_child(label(env._('Nothing copied yet'), 'kiwi-notch-empty-text'));
+        col.add_child(label(env._('Nothing copied yet'), 'kiwi-notch-empty-text kiwi-secondary-text'));
     for (const entry of entries) {
         const b = new St.Button({
-            style_class: 'kiwi-notch-clip',
+            style_class: 'kiwi-notch-clip kiwi-row',
             accessible_name: entry.text,
             can_focus: true,
             x_expand: true,
@@ -298,7 +303,7 @@ export function trayTab(env, ctx) {
         const info = ctx.shelf.info(selected);
         bar.add_child(label(info.name, 'kiwi-notch-shelf-selected', { x_expand: true }));
         const act = (iconName, name, fn) => bar.add_child(button({
-            styleClass: 'kiwi-notch-row-action', iconName, accessibleName: name, size: 14, onClick: fn,
+            styleClass: 'kiwi-notch-row-action kiwi-toolbar-button', iconName, accessibleName: name, size: 14, onClick: fn,
         }));
         act('document-open-symbolic', env._('Open'), () => env.h.onShelf('open', selected));
         act('folder-open-symbolic', env._('Show in Files'), () => env.h.onShelf('reveal', selected));
@@ -326,7 +331,7 @@ export function trayTab(env, ctx) {
         const empty = new St.BoxLayout({ style_class: 'kiwi-notch-shelf-empty', orientation: Clutter.Orientation.VERTICAL, y_expand: true });
         empty.add_child(icon(themed('folder-download-symbolic'), 24, 'kiwi-notch-shelf-empty-icon'));
         empty.add_child(label(env._('Drop files here, or copy them and Add from Clipboard'),
-            'kiwi-notch-empty-text kiwi-notch-shelf-hint', { x_align: Clutter.ActorAlign.CENTER }));
+            'kiwi-notch-empty-text kiwi-notch-shelf-hint kiwi-secondary-text', { x_align: Clutter.ActorAlign.CENTER }));
         shelf.add_child(empty);
     } else {
         const grid = new St.Widget({
@@ -365,79 +370,24 @@ export function trayTab(env, ctx) {
 
 // ---- Widgets ---------------------------------------------------------------------------
 
-function card(styleClass, width) {
-    return new St.BoxLayout({
-        style_class: `kiwi-notch-widget ${styleClass}`,
+// The notch's own tile: Focus (or Do Not Disturb), the microphone, and timer presets. A small
+// card of the strip, drawn at the strip's scaled size.
+function controlsCard(env, ctx, side) {
+    const ctl = new St.BoxLayout({
+        style_class: 'kiwi-notch-widget kiwi-notch-widget-controls kiwi-card',
         orientation: Clutter.Orientation.VERTICAL,
-        width,
-        y_expand: true,
+        width: side,
+        height: side,
     });
-}
-
-/**
- * @param {object} env
- * @param {{events: object[]|null, weather: object|null, mic: {available, muted}, dnd: boolean,
- *   timersEnabled: boolean}} ctx
- */
-export function widgetsTab(env, ctx) {
-    const body = new St.BoxLayout({ style_class: 'kiwi-notch-tab-body kiwi-notch-tab-widgets', x_expand: true, y_expand: true });
-
-    // Calendar day: weekday and date, then today's next events
-    const cal = card('kiwi-notch-widget-calendar', 252);
-    const now = GLib.DateTime.new_now_local();
-    const top = new St.BoxLayout({ style_class: 'kiwi-notch-cal-top' });
-    top.add_child(label(now.format('%A').toUpperCase(), 'kiwi-notch-cal-weekday', { x_expand: true }));
-    top.add_child(label(String(now.get_day_of_month()), 'kiwi-notch-cal-day'));
-    cal.add_child(top);
-    const nowMs = Date.now();
-    const upcoming = (ctx.events ?? []).filter(e => e.end > nowMs).sort((a, b) => a.start - b.start).slice(0, 2);
-    if (!upcoming.length)
-        cal.add_child(label(ctx.events ? env._('No more events today') : env._('No calendar'), 'kiwi-notch-cal-none'));
-    for (const e of upcoming) {
-        const r = new St.BoxLayout({ style_class: 'kiwi-notch-cal-event' });
-        r.add_child(new St.Widget({ style_class: 'kiwi-notch-cal-bar', y_expand: true }));
-        const text = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, x_expand: true });
-        text.add_child(label(e.summary, 'kiwi-notch-cal-summary'));
-        const time = e.allDay ? env._('All day')
-            : GLib.DateTime.new_from_unix_local(Math.floor(e.start / 1000)).format('%H:%M');
-        text.add_child(label(time, 'kiwi-notch-cal-time'));
-        r.add_child(text);
-        cal.add_child(r);
-    }
-    const calButton = new St.Button({ style_class: 'kiwi-notch-widget-button', child: cal, can_focus: true, accessible_name: env._('Calendar') });
-    calButton.connect('clicked', () => env.h.onOpenCalendar());
-    body.add_child(calButton);
-
-    // Weather from the date menu's client
-    const w = ctx.weather;
-    const wx = card('kiwi-notch-widget-weather', 160);
-    if (w && !w.loading) {
-        wx.add_child(label(w.location, 'kiwi-notch-wx-place'));
-        const line = new St.BoxLayout({ style_class: 'kiwi-notch-wx-line' });
-        line.add_child(icon(themed(w.icon), 28, 'kiwi-notch-wx-icon'));
-        line.add_child(label(w.temp, 'kiwi-notch-wx-temp'));
-        wx.add_child(line);
-        wx.add_child(label(w.summary, 'kiwi-notch-wx-summary'));
-    } else {
-        wx.add_child(label(env._('Weather'), 'kiwi-notch-wx-place'));
-        wx.add_child(icon(themed('weather-overcast-symbolic'), 28, 'kiwi-notch-wx-icon kiwi-notch-wx-off'));
-        wx.add_child(label(w?.loading ? env._('Loading…') : env._('Not available'), 'kiwi-notch-wx-summary'));
-    }
-    const wxButton = new St.Button({ style_class: 'kiwi-notch-widget-button', child: wx, can_focus: true, accessible_name: env._('Weather') });
-    wxButton.connect('clicked', () => env.h.onOpenWeather());
-    body.add_child(wxButton);
-
-    // Quick controls
-    const ctl = card('kiwi-notch-widget-controls', 156);
-    const toggles = new St.BoxLayout({ style_class: 'kiwi-notch-toggles' });
+    const toggles = new St.BoxLayout({ style_class: 'kiwi-notch-toggles', x_align: Clutter.ActorAlign.CENTER });
     const toggle = (iconName, name, on, fn, enabled = true) => {
         const box = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, style_class: 'kiwi-notch-toggle-box', x_expand: true });
-        const b = button({ styleClass: 'kiwi-notch-toggle', iconName, accessibleName: name, size: 18, toggle: on, onClick: fn });
+        const b = button({ styleClass: 'kiwi-notch-toggle kiwi-toolbar-button', iconName, accessibleName: name, size: 16, toggle: on, onClick: fn });
         b.reactive = enabled;
         b.opacity = enabled ? 255 : 110;
         b.x_align = Clutter.ActorAlign.CENTER;
         box.add_child(b);
-        box.add_child(label(name, 'kiwi-notch-toggle-caption', { x_align: Clutter.ActorAlign.CENTER }));
+        box.add_child(label(name, 'kiwi-notch-toggle-caption kiwi-secondary-text kiwi-text-caption', { x_align: Clutter.ActorAlign.CENTER }));
         toggles.add_child(box);
     };
     // The active Focus mode's icon and name (features/focus), else the Do Not Disturb moon
@@ -446,12 +396,10 @@ export function widgetsTab(env, ctx) {
         ctx.dnd || !!focus, () => env.h.onToggleDnd());
     toggle(ctx.mic.muted ? 'microphone-disabled-symbolic' : 'audio-input-microphone-symbolic',
         env._('Mic Off'), ctx.mic.muted, () => env.h.onToggleMic(), ctx.mic.available);
+    toggles.y_expand = true;
     ctl.add_child(toggles);
     if (ctx.timersEnabled) {
-        // Toggles at the top and the timer presets at the bottom, the same 12px from the card's
-        // edges, instead of both stacked at the top over an empty band
-        toggles.y_expand = true;
-        const presets = new St.BoxLayout({ style_class: 'kiwi-notch-presets' });
+        const presets = new St.BoxLayout({ style_class: 'kiwi-notch-presets', x_align: Clutter.ActorAlign.CENTER });
         presets.add_child(icon(themed('alarm-symbolic'), 14, 'kiwi-notch-glyph kiwi-notch-tint-orange'));
         for (const m of TIMER_PRESETS) {
             presets.add_child(button({
@@ -463,6 +411,86 @@ export function widgetsTab(env, ctx) {
         }
         ctl.add_child(presets);
     }
-    body.add_child(ctl);
+    return ctl;
+}
+
+// One core/widgets card, drawn at its desktop size and scaled down to the strip (as the
+// gallery's previews), inside a button so a press stays on the dashboard and a click opens
+// the widget's app. Its data runs only while the tab is shown (view.js sets the views active).
+function widgetCard(env, kind, size) {
+    const view = env.host.createView(kind, { size, config: {}, surface: 'notch' });
+    const full = pixelSize(size);
+    const scaled = pixelSize(size, WIDGET_STRIP.scale);
+    const holder = new St.Widget({ width: scaled.width, height: scaled.height });
+    view.actor.set_scale(WIDGET_STRIP.scale, WIDGET_STRIP.scale);
+    holder.add_child(view.actor);
+    view.actor.set_size(full.width, full.height);
+    const b = new St.Button({
+        style_class: 'kiwi-notch-widget-button',
+        child: holder,
+        can_focus: true,
+        accessible_name: env._(view.def.title),
+        y_align: Clutter.ActorAlign.CENTER,
+    });
+    b.connect('clicked', () => env.h.onOpenWidget?.(view));
+    env.views.push(view);
+    return b;
+}
+
+// "Edit": every kind with its sizes; a size that would overflow the strip is disabled
+function chooser(env, ctx) {
+    const registry = env.host.registry;
+    const sizesFor = kind => (kind === NOTCH_CONTROLS ? ['small'] : registry.sizesFor(kind, 'notch'));
+    const grid = buildChooser({
+        _: env._,
+        entries: [{ kind: NOTCH_CONTROLS, title: N_('Controls') },
+            ...registry.kinds().map(k => ({ kind: k.id, title: k.title }))],
+        list: ctx.list,
+        sizesFor,
+        canUse: (kind, size) => fitsStrip(ctx.list, kind, size, WIDGET_STRIP.columns),
+        onChange: list => env.h.onSetWidgets?.(list),
+        columns: 2,
+    });
+    const scroll = new St.ScrollView({
+        style_class: 'kiwi-notch-chooser', x_expand: true, y_expand: true, overlay_scrollbars: true,
+        hscrollbar_policy: St.PolicyType.NEVER, vscrollbar_policy: St.PolicyType.AUTOMATIC,
+    });
+    const box = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, x_expand: true });
+    box.add_child(grid);
+    scroll.set_child(box);
+    return scroll;
+}
+
+/**
+ * @param {object} env with `host` (core/widgets) and `views` (the cards built, for setActive)
+ * @param {{list: {kind: string, size: string}[], editing: boolean, mic: {available, muted},
+ *   dnd: boolean, focus: object|null, timersEnabled: boolean}} ctx
+ */
+export function widgetsTab(env, ctx) {
+    const body = new St.BoxLayout({ style_class: 'kiwi-notch-tab-body kiwi-notch-tab-widgets', x_expand: true, y_expand: true });
+    if (!env.host)
+        return body;
+    if (ctx.editing) {
+        body.add_child(chooser(env, ctx));
+        return body;
+    }
+    const { shown } = fitStrip(ctx.list, WIDGET_STRIP.columns);
+    if (!shown.length) {
+        body.add_child(label(env._('No widgets. Choose Edit to add some.'), 'kiwi-notch-empty-text kiwi-secondary-text', {
+            x_expand: true, x_align: Clutter.ActorAlign.CENTER, y_align: Clutter.ActorAlign.CENTER,
+        }));
+        return body;
+    }
+    const strip = new St.BoxLayout({ style_class: 'kiwi-notch-widget-strip', x_expand: true, x_align: Clutter.ActorAlign.CENTER });
+    for (const { kind, size } of shown) {
+        try {
+            strip.add_child(kind === NOTCH_CONTROLS
+                ? controlsCard(env, ctx, pixelSize('small', WIDGET_STRIP.scale).width)
+                : widgetCard(env, kind, size));
+        } catch (e) {
+            console.error(`[Kiwi] notch widget ${kind} failed:`, e);
+        }
+    }
+    body.add_child(strip);
     return body;
 }

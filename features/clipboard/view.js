@@ -7,6 +7,7 @@ import GLib from 'gi://GLib';
 import St from 'gi://St';
 
 import * as A11y from '../../lib/a11y.js';
+import { iconSizeFor, wellClasses } from '../../lib/designTokens.js';
 import { FILTERS, ageOf, ensureVisible, tileIconProps } from './model.js';
 
 const PREVIEW_CHARS = 2000;
@@ -53,11 +54,13 @@ export function titleOf(entry, _) {
     return entry.kind === 'image' ? _('Image') : entry.preview;
 }
 
-/** Type tile: image thumbnail (made lazily when the tile is built), colour swatch or glyph. */
-export function buildTile(entry, ctl, size) {
+/**
+ * Type tile in a design-system icon well (`well`: 'S' | 'M' | 'L'): image thumbnail (made
+ * lazily when the tile is built), colour swatch or a symbolic glyph on the well's fill.
+ */
+export function buildTile(entry, ctl, well = 'M') {
     const tile = new St.Bin({
-        style_class: `kiwi-clip-tile kiwi-clip-tile-${entry.type}`,
-        width: size, height: size,
+        style_class: `${wellClasses(well, 'rounded')} kiwi-clip-tile kiwi-clip-tile-${entry.type}`,
         x_align: Clutter.ActorAlign.CENTER, y_align: Clutter.ActorAlign.CENTER,
     });
     if (entry.type === 'color') {
@@ -65,7 +68,7 @@ export function buildTile(entry, ctl, size) {
         return tile;
     }
     const gicon = entry.kind === 'image' ? ctl.iconFor(entry) : null;
-    tile.set_child(new St.Icon(tileIconProps(entry.type, size, gicon)));
+    tile.set_child(new St.Icon(tileIconProps(entry.type, iconSizeFor(well), gicon, iconSizeFor(well, true))));
     return tile;
 }
 
@@ -88,15 +91,15 @@ function iconButton(iconName, label, onClick) {
  * @param {object} entry
  * @param {object} ctl controller
  * @param {Function} _ gettext
- * @param {{onActivate: Function, tile?: number, now?: number, compact?: boolean}} o
- *   compact: one line (type icon, preview, time on the right), for the panel popover
+ * @param {{onActivate: Function, tile?: string, now?: number, compact?: boolean}} o
+ *   tile: the icon well size ('M'); compact: one line (type icon, preview, time on the right), for the panel popover
  * @returns {St.Button} with `.entryId`; add pseudo class 'selected' to mark it
  */
-export function buildRow(entry, ctl, _, { onActivate, tile = 34, now = Date.now(), compact = false }) {
+export function buildRow(entry, ctl, _, { onActivate, tile = 'M', now = Date.now(), compact = false }) {
     if (compact)
         return buildCompactRow(entry, ctl, _, { onActivate, tile, now });
     const row = new St.Button({
-        style_class: 'kiwi-clip-row', can_focus: true, reactive: true, track_hover: true,
+        style_class: 'kiwi-clip-row kiwi-row', can_focus: true, reactive: true, track_hover: true,
         x_expand: true, x_align: Clutter.ActorAlign.FILL,
     });
     row.entryId = entry.id;
@@ -109,10 +112,10 @@ export function buildRow(entry, ctl, _, { onActivate, tile = 34, now = Date.now(
         orientation: Clutter.Orientation.VERTICAL, x_expand: true,
         y_align: Clutter.ActorAlign.CENTER, style_class: 'kiwi-clip-text',
     });
-    const title = new St.Label({ text: titleOf(entry, _), style_class: 'kiwi-clip-title' });
+    const title = new St.Label({ text: titleOf(entry, _), style_class: 'kiwi-clip-title kiwi-text-body' });
     title.clutter_text.set_ellipsize(3);          // Pango.EllipsizeMode.END
     text.add_child(title);
-    text.add_child(new St.Label({ text: subtitleOf(entry, now, _), style_class: 'kiwi-clip-sub' }));
+    text.add_child(new St.Label({ text: subtitleOf(entry, now, _), style_class: 'kiwi-clip-sub kiwi-secondary-text kiwi-text-caption' }));
     box.add_child(text);
 
     const actions = new St.BoxLayout({ style_class: 'kiwi-clip-actions', y_align: Clutter.ActorAlign.CENTER });
@@ -146,7 +149,7 @@ export function oneLine(text) {
  */
 function buildCompactRow(entry, ctl, _, { onActivate, tile, now }) {
     const row = new St.Button({
-        style_class: 'kiwi-clip-row kiwi-clip-row-compact', can_focus: true, reactive: true,
+        style_class: 'kiwi-clip-row kiwi-clip-row-compact kiwi-row', can_focus: true, reactive: true,
         track_hover: true, x_expand: true, x_align: Clutter.ActorAlign.FILL,
     });
     row.entryId = entry.id;
@@ -156,14 +159,14 @@ function buildCompactRow(entry, ctl, _, { onActivate, tile, now }) {
     box.add_child(buildTile(entry, ctl, tile));
 
     const title = new St.Label({
-        text: oneLine(titleOf(entry, _)), style_class: 'kiwi-clip-title',
+        text: oneLine(titleOf(entry, _)), style_class: 'kiwi-clip-title kiwi-text-body',
         x_expand: true, y_align: Clutter.ActorAlign.CENTER,
     });
     title.clutter_text.set_ellipsize(3);          // Pango.EllipsizeMode.END
     box.add_child(title);
 
     const time = new St.Label({
-        text: ageText(entry, now, _), style_class: 'kiwi-clip-time', y_align: Clutter.ActorAlign.CENTER,
+        text: ageText(entry, now, _), style_class: 'kiwi-clip-time kiwi-secondary-text kiwi-text-caption', y_align: Clutter.ActorAlign.CENTER,
     });
     box.add_child(time);
 
@@ -201,7 +204,7 @@ export function addRow(list, entry, ctl, _, opts) {
 
 /** "Pinned" / "Recent" caption. */
 export function sectionLabel(text) {
-    return new St.Label({ text, style_class: 'kiwi-clip-section' });
+    return new St.Label({ text, style_class: 'kiwi-clip-section kiwi-section-header' });
 }
 
 /** Cap the characters a preview pane has to lay out. */
@@ -252,7 +255,7 @@ export function buildFilterTabs(_, onPick) {
     const buttons = new Map();
     for (const id of FILTERS) {
         const b = new St.Button({
-            label: labels[id], style_class: 'kiwi-clip-filter', can_focus: true, toggle_mode: true,
+            label: labels[id], style_class: 'kiwi-clip-filter kiwi-pill-button', can_focus: true, toggle_mode: true,
             accessible_name: labels[id], accessible_role: A11y.Role.TOGGLE_BUTTON,
         });
         b.connect('clicked', () => onPick(id));

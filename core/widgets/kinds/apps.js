@@ -31,7 +31,7 @@ export default {
             y_expand: true,
         });
         root.add_child(grid);
-        const empty = label('', 'kiwi-widget-caption kiwi-widget-dim');
+        const empty = label('', 'kiwi-widget-caption kiwi-secondary-text');
         root.add_child(empty);
         let shown = '';
 

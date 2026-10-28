@@ -1,18 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// State for the Widgets tab that lives in the Shell: the microphone (the Shell's mixer
-// control, js/ui/status/volume.js getMixerControl, GNOME 45-51) and the weather the date menu
-// already fetches (its WeatherSection's WeatherClient: private `_weatherItem._weatherClient`
-// in js/ui/dateMenu.js, checked on 48-51). Kiwi never starts a second weather client, so no
-// extra location or network requests. Both are read on signals only.
+// State for the Widgets tab's Controls tile that lives in the Shell: the microphone (the
+// Shell's mixer control, js/ui/status/volume.js getMixerControl, GNOME 45-51), read on
+// signals only. (Weather and events come from core/widgets now.)
 
-import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { getMixerControl } from 'resource:///org/gnome/shell/ui/status/volume.js';
 
 /**
  * @param {CleanupRegistry} cleanup
- * @param {() => void} onChange called when mic() or weather() may have changed
- * @returns {{mic: () => {available: boolean, muted: boolean}, toggleMic: () => void,
- *   weather: () => object|null, openWeather: () => void}}
+ * @param {() => void} onChange called when mic() may have changed
+ * @returns {{mic: () => {available: boolean, muted: boolean}, toggleMic: () => void}}
  */
 export function watchWidgets(cleanup, onChange) {
     const control = getMixerControl();
@@ -38,28 +34,8 @@ export function watchWidgets(cleanup, onChange) {
     cleanup.add(dropStream);
     follow();
 
-    const client = Main.panel.statusArea.dateMenu?._weatherItem?._weatherClient ?? null;
-    if (client?.connect) {
-        const id = client.connect('changed', onChange);
-        cleanup.add(() => client.disconnect(id));
-    }
-
     return {
         mic: () => ({ available: !!stream, muted: !!stream?.is_muted }),
         toggleMic: () => stream?.change_is_muted(!stream.is_muted),
-        weather: () => {
-            if (!client?.available || !client.hasLocation)
-                return null;
-            const info = client.info;
-            if (!info?.is_valid?.())
-                return { loading: !!client.loading };
-            return {
-                temp: info.get_temp_summary?.() ?? '',
-                icon: info.get_symbolic_icon_name?.() ?? 'weather-overcast-symbolic',
-                location: info.get_location_name?.() ?? '',
-                summary: info.get_sky?.() || info.get_weather_summary?.() || '',
-            };
-        },
-        openWeather: () => client?.activateApp?.(),
     };
 }

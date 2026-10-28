@@ -21,8 +21,7 @@ const isAllDay = e => {
 
 /**
  * @param {CleanupRegistry} cleanup
- * @param {{activity: Function, events: (list: object[]) => void}} sink events(): today's
- *   timed and all-day events for the Widgets tab
+ * @param {{activity: Function}} sink
  */
 export function watchCalendar(cleanup, sink) {
     let source;
@@ -59,7 +58,6 @@ export function watchCalendar(cleanup, sink) {
             id: e.id, summary: e.summary ?? '', start: e.date.getTime(), end: e.end.getTime(), allDay: isAllDay(e),
         }));
         const dayEnd = dayStart.getTime() + DAY_MS;
-        sink.events(list.filter(e => e.start < dayEnd && e.end > dayStart.getTime()));
         const next = nextEvent(list, now);
         sink.activity('event', next?.soon ? 'event-soon' : 'event', next
             ? { summary: next.event.summary, start: next.event.start, end: next.event.end, ongoing: next.ongoing }

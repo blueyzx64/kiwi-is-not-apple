@@ -1,15 +1,16 @@
 /* feature: desktop-widgets */
 /* Widget cards (core/widgets/view.js) are shared by the desktop layer, the Notification
    Center and the notch, so their rules live here for every surface. lib/glass.js ('overlays')
-   gives the fill and rim; this is the solid look when glass is off. Radius and padding are
-   inline (view.js RADIUS / PADDING, scaled). */
-.kiwi-widget {
+   gives the desktop card its fill and rim; this is the solid look when glass is off. Radius
+   and padding are inline (view.js, scaled). A card inside a panel (Notification Center, notch)
+   is a .kiwi-card instead (styles/base.css) and takes the panel's text colour. */
+.kiwi-widget-floating {
   background-color: rgba(36, 36, 40, 0.82);
   border: 1px solid rgba(255, 255, 255, 0.14);
   color: #ffffff;
 }
 
-.kiwi-widget.kiwi-glass-light {
+.kiwi-widget-floating.kiwi-glass-light {
   color: #1d1d1f;
 }
 
@@ -47,11 +48,6 @@
   font-weight: 600;
 }
 
-.kiwi-widget-title {
-  font-size: 13px;
-  font-weight: 600;
-}
-
 .kiwi-widget-body {
   font-size: 13px;
 }
@@ -73,14 +69,6 @@
 
 .kiwi-widget-strong {
   font-weight: 700;
-}
-
-.kiwi-widget-dim {
-  color: rgba(255, 255, 255, 0.62);
-}
-
-.kiwi-glass-light .kiwi-widget-dim {
-  color: rgba(0, 0, 0, 0.55);
 }
 
 /* The calendar's weekday and the clock's date: macOS red */
@@ -180,6 +168,16 @@
 
 .kiwi-widget-art-icon {
   color: rgba(255, 255, 255, 0.7);
+}
+
+.kiwi-glass-light .kiwi-widget-artwork,
+.kiwi-modal-light .kiwi-widget-artwork {
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+.kiwi-glass-light .kiwi-widget-art-icon,
+.kiwi-modal-light .kiwi-widget-art-icon {
+  color: rgba(0, 0, 0, 0.45);
 }
 
 .kiwi-widget-controls {
@@ -446,7 +444,8 @@
   background-color: rgba(90, 90, 96, 0.98);
 }
 
-/* Gallery */
+/* Gallery: the shared design system's title, capsule search field, pills and push button
+   (docs/architecture/design-system.md); the fill below is the look with glass off. */
 .kiwi-widgets-gallery {
   border-radius: 26px;
   padding: 14px 18px;
@@ -460,55 +459,19 @@
 }
 
 .kiwi-widgets-gallery-title {
-  font-size: 1.25em;
-  font-weight: 700;
   padding-right: 6px;
 }
 
 .kiwi-widgets-gallery-search {
-  border-radius: 999px;
-  padding: 4px 10px;
   max-width: 360px;
 }
 
 .kiwi-widgets-gallery-search-icon {
   icon-size: 14px;
-  padding-right: 4px;
-}
-
-.kiwi-widgets-gallery-pill {
-  border-radius: 999px;
-  padding: 5px 14px;
-  font-weight: 600;
-  background-color: rgba(255, 255, 255, 0.14);
-}
-
-.kiwi-widgets-gallery-pill:hover {
-  background-color: rgba(255, 255, 255, 0.22);
-}
-
-.kiwi-widgets-gallery-done {
-  background-color: -st-accent-color;
-  color: -st-accent-fg-color;
 }
 
 .kiwi-widgets-gallery-categories {
   spacing: 6px;
-}
-
-.kiwi-widgets-gallery-chip {
-  border-radius: 8px;
-  padding: 3px 10px;
-  font-size: 0.9em;
-}
-
-.kiwi-widgets-gallery-chip:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.kiwi-widgets-gallery-chip:checked {
-  background-color: rgba(255, 255, 255, 0.2);
-  font-weight: 700;
 }
 
 .kiwi-widgets-gallery-row {
@@ -521,7 +484,7 @@
 }
 
 .kiwi-widgets-gallery-preview {
-  border-radius: 14px;
+  border-radius: 18px;
 }
 
 .kiwi-widgets-gallery-preview:hover,
@@ -529,8 +492,9 @@
   background-color: rgba(255, 255, 255, 0.08);
 }
 
-.kiwi-widgets-gallery-name {
-  font-weight: 600;
+.kiwi-glass-light .kiwi-widgets-gallery-preview:hover,
+.kiwi-glass-light .kiwi-widgets-gallery-preview:focus {
+  background-color: rgba(0, 0, 0, 0.06);
 }
 
 .kiwi-widgets-gallery-add {
@@ -546,18 +510,22 @@
 }
 
 .kiwi-widgets-gallery-size {
-  border-radius: 6px;
-  padding: 1px 8px;
-  font-size: 0.8em;
-  font-weight: 600;
-  background-color: rgba(255, 255, 255, 0.08);
-}
-
-.kiwi-widgets-gallery-size:checked {
-  background-color: rgba(255, 255, 255, 0.28);
+  padding: 2px 9px;
+  font-size: 8.25pt;
 }
 
 .kiwi-widgets-gallery-empty {
   padding: 24px;
-  color: rgba(255, 255, 255, 0.62);
+}
+
+/* The chooser of a panel's widgets (core/widgets/chooser.js): .kiwi-row rows, the sizes as
+   small toggle pills */
+.kiwi-widget-chooser-row {
+  spacing: 6px;
+  padding: 3px 4px 3px 8px;
+}
+
+.kiwi-widget-chooser-size {
+  padding: 1px 8px;
+  font-size: 8.25pt;
 }

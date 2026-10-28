@@ -487,14 +487,150 @@ export class WidgetRegistry {
         return [...new Set(this.kinds().map(k => k.category))];
     }
 
-    /** The sizes a surface may use: Notification Center and the notch have no extra-large. */
+    /**
+     * The sizes a surface may use (SURFACE_SIZES): the Notification Center has no extra-large,
+     * the notch's dashboard only small and medium.
+     */
     sizesFor(id, surface = 'desktop') {
         const def = this.get(id);
         if (!def)
             return [];
-        return surface === 'desktop' ? [...def.sizes] : def.sizes.filter(s => s !== 'extraLarge');
+        const allowed = SURFACE_SIZES[surface] ?? SURFACE_SIZES.desktop;
+        return def.sizes.filter(s => allowed.includes(s));
     }
 }
+
+// ---- widget lists of a panel (Notification Center, notch) ----------------------------------
+//
+// A panel shows an ordered list of widgets, one per kind, stored as a GSettings string array
+// of "kind:size" (notification-center-widget-list, notch-widgets). The desktop has its own
+// free layout (above); a panel only stacks its list in rows of `columns` cells.
+
+/** Sizes each surface allows. */
+export const SURFACE_SIZES = Object.freeze({
+    desktop: SIZE_ORDER,
+    center: Object.freeze(['small', 'medium', 'large']),
+    notch: Object.freeze(['small', 'medium']),
+});
+
+/** Cells across of a size class (small 1, medium and large 2). */
+export const cellsOf = size => SIZES[size]?.cols ?? 1;
+
+/**
+ * Parse a stored widget list.
+ *
+ * @param {string[]} strv "kind:size" entries
+ * @param {{sizesFor: (kind: string) => string[], defaultSize?: (kind: string) => string}} kinds
+ *   the sizes the surface allows for a kind ([] for an unknown kind: dropped), and its default
+ * @returns {{kind: string, size: string}[]} one entry per kind, in order; a size the surface
+ *   does not allow becomes the kind's default (when allowed) or its smallest allowed size
+ */
+export function parseWidgetList(strv, kinds) {
+    const out = [];
+    const seen = new Set();
+    for (const raw of Array.isArray(strv) ? strv : []) {
+        if (typeof raw !== 'string')
+            continue;
+        const [kind, size = ''] = raw.split(':');
+        const allowed = kinds.sizesFor(kind);
+        if (!kind || seen.has(kind) || !allowed.length)
+            continue;
+        const fallback = kinds.defaultSize?.(kind);
+        const fixed = allowed.includes(size) ? size
+            : allowed.includes(fallback) ? fallback : allowed[0];
+        seen.add(kind);
+        out.push({ kind, size: fixed });
+    }
+    return out;
+}
+
+/** @returns {string[]} the stored form of a list */
+export function serializeWidgetList(list) {
+    return list.map(w => `${w.kind}:${w.size}`);
+}
+
+/**
+ * Show a kind at a size (replacing its size in place, or appended), or hide it (size null).
+ *
+ * @returns {{kind: string, size: string}[]} a new list
+ */
+export function setWidget(list, kind, size) {
+    if (!size)
+        return list.filter(w => w.kind !== kind);
+    if (list.some(w => w.kind === kind))
+        return list.map(w => (w.kind === kind ? { kind, size } : w));
+    return [...list, { kind, size }];
+}
+
+/**
+ * Cells a list takes in a strip of `columns` cells (the notch): every widget side by side.
+ *
+ * @returns {number}
+ */
+export function stripCells(list) {
+    return list.reduce((n, w) => n + cellsOf(w.size), 0);
+}
+
+/**
+ * Would the list still fit a strip of `columns` cells with `kind` at `size`? (The notch's
+ * chooser disables the sizes that would not.)
+ */
+export function fitsStrip(list, kind, size, columns) {
+    return stripCells(setWidget(list, kind, size)) <= columns;
+}
+
+/**
+ * What a strip of `columns` cells shows: the list in order, skipping what no longer fits.
+ *
+ * @returns {{shown: object[], hidden: object[]}}
+ */
+export function fitStrip(list, columns) {
+    const shown = [];
+    const hidden = [];
+    let used = 0;
+    for (const w of list) {
+        const c = cellsOf(w.size);
+        if (used + c <= columns) {
+            shown.push(w);
+            used += c;
+        } else {
+            hidden.push(w);
+        }
+    }
+    return { shown, hidden };
+}
+
+/**
+ * Rows of a column `columns` cells wide (the Notification Center: two smalls or one medium
+ * per row, as macOS stacks them). Order is kept: a widget that does not fit the current row
+ * starts the next one.
+ *
+ * @returns {object[][]}
+ */
+export function packRows(list, columns = 2) {
+    const rows = [];
+    let row = [];
+    let used = 0;
+    for (const w of list) {
+        const c = Math.min(cellsOf(w.size), columns);
+        if (row.length && used + c > columns) {
+            rows.push(row);
+            row = [];
+            used = 0;
+        }
+        row.push(w);
+        used += c;
+    }
+    if (row.length)
+        rows.push(row);
+    return rows;
+}
+
+/** Today's look: what each panel shows until the user edits it (also the schema defaults). */
+export const DEFAULT_PANEL_WIDGETS = Object.freeze({
+    center: Object.freeze(['weather:small', 'batteries:small', 'now-playing:medium']),
+    notch: Object.freeze(['up-next:medium', 'weather:small', 'notch-controls:small']),
+});
 
 // ---- starter set --------------------------------------------------------------------------
 

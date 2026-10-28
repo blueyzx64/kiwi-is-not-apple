@@ -71,3 +71,21 @@ export function formatClock(hours, minutes, format) {
 export function cardSize({ actions }) {
     return { w: 430, h: actions ? 148 : 108, r: DASH_SIZE.r };
 }
+
+/** The Widgets tab's own tile (Focus, microphone, timers), listed in notch-widgets like a kind. */
+export const NOTCH_CONTROLS = 'notch-controls';
+
+/**
+ * The Widgets tab: core/widgets cards side by side in the body under the header band. A card
+ * is drawn at its desktop size and scaled to the body's height (170 -> 136: the 192 shape minus
+ * the 32 band and the body's 4 + 20 padding), so text keeps its proportions; four smalls, two
+ * mediums or a medium and two smalls fill the 608 px inner width.
+ */
+export const WIDGET_STRIP = Object.freeze({ columns: 4, scale: 0.8, spacing: 20, inner: 608 });
+
+/** @returns {number} the strip's width in px for cards of these (unscaled) widths */
+export function stripWidth(widths) {
+    if (!widths.length)
+        return 0;
+    return widths.reduce((n, w) => n + w * WIDGET_STRIP.scale, 0) + (widths.length - 1) * WIDGET_STRIP.spacing;
+}

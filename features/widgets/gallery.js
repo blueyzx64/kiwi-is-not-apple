@@ -14,6 +14,7 @@ import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import * as A11y from '../../lib/a11y.js';
+import { RADIUS } from '../../lib/designTokens.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { Glass } from '../../lib/glass.js';
 import { OutsideClick } from '../../lib/outsideClick.js';
@@ -72,14 +73,14 @@ export class Gallery {
             panel.destroy();
             this.panel = null;
         });
-        const glass = Glass.attach(panel, { surface: 'overlays', role: 'content', radius: 26 * scale });
+        const glass = Glass.attach(panel, { surface: 'overlays', role: 'overlay', radius: RADIUS.panel * scale });
         cleanup.add(() => glass.destroy());
 
         // Header: title, search, add defaults, Done
         const header = new St.BoxLayout({ style_class: 'kiwi-widgets-gallery-header' });
-        header.add_child(new St.Label({ text: _('Widgets'), style_class: 'kiwi-widgets-gallery-title', y_align: Clutter.ActorAlign.CENTER }));
+        header.add_child(new St.Label({ text: _('Widgets'), style_class: 'kiwi-widgets-gallery-title kiwi-text-title', y_align: Clutter.ActorAlign.CENTER }));
         const search = new St.Entry({
-            style_class: 'kiwi-widgets-gallery-search',
+            style_class: 'kiwi-widgets-gallery-search kiwi-search-field kiwi-search-capsule-filled',
             hint_text: _('Search Widgets'),
             accessible_name: _('Search Widgets'),
             can_focus: true,
@@ -88,13 +89,13 @@ export class Gallery {
         });
         header.add_child(search);
         this._defaults = new St.Button({
-            style_class: 'kiwi-widgets-gallery-pill',
+            style_class: 'kiwi-widgets-gallery-pill kiwi-pill-button',
             label: _('Add Default Widgets'),
             can_focus: true,
         });
         cleanup.connect(this._defaults, 'clicked', () => this._feature.addDefaults());
         header.add_child(this._defaults);
-        const done = new St.Button({ style_class: 'kiwi-widgets-gallery-pill kiwi-widgets-gallery-done', label: _('Done'), can_focus: true });
+        const done = new St.Button({ style_class: 'kiwi-widgets-gallery-done kiwi-push-button kiwi-push-button-default', label: _('Done'), can_focus: true });
         cleanup.connect(done, 'clicked', () => this._feature.closeGallery());
         header.add_child(done);
         panel.add_child(header);
@@ -104,7 +105,7 @@ export class Gallery {
         const all = [null, ...this._feature.host.registry.categories()];
         this._chips = all.map(cat => {
             const b = new St.Button({
-                style_class: 'kiwi-widgets-gallery-chip',
+                style_class: 'kiwi-widgets-gallery-chip kiwi-pill-button',
                 label: cat ? _(cat) : _('All Widgets'),
                 accessible_role: A11y.Role.TOGGLE_BUTTON,
                 toggle_mode: true,
@@ -172,7 +173,7 @@ export class Gallery {
         const registry = this._feature.host.registry;
         const kinds = registry.find({ query: this._query, category: this._category, translate: _ });
         if (!kinds.length) {
-            this._row.add_child(new St.Label({ text: _('No Widgets'), style_class: 'kiwi-widgets-gallery-empty', y_align: Clutter.ActorAlign.CENTER }));
+            this._row.add_child(new St.Label({ text: _('No Widgets'), style_class: 'kiwi-widgets-gallery-empty kiwi-secondary-text', y_align: Clutter.ActorAlign.CENTER }));
             return;
         }
         for (const def of kinds)
@@ -222,7 +223,7 @@ export class Gallery {
         tiles.connect(slot, 'clicked', () => this._feature.add(def.id, size));
 
         const caption = new St.BoxLayout({ style_class: 'kiwi-widgets-gallery-caption' });
-        caption.add_child(new St.Label({ text: _(def.title), style_class: 'kiwi-widgets-gallery-name', x_expand: true, y_align: Clutter.ActorAlign.CENTER }));
+        caption.add_child(new St.Label({ text: _(def.title), style_class: 'kiwi-widgets-gallery-name kiwi-text-headline', x_expand: true, y_align: Clutter.ActorAlign.CENTER }));
         const add = new St.Button({
             style_class: 'kiwi-widgets-gallery-add',
             accessible_name: `${_('Add')} ${_(def.title)}`,
@@ -236,7 +237,7 @@ export class Gallery {
         const picker = new St.BoxLayout({ style_class: 'kiwi-widgets-gallery-sizes', x_align: Clutter.ActorAlign.CENTER });
         const buttons = sizes.map(s => {
             const b = new St.Button({
-                style_class: 'kiwi-widgets-gallery-size',
+                style_class: 'kiwi-widgets-gallery-size kiwi-pill-button',
                 label: SIZE_NAMES[s],
                 accessible_name: { small: _('Small'), medium: _('Medium'), large: _('Large'), extraLarge: _('Extra Large') }[s],
                 accessible_role: A11y.Role.TOGGLE_BUTTON,

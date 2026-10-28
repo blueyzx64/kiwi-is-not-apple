@@ -23,7 +23,8 @@ export class DockMenu extends PopupMenu.PopupMenu {
      */
     constructor(source, position) {
         super(source, 0.5, ARROW_SIDE[position] ?? St.Side.BOTTOM);
-        this.actor.add_style_class_name('kiwi-dock-menu');
+        // The design system's menu shape and selection (.kiwi-menu, styles/base.css)
+        this.actor.add_style_class_name('kiwi-dock-menu kiwi-menu');
         Main.uiGroup.add_child(this.actor);
         this.actor.hide();
         this._glass = Glass.attachMenu(this);

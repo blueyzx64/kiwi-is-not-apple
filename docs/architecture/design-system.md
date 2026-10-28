@@ -38,7 +38,7 @@ with 8 px padding holds 18 px cards; a 18 px card with 8 px padding holds 10 px 
 | `.kiwi-search-glyph` | The magnifier: secondary colour |
 | `.kiwi-toolbar-button` | Circular 32 px button: a faint fill, the row hover fill, the accent when `:checked`, the shared focus ring |
 | `.kiwi-secondary-text` / `.kiwi-tertiary-text` | 60 % / 40 % of the label colour (55 % / 40 % on light) |
-| `.kiwi-pill-button` | A small capsule text button on a panel ("Clear All", "Edit Widgets…", "Edit Controls…", "Reset") |
+| `.kiwi-pill-button` | A small capsule text button on a panel ("Clear All", "Edit Widgets…", "Edit Controls…", "Reset"); in toggle mode (filters, categories, sizes) `:checked` is the accent |
 | `.kiwi-push-button` (+ `-default`) | A dialog/alert button: radius 8, padding 4/16; the default one in the accent |
 | `.kiwi-menu` | Kiwi's panel menus (`lib/menuGlass.js` adds it): radius 12, padding 5, items radius 7, the highlighted item in the row selection accent |
 | `.kiwi-separator` | A 1 px hairline |
@@ -84,18 +84,19 @@ the 4.5:1 text floor; Reduce Transparency and Increase Contrast make all of them
 | Dialogs | radius 26, overlay glass, type scale, push-button shape |
 | OSD, Hover Text, App switcher | overlay glass; Hover Text radius 18; captions in pt |
 
-### Still to migrate
+Every surface listed in the old "Still to migrate" table has adopted the system:
 
-These were being changed elsewhere when the system landed; adopt in a follow-up:
-
-| Where | Change |
+| Surface | Adopted |
 |---|---|
-| `features/clipboard` (popover `view.js`, `popover.js`, `quickPaste.js`) | `kiwi-clip-row` → add `.kiwi-row` and drop its own hover/`:selected` colours (it uses the full accent); `kiwi-clip-sub`/`-time` → `.kiwi-secondary-text`, `.kiwi-text-caption`; `kiwi-clip-section` → `.kiwi-section-header`; `kiwi-clip-search` and `kiwi-qp-search` → `.kiwi-search-field.kiwi-search-capsule-filled` (radius 999, drop border/fill); `kiwi-clip-filter` chips → `.kiwi-pill-button`; Quick Paste buttons → `.kiwi-push-button`; row icons in `wellClasses('M')`; the popover is `attachMenu({ surface: 'overlays' })` — keep `content` (now 0.94–0.98) or pass `role: 'overlay'` |
-| `features/widgets` (gallery) | `kiwi-widgets-gallery-search` → the capsule search field classes; `-chip`/`-pill` → `.kiwi-pill-button`; `-title` → `.kiwi-text-title`; `-row` → `.kiwi-row`; glass `role: 'overlay'`, radius `RADIUS.panel` |
-| `core/widgets` (cards in the Notification Center and on the desktop) | `RADIUS = 24` → `RADIUS.card` (18) inside the Notification Center so its cards match `.kiwi-card`; titles `.kiwi-text-headline`, secondary lines `.kiwi-secondary-text`; glass `role: 'overlay'` on the desktop |
-| `features/dock` | stack panel (`stack.js`): `kiwi-dock-stack-title` → `.kiwi-section-header`, list entries `.kiwi-row`, radius `RADIUS.card`; app menu (`appMenu.js`): add `.kiwi-menu` to the menu actor (or use `MenuGlass`) |
-| `features/missionControl` | `kiwi-mc-space-label` and `kiwi-mc-expose-title` → `.kiwi-text-callout`/`-caption`; close buttons → `.kiwi-toolbar-button` |
-| `features/notch` | dashboard cards `kiwi-notch-card` → `.kiwi-card` look on the dark island (radius 18); `kiwi-notch-dash-header`/`-card-header` → `.kiwi-section-header`; recent/clock rows `.kiwi-row`; widget/art buttons `.kiwi-toolbar-button`; secondary lines `.kiwi-secondary-text` (the island is always dark, so no light marker) |
+| Clipboard popover and Quick Paste | `.kiwi-row` rows (the calmer accent selection), `.kiwi-section-header`, `.kiwi-secondary-text` + `.kiwi-text-caption` times and subtitles, type tiles in `wellClasses('M', 'rounded')`, search fields `.kiwi-search-field.kiwi-search-capsule-filled`, filter and Clear `.kiwi-pill-button`, Quick Paste preview `.kiwi-card`, Paste / Pin `.kiwi-push-button` (+ `-default`); the popover keeps glass `content`, `.kiwi-light` marker; Quick Paste radius `RADIUS.panel` |
+| Widget gallery | `.kiwi-text-title`, capsule search field, category and size `.kiwi-pill-button`s (`:checked`), Done `.kiwi-push-button-default`, glass `overlay`, radius `RADIUS.panel` (its strip of tiles is a scroller, not a list: no `.kiwi-row`) |
+| Widget cards (`core/widgets`) | desktop: glass `overlay`, radius 24 (`.kiwi-widget-floating`); Notification Center and notch: `.kiwi-card` (radius `RADIUS.card`, no glass on glass); titles `.kiwi-text-headline`, secondary lines `.kiwi-secondary-text`; the panel chooser `.kiwi-row` + `.kiwi-pill-button` |
+| Dock | Stack panel: `.kiwi-section-header` title, `.kiwi-row` entries, `.kiwi-pill-button` Open in Files, glass radius `RADIUS.card` (the fan keeps its floating pills); app menu `.kiwi-menu` |
+| Mission Control | space labels `.kiwi-text-caption`, window titles `.kiwi-text-callout`, the space close button `.kiwi-toolbar-button` (20 px, kept solid over thumbnails) |
+| Notch | Now-tab rows and clipboard rows `.kiwi-row` (the activity template keeps its 40 px height and resting fill), card app name and dashboard date `.kiwi-section-header`, secondary lines `.kiwi-secondary-text`, row actions and the Controls toggles `.kiwi-toolbar-button`, widget cards `.kiwi-card`; the island stays black, the PRESENTATION / icon-well templates and the artwork button stay the notch's own |
+
+`.kiwi-pill-button:checked` (filter, category and size pills in toggle mode) is the accent, as a
+checked toolbar button.
 
 ## Adopting it in a feature
 

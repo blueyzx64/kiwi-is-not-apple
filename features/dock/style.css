@@ -104,11 +104,10 @@
     box-shadow: 0 0 8px rgba(255, 255, 255, 0.45);
 }
 
-.kiwi-dock-menu .popup-menu-content {
-    border-radius: 14px;
-}
-
-/* ---- Downloads stack ---- */
+/* ---- Downloads stack ----
+   The fan's files float over the desktop with their names on dark pills; the grid and list
+   panel is glass (radius 18, RADIUS.card) with a .kiwi-section-header title, .kiwi-row
+   entries and a .kiwi-pill-button to open the folder (docs/architecture/design-system.md). */
 .kiwi-dock-stack-file {
     padding: 4px;
     border-radius: 10px;
@@ -116,8 +115,8 @@
     color: #f5f5f7;
 }
 
-.kiwi-dock-stack-file:hover,
-.kiwi-dock-stack-file:focus {
+#kiwi-dock-stack > .kiwi-dock-stack-file:hover,
+#kiwi-dock-stack > .kiwi-dock-stack-file:focus {
     background-color: rgba(255, 255, 255, 0.14);
 }
 
@@ -148,17 +147,17 @@
 }
 
 .kiwi-dock-stack-panel {
-    padding: 12px;
+    padding: 8px;
     border-radius: 18px;
     background-color: rgba(36, 36, 40, 0.94);
     border: 1px solid rgba(255, 255, 255, 0.16);
     color: #f5f5f7;
-    spacing: 8px;
+    spacing: 6px;
 }
 
-.kiwi-dock-stack-title {
-    font-weight: 700;
-    padding: 0 6px;
+.kiwi-dock-stack-panel.kiwi-glass-light,
+.kiwi-dock-stack-panel.kiwi-glass-light .kiwi-dock-stack-file {
+    color: #1d1d1f;
 }
 
 .kiwi-dock-stack-grid .kiwi-dock-stack-name {
@@ -176,7 +175,6 @@
 
 .kiwi-dock-stack-empty {
     padding: 16px;
-    color: rgba(245, 245, 247, 0.7);
 }
 
 .kiwi-dock-stack-open {
@@ -191,6 +189,10 @@
 .kiwi-dock-stack-open:hover,
 .kiwi-dock-stack-open:focus {
     background-color: rgba(60, 60, 66, 0.92);
+}
+
+.kiwi-dock-stack-open-pill {
+    margin-top: 2px;
 }
 
 /* The optional Mission Control tile (missionControlItem.js) */

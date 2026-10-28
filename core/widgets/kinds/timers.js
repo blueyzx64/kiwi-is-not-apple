@@ -64,8 +64,8 @@ export default {
         for (let i = 0; i < SHOWN[size]; i++) {
             const state = { fraction: 0, color: COLORS.orange };
             const ring = canvas(ringSize, ringSize, (cr, w, h, fg) => drawRing(cr, w, h, state.fraction, state.color, fg, Math.max(3, 5 * s)));
-            const time = label('', size === 'small' ? 'kiwi-widget-headline kiwi-widget-tabular' : 'kiwi-widget-title kiwi-widget-tabular');
-            const name = label('', 'kiwi-widget-footnote kiwi-widget-dim');
+            const time = label('', size === 'small' ? 'kiwi-widget-headline kiwi-widget-tabular' : 'kiwi-text-headline kiwi-widget-tabular');
+            const name = label('', 'kiwi-widget-footnote kiwi-secondary-text');
             const toggle = iconButton({ name: _('Pause'), iconName: 'media-playback-pause-symbolic', size: Math.round(14 * s), onClick: () => {} });
             const stop = iconButton({ name: _('Stop'), iconName: 'window-close-symbolic', size: Math.round(14 * s), onClick: () => {} });
             const rec = { state, ring, time, name, toggle, stop, timer: null };
@@ -107,7 +107,7 @@ export default {
             holder.add_child(row);
             rows.push(rec);
         }
-        const empty = label('', 'kiwi-widget-caption kiwi-widget-dim');
+        const empty = label('', 'kiwi-widget-caption kiwi-secondary-text');
 
         if (size === 'small') {
             root.add_child(holder);

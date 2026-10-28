@@ -776,15 +776,16 @@ export const TYPE_ICON = Object.freeze({
  * initializer", which aborted every popover and Quick Paste refresh at the first row.
  *
  * @param {string} type entry.type
- * @param {number} size tile size in px
+ * @param {number} size thumbnail size in px
  * @param {object|null} gicon thumbnail for images, or null for the type glyph
+ * @param {number} [glyph] the symbolic glyph's size (the icon well's, lib/designTokens.js)
  */
-export function tileIconProps(type, size, gicon = null) {
+export function tileIconProps(type, size, gicon = null, glyph = Math.round(size * 0.55)) {
     if (gicon)
         return { gicon, icon_size: size, style_class: 'kiwi-clip-thumb' };
     return {
         icon_name: TYPE_ICON[type] ?? TYPE_ICON.text,
-        icon_size: Math.round(size * 0.55),
+        icon_size: glyph,
         style_class: 'kiwi-clip-glyph',
     };
 }

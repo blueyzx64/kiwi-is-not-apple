@@ -175,6 +175,10 @@
   spacing: 16px;
 }
 
+.kiwi-nc .kiwi-nc-widget-rows {
+  spacing: 16px;
+}
+
 /* Placeholders, only while no widget is registered */
 .kiwi-nc .kiwi-nc-placeholder-row {
   spacing: 10px;

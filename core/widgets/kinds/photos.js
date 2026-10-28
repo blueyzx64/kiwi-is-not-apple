@@ -9,7 +9,7 @@ import Gio from 'gi://Gio';
 import St from 'gi://St';
 
 import { pickPhoto } from '../data.js';
-import { RADIUS, pixelSize } from '../view.js';
+import { pixelSize } from '../view.js';
 import { N_, icon, label, openApp } from './common.js';
 
 const TRIES = 3;
@@ -39,7 +39,7 @@ export default {
         const glyph = icon('image-x-generic-symbolic', Math.round(32 * view.scale));
         glyph.x_align = Clutter.ActorAlign.CENTER;
         empty.add_child(glyph);
-        const note = label('', 'kiwi-widget-caption kiwi-widget-dim', { x_align: Clutter.ActorAlign.CENTER });
+        const note = label('', 'kiwi-widget-caption kiwi-secondary-text', { x_align: Clutter.ActorAlign.CENTER });
         note.clutter_text.line_wrap = true;
         note.clutter_text.line_alignment = 2; // CENTER
         empty.add_child(note);
@@ -71,7 +71,7 @@ export default {
             cancel?.cancel();
             const mine = cancel = new Gio.Cancellable();
             try {
-                const px = await provider.decode(path, width, height, Math.round(RADIUS * view.scale), mine);
+                const px = await provider.decode(path, width, height, Math.round(view.radius), mine);
                 if (mine.is_cancelled())
                     return;
                 const image = St.ImageContent.new_with_preferred_size(px.width, px.height);

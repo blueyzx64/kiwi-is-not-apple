@@ -10,6 +10,7 @@ import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 
 import * as A11y from '../../lib/a11y.js';
+import { RADIUS } from '../../lib/designTokens.js';
 import { ModalSurface } from '../../lib/modalSurface.js';
 import { stepFilter, stepSelection } from './model.js';
 import {
@@ -38,7 +39,7 @@ export class QuickPaste {
             width: WIDTH,
             height: HEIGHT,
             position: 'center',
-            radius: 26,
+            radius: RADIUS.panel,
             styleClass: 'kiwi-quick-paste',
             build: frame => this._build(frame),
             onCapturedKey: event => this._onKey(event),
@@ -68,7 +69,9 @@ export class QuickPaste {
         this._query = '';
         this._filter = 'all';
         const entry = new St.Entry({
-            style_class: 'kiwi-qp-search', hint_text: _('Search Clipboard'), accessible_name: _('Search Clipboard'), can_focus: true, x_expand: true,
+            style_class: 'kiwi-qp-search kiwi-search-field kiwi-search-capsule-filled kiwi-text-body',
+            hint_text: _('Search Clipboard'), accessible_name: _('Search Clipboard'), can_focus: true, x_expand: true,
+            primary_icon: new St.Icon({ icon_name: 'edit-find-symbolic', style_class: 'kiwi-qp-search-icon' }),
         });
         entry.clutter_text.connect('text-changed', () => {
             this._query = entry.get_text();
@@ -102,23 +105,23 @@ export class QuickPaste {
         });
         body.add_child(side);
         const previewBox = new St.BoxLayout({
-            style_class: 'kiwi-qp-preview', orientation: Clutter.Orientation.VERTICAL, x_expand: true, y_expand: true,
+            style_class: 'kiwi-qp-preview kiwi-card', orientation: Clutter.Orientation.VERTICAL, x_expand: true, y_expand: true,
         });
         side.add_child(previewBox);
-        const meta = new St.Label({ style_class: 'kiwi-qp-meta' });
+        const meta = new St.Label({ style_class: 'kiwi-qp-meta kiwi-secondary-text kiwi-text-caption' });
         side.add_child(meta);
 
         const buttons = new St.BoxLayout({ style_class: 'kiwi-qp-buttons' });
-        const paste = new St.Button({ label: _('Paste'), style_class: 'kiwi-qp-button kiwi-qp-primary', can_focus: true });
+        const paste = new St.Button({ label: _('Paste'), style_class: 'kiwi-qp-button kiwi-push-button kiwi-push-button-default', can_focus: true });
         paste.connect('clicked', () => this._paste());
-        const pin = new St.Button({ label: _('Pin'), style_class: 'kiwi-qp-button', can_focus: true });
+        const pin = new St.Button({ label: _('Pin'), style_class: 'kiwi-qp-button kiwi-push-button', can_focus: true });
         pin.connect('clicked', () => this._pin());
         buttons.add_child(paste);
         buttons.add_child(pin);
         side.add_child(buttons);
 
         frame.add_child(new St.Label({
-            style_class: 'kiwi-qp-hints',
+            style_class: 'kiwi-qp-hints kiwi-secondary-text kiwi-text-caption',
             text: _('↑↓ Select    ←→ Category    ↵ Paste    Ctrl+P Pin    Ctrl+D Remove    Esc Close'),
         }));
 
@@ -145,7 +148,7 @@ export class QuickPaste {
         const shownPinned = all.filter(e => e.pinned);
         const shownRecent = all.filter(e => !e.pinned);
         const add = rows => rows.forEach(e => addRow(ui.list, e, ctl, _, {
-            tile: 30, now, onActivate: en => {
+            tile: 'M', now, onActivate: en => {
                 this._selected = en.id;
                 this._paste();
             },
@@ -160,7 +163,7 @@ export class QuickPaste {
         }
         if (!all.length) {
             ui.list.add_child(new St.Label({
-                text: ctl.count ? _('No matches') : _('Nothing copied yet'), style_class: 'kiwi-clip-empty',
+                text: ctl.count ? _('No matches') : _('Nothing copied yet'), style_class: 'kiwi-clip-empty kiwi-secondary-text',
             }));
         }
         this._syncSelection();

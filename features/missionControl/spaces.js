@@ -274,10 +274,10 @@ export class SpacesBar {
 
     _decorate(t) {
         const cleanup = new CleanupRegistry();
-        const label = cleanup.actor(new St.Label({ style_class: 'kiwi-mc-space-label', reactive: true, track_hover: true, can_focus: true }));
+        const label = cleanup.actor(new St.Label({ style_class: 'kiwi-mc-space-label kiwi-text-caption', reactive: true, track_hover: true, can_focus: true }));
         label.clutter_text.ellipsize = Pango.EllipsizeMode.END;
         const close = cleanup.actor(new St.Button({
-            style_class: 'kiwi-mc-space-close',
+            style_class: 'kiwi-mc-space-close kiwi-toolbar-button',
             accessible_name: this._host._('Remove Desktop'),
             child: new St.Icon({ icon_name: 'window-close-symbolic', icon_size: 10 }),
             track_hover: true,

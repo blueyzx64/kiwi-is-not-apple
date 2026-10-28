@@ -41,7 +41,7 @@ export default {
         // Top: where, and how warm
         const top = box('kiwi-widget-row', false, { x_expand: true });
         const left = box('kiwi-widget-column', true, { x_expand: true });
-        const place = label('', 'kiwi-widget-title');
+        const place = label('', 'kiwi-text-headline');
         const temp = label('', 'kiwi-widget-hero');
         left.add_child(place);
         left.add_child(temp);
@@ -59,8 +59,8 @@ export default {
         const mini = icon('weather-few-clouds-symbolic', Math.round(20 * s));
         mini.y_align = Clutter.ActorAlign.START;
         const text = box('kiwi-widget-column', true, { x_expand: true });
-        const summary = label('', 'kiwi-widget-title');
-        const range = label('', 'kiwi-widget-caption kiwi-widget-dim');
+        const summary = label('', 'kiwi-text-headline');
+        const range = label('', 'kiwi-widget-caption kiwi-secondary-text');
         text.add_child(summary);
         text.add_child(range);
         if (!view.size.startsWith('l'))
@@ -76,7 +76,7 @@ export default {
                 hours.y_align = Clutter.ActorAlign.CENTER;
             (medium ? body : root).add_child(hours);
         }
-        const message = label('', 'kiwi-widget-caption kiwi-widget-dim', { x_expand: true });
+        const message = label('', 'kiwi-widget-caption kiwi-secondary-text', { x_expand: true });
         message.clutter_text.line_wrap = true;
         message.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
         root.add_child(message);
@@ -110,7 +110,7 @@ export default {
                 for (const f of d.forecasts.slice(0, medium ? 4 : 5)) {
                     const col = box('kiwi-widget-column kiwi-widget-hour', true, { x_expand: true });
                     const t = GLib.DateTime.new_from_unix_local(f.time);
-                    col.add_child(label(t.format('%l%P').trim(), 'kiwi-widget-caption kiwi-widget-dim', { x_align: Clutter.ActorAlign.CENTER }));
+                    col.add_child(label(t.format('%l%P').trim(), 'kiwi-widget-caption kiwi-secondary-text', { x_align: Clutter.ActorAlign.CENTER }));
                     const g = icon(f.icon, Math.round(20 * s));
                     g.x_align = Clutter.ActorAlign.CENTER;
                     col.add_child(g);

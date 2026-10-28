@@ -30,7 +30,7 @@ export default {
                 x_expand: true, y_expand: true,
             });
         root.add_child(holder);
-        const empty = label(_('No batteries'), 'kiwi-widget-caption kiwi-widget-dim');
+        const empty = label(_('No batteries'), 'kiwi-widget-caption kiwi-secondary-text');
         root.add_child(empty);
 
         const ringSize = Math.round({ small: 46, medium: 64, large: 40 }[view.size] * s);

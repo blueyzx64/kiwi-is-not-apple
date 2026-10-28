@@ -236,18 +236,18 @@ export function trailingSlot() {
  */
 export function row(activity, env) {
     const desc = describe(activity, env._);
-    const box = new St.BoxLayout({ style_class: 'kiwi-notch-card-row kiwi-notch-activity-row', x_expand: true });
+    const box = new St.BoxLayout({ style_class: 'kiwi-notch-card-row kiwi-notch-activity-row kiwi-row', x_expand: true });
     box.add_child(iconWell(gIconOf(desc), desc, 'row'));
     const text = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, x_expand: true, y_align: Clutter.ActorAlign.CENTER });
     text.add_child(label(desc.title, 'kiwi-notch-recent-title'));
-    text.add_child(detailLabel(desc, 'kiwi-notch-recent-sub', env.live));
+    text.add_child(detailLabel(desc, 'kiwi-notch-recent-sub kiwi-secondary-text', env.live));
     box.add_child(text);
     if (desc.row === 'ring' && desc.fraction !== null)
         box.add_child(ring(desc.fraction, desc.tint));
     if (desc.row === 'action') {
         for (const a of desc.actions) {
             box.add_child(button({
-                styleClass: 'kiwi-notch-row-action',
+                styleClass: 'kiwi-notch-row-action kiwi-toolbar-button',
                 iconName: a.iconName,
                 accessibleName: a.label,
                 size: 14,

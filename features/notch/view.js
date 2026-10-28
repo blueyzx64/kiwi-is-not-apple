@@ -65,7 +65,8 @@ export class NotchView {
      *   onMedia('previous'|'toggle'|'next'), onRaisePlayer (the art: the playing app to the front), onToggleDnd, onToggleMic, onCopy(entryId), onCollapse,
      *   onOpenNotification(notification), onOpenList, onSeek(fraction 0..1), onTab(tab),
      *   onActivityAction(activity, id), onShelf(action, uri), onShelfLayout(layout|null), isShelfHelperWindow(window), onTimerPreset(minutes),
-     *   onOpenWeather, onOpenCalendar, getPosition(): Promise<number|null>}
+     *   widgetHost() (core/widgets host), onEditWidgets, onSetWidgets(list), onOpenWidget(view),
+     *   getPosition(): Promise<number|null>}
      * @param {function(string): string} gettext
      * @param {import('../../core/motion.js').Motion} motion
      */
@@ -704,14 +705,22 @@ export class NotchView {
             tabs.add_child(b);
         }
         header.add_child(tabs);
-        header.add_child(label(GLib.DateTime.new_now_local().format('%a %e %b').replace(/\s+/g, ' '), 'kiwi-notch-dash-date'));
+        // "Edit" / "Done" for the Widgets tab's chooser, shown on that tab only
+        const edit = new St.Button({
+            style_class: 'kiwi-notch-dash-edit kiwi-pill-button', can_focus: true,
+            label: this._('Edit'), accessible_name: this._('Edit Widgets'),
+            y_align: Clutter.ActorAlign.CENTER, visible: false,
+        });
+        edit.connect('clicked', () => this._h.onEditWidgets?.());
+        header.add_child(edit);
+        header.add_child(label(GLib.DateTime.new_now_local().format('%a %e %b').replace(/\s+/g, ' '), 'kiwi-notch-dash-date kiwi-section-header'));
         page.add_child(header);
         const holder = new St.Widget({
             style_class: 'kiwi-notch-dash-holder', layout_manager: new Clutter.BinLayout(),
             x_expand: true, y_expand: true, clip_to_allocation: true,
         });
         page.add_child(holder);
-        this._dash = { page, buttons, holder, bodies: new Map(), current: null, tab: null, live: [], prebuild: 0, prebuildArgs: null, sliding: false };
+        this._dash = { page, buttons, edit, holder, bodies: new Map(), current: null, tab: null, live: [], prebuild: 0, prebuildArgs: null, sliding: false };
         this._fillDashboard(vm, ctx);
         return page;
     }
@@ -719,7 +728,17 @@ export class NotchView {
     _dropDash() {
         if (this._dash?.prebuild)
             this._cleanup.release(this._dash.prebuild);
+        // Widgets on the leaving dashboard stop following their data at once
+        for (const entry of this._dash?.bodies.values() ?? [])
+            entry.views.forEach(v => v.setActive(false));
         this._dash = null;
+    }
+
+    // Only the shown tab's widgets follow their data (core/widgets providers run only then)
+    _syncWidgetViews() {
+        const dash = this._dash;
+        for (const entry of dash?.bodies.values() ?? [])
+            entry.views.forEach(v => v.setActive(entry === dash.current));
     }
 
     _updateDashboard(vm, ctx) {
@@ -736,10 +755,15 @@ export class NotchView {
         dash.tab = vm.tab;
         for (const [tab, b] of dash.buttons)
             b.checked = tab === vm.tab;
+        const editing = !!ctx.widgets?.editing;
+        dash.edit.visible = vm.tab === 'widgets' && !!this._h.widgetHost?.();
+        dash.edit.label = editing ? this._('Done') : this._('Edit');
+        dash.edit.accessible_name = editing ? this._('Done') : this._('Edit Widgets');
         const old = dash.current;
         const entry = this._tabBody(vm.tab, vm, ctx);
         dash.current = entry;
         dash.live = entry.live;
+        this._syncWidgetViews();
         this._prebuildTabs(vm, ctx);
         const switching = !!old && old.tab !== vm.tab;
         dash.sliding = switching;
@@ -778,9 +802,11 @@ export class NotchView {
         if (cached?.sig === sig)
             return cached;
         const live = [];
+        const views = [];
         const env = {
             _: this._, h: this._h, live, alive: () => !this._destroyed,
             clockFormat: () => this._clockFormat(),
+            host: this._h.widgetHost?.() ?? null, views,
         };
         let actor;
         try {
@@ -796,7 +822,7 @@ export class NotchView {
         // an offscreen buffer first (a costly first frame); the children do not overlap
         actor.offscreen_redirect = 0;
         cached?.actor.destroy();
-        const entry = { tab, actor, sig, live, shelf: env.shelf ?? null };
+        const entry = { tab, actor, sig, live, views, shelf: env.shelf ?? null };
         dash.bodies.set(tab, entry);
         dash.holder.add_child(actor);
         return entry;
@@ -989,11 +1015,11 @@ export class NotchView {
         header.add_child(iconWell(this._notificationIcon(notification), presentation('notification'), 'banner'));
         const app = notification.source?.title ?? '';
         const when = notification.datetime?.format?.('%H:%M') ?? '';
-        header.add_child(label(app, 'kiwi-notch-card-app', { x_expand: true }));
+        header.add_child(label(app, 'kiwi-notch-card-app kiwi-section-header', { x_expand: true }));
         if (badge > 0)
             header.add_child(label(`+${badge}`, 'kiwi-notch-badge'));
         if (when)
-            header.add_child(label(when, 'kiwi-notch-card-time'));
+            header.add_child(label(when, 'kiwi-notch-card-time kiwi-secondary-text'));
         const close = new St.Button({
             style_class: 'kiwi-notch-close',
             child: new St.Icon({ icon_name: 'window-close-symbolic', icon_size: 12 }),
