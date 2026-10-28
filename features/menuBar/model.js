@@ -71,16 +71,32 @@ export function touchesBar(frame, area) {
  * @param {boolean} s.transparent the "transparent menu bar" setting
  * @param {boolean} s.windowAtTop a window touches the bar or is maximized
  * @param {boolean} s.solidOnWindow the "solid when a window touches the bar" setting
- * @param {boolean} s.overview Mission Control / the overview is showing
  * @param {boolean} s.solidOnly high contrast or reduced transparency
- * @returns {'clear'|'solid'|'overview'}
+ * @returns {'clear'|'solid'}
  */
-export function barLook({ transparent, windowAtTop, solidOnWindow, overview, solidOnly }) {
-    if (overview)
-        return 'overview';
+export function barLook({ transparent, windowAtTop, solidOnWindow, solidOnly }) {
     if (!transparent || solidOnly || (solidOnWindow && windowAtTop))
         return 'solid';
     return 'clear';
+}
+
+/**
+ * The box pointer's source alignment that puts the menu's leading edge on the clicked item's
+ * leading edge. The pointer reads the item's content box straight from its allocation, so the
+ * box starts where the item sits in its parent plus its padding: both are taken back here
+ * with an alignment outside 0..1 (a stock quirk that shifts every bar menu by a few pixels).
+ *
+ * @param {object} s
+ * @param {boolean} s.rtl right-to-left text direction
+ * @param {number} s.width the item's width
+ * @param {number} s.contentStart where the content box starts, as the pointer reads it
+ * @param {number} s.contentWidth width of the content box
+ * @returns {number}
+ */
+export function leadingAlignment({ rtl, width, contentStart, contentWidth }) {
+    if (contentWidth <= 0)
+        return rtl ? 1 : 0;
+    return ((rtl ? width : 0) - contentStart) / contentWidth;
 }
 
 // ---- About This PC ---------------------------------------------------------------------------

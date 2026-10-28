@@ -1,6 +1,6 @@
 // Run: gjs -m tests/menuBarModel.test.js
 import {
-    chooseText, touchesBar, barLook, parseOsRelease, systemLogoNames, parseCpuInfo, parseMemTotal,
+    chooseText, touchesBar, barLook, leadingAlignment, parseOsRelease, systemLogoNames, parseCpuInfo, parseMemTotal,
     formatBytes, deviceModel, chassisIcon, gpuNames, parseRecentXbel, forceQuitRows,
     privacyDots, micApps, confirmationHolds, fillPlaceholders, fitMenus,
 } from '../features/menuBar/model.js';
@@ -150,12 +150,11 @@ test('a window touches the bar at the top of the work area', () => {
 });
 
 test('bar look', () => {
-    eq(barLook({ transparent: true, windowAtTop: false, solidOnWindow: true, overview: false, solidOnly: false }), 'clear');
-    eq(barLook({ transparent: true, windowAtTop: true, solidOnWindow: true, overview: false, solidOnly: false }), 'solid');
-eq(barLook({ transparent: true, windowAtTop: true, solidOnWindow: false, overview: false, solidOnly: false }), 'clear');
-    eq(barLook({ transparent: false, windowAtTop: false, overview: false, solidOnly: false }), 'solid');
-    eq(barLook({ transparent: true, windowAtTop: false, overview: false, solidOnly: true }), 'solid');
-    eq(barLook({ transparent: true, windowAtTop: true, overview: true, solidOnly: false }), 'overview');
+    eq(barLook({ transparent: true, windowAtTop: false, solidOnWindow: true, solidOnly: false }), 'clear');
+    eq(barLook({ transparent: true, windowAtTop: true, solidOnWindow: true, solidOnly: false }), 'solid');
+eq(barLook({ transparent: true, windowAtTop: true, solidOnWindow: false, solidOnly: false }), 'clear');
+    eq(barLook({ transparent: false, windowAtTop: false, solidOnly: false }), 'solid');
+    eq(barLook({ transparent: true, windowAtTop: false, solidOnly: true }), 'solid');
 });
 
 test('os-release, cpuinfo and meminfo', () => {
@@ -217,6 +216,14 @@ test('privacy dots and mic apps', () => {
 test('systemLogoNames tries the symbolic icon first', () => {
     eq(systemLogoNames('fedora-logo-icon'), ['fedora-logo-icon-symbolic', 'fedora-logo-icon']);
     eq(systemLogoNames('x-symbolic'), ['x-symbolic']);
+});
+
+test('menu placement aligns leading edges', () => {
+    eq(leadingAlignment({ rtl: false, width: 0, contentStart: 3, contentWidth: 0 }), 0);
+    eq(leadingAlignment({ rtl: true, width: 0, contentStart: 3, contentWidth: 0 }), 1);
+    eq(leadingAlignment({ rtl: false, width: 100, contentStart: 0, contentWidth: 100 }), 0);
+    eq(leadingAlignment({ rtl: false, width: 100, contentStart: 10, contentWidth: 80 }), -0.125);
+    eq(leadingAlignment({ rtl: true, width: 100, contentStart: 10, contentWidth: 80 }), 1.125);
 });
 
 if (failed)

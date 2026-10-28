@@ -60,7 +60,7 @@ export class AdaptiveBar {
         this._windows = new Map();   // Meta.Window -> CleanupRegistry tokens
     }
 
-    /** 'clear' | 'solid' | 'overview' (tests, the harness) */
+    /** 'clear' | 'solid' (tests, the harness) */
     get look() {
         return this._look;
     }
@@ -109,7 +109,6 @@ export class AdaptiveBar {
             this._opaque = !!(env.opaque || env.highContrast);
             this._apply();
         });
-        cleanup.connect(Main.overview, 'showing', () => this._apply());
         cleanup.connect(Main.overview, 'hidden', () => this._checkWindows());
 
         // Windows touching the bar
@@ -170,6 +169,10 @@ export class AdaptiveBar {
     }
 
     _checkWindows() {
+        // The overview spreads the windows out: judging them now would flip the bar mid-transition.
+        // 'hidden' checks again.
+        if (Main.overview.visible)
+            return;
         const lm = Main.layoutManager;
         const primary = lm.primaryIndex;
         const area = lm.getWorkAreaForMonitor(primary);
@@ -200,7 +203,6 @@ export class AdaptiveBar {
             transparent: true,
             solidOnWindow: this._solidOnWindow,
             windowAtTop: this._windowAtTop,
-            overview: Main.overview.visible,
             solidOnly: this._opaque || !!St.Settings.get().high_contrast,
         });
         this._look = look;
