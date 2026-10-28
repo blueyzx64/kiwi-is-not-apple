@@ -1,5 +1,5 @@
 // Run: gjs -m tests/motionModel.test.js
-import { DURATIONS, CURVES, SPRINGS, REDUCED_MAX_MS, TRANSFORM_PROPS, resolve, splitProps, springAt, springDuration, springKeyframes } from '../core/motionModel.js';
+import { DURATIONS, CURVES, SPRINGS, REDUCED_MAX_MS, TRANSFORM_PROPS, POPUP_FLAGS, menuMotion, resolve, splitProps, springAt, springDuration, springKeyframes } from '../core/motionModel.js';
 
 let failed = 0;
 function test(name, fn) {
@@ -233,6 +233,25 @@ test('F1: an env with neither field, or only reducedMotion false, is animated', 
 test('F1: animations false still switches off with or without the other field', () => {
     eq(resolve({ duration: 'long' }, { animations: false }), resolve({ duration: 'long' }, OFF));
     eq(resolve({ duration: 'long' }, { reducedMotion: true, animations: false }).duration, 0);
+});
+test('menus: open fades in fast with no slide; a switch or NONE shows at once', () => {
+    const { NONE, SLIDE, FADE, FULL } = POPUP_FLAGS;
+    eq(menuMotion('open', FULL), { flags: FADE, duration: 'menuOpen' });
+    eq(menuMotion('open', true), { flags: FADE, duration: 'menuOpen' });
+    eq(menuMotion('open', SLIDE), { flags: FADE, duration: 'menuOpen' });
+    eq(menuMotion('open', FADE), { flags: NONE, duration: 'instant' });   // from one open menu to the next
+    eq(menuMotion('open', NONE), { flags: NONE, duration: 'instant' });
+    eq(menuMotion('open', false), { flags: NONE, duration: 'instant' });
+    ok(DURATIONS.menuOpen > 0 && DURATIONS.menuOpen <= 100, 'macOS: a menu appears within 100 ms');
+});
+test('menus: a dismissal is immediate; only a chosen item fades the menu out briefly', () => {
+    const { NONE, FADE, FULL } = POPUP_FLAGS;
+    for (const req of [FULL, FADE, true, NONE, false])
+        eq(menuMotion('close', req), { flags: NONE, duration: 'instant' }, `close ${req}`);
+    eq(menuMotion('close', FULL, true), { flags: FADE, duration: 'menuActivate' });
+    eq(menuMotion('close', NONE, true), { flags: NONE, duration: 'instant' });
+    ok(DURATIONS.menuActivate > 0 && DURATIONS.menuActivate <= 150, 'macOS: at most 150 ms');
+    eq(resolve({ duration: 'menuActivate' }, OFF).duration, 0);
 });
 
 if (failed) {

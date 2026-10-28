@@ -16,6 +16,13 @@
 // Hot path: ease() hands the work to Clutter (actor.ease); spring() runs one Clutter.Timeline
 // whose new-frame handler interpolates a table computed once, and allocates nothing per frame.
 //
+// One animation per property: a spring on a property cancels the spring already running on
+// that property of that actor, and so does an ease() of it, so two timelines never fight over
+// one value (the loser's last frame used to land after the winner's and leave the actor out of
+// place). Every new animation starts from the current value, so an interrupted one never jumps.
+//
+// Popup menus (BoxPointer) follow motionModel.menuMotion while Motion runs (core/menuMotion.js).
+//
 // Shell API: actor.ease (js/ui/environment.js), St.Settings (enable-animations,
 // slow-down-factor), lib/compat.js watchReducedMotion.
 
@@ -25,6 +32,7 @@ import St from 'gi://St';
 import { CleanupRegistry } from '../lib/disposables.js';
 import { watchReducedMotion } from '../lib/compat.js';
 import { resolve, splitProps, springKeyframes } from './motionModel.js';
+import { installMenuMotion } from './menuMotion.js';
 
 const NOOP_HANDLE = Object.freeze({ cancel() {}, get running() { return false; } });
 
@@ -84,6 +92,8 @@ export class Motion {
         });
         cleanup.connect(st, 'notify::enable-animations', sync);
         sync();
+        // Popup menus open and close on the same rules (core/menuMotion.js)
+        installMenuMotion(cleanup, this);
     }
 
     /** Stop following them (extension disable). */

@@ -21,6 +21,8 @@ export const DURATIONS = Object.freeze({
     medium: 260,    // panels, the notch, Spotlight
     long: 400,      // window flights, Show Desktop
     extraLong: 550, // Genie, Mission Control
+    menuOpen: 90,      // a popup menu fading in (macOS: no slide, no scale)
+    menuActivate: 120, // a popup menu fading out after one of its items was chosen
 });
 
 /** Named easing curves: Clutter.AnimationMode names (core/motion.js maps them). */
@@ -162,4 +164,33 @@ export function splitProps(props, transforms) {
             animate[k] = v;
     }
     return { animate, jump };
+}
+
+/** BoxPointer.PopupAnimation bits (js/ui/boxpointer.js, Shell 48-51). */
+export const POPUP_FLAGS = Object.freeze({ NONE: 0, SLIDE: 1, FADE: 2, FULL: ~0 });
+
+/**
+ * How a popup menu (PopupMenu's BoxPointer: panel menus, Quick Settings / Control Center, the
+ * calendar, context menus) shows and hides, macOS style:
+ *   - opening fades in quickly, with no slide or scale; moving from one open menu to the next
+ *     (the Shell passes FADE alone then) and an open asked for without animation show at once;
+ *   - a dismissal (press outside, Escape, the menu's button, another surface taking over) is
+ *     immediate, so nothing lingers under the next click;
+ *   - only a close after an item was chosen fades out, briefly.
+ *
+ * @param {'open'|'close'} phase
+ * @param {number|boolean} requested what the Shell asked for (PopupAnimation bits; `true` is
+ *   what callers pass as "animate", as Shell 48-50 menu.close(true))
+ * @param {boolean} [activated] the close follows an item activation
+ * @returns {{flags: number, duration: string}} the PopupAnimation to run and a DURATIONS name
+ */
+export function menuMotion(phase, requested, activated = false) {
+    const bits = requested === true ? POPUP_FLAGS.FULL : Number(requested) || 0;
+    const fade = { flags: POPUP_FLAGS.FADE, duration: phase === 'open' ? 'menuOpen' : 'menuActivate' };
+    const now = { flags: POPUP_FLAGS.NONE, duration: 'instant' };
+    if (bits === POPUP_FLAGS.NONE)
+        return now;
+    if (phase === 'open')
+        return bits === POPUP_FLAGS.FADE ? now : fade;
+    return activated ? fade : now;
 }
