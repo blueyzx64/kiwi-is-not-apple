@@ -71,7 +71,7 @@ export class NotificationCenter {
         this._ctx.events.on('notification-center-requested', () => this.open(), cleanup);
         NotificationRouter.watchHistory(cleanup, () => this._queueRefresh());
         this._ks.watch('notification-center-widgets', () => this._rebuild());
-        this._host = Widgets.acquire(cleanup, this._ctx.gettext);
+        this._host = Widgets.acquire(cleanup, this._ctx.gettext, this._ctx);
         WIDGET_ROWS.forEach((row, order) =>
             this.addWidget(cleanup, { id: `row-${order}`, order, create: () => this._widgetRow(row) }));
         cleanup.add(() => this._showBanners());

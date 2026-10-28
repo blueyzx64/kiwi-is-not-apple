@@ -13,8 +13,13 @@
 //   view.menuItems();          // the kind's own options for a right-click menu
 //
 // Kind definition (core/widgets/kinds/*.js):
-//   {id, title, category, sizes, defaultSize, provider,
-//    build(view) -> {update(data)}, open?(view), options?(view) -> [{label, active, apply()}]}
+//   {id, title, category, sizes, defaultSize, provider, bleed?,
+//    build(view) -> {update(data), destroy?()}, open?(view), options?(view) -> [{label, active, apply()}]}
+// bleed: the content fills the card edge to edge (Photos, Notes); it gets the card's radius
+// and pads itself. destroy() runs when the content is rebuilt or the view goes (cancel work).
+// Controls inside a widget that act in place (Sonoma's interactive widgets) are St.Buttons or
+// St.Entries, or carry the kiwi-widget-interactive class: a surface never drags or opens the
+// widget from a press on them (features/widgets/layer.js).
 
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
@@ -61,16 +66,20 @@ export class WidgetView {
             reactive: true,
             accessible_name: this._(def.title),
         });
-        this.actor.set_style(`border-radius: ${RADIUS * scale}px; padding: ${PADDING * scale}px;`);
+        const pad = def.bleed ? 0 : PADDING * scale;
+        this.actor.set_style(`border-radius: ${RADIUS * scale}px; padding: ${pad}px;`);
         this.content = new St.BoxLayout({
             style_class: 'kiwi-widget-content',
             orientation: Clutter.Orientation.VERTICAL,
             x_expand: true,
             y_expand: true,
         });
+        if (def.bleed)
+            this.content.set_style(`border-radius: ${RADIUS * scale}px;`);
         this.actor.add_child(this.content);
         const glass = Glass.attach(this.actor, { surface: 'overlays', role: 'content', radius: RADIUS * scale });
         this.cleanup.add(() => glass.destroy());
+        this.cleanup.add(() => this._endRenderer());
         this._actorGone = false;
         this.cleanup.connect(this.actor, 'destroy', () => {
             this._actorGone = true;
@@ -80,6 +89,11 @@ export class WidgetView {
         // null until the provider has data: each kind shows its empty state
         this._renderer = def.build(this);
         this._renderer.update(null);
+    }
+
+    /** The host's services: {gettext, settings, timers, events} (core/widgets/index.js). */
+    get env() {
+        return this._host.env;
     }
 
     /** The running provider while active, else null (for buttons that act in place). */
@@ -98,7 +112,7 @@ export class WidgetView {
         if (on) {
             this._handle = this._host.pool.acquire(this.def.provider);
             const provider = this._handle.provider;
-            this._off = provider.onChange(data => this._renderer.update(data));
+            this._off = provider.onChange(data => this._renderer?.update(data));
             this._renderer.update(provider.snapshot());
         } else {
             this._off?.();
@@ -122,9 +136,20 @@ export class WidgetView {
         return this.def.options?.(this) ?? [];
     }
 
+    _endRenderer() {
+        const r = this._renderer;
+        this._renderer = null;
+        try {
+            r?.destroy?.();
+        } catch (e) {
+            console.error(`[Kiwi] widget ${this.def.id} failed to clean up:`, e);
+        }
+    }
+
     /** Change config (the caller persists it) and rebuild the content. */
     setConfig(config) {
         this.config = { ...this.config, ...config };
+        this._endRenderer();
         this.content.destroy_all_children();
         this._renderer = this.def.build(this);
         this._renderer.update(this.provider?.snapshot() ?? null);
@@ -133,6 +158,8 @@ export class WidgetView {
     destroy() {
         if (this._destroyed)
             return;
+        // The content first, while its provider still runs (a note writes its last edit)
+        this._endRenderer();
         this.setActive(false);
         this._destroyed = true;
         this.cleanup.dispose();

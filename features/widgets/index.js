@@ -59,7 +59,7 @@ export class DesktopWidgets {
         const ctx = this.ctx;
         this._ks = new KiwiSettings(ctx.settings);
         this._ks.attach(cleanup);
-        this.host = Widgets.acquire(cleanup, ctx.gettext);
+        this.host = Widgets.acquire(cleanup, ctx.gettext, ctx);
         this._desktop = ctx.desktop.acquire(cleanup);
         this._layout = ctx.layout.acquire(cleanup);
         this.desktopLayers = DesktopLayers.acquire(cleanup);

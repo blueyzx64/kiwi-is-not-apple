@@ -190,10 +190,11 @@ export class DesktopLayer {
 
     // ---- pointer ------------------------------------------------------------------------------
 
-    // Buttons inside a widget (Now Playing) act in place; the card itself drags or opens
+    // Controls inside a widget (Now Playing's buttons, a reminder's check, the note's text)
+    // act in place; the card itself drags or opens (core/widgets/view.js)
     _onButton(card, event) {
         for (let a = global.stage.get_event_actor(event); a && a !== card.view.actor; a = a.get_parent()) {
-            if (a instanceof St.Button)
+            if (a instanceof St.Button || a instanceof St.Entry || a.has_style_class_name?.('kiwi-widget-interactive'))
                 return true;
         }
         return false;
