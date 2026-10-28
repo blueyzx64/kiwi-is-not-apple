@@ -89,7 +89,7 @@ class KiwiAppSwitcherPopup extends SwitcherPopup.SwitcherPopup {
             button.accessible_name = AppNames.of(app);
             return item;
         });
-        this._glass = Glass.attach(this._switcherList, { surface: 'overlays', role: 'content' });
+        this._glass = Glass.attach(this._switcherList, { surface: 'overlays', role: 'overlay' });
 
         // An app that quits (Q, or on its own) leaves the panel, as on macOS
         for (const item of this._items) {

@@ -2,7 +2,7 @@
 /* The Shell's modal dialogs as macOS alerts. lib/glass.js gives the card its fill and rim
    (surface 'overlays'); with glass off the stock card colour stays. */
 .modal-dialog.kiwi-dialog {
-  border-radius: 20px;
+  border-radius: 26px;
   padding: 22px 22px 18px;
   spacing: 14px;
   box-shadow: none;
@@ -10,7 +10,7 @@
 
 .kiwi-dialog-shadow {
   background-color: transparent;
-  border-radius: 20px;
+  border-radius: 26px;
 }
 
 .kiwi-dialog .modal-dialog-content-box {
@@ -22,19 +22,21 @@
   margin-bottom: 2px;
 }
 
+/* Type scale (design system): title 12.75pt bold, body 9.75pt (callout) */
 .kiwi-dialog .message-dialog-title {
-  font-size: 15px;
+  font-size: 12.75pt;
   font-weight: bold;
 }
 
 .kiwi-dialog .message-dialog-description {
-  font-size: 13px;
+  font-size: 9.75pt;
 }
 
 .kiwi-dialog .modal-dialog-button-box {
   padding-top: 4px;
 }
 
+/* The stock buttons take the design system's push-button shape (radius 8, padding 6/16) */
 .kiwi-dialog .modal-dialog-button-box .modal-dialog-button {
   font-weight: normal;
   min-width: 76px;

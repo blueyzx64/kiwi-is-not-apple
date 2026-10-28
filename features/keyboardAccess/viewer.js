@@ -22,6 +22,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { getInputSourceManager } from 'resource:///org/gnome/shell/ui/status/keyboard.js';
 
 import * as A11y from '../../lib/a11y.js';
+import { RADIUS } from '../../lib/designTokens.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { Glass } from '../../lib/glass.js';
 import { EVDEV, board, resolveKeys, splitXkbId } from './model.js';
@@ -195,7 +196,7 @@ export class KeyboardViewer {
             root.destroy();
         });
         const glass = Glass.attach(root, {
-            surface: 'overlays', role: 'content', radius: 14,
+            surface: 'overlays', role: 'overlay', radius: RADIUS.card,
             isDark: () => St.Settings.get().color_scheme !== St.SystemColorScheme.PREFER_LIGHT,
         });
         reg.add(() => glass.destroy());

@@ -288,6 +288,20 @@ export function reselect(oldSections, oldIndex, newSections, moved) {
     return 0;
 }
 
+/**
+ * The second line of a row: never a repeat of the title ("Text Editor / Text Editor"). An app
+ * whose generic name is its name reads "Application", as on macOS; other rows drop the line.
+ *
+ * @param {{title?: string, subtitle?: string, kind?: string}} item
+ * @param {string} appLabel the translated "Application"
+ */
+export function rowSubtitle(item, appLabel) {
+    const sub = (item.subtitle ?? '').trim();
+    if (sub && normalize(sub) !== normalize(item.title ?? ''))
+        return sub;
+    return item.kind === 'app' ? appLabel : '';
+}
+
 // ---- Web search ---------------------------------------------------------------
 
 export const ENGINES = {

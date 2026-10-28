@@ -34,7 +34,7 @@ function button({ text = null, icon = null, name, styleClass, onClick }) {
 /** The date widget: macOS's Calendar widget, small month. */
 export function buildDateWidget(_, now, weekStart) {
     const date = GLib.DateTime.new_from_unix_local(Math.floor(now / 1000));
-    const box = new St.BoxLayout({ style_class: 'kiwi-nc-card kiwi-nc-date', orientation: Clutter.Orientation.VERTICAL });
+    const box = new St.BoxLayout({ style_class: 'kiwi-nc-card kiwi-card kiwi-nc-date', orientation: Clutter.Orientation.VERTICAL });
     const head = new St.BoxLayout({ style_class: 'kiwi-nc-date-head' });
     const titles = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, x_expand: true });
     titles.add_child(label(date.format('%A').toUpperCase(), 'kiwi-nc-date-weekday'));
@@ -83,7 +83,7 @@ export function formatAge(_, now, then) {
 function buildCard(item, ctl, { actions }) {
     const { _ } = ctl;
     const card = new St.Button({
-        style_class: 'kiwi-nc-card kiwi-nc-notification',
+        style_class: 'kiwi-nc-card kiwi-card kiwi-nc-notification',
         accessible_name: [item.appName, item.title, item.body].filter(Boolean).join(', '),
         can_focus: true, reactive: true, x_expand: true,
     });
@@ -95,10 +95,10 @@ function buildCard(item, ctl, { actions }) {
     }));
     const text = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, x_expand: true });
     const top = new St.BoxLayout({ x_expand: true });
-    const title = label(item.title || item.appName, 'kiwi-nc-title', { x_expand: true });
+    const title = label(item.title || item.appName, 'kiwi-nc-title kiwi-text-headline', { x_expand: true });
     title.clutter_text.ellipsize = Pango.EllipsizeMode.END;
     top.add_child(title);
-    const when = label(formatAge(_, ctl.now, item.time), 'kiwi-nc-age', { y_align: Clutter.ActorAlign.CENTER });
+    const when = label(formatAge(_, ctl.now, item.time), 'kiwi-nc-age kiwi-text-caption kiwi-secondary-text', { y_align: Clutter.ActorAlign.CENTER });
     top.add_child(when);
     // The close button takes the age's place while the pointer is over the card (macOS)
     const close = button({
@@ -109,7 +109,7 @@ function buildCard(item, ctl, { actions }) {
     top.add_child(close);
     text.add_child(top);
     if (item.body) {
-        const body = label(item.body, 'kiwi-nc-body');
+        const body = label(item.body, 'kiwi-nc-body kiwi-text-callout');
         body.clutter_text.set({ line_wrap: true, ellipsize: Pango.EllipsizeMode.END });
         body.clutter_text.line_wrap_mode = Pango.WrapMode.WORD_CHAR;
         text.add_child(body);
@@ -119,7 +119,7 @@ function buildCard(item, ctl, { actions }) {
     if (actions && item.actions.length) {
         const bar = new St.BoxLayout({ style_class: 'kiwi-nc-actions', x_expand: true });
         item.actions.forEach((name, index) => {
-            const b = button({ text: name, name, styleClass: 'kiwi-nc-action', onClick: () => ctl.action(item, index) });
+            const b = button({ text: name, name, styleClass: 'kiwi-nc-action kiwi-push-button', onClick: () => ctl.action(item, index) });
             b.x_expand = true;
             bar.add_child(b);
         });
@@ -151,9 +151,9 @@ function buildGroup(group, ctl, expanded) {
     box.kiwiGroupKey = group.key;
     if (expanded && view.count > 1) {
         const head = new St.BoxLayout({ style_class: 'kiwi-nc-group-head', x_expand: true });
-        head.add_child(label(group.appName, 'kiwi-nc-group-title', { x_expand: true, y_align: Clutter.ActorAlign.CENTER }));
-        head.add_child(button({ text: _('Show Less'), name: _('Show Less'), styleClass: 'kiwi-nc-pill', onClick: () => ctl.collapse(group) }));
-        head.add_child(button({ icon: 'window-close-symbolic', name: _('Clear All'), styleClass: 'kiwi-nc-pill kiwi-nc-pill-icon', onClick: () => ctl.clearGroup(group) }));
+        head.add_child(label(group.appName, 'kiwi-nc-group-title kiwi-section-header', { x_expand: true, y_align: Clutter.ActorAlign.CENTER }));
+        head.add_child(button({ text: _('Show Less'), name: _('Show Less'), styleClass: 'kiwi-nc-pill kiwi-pill-button', onClick: () => ctl.collapse(group) }));
+        head.add_child(button({ icon: 'window-close-symbolic', name: _('Clear All'), styleClass: 'kiwi-nc-pill kiwi-pill-button kiwi-nc-pill-icon', onClick: () => ctl.clearGroup(group) }));
         box.add_child(head);
     }
     for (const item of view.shown) {
@@ -176,13 +176,13 @@ export function buildNotifications(groups, ctl) {
     const { _ } = ctl;
     const box = new St.BoxLayout({ style_class: 'kiwi-nc-section', orientation: Clutter.Orientation.VERTICAL, x_expand: true });
     const head = new St.BoxLayout({ style_class: 'kiwi-nc-section-head', x_expand: true });
-    head.add_child(label(_('Notifications'), 'kiwi-nc-section-title', { x_expand: true, y_align: Clutter.ActorAlign.CENTER }));
+    head.add_child(label(_('Notifications'), 'kiwi-nc-section-title kiwi-text-headline', { x_expand: true, y_align: Clutter.ActorAlign.CENTER }));
     if (groups.length) {
-        head.add_child(button({ text: _('Clear All'), name: _('Clear All notifications'), styleClass: 'kiwi-nc-pill', onClick: () => ctl.clearAll() }));
+        head.add_child(button({ text: _('Clear All'), name: _('Clear All notifications'), styleClass: 'kiwi-nc-pill kiwi-pill-button', onClick: () => ctl.clearAll() }));
     }
     box.add_child(head);
     if (!groups.length) {
-        box.add_child(label(_('No Notifications'), 'kiwi-nc-empty', { x_align: Clutter.ActorAlign.CENTER }));
+        box.add_child(label(_('No Notifications'), 'kiwi-nc-empty kiwi-text-callout kiwi-secondary-text', { x_align: Clutter.ActorAlign.CENTER }));
         return box;
     }
     const visible = visibleGroups(groups, ctl.showAll);
@@ -190,7 +190,7 @@ export function buildNotifications(groups, ctl) {
         box.add_child(buildGroup(group, ctl, ctl.expanded.has(group.key)));
     if (visible.more) {
         const text = visible.more === 1 ? _('1 more notification') : _('%d more notifications').replace('%d', visible.more);
-        const more = button({ text, name: text, styleClass: 'kiwi-nc-pill kiwi-nc-more', onClick: () => ctl.showMore() });
+        const more = button({ text, name: text, styleClass: 'kiwi-nc-pill kiwi-pill-button kiwi-nc-more', onClick: () => ctl.showMore() });
         more.x_align = Clutter.ActorAlign.CENTER;
         box.add_child(more);
     }
@@ -220,7 +220,7 @@ export function buildWidgets(_, widgets, onEdit = null) {
     if (added) {
         if (onEdit) {
             const edit = new St.Button({
-                style_class: 'kiwi-nc-edit-widgets', label: _('Edit Widgets…'), can_focus: true,
+                style_class: 'kiwi-nc-edit-widgets kiwi-pill-button', label: _('Edit Widgets…'), can_focus: true,
                 x_align: Clutter.ActorAlign.CENTER,
             });
             edit.connect('clicked', onEdit);
@@ -230,7 +230,7 @@ export function buildWidgets(_, widgets, onEdit = null) {
     }
     const row = new St.BoxLayout({ style_class: 'kiwi-nc-placeholder-row', x_expand: true });
     for (const [icon, text] of [['weather-few-clouds-symbolic', _('Weather')], ['preferences-system-time-symbolic', _('Clock')]]) {
-        const tile = new St.BoxLayout({ style_class: 'kiwi-nc-card kiwi-nc-placeholder', orientation: Clutter.Orientation.VERTICAL, x_expand: true });
+        const tile = new St.BoxLayout({ style_class: 'kiwi-nc-card kiwi-card kiwi-nc-placeholder', orientation: Clutter.Orientation.VERTICAL, x_expand: true });
         tile.add_child(new St.Icon({ icon_name: icon, icon_size: 24, style_class: 'kiwi-nc-placeholder-icon' }));
         tile.add_child(label(text, 'kiwi-nc-placeholder-label', { x_align: Clutter.ActorAlign.CENTER }));
         row.add_child(tile);

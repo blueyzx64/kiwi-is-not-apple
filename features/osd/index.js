@@ -149,7 +149,7 @@ export class OsdPill {
         pill.add_child(column);
         Main.uiGroup.add_child(root);
         reg.actor(root);
-        const glass = Glass.attach(pill, { surface: 'overlays', role: 'content', shadow: root });
+        const glass = Glass.attach(pill, { surface: 'overlays', role: 'overlay', shadow: root });
         reg.add(() => glass.destroy());
         this._view = { style: 'golden-gate', reg, root, pill, icon, caption, segments, fill: null, anchorName: null };
     }
@@ -177,7 +177,7 @@ export class OsdPill {
         // The OSD sits above the bar and every window, like the stock one
         Main.uiGroup.add_child(root);
         reg.actor(root);
-        const glass = Glass.attach(pill, { surface: 'overlays', role: 'content', shadow: root });
+        const glass = Glass.attach(pill, { surface: 'overlays', role: 'overlay', shadow: root });
         reg.add(() => glass.destroy());
         this._view = { style: 'tahoe', reg, root, pill, icon, caption, track, fill, segments: null };
     }

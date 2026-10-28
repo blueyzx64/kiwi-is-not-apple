@@ -39,26 +39,20 @@
     font-weight: 600;
 }
 
-/* Accessibility Shortcuts panel (a ModalSurface frame) */
+/* Accessibility Shortcuts panel (a ModalSurface frame, radius 26): design-system rows
+   (.kiwi-row: hover fill, focus ring) and title (.kiwi-text-title), rows 8 px from the edge */
 .kiwi-a11y-panel {
-    padding: 14px 10px 10px;
+    padding: 14px 8px 8px;
 }
 .kiwi-a11y-panel-title {
-    font-size: 15px;
-    font-weight: 700;
-    padding: 0 8px 8px;
+    padding: 0 10px 8px;
 }
 .kiwi-a11y-panel-row {
     height: 40px;
     padding: 0 10px;
-    border-radius: 8px;
 }
-.kiwi-a11y-panel-row:hover,
 .kiwi-a11y-panel-row:focus {
     background-color: rgba(127, 127, 127, 0.16);
-}
-.kiwi-a11y-panel-row:focus {
-    box-shadow: inset 0 0 0 2px -st-accent-color;
 }
 .kiwi-a11y-panel-row-box {
     spacing: 10px;
@@ -70,7 +64,7 @@
 /* Keyboard Viewer: a floating glass keyboard */
 .kiwi-kbd-viewer {
     padding: 8px 10px 10px;
-    border-radius: 14px;
+    border-radius: 18px;
     color: #1d1d1f;
     background-color: rgba(236, 236, 240, 0.9);
     border: 1px solid rgba(0, 0, 0, 0.12);
@@ -85,7 +79,7 @@
     padding-bottom: 8px;
 }
 .kiwi-kbd-viewer-title {
-    font-size: 12px;
+    font-size: 9pt;
     font-weight: 600;
 }
 .kiwi-kbd-viewer-close {

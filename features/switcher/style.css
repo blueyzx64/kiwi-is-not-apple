@@ -40,7 +40,7 @@
 /* Only the selected app shows its name, as on macOS; the label keeps its height so the row
    does not jump */
 .kiwi-switcher-label {
-  font-size: 13px;
+  font-size: 9.75pt;
   font-weight: 500;
   color: transparent;
   text-align: center;

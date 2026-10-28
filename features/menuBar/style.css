@@ -33,6 +33,12 @@
   font-feature-settings: "tnum";
 }
 
+/* On the highlighted item (the design system's accent selection) the shortcut reads as
+   secondary text on the accent */
+.kiwi-menu .popup-menu-item:selected .kiwi-menubar-accel {
+  color: rgba(255, 255, 255, 0.78);
+}
+
 .kiwi-menubar-menu-item:insensitive .kiwi-menubar-accel {
   color: rgba(128, 128, 128, 0.5);
 }

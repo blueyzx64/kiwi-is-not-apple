@@ -75,12 +75,12 @@ export class ControlsEditor {
 
         const head = new St.BoxLayout({ style_class: 'kiwi-cc-editor-head' });
         head.add_child(new St.Label({
-            text: _('Edit Controls'), style_class: 'kiwi-cc-editor-title',
+            text: _('Edit Controls'), style_class: 'kiwi-cc-editor-title kiwi-text-headline',
             x_expand: true, y_align: Clutter.ActorAlign.CENTER,
         }));
-        const reset = new St.Button({ style_class: 'kiwi-cc-editor-text-button', label: _('Reset'), can_focus: true });
+        const reset = new St.Button({ style_class: 'kiwi-cc-editor-text-button kiwi-pill-button', label: _('Reset'), can_focus: true });
         reset.connect('clicked', () => onReset());
-        const done = new St.Button({ style_class: 'kiwi-cc-editor-text-button kiwi-cc-editor-done', label: _('Done'), can_focus: true });
+        const done = new St.Button({ style_class: 'kiwi-cc-editor-text-button kiwi-pill-button kiwi-cc-editor-done', label: _('Done'), can_focus: true });
         done.connect('clicked', () => onDone());
         head.add_child(reset);
         head.add_child(done);
@@ -102,7 +102,7 @@ export class ControlsEditor {
         }));
 
         this._search = new St.Entry({
-            style_class: 'kiwi-cc-editor-search',
+            style_class: 'kiwi-cc-editor-search kiwi-search-field kiwi-search-capsule-filled kiwi-text-callout',
             hint_text: _('Search Controls'),
             accessible_name: _('Search Controls'),
             can_focus: true,
@@ -233,7 +233,7 @@ export class ControlsEditor {
         }
         if (!layout.length) {
             this._previewLayout.attach(new St.Label({
-                text: _('Add controls from the list below.'), style_class: 'kiwi-cc-edit-empty',
+                text: _('Add controls from the list below.'), style_class: 'kiwi-cc-edit-empty kiwi-text-caption kiwi-secondary-text',
             }), 0, 0, 4, 1);
         }
     }
@@ -250,11 +250,11 @@ export class ControlsEditor {
         });
         for (const group of groups) {
             const section = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, style_class: 'kiwi-cc-gallery-section' });
-            section.add_child(new St.Label({ text: _(group.title), style_class: 'kiwi-cc-gallery-title' }));
+            section.add_child(new St.Label({ text: _(group.title), style_class: 'kiwi-cc-gallery-title kiwi-section-header' }));
             for (const c of group.controls) {
                 const row = new St.BoxLayout({ x_expand: true });
                 row.add_child(this._icon(c.id));
-                const label = new St.Label({ text: c.title, x_expand: true, y_align: Clutter.ActorAlign.CENTER, style_class: 'kiwi-cc-gallery-label' });
+                const label = new St.Label({ text: c.title, x_expand: true, y_align: Clutter.ActorAlign.CENTER, style_class: 'kiwi-cc-gallery-label kiwi-text-callout' });
                 label.clutter_text.ellipsize = Pango.EllipsizeMode.END;
                 row.add_child(label);
                 row.add_child(new St.Icon({
@@ -263,7 +263,7 @@ export class ControlsEditor {
                     style_class: c.added ? 'kiwi-cc-gallery-added' : 'kiwi-cc-gallery-add',
                 }));
                 const button = new St.Button({
-                    style_class: 'kiwi-cc-gallery-item',
+                    style_class: 'kiwi-cc-gallery-item kiwi-row',
                     accessible_name: (c.added ? _('Remove %s') : _('Add %s')).replace('%s', c.title),
                     can_focus: true,
                     track_hover: true,
@@ -279,6 +279,6 @@ export class ControlsEditor {
             this._galleryBox.add_child(section);
         }
         if (!groups.length)
-            this._galleryBox.add_child(new St.Label({ text: _('No controls match.'), style_class: 'kiwi-cc-edit-empty' }));
+            this._galleryBox.add_child(new St.Label({ text: _('No controls match.'), style_class: 'kiwi-cc-edit-empty kiwi-text-caption kiwi-secondary-text' }));
     }
 }

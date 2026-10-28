@@ -13,16 +13,16 @@ import St from 'gi://St';
 import { ensureActorVisibleInScrollView } from 'resource:///org/gnome/shell/misc/animationUtils.js';
 
 import * as A11y from '../../lib/a11y.js';
+import { SEARCH_BAR, TOOLBAR, iconSizeFor, wellClasses } from '../../lib/designTokens.js';
 import { IconStyle } from '../../lib/iconStyle.js';
-import { SuperTapTracker, flatten, jumpGroup, locate, reselect } from './model.js';
+import { SuperTapTracker, flatten, jumpGroup, locate, reselect, rowSubtitle } from './model.js';
 import { VIEWS, moveIn, viewForDigit } from './queryModel.js';
 
-const ROW_ICON = 28;
-const TOP_ICON = 40;
-const TILE_ICON = 56;
+// Icon wells (lib/designTokens.js): rows M, the top hit L, Apps-view tiles XL
+const ROW_WELL = 'M';
+const TOP_WELL = 'L';
+const TILE_WELL = 'XL';
 const GRID_COLS = 6;
-const ENTRY_ICON = 22;
-const VIEW_ICON = 16;
 const MAX_LIST_HEIGHT = 440;
 const DIGITS = [Clutter.KEY_1, Clutter.KEY_2, Clutter.KEY_3, Clutter.KEY_4];
 
@@ -56,15 +56,26 @@ function rowKey(item, isTop) {
         item.gicon?.to_string?.()].join('\u0002');
 }
 
-function makeIcon(item, size) {
-    const props = { icon_size: size, style_class: 'kiwi-spotlight-icon' };
+// Every row icon sits in a fixed well, so icons line up whatever their file's padding. A
+// symbolic glyph (actions, settings, web) gets the well's quiet fill and a smaller size.
+function makeIcon(item, wellSize) {
+    const name = item.iconName ?? 'application-x-executable';
+    const symbolic = !item.gicon && name.endsWith('-symbolic');
+    const props = {
+        icon_size: iconSizeFor(wellSize, symbolic), style_class: 'kiwi-spotlight-icon',
+        x_align: Clutter.ActorAlign.CENTER, y_align: Clutter.ActorAlign.CENTER,
+    };
     const icon = item.gicon
         ? new St.Icon({ ...props, gicon: item.gicon })
-        : new St.Icon({ ...props, icon_name: item.iconName ?? 'application-x-executable' });
+        : new St.Icon({ ...props, icon_name: name });
     // App icons follow the icon style (Appearance); it untracks itself when the row goes
     if (item.kind === 'app')
         IconStyle.apply(icon);
-    return icon;
+    const well = new St.Bin({
+        style_class: wellClasses(wellSize, symbolic ? 'rounded' : 'none'),
+        child: icon, y_align: Clutter.ActorAlign.CENTER,
+    });
+    return well;
 }
 
 export class SpotlightView {
@@ -107,13 +118,18 @@ export class SpotlightView {
     /** Build into the modal frame. @returns {Clutter.Actor} the key-focus actor */
     build(frame) {
         const _ = this._;
-        const bar = new St.BoxLayout({ style_class: 'kiwi-spotlight-bar', y_align: Clutter.ActorAlign.CENTER });
+        // The frame is the glass capsule; the field is borderless text on it (design system)
+        const bar = new St.BoxLayout({
+            style_class: 'kiwi-spotlight-bar kiwi-search-capsule', y_align: Clutter.ActorAlign.CENTER,
+            style: `height: ${SEARCH_BAR.height}px;`,
+        });
         const glyph = new St.Icon({
-            icon_name: 'system-search-symbolic', icon_size: ENTRY_ICON, style_class: 'kiwi-spotlight-glass-icon',
-            y_align: Clutter.ActorAlign.CENTER,
+            icon_name: 'system-search-symbolic', icon_size: SEARCH_BAR.glyph,
+            style_class: 'kiwi-spotlight-glass-icon kiwi-search-glyph', y_align: Clutter.ActorAlign.CENTER,
         });
         const entry = new St.Entry({
-            style_class: 'kiwi-spotlight-entry', hint_text: _('Search'), can_focus: true, x_expand: true,
+            style_class: 'kiwi-spotlight-entry kiwi-search-field kiwi-text-display', hint_text: _('Search'),
+            can_focus: true, x_expand: true, y_align: Clutter.ActorAlign.CENTER,
             accessible_name: _('Search'),
         });
         bar.add_child(glyph);
@@ -122,14 +138,18 @@ export class SpotlightView {
             style_class: 'kiwi-spotlight-chip', visible: false, y_align: Clutter.ActorAlign.CENTER,
         });
         bar.add_child(chip);
-        const views = new St.BoxLayout({ style_class: 'kiwi-spotlight-views', y_align: Clutter.ActorAlign.CENTER });
+        const views = new St.BoxLayout({
+            style_class: 'kiwi-spotlight-views', y_align: Clutter.ActorAlign.CENTER,
+            style: `spacing: ${TOOLBAR.spacing}px;`,
+        });
         const viewButtons = new Map();
         VIEWS.forEach((v, i) => {
             const button = new St.Button({
-                style_class: 'kiwi-spotlight-view-button', can_focus: false, toggle_mode: false,
+                style_class: 'kiwi-spotlight-view-button kiwi-toolbar-button', can_focus: false, toggle_mode: false,
                 accessible_role: A11y.Role.TOGGLE_BUTTON,
                 accessible_name: `${_(v.title)} (Super+${i + 1})`,
-                child: new St.Icon({ icon_name: v.icon, icon_size: VIEW_ICON }),
+                y_align: Clutter.ActorAlign.CENTER,
+                child: new St.Icon({ icon_name: v.icon, icon_size: TOOLBAR.icon }),
             });
             button.connect('clicked', () => this._onView(v.id));
             views.add_child(button);
@@ -263,7 +283,7 @@ export class SpotlightView {
         let flatIndex = 0;
         if (empty) {
             children.push(take('empty', () => new St.Label({
-                text: _('No Results'), style_class: 'kiwi-spotlight-empty',
+                text: _('No Results'), style_class: 'kiwi-spotlight-empty kiwi-text-callout kiwi-secondary-text',
             })));
         }
         for (const section of this._sections) {
@@ -272,7 +292,7 @@ export class SpotlightView {
                 ? `${_('Top hit')} · ${section.items[0].title}`
                 : _(SECTION_TITLES[section.id] ?? '');
             if (label)
-                children.push(take(`section:${label}`, () => new St.Label({ text: label, style_class: 'kiwi-spotlight-section' })));
+                children.push(take(`section:${label}`, () => new St.Label({ text: label, style_class: 'kiwi-spotlight-section kiwi-section-header' })));
             if (section.layout === 'grid') {
                 for (let i = 0; i < section.items.length; i += GRID_COLS) {
                     const line = new St.BoxLayout({ style_class: 'kiwi-spotlight-grid-row' });
@@ -339,14 +359,16 @@ export class SpotlightView {
 
     _makeTile(item) {
         const tile = new St.BoxLayout({
-            style_class: 'kiwi-spotlight-row kiwi-spotlight-tile', orientation: Clutter.Orientation.VERTICAL,
+            style_class: 'kiwi-spotlight-row kiwi-row kiwi-spotlight-tile', orientation: Clutter.Orientation.VERTICAL,
             reactive: true, track_hover: true, accessible_name: item.title,
             accessible_role: A11y.Role.LIST_ITEM,
         });
-        const icon = makeIcon(item, TILE_ICON);
+        const icon = makeIcon(item, TILE_WELL);
         icon.x_align = Clutter.ActorAlign.CENTER;
         tile.add_child(icon);
-        const title = new St.Label({ text: item.title, style_class: 'kiwi-spotlight-tile-title', x_align: Clutter.ActorAlign.CENTER });
+        const title = new St.Label({
+            text: item.title, style_class: 'kiwi-spotlight-tile-title kiwi-text-callout', x_align: Clutter.ActorAlign.CENTER,
+        });
         title.clutter_text.ellipsize = 3; // Pango.EllipsizeMode.END
         tile.add_child(title);
         tile._kiwiItem = item;
@@ -360,22 +382,27 @@ export class SpotlightView {
             item.kind === 'calc' ? ' kiwi-spotlight-calc' : '',
             item.kind === 'note' ? ' kiwi-spotlight-note' : '',
         ].join('');
+        const _ = this._;
+        const subtitle = rowSubtitle(item, _('Application'));
         const row = new St.BoxLayout({
-            style_class: `kiwi-spotlight-row${extra}`,
+            style_class: `kiwi-spotlight-row kiwi-row${extra}`,
             reactive: true, track_hover: true, x_expand: true,
-            accessible_name: item.subtitle ? `${item.title}, ${item.subtitle}` : item.title,
+            accessible_name: subtitle ? `${item.title}, ${subtitle}` : item.title,
             accessible_role: A11y.Role.LIST_ITEM,
         });
-        row.add_child(makeIcon(item, isTop ? TOP_ICON : ROW_ICON));
+        row.add_child(makeIcon(item, isTop ? TOP_WELL : ROW_WELL));
         const texts = new St.BoxLayout({
             orientation: Clutter.Orientation.VERTICAL, x_expand: true, y_align: Clutter.ActorAlign.CENTER,
             style_class: 'kiwi-spotlight-texts',
         });
-        const title = new St.Label({ text: item.title, style_class: 'kiwi-spotlight-title' });
+        const titleType = item.kind === 'calc' ? 'kiwi-text-display' : isTop ? 'kiwi-text-title' : 'kiwi-text-body';
+        const title = new St.Label({ text: item.title, style_class: `kiwi-spotlight-title ${titleType}` });
         title.clutter_text.ellipsize = 3; // Pango.EllipsizeMode.END
         texts.add_child(title);
-        if (item.subtitle) {
-            const sub = new St.Label({ text: item.subtitle, style_class: 'kiwi-spotlight-subtitle' });
+        if (subtitle) {
+            const sub = new St.Label({
+                text: subtitle, style_class: 'kiwi-spotlight-subtitle kiwi-text-caption kiwi-secondary-text',
+            });
             sub.clutter_text.ellipsize = 3;
             texts.add_child(sub);
         }

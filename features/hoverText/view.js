@@ -11,6 +11,7 @@ import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import * as A11y from '../../lib/a11y.js';
+import { RADIUS } from '../../lib/designTokens.js';
 import { Glass } from '../../lib/glass.js';
 import { luminance, ringRect } from './model.js';
 
@@ -70,7 +71,7 @@ export class HoverPanel {
             this._glass.destroy();
             this._glass = null;
         } else if (!background && !this._glass) {
-            this._glass = Glass.attach(this.actor, { surface: 'overlays', role: 'content', radius: 14, isDark });
+            this._glass = Glass.attach(this.actor, { surface: 'overlays', role: 'overlay', radius: RADIUS.card, isDark });
             this._cleanup.add(() => this._glass?.destroy());
         }
     }

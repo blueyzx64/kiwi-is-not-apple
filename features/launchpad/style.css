@@ -11,26 +11,11 @@
     background-color: rgba(18, 20, 28, 0.42);
 }
 
-.kiwi-launchpad-search {
-    min-height: 28px;
-    padding: 2px 10px;
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.26);
-    background-color: rgba(255, 255, 255, 0.18);
-    color: rgba(255, 255, 255, 0.96);
-    caret-color: rgba(255, 255, 255, 0.96);
-    selection-background-color: -st-accent-color;
-    font-size: 10.5pt;
-}
-
-.kiwi-launchpad-search StLabel.hint-text {
-    color: rgba(255, 255, 255, 0.62);
-}
-
+/* The search field is the design system's capsule field (.kiwi-search-field
+   .kiwi-search-capsule-filled, styles/base.css); glass gives it its fill. Launchpad always
+   sits on its dark backdrop, so the field keeps light text in both schemes. */
 .kiwi-launchpad-search-icon {
     icon-size: 14px;
-    color: rgba(255, 255, 255, 0.72);
-    padding-right: 6px;
 }
 
 .kiwi-launchpad-tile {
@@ -69,7 +54,7 @@
 
 .kiwi-launchpad-folder-panel {
     padding: 16px 16px 8px;
-    border-radius: 32px;
+    border-radius: 26px;
     background-color: rgba(60, 62, 70, 0.62);
     border: 1px solid rgba(255, 255, 255, 0.18);
     spacing: 12px;
@@ -137,21 +122,18 @@
 .kiwi-launchpad-alert {
     padding: 20px 16px 16px;
     spacing: 10px;
-    border-radius: 18px;
+    border-radius: 26px;
     background-color: rgba(52, 54, 60, 0.94);
     border: 1px solid rgba(255, 255, 255, 0.16);
 }
 
 .kiwi-launchpad-alert-title {
     color: rgba(255, 255, 255, 0.98);
-    font-size: 11pt;
-    font-weight: 700;
     text-align: center;
 }
 
 .kiwi-launchpad-alert-body {
     color: rgba(255, 255, 255, 0.82);
-    font-size: 9.5pt;
     text-align: center;
 }
 
@@ -160,27 +142,7 @@
     padding-top: 6px;
 }
 
-.kiwi-launchpad-alert-button {
-    min-height: 28px;
-    border-radius: 8px;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.96);
-    background-color: rgba(255, 255, 255, 0.16);
-}
-
-.kiwi-launchpad-alert-button:hover {
-    background-color: rgba(255, 255, 255, 0.24);
-}
-
-.kiwi-launchpad-alert-button.default {
-    background-color: -st-accent-color;
-}
-
-.kiwi-launchpad-alert-button.default:hover {
-    background-color: -st-accent-color;
-    box-shadow: inset 0 0 0 100px rgba(255, 255, 255, 0.12);
-}
-
+/* Buttons: design-system .kiwi-push-button (-default for Delete) */
 .kiwi-launchpad-alert-button:focus {
     box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.5);
 }

@@ -104,6 +104,12 @@
    and weather are hidden by the feature. Colours under .kiwi-datemenu-calm (off under high
    contrast) and .kiwi-datemenu-light. Type: 14px titles, 12px secondary text minimum. */
 
+/* Design system: the card is a card-radius panel (18); what sits 8 px inside it (the
+   events, a message) takes the row radius (10), concentric */
+.popup-menu-content.kiwi-datemenu {
+    border-radius: 18px;
+}
+
 .kiwi-datemenu #calendarArea {
     padding: 8px;
 }
@@ -175,7 +181,7 @@
 
 .kiwi-datemenu .events-button {
     padding: 10px 12px;
-    border-radius: 12px;
+    border-radius: 10px;
     border-width: 0;
     box-shadow: none;
 }
@@ -199,7 +205,7 @@
 
 /* The notification list (only when "Keep notification panel" is on): quiet cards */
 .kiwi-datemenu .message {
-    border-radius: 12px;
+    border-radius: 10px;
     box-shadow: none;
 }
 
