@@ -2873,9 +2873,11 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
     background-color: #ffffff;
 }
 
-/* ---- notification card: 20px sides, inner radii concentric with the 32px outer ---- */
+/* ---- notification card: 20px sides, inner radii concentric with the 32px outer. The 26px
+   header row is centred in the 32px band level with the top bar (3px above and below), like the
+   pills and the dashboard's tab row, so it never straddles the bar's bottom edge. ---- */
 .kiwi-notch-card {
-    padding: 12px 20px 16px 20px;
+    padding: 3px 20px 16px 20px;
     spacing: 4px;
 }
 
@@ -2944,9 +2946,10 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
 
 /* ---- dashboard ---- */
 /* header band, level with the top bar */
+/* 20px sides: the first tab's pill and the date line up with the body's 20px grid */
 .kiwi-notch-dash-header {
     height: 32px;
-    padding: 0 20px 0 14px;
+    padding: 0 20px;
     spacing: 8px;
 }
 
@@ -3355,7 +3358,7 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
 }
 
 .kiwi-notch-widget {
-    padding: 10px 12px;
+    padding: 12px;
     spacing: 6px;
     border-radius: 18px;
     background-color: rgba(255, 255, 255, 0.07);

@@ -448,6 +448,9 @@ export function widgetsTab(env, ctx) {
         env._('Mic Off'), ctx.mic.muted, () => env.h.onToggleMic(), ctx.mic.available);
     ctl.add_child(toggles);
     if (ctx.timersEnabled) {
+        // Toggles at the top and the timer presets at the bottom, the same 12px from the card's
+        // edges, instead of both stacked at the top over an empty band
+        toggles.y_expand = true;
         const presets = new St.BoxLayout({ style_class: 'kiwi-notch-presets' });
         presets.add_child(icon(themed('alarm-symbolic'), 14, 'kiwi-notch-glyph kiwi-notch-tint-orange'));
         for (const m of TIMER_PRESETS) {
