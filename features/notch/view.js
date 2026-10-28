@@ -39,8 +39,8 @@ import { cardSize } from './dashboardModel.js';
 import { tabDirection, TABS } from './model.js';
 import { label, icon, themed, button, artwork, track, CenterLayout } from './ui.js';
 import { pill, tickMs } from './pills.js';
-import { OutsideClick } from './outsideClick.js';
-import { InputRing } from './inputRing.js';
+import { OutsideClick } from '../../lib/outsideClick.js';
+import { InputRing } from '../../lib/inputRing.js';
 import { nowTab, trayTab, widgetsTab, DASH_SIZE } from './tabs.js';
 
 // Springs in SwiftUI terms (core/motionModel.js): grow with a slight overshoot, shrink without
@@ -176,7 +176,7 @@ export class NotchView {
 
         this._addEars();
         // The island and its ears stay above the catcher
-        this._outside = new OutsideClick(cleanup, [...this._ears, this._island], () => this._h.onCollapse?.());
+        this._outside = new OutsideClick(cleanup, 'kiwi-notch-catcher', [...this._ears, this._island], () => this._h.onCollapse?.());
         this._plate = new InputRing(cleanup, 'kiwi-notch-plate', {
             press: () => {
                 this._pressOnSurface = true;
