@@ -262,8 +262,9 @@ export const FEATURES = [
         load: async () => (await import('./features/hotCorners/index.js')).HotCorners,
     },
     {
-        // The Tahoe volume / brightness pill under the menu bar: a sink of core/osd.js, which
-        // routes each change to the notch or here (osd-location). Off with 'system'.
+        // The volume / brightness pill under the menu bar (osd-style: Golden Gate or Tahoe): a
+        // sink of core/osd.js, which routes each change to the notch or here (osd-location).
+        // Off with 'system'.
         id: 'osd', when: ctx => ctx.settings.get_string('osd-location') !== 'system',
         keys: ['osd-location'],
         load: async () => (await import('./features/osd/index.js')).OsdPill,

@@ -1,5 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The Tahoe volume / brightness pill: what it says and where it goes. Pure (no gi imports).
+// The volume / brightness pill: what it says and where it goes. Pure (no gi imports).
+//
+// Two looks (osd-style):
+//   'golden-gate'  macOS 27.2: one larger icon on the left, a segmented level bar, centred under
+//                  the menu-bar item that matches the change (Sound, Keyboard Brightness), else
+//                  under the Control Center button
+//   'tahoe'        macOS 26: icon, caption and a continuous track, its right edge on the Control
+//                  Center button
 
 /** How long the pill stays after the last change (the stock OSD's HIDE_TIMEOUT). */
 export const VISIBLE_MS = 1500;
@@ -70,4 +77,79 @@ export function pillPosition(monitor, barBottom, anchor) {
     const minX = monitor.x + PILL.margin;
     const maxX = monitor.x + monitor.width - PILL.margin - PILL.width;
     return { x: Math.round(Math.max(minX, Math.min(maxX, right - PILL.width))), y: Math.round(barBottom + PILL.gap) };
+}
+
+// ---- Golden Gate (macOS 27.2) ------------------------------------------------------------
+
+/** Values of osd-style; the first is the default. */
+export const OSD_STYLES = Object.freeze(['golden-gate', 'tahoe']);
+
+/** The segmented bar: as many steps as the classic macOS HUD (16 squares). */
+export const SEGMENTS = 16;
+
+/** Golden Gate pill geometry, logical px. */
+export const GG_PILL = Object.freeze({ width: 236, height: 56, icon: 26, gap: 6, margin: 8 });
+
+/**
+ * How many segments are lit for a level. Any audible level lights at least one, so a quiet
+ * output never looks muted; muted lights none.
+ *
+ * @param {?number} fraction 0..1
+ * @param {boolean} muted
+ * @param {number} [segments]
+ * @returns {number}
+ */
+export function segmentFill(fraction, muted, segments = SEGMENTS) {
+    if (muted || !(fraction > 0))
+        return 0;
+    return Math.max(1, Math.min(segments, Math.round(Math.min(1, fraction) * segments)));
+}
+
+/**
+ * Which menu-bar item the pill hangs from. Candidates are the on-screen rects of the items
+ * (null when not in the menu bar or not mapped):
+ *   pinnedSound, pinnedKeyboard  Kiwi's pinned Control Center items (menubar-pinned)
+ *   stockVolume, stockBrightness, stockBacklight
+ *                                GNOME's own icons inside the system status pill (shown only
+ *                                in some states, e.g. the volume icon while there is an output)
+ *   controlCenter                the Control Center button (the fallback for every kind)
+ *
+ * @param {string} kind 'volume' | 'brightness' | 'keyboard-backlight'
+ * @param {object} rects
+ * @returns {{name: string, rect: {x: number, width: number}}|null}
+ */
+export function pickAnchor(kind, rects) {
+    const order = {
+        'volume': ['pinnedSound', 'stockVolume'],
+        'brightness': ['stockBrightness'],
+        'keyboard-backlight': ['pinnedKeyboard', 'stockBacklight'],
+    }[kind] ?? [];
+    for (const name of [...order, 'controlCenter']) {
+        const rect = rects?.[name];
+        if (rect && rect.width > 0)
+            return { name, rect };
+    }
+    return null;
+}
+
+/**
+ * Where the Golden Gate pill goes: centred under its anchor, just below the menu bar, kept
+ * inside the monitor. Without an anchor it sits at the right like the Control Center.
+ *
+ * @param {{x: number, y: number, width: number, height: number}} monitor
+ * @param {number} barBottom
+ * @param {?{x: number, width: number}} anchor
+ * @param {number} [width]
+ * @returns {{x: number, y: number}}
+ */
+export function ggPosition(monitor, barBottom, anchor, width = GG_PILL.width) {
+    const centre = anchor && anchor.width > 0
+        ? anchor.x + anchor.width / 2
+        : monitor.x + monitor.width - GG_PILL.margin - width / 2;
+    const minX = monitor.x + GG_PILL.margin;
+    const maxX = monitor.x + monitor.width - GG_PILL.margin - width;
+    return {
+        x: Math.round(Math.max(minX, Math.min(maxX, centre - width / 2))),
+        y: Math.round(barBottom + GG_PILL.gap),
+    };
 }

@@ -1556,6 +1556,15 @@
         <summary>Show volume and brightness in</summary>
         <description>'notch' shows them in the notch while it is on, and in a glass pill under the menu bar when it is off (macOS 26 style); 'menu-bar' always uses the pill; 'system' keeps GNOME's centred pop-up.</description>
       </key>
+      <key name="osd-style" type="s">
+        <choices>
+          <choice value="golden-gate"/>
+          <choice value="tahoe"/>
+        </choices>
+        <default>'golden-gate'</default>
+        <summary>Look of the volume and brightness pill</summary>
+        <description>'golden-gate' (macOS 27.2): one larger icon on the left and a segmented level bar, centred under the matching menu-bar item (Sound, Keyboard Brightness), else under the Control Center button. 'tahoe' (macOS 26): icon, caption and a continuous track under the Control Center button.</description>
+      </key>
 
       <!-- Dialogs (features/dialogs) -->
       <key name="dialogs-glass" type="b">

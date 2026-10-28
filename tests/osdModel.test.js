@@ -1,6 +1,9 @@
 // Run: gjs -m tests/osdModel.test.js
 import { classifyOsd, route } from '../core/osdModel.js';
-import { PILL, TRACK_WIDTH, deviceLabel, pillContent, pillPosition, volumeIconName } from '../features/osd/model.js';
+import {
+    GG_PILL, PILL, SEGMENTS, TRACK_WIDTH, deviceLabel, ggPosition, pickAnchor, pillContent, pillPosition,
+    segmentFill, volumeIconName,
+} from '../features/osd/model.js';
 
 let failed = 0;
 function test(name, fn) {
@@ -70,6 +73,42 @@ test('pill: under the bar, right edge on the Control Center button, inside the m
     eq(pillPosition(mon, 32, { x: 10, width: 40 }).x, PILL.margin);
     eq(pillPosition({ x: 1280, y: 0, width: 1920, height: 1080 }, 30, { x: 3150, width: 40 }).x, 3190 - PILL.width);
     eq(TRACK_WIDTH > 100, true);
+});
+
+test('golden gate: segments lit for a level', () => {
+    eq(SEGMENTS, 16);
+    eq(segmentFill(0, false), 0);
+    eq(segmentFill(0.5, false), 8);
+    eq(segmentFill(1, false), 16);
+    eq(segmentFill(1.4, false), 16);
+    eq(segmentFill(0.01, false), 1, 'an audible level lights one');
+    eq(segmentFill(0.8, true), 0, 'muted');
+    eq(segmentFill(null, false), 0);
+    eq(segmentFill(0.5, false, 10), 5);
+});
+
+test('golden gate: anchor is the matching item, else Control Center', () => {
+    const cc = { x: 1200, width: 60 };
+    const sound = { x: 1000, width: 30 };
+    const stock = { x: 1220, width: 16 };
+    eq(pickAnchor('volume', { pinnedSound: sound, stockVolume: stock, controlCenter: cc }).name, 'pinnedSound');
+    eq(pickAnchor('volume', { pinnedSound: null, stockVolume: stock, controlCenter: cc }).name, 'stockVolume');
+    eq(pickAnchor('volume', { stockVolume: { x: 0, width: 0 }, controlCenter: cc }).name, 'controlCenter');
+    eq(pickAnchor('brightness', { pinnedSound: sound, stockVolume: stock, controlCenter: cc }).name, 'controlCenter');
+    eq(pickAnchor('keyboard-backlight', { pinnedKeyboard: { x: 900, width: 30 }, controlCenter: cc }).name, 'pinnedKeyboard');
+    eq(pickAnchor('keyboard-backlight', { controlCenter: cc }).name, 'controlCenter');
+    eq(pickAnchor('keyboard-backlight', { stockBacklight: stock, controlCenter: cc }).name, 'stockBacklight');
+    eq(pickAnchor('brightness', { stockBrightness: stock, controlCenter: cc }).name, 'stockBrightness');
+    eq(pickAnchor('volume', {}), null);
+});
+
+test('golden gate: centred under the anchor, inside the monitor', () => {
+    const mon = { x: 0, y: 0, width: 1280, height: 800 };
+    eq(ggPosition(mon, 32, { x: 600, width: 40 }), { x: 620 - GG_PILL.width / 2, y: 32 + GG_PILL.gap });
+    eq(ggPosition(mon, 32, { x: 1250, width: 30 }).x, 1280 - GG_PILL.margin - GG_PILL.width, 'clamped right');
+    eq(ggPosition(mon, 32, { x: 0, width: 20 }).x, GG_PILL.margin, 'clamped left');
+    eq(ggPosition(mon, 32, null).x, 1280 - GG_PILL.margin - GG_PILL.width);
+    eq(ggPosition({ x: 1280, y: 0, width: 1920, height: 1080 }, 30, { x: 2200, width: 40 }).x, 2220 - GG_PILL.width / 2);
 });
 
 if (failed)

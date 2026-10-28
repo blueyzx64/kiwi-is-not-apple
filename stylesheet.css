@@ -3751,7 +3751,7 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
 /* ==== features/osd/style.css ==== */
 
 /* feature: osd */
-/* The Tahoe volume / brightness pill. Its fill comes from lib/glass.js (surface 'overlays');
+/* The volume / brightness pill (Tahoe and Golden Gate looks). Its fill comes from lib/glass.js (surface 'overlays');
    with glass off it keeps the solid look below. The root behind it is the shadow host. */
 .kiwi-osd-shadow {
   background-color: transparent;
@@ -3793,6 +3793,36 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
 .kiwi-osd-muted .kiwi-osd-caption,
 .kiwi-osd-muted .kiwi-osd-icon {
   color: rgba(128, 128, 128, 1);
+}
+
+/* Golden Gate (macOS 27.2): one larger icon, a segmented bar */
+.kiwi-osd-gg .kiwi-osd-pill {
+  border-radius: 20px;
+  padding: 0 16px;
+  spacing: 14px;
+}
+
+.kiwi-osd-gg .kiwi-osd-column {
+  spacing: 7px;
+}
+
+.kiwi-osd-segments {
+  spacing: 3px;
+  height: 8px;
+}
+
+.kiwi-osd-seg {
+  height: 8px;
+  border-radius: 2px;
+  background-color: rgba(128, 128, 128, 0.32);
+}
+
+.kiwi-osd-seg.kiwi-osd-seg-lit {
+  background-color: #ffffff;
+}
+
+.kiwi-glass-light .kiwi-osd-seg.kiwi-osd-seg-lit {
+  background-color: #1d1d1f;
 }
 
 /* ==== features/screenshots/style.css ==== */
