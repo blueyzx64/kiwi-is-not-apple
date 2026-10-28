@@ -4,15 +4,22 @@
 // amount on each side through two spacers at its ends, so the glass stays around the icons.
 //
 // No jitter: scales and offsets come from the rest layout, captured when the pointer enters
-// (or the items change), never from the magnified one. Per pointer move: a few set_scale /
-// translation writes and two spacer widths, into arrays allocated once per rest layout.
-// The amount eases in and out through core/motion (tween), so it honours reduced motion and
-// animations off like every Kiwi animation.
+// (or the items change), never from the magnified one.
 //
-// Shell API: Clutter motion-event, transform_stage_point.
+// Once per frame, not per event: a pointer move only records where the pointer is and asks for
+// one update before the next redraw (a Meta later), so a 1000 Hz mouse costs what a 60 Hz one
+// does. The update writes only the scales and translations that changed (most icons sit at
+// scale 1, far from the pointer) and the two spacer widths only when their whole-pixel values
+// change, so the slab is laid out again at most once per frame. The amount eases in and out
+// through core/motion (tween), which updates in the same frame. Reduced motion and animations
+// off are honoured there like every Kiwi animation.
+//
+// Shell API: Clutter motion-event, transform_stage_point, global.compositor.get_laters()
+// (Meta.LaterType.BEFORE_REDRAW).
 
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
+import Meta from 'gi://Meta';
 
 import { magnify, magnifyScale } from './model.js';
 
@@ -35,14 +42,19 @@ export class Magnifier {
         this._pointer = null;
         this._rest = null;
         this._out = { scales: [], offsets: [], before: 0, after: 0 };
-        // Measured in the harness
-        this.stats = { applies: 0, usTotal: 0 };
+        // What was last written per icon: unchanged values are not written again
+        this._shown = { scales: new Float64Array(0), offsets: new Float64Array(0) };
+        this._later = 0;
+        // Measured in the harness: pointer events seen, updates made
+        this.stats = { events: 0, applies: 0, usTotal: 0 };
         cleanup.connect(view.frame, 'motion-event', (_a, event) => {
+            this.stats.events++;
             this._pointerAt(event.get_coords());
             return Clutter.EVENT_PROPAGATE;
         });
         cleanup.add(() => {
             this._tween?.cancel();
+            this._cancelFrame();
             this._reset();
         });
     }
@@ -94,8 +106,29 @@ export class Magnifier {
         const [ok, x, y] = this._view.band.transform_stage_point(sx, sy);
         if (!ok)
             return;
-        this._pointer = this._host.horizontal ? x : y;
-        this._apply();
+        const pointer = this._host.horizontal ? x : y;
+        if (pointer === this._pointer)
+            return;
+        this._pointer = pointer;
+        this._queueFrame();
+    }
+
+    // One update before the next redraw, with the newest pointer position
+    _queueFrame() {
+        if (this._later)
+            return;
+        this._later = global.compositor.get_laters().add(Meta.LaterType.BEFORE_REDRAW, () => {
+            this._later = 0;
+            this._apply();
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    _cancelFrame() {
+        if (!this._later)
+            return;
+        global.compositor.get_laters().remove(this._later);
+        this._later = 0;
     }
 
     // Rest centres and sizes along the dock, in band coordinates (the band does not move)
@@ -112,6 +145,9 @@ export class Magnifier {
         };
         this._out.scales = new Float64Array(n);
         this._out.offsets = new Float64Array(n);
+        // NaN: nothing written yet, so the first update writes every icon
+        this._shown.scales = new Float64Array(n).fill(NaN);
+        this._shown.offsets = new Float64Array(n).fill(NaN);
         const pivot = PIVOTS[this._host.position];
         const pill = this._view.pill;
         const [px, py] = pill.get_transformed_position();
@@ -133,6 +169,8 @@ export class Magnifier {
         const rest = this._rest;
         if (!rest || this._pointer === null)
             return;
+        // A tween frame and a queued pointer update in the same frame: one update covers both
+        this._cancelFrame();
         const t0 = GLib.get_monotonic_time();
         const m = this._host.metrics;
         const out = magnify({
@@ -149,12 +187,20 @@ export class Magnifier {
         this._view.setGrowth(before, after);
         const drift = before - (before + after) / 2;
         const prop = this._host.horizontal ? 'translation_x' : 'translation_y';
+        const shown = this._shown;
         for (let i = 0; i < rest.count; i++) {
             const a = rest.actors[i];
             const s = out.scales[i];
-            a.set_scale(s, s);
-            a[prop] = out.offsets[i] - drift;
-            rest.keep[i]?.set_scale(1 / s, 1 / s);
+            if (s !== shown.scales[i]) {
+                shown.scales[i] = s;
+                a.set_scale(s, s);
+                rest.keep[i]?.set_scale(1 / s, 1 / s);
+            }
+            const offset = out.offsets[i] - drift;
+            if (offset !== shown.offsets[i]) {
+                shown.offsets[i] = offset;
+                a[prop] = offset;
+            }
         }
         if (this._amount === 0 && this._target === 0)
             this._reset();
@@ -166,6 +212,7 @@ export class Magnifier {
         const rest = this._rest;
         this._rest = null;
         this._pointer = null;
+        this._cancelFrame();
         if (!rest)
             return;
         rest.actors.forEach((a, i) => {

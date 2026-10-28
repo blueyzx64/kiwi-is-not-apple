@@ -193,12 +193,14 @@ export class DockView {
                 item.destroy();
         }
         this._items = next;
-        // Items sit between the two growth spacers
+        // Items sit between the two growth spacers. Only what moved is touched: every
+        // set_child_at_index lays the whole slab out again, and a sync runs on every window
+        // change while the order rarely changes
         let index = 1;
         for (const item of next.values()) {
             if (item.actor.get_parent() !== this.pill)
                 this.pill.insert_child_at_index(item.actor, index);
-            else
+            else if (this.pill.get_child_at_index(index) !== item.actor)
                 this.pill.set_child_at_index(item.actor, index);
             index++;
         }
@@ -280,7 +282,10 @@ export class DockView {
         const label = this._label;
         label.text = item.name;
         label.visible = true;
-        Main.layoutManager.uiGroup.set_child_above_sibling(label, null);
+        // Restacking lays the uiGroup out again: only when something went above the label
+        const uiGroup = Main.layoutManager.uiGroup;
+        if (uiGroup.get_last_child() !== label)
+            uiGroup.set_child_above_sibling(label, null);
         const [x, y] = item.actor.get_transformed_position();
         const [w, h] = item.actor.get_transformed_size();
         const [, , lw, lh] = label.get_preferred_size();

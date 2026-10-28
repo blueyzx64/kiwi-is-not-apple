@@ -205,7 +205,7 @@ export class AppItem extends DockItem {
         }
         if (this._badge) {
             this._badge.visible = !!text;
-            if (text)
+            if (text && this._badge.text !== text)
                 this._badge.text = text;
         }
         const progress = badgeProgress(entry);
@@ -229,8 +229,9 @@ export class AppItem extends DockItem {
         }
         if (this._progress) {
             this._progress.visible = progress !== null;
-            if (progress !== null)
-                this._progressFill.width = Math.round((length - 2) * progress);
+            const fill = Math.round((length - 2) * (progress ?? 0));
+            if (progress !== null && this._progressFill.width !== fill)
+                this._progressFill.width = fill;
         }
         this.badgeEntry = entry;
     }
