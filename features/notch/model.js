@@ -120,6 +120,30 @@ export function detectCode(text) {
 // A list of file links, newest first; the files stay where they are. Added by the clipboard
 // ("Add from Clipboard" with files copied in Files), by finished downloads and by screenshots.
 
+/**
+ * Battery glyph names for the charging and low-battery activities, best first (a
+ * Gio.ThemedIcon takes the first the theme has). Adwaita (GNOME 50) has
+ * battery-level-{0..100 by 10}-symbolic, -charging- for 0..90 and -plugged-in- for every level,
+ * but no battery-level-100-charging-symbolic: at 95 % and up a charging battery is "charged".
+ * That missing name drew an empty glyph from 95 % on.
+ * @param {number} percent 0..100
+ * @param {boolean} charging
+ * @returns {string[]}
+ */
+export function batteryIconNames(percent, charging) {
+    const p = Number.isFinite(percent) ? percent : 0;
+    const level = Math.max(0, Math.min(100, Math.round(p / 10) * 10));
+    if (charging) {
+        return [
+            level === 100 ? 'battery-level-100-charged-symbolic' : `battery-level-${level}-charging-symbolic`,
+            `battery-level-${level}-plugged-in-symbolic`,
+            'battery-full-charging-symbolic',
+            'battery-symbolic',
+        ];
+    }
+    return [`battery-level-${level}-symbolic`, level <= 10 ? 'battery-caution-symbolic' : 'battery-low-symbolic', 'battery-symbolic'];
+}
+
 export const SHELF_LIMIT = 24;
 
 /** @returns {string[]} the shelf with `uris` added at the front (deduplicated, capped) */

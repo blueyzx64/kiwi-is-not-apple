@@ -8,20 +8,16 @@ import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
 import St from 'gi://St';
 
-import { label, icon, themed, button, track, setText } from './ui.js';
-import { formatCountdown, formatElapsed, formatBytes, minutesUntil } from './model.js';
+import { label, icon, themed, themedAny, button, track, setText } from './ui.js';
+import { formatCountdown, formatElapsed, formatBytes, minutesUntil, batteryIconNames } from './model.js';
 
 const monoNow = () => Math.floor(GLib.get_monotonic_time() / 1000);
 
-function batteryIcon(percent, charging) {
-    const level = Math.max(0, Math.min(100, Math.round((percent ?? 0) / 10) * 10));
-    return `battery-level-${level}${charging ? '-charging' : ''}-symbolic`;
-}
 
 /**
  * @param {{kind: string, data: object}} activity
  * @param {function(string): string} _
- * @returns {{iconName: string, tint: string|null, title: string, detail: string|(() => string),
+ * @returns {{iconName: string|string[], tint: string|null, title: string, detail: string|(() => string),
  *   fraction?: number|null, actions: Array<{id: string, label: string, iconName?: string}>}}
  *   detail as a function: it changes every second (countdowns), the view refreshes it
  */
@@ -51,9 +47,9 @@ export function describe(activity, _) {
         };
     case 'charging-started':
     case 'charging':
-        return { iconName: batteryIcon(d.percent, true), tint: 'green', title: _('Charging'), detail: `${d.percent}%`, actions: [] };
+        return { iconName: batteryIconNames(d.percent, true), tint: 'green', title: _('Charging'), detail: `${d.percent}%`, actions: [] };
     case 'low-battery':
-        return { iconName: batteryIcon(d.percent, false), tint: 'red', title: _('Low Battery'), detail: `${d.percent}%`, actions: [] };
+        return { iconName: batteryIconNames(d.percent, false), tint: 'red', title: _('Low Battery'), detail: `${d.percent}%`, actions: [] };
     case 'headphones-connected':
     case 'headphones':
         return {
@@ -92,7 +88,9 @@ export function describe(activity, _) {
 }
 
 const glyph = (desc, size) => {
-    const i = icon(themed(desc.iconName), size, `kiwi-notch-glyph${desc.tint ? ` kiwi-notch-tint-${desc.tint}` : ''}`);
+    // A list of names: the first one the theme has (batteryIconNames)
+    const gicon = Array.isArray(desc.iconName) ? themedAny(desc.iconName) : themed(desc.iconName);
+    const i = icon(gicon, size, `kiwi-notch-glyph${desc.tint ? ` kiwi-notch-tint-${desc.tint}` : ''}`);
     return i;
 };
 
