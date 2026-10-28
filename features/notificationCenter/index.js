@@ -30,6 +30,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { NotificationRouter } from '../../core/notificationRouter.js';
 import { Widgets } from '../../core/widgets/index.js';
 import { MENU_CLOSE_ARGS } from '../../lib/compat.js';
+import { RADIUS } from '../../lib/designTokens.js';
 import { ModalSurface } from '../../lib/modalSurface.js';
 import { KiwiSettings } from '../../lib/settings.js';
 import { groupByApp, orderWidgets, pruneExpanded } from './model.js';
@@ -63,7 +64,7 @@ export class NotificationCenter {
         this._ks = new KiwiSettings(this._ctx.settings);
         this._ks.attach(cleanup);
         this._modal = new ModalSurface(cleanup, {
-            id: 'notification-center', accessibleName: this._ctx.gettext('Notification Center'), position: 'right', width: WIDTH, radius: 22, dim: false,
+            id: 'notification-center', accessibleName: this._ctx.gettext('Notification Center'), position: 'right', width: WIDTH, radius: RADIUS.panel, dim: false,
             styleClass: 'kiwi-nc',
             build: frame => this._build(frame),
             onClosed: () => this._onClosed(),
