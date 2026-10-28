@@ -5,7 +5,7 @@ import {
     autostartState, autostartText, badgeProgress, badgeText, bounceAgain, bounceSteps, clickAction,
     dockItems, dockMetrics, downloadEntry, downloadFinished, dropIndex, fanLayout, folderDropAccepted,
     magnify, magnifyScale, menuEntries, nextWindow, packageKind, pinPosition, pushRecent, readConfig,
-    isPartialWrite, removeFolder, sortDownloads, stableOrder, stackView,
+    isPartialWrite, rectContains, removeFolder, sortDownloads, stableOrder, stackView,
 } from '../features/dock/model.js';
 
 let failed = 0;
@@ -35,8 +35,8 @@ test('config: defaults pass through, bad values fall back', () => {
 });
 test('metrics: the edge claim includes the floating gap; radii are concentric', () => {
     const m = dockMetrics(48);
-    eq(m.size, m.thickness + m.gap);
-    eq(m.thickness, m.tile + 2 * m.padding);
+    eq(m.size, m.thickness + 2 * m.gap);
+    eq(m.thickness, m.tile + 2 * (m.padding + m.border));
     eq(m.tileRadius, m.radius - m.padding);
     eq(dockMetrics(4).icon, 24);
 });
@@ -358,6 +358,15 @@ test('menu: Show All Windows (App Exposé) before Quit, only when running and of
     eq(m.slice(-2).map(e => e.type), ['show-all-windows', 'quit']);
     eq(menuEntries({ ...menuBase, windows: [{ id: 1, title: 'x' }] }).some(e => e.type === 'show-all-windows'), false);
     eq(menuEntries({ ...menuBase, showAllWindows: true }).some(e => e.type === 'show-all-windows'), false);
+});
+
+test('rectContains: inside, the far edges excluded, null holds nothing', () => {
+    const r = { x: 10, y: 20, width: 30, height: 40 };
+    eq(rectContains(r, 10, 20), true);
+    eq(rectContains(r, 39, 59), true);
+    eq(rectContains(r, 40, 30), false);
+    eq(rectContains(r, 20, 60), false);
+    eq(rectContains(null, 0, 0), false);
 });
 
 if (failed) {

@@ -78,7 +78,7 @@ starts with a summary and a table of contents.
 | Write Adw preference pages and bind settings | `references/prefs-adwaita.md` |
 | Prepare an EGO submission or review code for leaks | `references/review-guidelines-and-pitfalls.md` |
 | Run a nested shell, read logs, use Looking Glass, lint, unit test | `references/testing-and-debugging.md` |
-| Remove titlebar buttons or put window controls in the panel | `windows-workspaces-and-actors.md` §Window controls, and `apps/windowControls.js`, `apps/gtkThemeManager.js` |
+| Remove titlebar buttons or put window controls in the panel | `windows-workspaces-and-actors.md` §Window controls, and `apps/appButtons.js`, `apps/gtkThemeManager.js` |
 
 ## Kiwi module skeleton (match existing style)
 

@@ -1,7 +1,7 @@
 # Appearance
 
 ## What it does
-Light and Dark, accent and highlight colours, icon style, menu styling and GTK app fixes. Registry ids `appearance`, `popup-menu-styling`, `gtk-theme`. Code: `features/appearance/`, `features/windowControls/gtkTheme.js`. Liquid Glass has its own page: [liquid-glass.md](liquid-glass.md).
+Light and Dark, accent and highlight colours, icon style, menu styling and GTK app fixes. Registry ids `appearance`, `popup-menu-styling`, `gtk-theme`. Code: `features/appearance/`, `features/appButtons/gtkTheme.js`. Liquid Glass has its own page: [liquid-glass.md](liquid-glass.md).
 
 ## Use
 - **Auto Light and Dark (`appearance-auto`, off):** Light by day, Dark by night, by sunset and sunrise (`appearance-auto-schedule` `sun`, from the location Night Light last saw, else your time zone) or custom times (`appearance-auto-light-minute` 420, `appearance-auto-dark-minute` 1140). It switches only once you have been idle for a minute. Choosing a style yourself turns Auto off. Kiwi owns GNOME's `color-scheme` only while Auto runs (restored after, also after a crash).

@@ -2,7 +2,7 @@
 // Popup menu styling (key popup-menu-styling): accent hover and selection and tighter rows for
 // every Shell menu. The rules in style.css reach stock Shell elements, so they hang off one
 // class on the UI group (menus live there, not under the panel) and apply only while it is on.
-// The GTK app fixes that share the key are imported by features/windowControls/gtkTheme.js.
+// The GTK app fixes that share the key are imported by features/appButtons/gtkTheme.js.
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 

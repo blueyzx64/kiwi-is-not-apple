@@ -8,6 +8,13 @@
 //                     it slides away when the pointer leaves the bar and no menu is open.
 //   always            the panelBox stops tracking full screen while this runs.
 //
+// While revealed the bar wears the kiwi-menubar-revealed class: a darker, accent-tinted glass
+// (style.css) so the items stay readable over any content. It fades with the slide.
+//
+// The edge reveals on a push: the pointer has to cross into it. An edge that appears under a
+// pointer already at the top (the window just went full screen) stays unarmed until the
+// pointer has left it once, so a maximize then full screen never leaves the bar shown.
+//
 // The notch lives inside the bar, so it reveals with it.
 //
 // Private Shell API: Main.layoutManager._trackedActors (the panelBox's trackFullscreen flag,
@@ -18,6 +25,8 @@ import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import * as A11y from '../../lib/a11y.js';
+
+const REVEALED = 'kiwi-menubar-revealed';
 
 export class FullscreenReveal {
     /**
@@ -31,6 +40,7 @@ export class FullscreenReveal {
         this._always = always;
         this._revealed = false;
         this._edge = null;
+        this._armed = false;     // the pointer was off the edge since it appeared
         this._anim = null;
         this._menuWatch = 0;     // token of the one handler waiting for the open menu to close
     }
@@ -81,7 +91,12 @@ export class FullscreenReveal {
             this._edge = null;
         });
         cleanup.connect(edge, 'enter-event', () => {
-            this.reveal();
+            if (this._armed)
+                this.reveal();
+            return Clutter.EVENT_PROPAGATE;
+        });
+        cleanup.connect(edge, 'leave-event', () => {
+            this._armed = true;
             return Clutter.EVENT_PROPAGATE;
         });
 
@@ -120,6 +135,8 @@ export class FullscreenReveal {
         const full = this._inFullscreen();
         if (!full && this._revealed)
             this._conceal(false);
+        if (full && !this._edge.visible && !this._revealed)
+            this._armed = global.get_pointer()[1] > monitor.y;
         this._edge.visible = full && !this._revealed;
     }
 
@@ -138,9 +155,11 @@ export class FullscreenReveal {
         this._revealed = true;
         this._edge.visible = false;
         this._anim?.cancel();
+        Main.panel.add_style_class_name(REVEALED);
         panelBox.show();
         panelBox.translation_y = -this._barHeight();
-        this._anim = this._ctx.motion.ease(panelBox, { translation_y: 0 },
+        panelBox.opacity = 0;
+        this._anim = this._ctx.motion.ease(panelBox, { translation_y: 0, opacity: 255 },
             { duration: 'short', curve: 'enter', onDone: finished => finished && onShown?.() }, this._cleanup);
     }
 
@@ -188,6 +207,8 @@ export class FullscreenReveal {
             if (this._revealed)
                 return;
             panelBox.translation_y = 0;
+            panelBox.opacity = 255;
+            Main.panel.remove_style_class_name(REVEALED);
             // The Shell's rule again: hidden while the monitor is in full screen
             if (this._inFullscreen())
                 panelBox.hide();
@@ -198,7 +219,7 @@ export class FullscreenReveal {
             done();
             return;
         }
-        this._anim = this._ctx.motion.ease(panelBox, { translation_y: -this._barHeight() },
+        this._anim = this._ctx.motion.ease(panelBox, { translation_y: -this._barHeight(), opacity: 0 },
             { duration: 'short', curve: 'exit', onDone: done }, this._cleanup);
     }
 }

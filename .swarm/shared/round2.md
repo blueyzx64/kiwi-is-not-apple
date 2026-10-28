@@ -34,3 +34,19 @@ The owner tested 3.0.0 on real hardware (Fedora 44, GNOME 50) and reported the b
    - If that's impossible, find the best per-window alternative and report the limits.
 3. **Optional setting "Hide title bars of maximized windows", OFF by default.** It acts only where it's safe: server-side and X11 frames (via _MOTIF_WM_HINTS on Xwayland windows) and plain GTK3 title bars (CSS). It never hides GTK4/libadwaita header bars.
 - Green button click stays FULL SCREEN (owner, option A). Zoom stays on Alt-click and the green menu.
+
+## Round 3: owner feedback (2026-10-28). The same quality bar applies.
+1. REMOVE the top-bar window controls entirely. Window buttons always stay on the app's own titlebar (side right by default). The "Hide title bars of maximized windows" option goes too, because maximized windows would have no buttons otherwise.
+2. Stage Manager flickers into view and disappears again on minimize or maximize.
+3. Dock Downloads popup: once it's open, clicking other dock items doesn't work and the popup doesn't dismiss.
+4. Notch shelf drag-out fails when a window is maximized or touching the top bar.
+5. Widgets card or gallery: clicking outside doesn't close it, while items under it can still be clicked.
+6. Windows in the Stage Manager strip (not on stage) must not show in Mission Control.
+7. Going from Mission Control back to the desktop, the top bar glitches and briefly loses its transparency.
+8. (owner) The drag-to-top tiling picker must look and animate like Windows 11 Snap Layouts, as the GNOME extension Tiling Shell's "Snap Assistant" does it. Dragging a window towards the top centre reveals a small handle, which expands into a bar of layouts; hover a zone to preview; drop to snap. This is queued after R3A (agent R3F).
+9. (owner) Maximize, then full screen: the top bar stays visible (a glitch). In full screen it must hide and reveal only on a push, with a darker tinted bar while revealed over full screen → R3E.
+10. (owner) The overview has no button to add a new desktop (the + isn't visible) → R3B.
+11. (owner) Maximized windows touch the dock; they need a gap above the dock equal to its bottom margin → R3C.
+12. (owner) Top-bar menus open a few px off from the clicked item; align them under the item's leading edge as on macOS → R3E.
+13. (owner) SM sets: when one window of a set is maximized, split the set; the maximized window stays on stage alone and the other windows go to the strip as their own entry. 14. (owner) Drag a strip card onto another strip card to form a set and open it on stage, with left/right side highlights showing where the dragged window will be placed; they tile side by side → R3G.
+15. (owner) Give the SM strip a backdrop again (soft tinted glass, setting on by default) so thumbnails stand apart from app content → R3G.

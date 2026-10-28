@@ -126,7 +126,7 @@ Each card lists: **Skills** (besides caveman) · **Read** · **Build** · **Depe
 
 **S2 Window controls + panelLayout (Phase 1)**
 - Skills: `gnome-shell-extension`, `gjs`, `apple-design`
-- Read: `docs/features/window-controls.md`; `apps/windowControls.js:42-55,177-208,357-360`;
+- Read: `docs/features/window-controls.md`; `apps/appButtons.js:42-55,177-208,357-360`;
   `apps/gtkThemeManager.js:66-72`; `css/hide-titlebar*.css`.
 - Build: `coordinators/panelLayout.js`; controls for all focused windows; titlebar-button
   removal via GTK CSS for all windows (not `button-layout`); key migration.

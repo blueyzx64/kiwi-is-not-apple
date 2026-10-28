@@ -44,7 +44,7 @@ function shortcutExpander(settings, _, title, subtitle, list) {
 export function buildPrefs({ settings, _ }) {
     const tiling = new Adw.PreferencesGroup({
         title: _('Tiling'),
-        description: _('Drag windows to the edges, corners or top bar, use the green button menu, or the shortcuts. ' +
+        description: _('Drag windows to the edges, corners or top bar (dragging to the top centre opens the snap layouts), or use the shortcuts. ' +
             'GNOME\'s own edge tiling is off while this is on and comes back when it is turned off.'),
     });
     tiling.add(switchRow(settings, _('Tile Windows'),
@@ -54,8 +54,8 @@ export function buildPrefs({ settings, _ }) {
             _('Left or right edge for a half, a corner for a quarter'), 'windows-tile-drag-edges'),
         switchRow(settings, _('Drag windows to top bar to fill screen'),
             _('Fills the screen without going full screen'), 'windows-tile-drag-menubar'),
-        switchRow(settings, _('Layout picker at the top centre'),
-            _('Drag to the middle of the top bar for halves, quarters and arrangements; release elsewhere on the bar to fill'),
+        switchRow(settings, _('Snap layouts at the top centre'),
+            _('Drag to the middle of the top edge: a handle appears, move onto it for a bar of layouts (halves, thirds, quarters), then drop on a zone'),
             'windows-tile-drag-picker'),
         switchRow(settings, _('Hold Alt key while dragging windows to tile'),
             _('Shows the half outlines at once, without reaching the edge (the macOS Option key)'),

@@ -34,8 +34,8 @@ import { TimerService } from './core/timers.js';
 import { AppMenuService } from './core/appMenus/service.js';
 import { OsdRouter } from './core/osd.js';
 import { OriginalsStore, STORE_BACKUP_KEY, STORE_KEY, originalId, restoreStale } from './core/originals.js';
-import { WM_SCHEMA } from './features/windowControls/buttonLayout.js';
-import { parseButtonLayout } from './features/windowControls/model.js';
+import { WM_SCHEMA } from './features/appButtons/buttonLayout.js';
+import { parseButtonLayout } from './features/appButtons/model.js';
 import { FEATURES } from './features.js';
 
 // Keys Kiwi writes itself at run time. No `when` or restartOn reads them, and a write made

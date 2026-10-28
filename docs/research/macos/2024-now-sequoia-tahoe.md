@@ -204,7 +204,7 @@ general-purpose Rosetta 2. That has no desktop-feature impact for Kiwi.
   - The quarter tiles have no keyboard shortcuts.
   - The meaning of "the second window" (most recently used) is not obvious.
 - **Port to GNOME 50:** Shell extension.
-  - The traffic lights already live in Kiwi's menu bar (`apps/windowControls`).
+  - The traffic lights already live in Kiwi's menu bar (`apps/appButtons`).
   - Add a hover popup (`PopupMenu.PopupMenu` or a custom `St.BoxLayout` with glyph buttons) on the green button
     after about 400 ms of hover. `windowTiling.js` already builds glyph button grids, including ghost panes.
   - "Second window" comes from `global.display.get_tab_list(Meta.TabList.NORMAL, workspace)`, item 1 (the MRU).
@@ -1671,7 +1671,7 @@ Apple's own definition (newsroom, June 2025; HIG Materials):
   - Critique (512 Pixels): too bright in dark mode, the least saturated stoplights ever, and background windows'
     buttons are too prominent ("should drop the highlights").
 - **Caveats (on macOS):** brightness in dark mode; inactive windows look active.
-- **Port to GNOME 50:** Kiwi's traffic lights (`apps/windowControls`, in the menu bar or app-buttons mode) are St
+- **Port to GNOME 50:** Kiwi's traffic lights (`apps/appButtons`, in the menu bar or app-buttons mode) are St
   buttons, so this is pure CSS.
   - **The bead:** a base colour, a `background-gradient` (vertical, lighter top to base), a small white top
     "catchlight" child (an ellipse via `border-radius`, 40 % white), a 1 px darker rim and an inner bottom glow.

@@ -1,6 +1,6 @@
 // Run: gjs -m tests/shelfHelperModel.test.js
 // features/notch/shelfHelperModel.js: talking to the shelf drag-out helper.
-import { HELPER, CLEAR_LINE, isHelperWindow, layoutOf, parseEvent, pointerOnNotch, dragIconName, surround } from '../features/notch/shelfHelperModel.js';
+import { HELPER, CLEAR_LINE, isHelperWindow, layoutOf, parseEvent, pointerOnNotch, dragIconName } from '../features/notch/shelfHelperModel.js';
 
 let failed = 0;
 function test(name, fn) {
@@ -54,22 +54,6 @@ test('the pointer counts as on the notch during a drag', () => {
     eq(pointerOnNotch({ helper: false, dragging: false }), false);
     eq(pointerOnNotch({ helper: true, dragging: false }), true);
     eq(pointerOnNotch({ helper: false, dragging: true }), true);
-});
-
-test('surround: no hole is the whole box; a hole leaves four boxes that tile the rest', () => {
-    const outer = { x: 0, y: 0, w: 100, h: 50 };
-    eq(surround(outer, null), [outer]);
-    const rects = surround(outer, { x: 20, y: 10, w: 30, h: 20 });
-    eq(rects.length, 4);
-    eq(rects.reduce((a, r) => a + r.w * r.h, 0), 100 * 50 - 30 * 20);
-});
-
-test('surround: a hole touching an edge drops that box; a hole outside is clipped', () => {
-    const outer = { x: 0, y: 0, w: 100, h: 50 };
-    eq(surround(outer, { x: 0, y: 0, w: 100, h: 50 }), []);
-    eq(surround(outer, { x: 0, y: 0, w: 100, h: 20 }).length, 1);
-    const clipped = surround(outer, { x: 80, y: 40, w: 100, h: 100 });
-    eq(clipped.reduce((a, r) => a + r.w * r.h, 0), 100 * 50 - 20 * 10);
 });
 
 test('drag icon: first themed name, else empty', () => {

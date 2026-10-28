@@ -79,7 +79,7 @@ split `index / model / view / shellAdapter / settings` is described there in det
 Adding `lib/`, `coordinators/` and `features.js` to that list belongs in the same PR that
 creates them, or the release zip breaks.
 
-`windowControls.js` and `panelHover.js` stay where they are but are rewritten on top of
+`appButtons.js` and `panelHover.js` stay where they are but are rewritten on top of
 `panelLayout` and `panelVisibility`. They are not copied into new folders.
 
 ## 3. Shared services (lib/ and coordinators/)
@@ -98,7 +98,7 @@ creates them, or the release zip breaks.
 ## 4. Where each feature changes code
 | Feature | New files | Existing files touched | Settings |
 |---|---|---|---|
-| Window controls | — | `apps/windowControls.js` (visibility gate `:357-360`, side detection `:42-55`), `apps/gtkThemeManager.js:66-72`, `css/hide-titlebar*.css`, Firefox/Thunderbird `*Hidden.css` | migrate `show-window-controls-fullscreen-only` → `window-controls-scope` |
+| Window controls | — | `apps/appButtons.js` (visibility gate `:357-360`, side detection `:42-55`), `apps/gtkThemeManager.js:66-72`, `css/hide-titlebar*.css`, Firefox/Thunderbird `*Hidden.css` | migrate `show-window-controls-fullscreen-only` → `window-controls-scope` |
 | Liquid Glass | `apps/liquidGlass/`, `lib/glass.js` | `panelTransparency.js`, `dockBlur.js`, `overviewWallpaper.js` (delegate to the service), `stylesheet.css` (glass classes) | `liquid-glass-*`; `panel-blur` and `dock-blur` become "handled by Liquid Glass" when it is on |
 | Clipboard | `apps/clipboard/`, `lib/modalSurface.js`, `lib/keybindings.js` | `prefs.js` (new page), schema | `clipboard-*` |
 | Spotlight | `apps/spotlight/` | schema (keybinding), prefs | `spotlight-*` |

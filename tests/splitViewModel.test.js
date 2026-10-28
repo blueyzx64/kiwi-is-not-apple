@@ -1,5 +1,5 @@
 // Run: gjs -m tests/splitViewModel.test.js
-import { isCandidate, menuEntries, splitRects, survivorAfter, thumbnailRects, preSplitRect } from '../features/splitView/model.js';
+import { isCandidate, splitRects, survivorAfter, thumbnailRects, preSplitRect } from '../features/splitView/model.js';
 
 let failed = 0;
 function test(name, fn) {
@@ -57,13 +57,6 @@ test('thumbnailRects: inside the half, never enlarged, no overlap', () => {
         }
     }
     eq(thumbnailRects([], area), []);
-});
-
-test('menuEntries', () => {
-    eq(menuEntries({ fullscreen: true, inSplit: false, candidates: 2 }), ['tile-left', 'tile-right']);
-    eq(menuEntries({ fullscreen: true, inSplit: false, candidates: 0 }), []);
-    eq(menuEntries({ fullscreen: false, inSplit: false, candidates: 3 }), []);
-    eq(menuEntries({ fullscreen: false, inSplit: true, candidates: 0 }), ['swap', 'exit']);
 });
 
 test('preSplitRect: the windowed frame, never a whole-area one', () => {

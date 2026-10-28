@@ -100,7 +100,7 @@ Events (`EVENTS` in `core/events.js`): `window-added`, `window-changed`, `window
 `motion-changed`, `feature-changed`, `minimize-requested`, `notification-center-requested`, `focus-changed`
 (the clock), `app-hide-requested` and `window-tile-requested` (app-menu commands for the
 window manager; the menu bar runs a fallback when nobody listens), `launchpad-requested` (dock tile,
-pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view-changed` (Split View), `recording-started` /
+pinch, hot corner), `split-view-changed` (Split View), `recording-started` /
 `recording-stopped` (screenshots; for the notch's recording live activity), `timers-changed`,
 `timer-finished` (core/timers).
 
@@ -116,6 +116,7 @@ pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view
 | `glass.js` (+`glassParams.js`) | faux Liquid Glass service: classes and a fill fragment on every Kiwi surface, shadow hosts, Clear↔Tinted, Reduce Transparency, Increase Contrast, Show Borders (CSS in `styles/base.css`); `attach`, `attachMenu`, `watch` |
 | `wallpaperTint.js` (+`wallpaperModel.js`) | the wallpaper's average colour for the glass tint (async 32×32 decode, cached per URI) |
 | `modalSurface.js` (+`modalLook.js`, `modalModel.js`) | one Kiwi modal at a time (Spotlight, Quick Paste, clipboard popover) |
+| `outsideClick.js` + `inputRing.js` (+`inputRingModel.js`) | a press outside a non-modal popup (notch, widget gallery) closes it and the click is replayed to what lay under it; `replayClick()` for popups that hold a modal grab (the dock stacks) |
 | `keybindings.js` (+`Model`) | registers Kiwi shortcuts, conflict list |
 | `mpris.js` (+`Model`) | MPRIS players |
 | `quickSettings.js` | `readyQuickSettings()`, `whenQuickSettingsReady(cleanup, fn, name)` (bounded wait), `stockKeys(qs)` (stock items by model key) |
@@ -132,13 +133,13 @@ pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view
 
 | Folder | Registry ids (features.js) | Notes |
 |---|---|---|
-| `windowControls/` | `window-controls`, `app-buttons`, `gtk-theme` | traffic lights in the top bar (`index.js`), the apps' own buttons when off (`appButtons.js`), both owning `button-layout` through `buttonLayout.js` (a `SettingOwner`); GTK stylesheets in `gtk/` imported into the user's gtk.css by `gtkTheme.js` |
+| `appButtons/` | `app-buttons`, `gtk-theme` | the apps' own titlebar buttons (`index.js`): side and button set through the WM `button-layout`, owned by `buttonLayout.js` (a `SettingOwner`, the user's layout restored exactly); GTK stylesheets in `gtk/` (traffic lights, app fixes) imported into the user's gtk.css by `gtkTheme.js`. No window buttons in the top bar |
 | `menuBar/` | `menu-bar` | the macOS menu bar: logo menu, app name and menus (core/appMenus), transparent adaptive bar, full-screen reveal, privacy dots, About This PC, Force Quit, clock hook, Activities policy |
 | `calendar/` | `calendar`, `quick-settings-notifications`, `dnd-button` | date menu on the right as a card; notification list in Quick Settings; Kiwi's Do Not Disturb (beaten by `control-center`) |
 | `controlCenter/` | `control-center` | Quick Settings restyled; Edit Controls (`editor.js`, `customModel.js`: gallery, sizes, `control-center-layout`, empty = default plan), Kiwi's own controls (`controls.js`: feature and accessibility switches, Screenshot, Screen Recording, Timer, Keep Awake, Low Power Mode) |
 | `lowPower/` | `low-power` | Low Power Mode per power source (`low-power-battery`/`-adapter`) via power-profiles-daemon HoldProfile; battery health; event `low-power-changed` |
 | `menuBarItems/` | `menu-bar-items` | right side of the menu bar: StatusNotifierItem host (`host.js`: owns org.kde.StatusNotifierWatcher, or joins another watcher, or defers to the AppIndicator extension; `sniItem.js`, `dbusMenu.js`), pinned Control Center controls (`pinned.js`, mirrors of the stock items), item manager (`manager.js`: order, hidden, overflow chevron, input-source menu, AppIndicator icons) |
-| `notch/` | `notch` | banners, live activities, OSD; hover/click opens Now / Tray / Widgets tabs. `stateMachine.js` (queue, shape, tabs) and `model.js` (activity priority, code detection, shelf, derivations) are pure; `sources/` feed activities (UPower, BlueZ, core timers, recording, calendar server, downloads, one-time codes, mic and weather); `shelf.js` + `drop.js` (files dropped from apps via the DND selection); `shelfHelper.js` + `shelfHelperModel.js` (the drag-out helper, helpers/kiwi-shelf-helper); `outsideClick.js` + `inputRing.js` (press outside collapses, with replay); `view.js`, `pills.js`, `tabs.js`, `ui.js` draw |
+| `notch/` | `notch` | banners, live activities, OSD; hover/click opens Now / Tray / Widgets tabs. `stateMachine.js` (queue, shape, tabs) and `model.js` (activity priority, code detection, shelf, derivations) are pure; `sources/` feed activities (UPower, BlueZ, core timers, recording, calendar server, downloads, one-time codes, mic and weather); `shelf.js` + `drop.js` (files dropped from apps via the DND selection); `shelfHelper.js` + `shelfHelperModel.js` (the drag-out helper, helpers/kiwi-shelf-helper); `view.js`, `pills.js`, `tabs.js`, `ui.js` draw |
 | `spotlight/` | `spotlight` | Super tap, providers; Tahoe browse views (Super+1..4), "/" filters, Actions, Quick Keys, history, Quick Look, menu items (`queryModel.js`, `actionsModel.js`, `results.js`) |
 | `clipboard/` | `clipboard-history` | history, popover, Quick Paste |
 | `stageManager/` | `stage-manager`, `stage-manager-shortcut` | v3 (P4): `model.js` pure `StageMachine` (events in, effects out: stage, entries, strip order per workspace, desktop); `geometry.js` strip maths; `index.js` adapter on core/desktop, core/layout claim `stage-strip` (opposite a side dock), core/motion; `view.js` strip, drop target and flight layer in one container; `flights.js`; `windows.js` hide by opacity+pick. Public: `toggleDesktop()`, `isDesktopShown`, `openIntoStage(appId)` |
@@ -155,7 +156,7 @@ pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view
 | `focus/` | `focus` | Focus modes (DND, Sleep, Work, Personal, custom): allowed apps, schedules, app triggers, time-sensitive break-through (`model.js`); banner filter via the router; GNOME DND synced both ways; Control Center tile with the mode menu and menu-bar icon (`indicator.js`); `state()`, event `focus-changed` |
 | `missionControl/` | `mission-control` | overview restyled as Mission Control: Spaces bar (+, ×, reorder), App Exposé with minimized strip, F3 / Ctrl+Up / Ctrl+Down, start on the desktop, static Spaces (dynamic-workspaces via core/originals) |
 | `windows/` | `window-tiling`, `app-hide` | Sequoia tiling: drag zones with a glass outline (`drag.js`), shortcuts, arrangements, margins, tile book (`model.js`); owns mutter `edge-tiling`; answers `window-tile-requested`. Hide / Hide Others (`hide.js`, `hideModel.js`), WindowState `hidden`, answers `app-hide-requested`, takes Super+H from GNOME's minimize while on |
-| `splitView/` | `split-view` | full screen Split View: green-button hover menu, tile a half, pick the partner from thumbnails; WindowState `splitView` |
+| `splitView/` | `split-view` | full screen Split View: shortcuts tile a full-screen window to a half, pick the partner from thumbnails; WindowState `splitView` |
 | `minimizeEffect/` | `minimize-effect` | Genie (`genie.js`, a strip-drawing `Clutter.OffscreenEffect` on a container holding a clone of the window; a `DeformEffect` on the window actor is cut off at the window's box on GNOME 50) and Scale minimize/restore into the dock; blocks the stock Shell.WM minimize handlers only while it runs and hands GNOME the windows it does not animate; `setTargetProvider(owner, fn)` for Stage Manager |
 | `switcher/` | `app-switcher` | Cmd-Tab panel on Super+Tab (`popup.js`, a SwitcherPopup subclass) and Super+` window cycling; own handlers for `switch-applications`/`switch-group`, the Shell's given back on disable |
 | `gestures/` | `gestures` | touchpad router (`captured-event::touchpad` on the stage): 4-finger down App Exposé, pinch Launchpad, spread Show Desktop; GNOME's swipes held back only when turned off |
@@ -166,8 +167,7 @@ pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view
 | `dialogs/` | `dialogs` | the Shell's modal dialogs (auth, end session, Run, others) as glass alerts: icon on top, natural-width buttons at the right, accent default; `ModalDialog.prototype.open` injection, undone on close and disable |
 | `colorFilters/` | `color-filters` | greyscale, protanopia / deuteranopia / tritanopia corrections and colour tint: one shader effect (a colour matrix as uniforms) on `global.stage` |
 
-Shared-resource rules (defined once in `features.js`): `window-controls`/`app-buttons` are
-mirrors over `button-layout`; `control-center` beats `dnd-button`; `stage-manager` beats
+Shared-resource rules (defined once in `features.js`): `app-buttons` alone owns `button-layout`; `control-center` beats `dnd-button`; `stage-manager` beats
 `move-window-to-new-workspace`; the notch forces the calendar to the right.
 
 ## 6. Preferences

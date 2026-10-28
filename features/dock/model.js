@@ -76,12 +76,15 @@ export function readConfig(get) {
 /** True for a dock along the bottom edge (icons in a row). */
 export const isHorizontal = position => position === 'bottom';
 
+const DOCK_BORDER = 1;   // px, the pill's hairline edge (view.js sets it inline)
+
 /**
  * Sizes for one icon size. The dock floats a small gap off the edge (Big Sur); the claim on the
- * edge includes the gap, so windows never touch the dock.
+ * edge includes that gap and the same gap again on the window side, so maximized and tiled
+ * windows stop one gap short of the dock.
  *
  * @param {number} iconSize px
- * @returns {{icon, tile, padding, gap, thickness, size, radius, tileRadius, dot}}
+ * @returns {{icon, tile, padding, border: DOCK_BORDER, gap, thickness, size, radius, tileRadius, dot}}
  */
 export function dockMetrics(iconSize) {
     const icon = clamp(Math.round(iconSize), ICON_SIZE_MIN, ICON_SIZE_MAX);
@@ -89,11 +92,11 @@ export function dockMetrics(iconSize) {
     const tile = icon + 2 * itemPad;
     const padding = Math.max(4, Math.round(icon / 8));
     const gap = Math.max(4, Math.round(icon / 8));
-    const thickness = tile + 2 * padding;
+    const thickness = tile + 2 * (padding + DOCK_BORDER);
     const radius = Math.round(thickness * 0.3);
     return Object.freeze({
-        icon, tile, padding, gap, thickness,
-        size: thickness + gap,
+        icon, tile, padding, border: DOCK_BORDER, gap, thickness,
+        size: thickness + 2 * gap,
         radius,
         tileRadius: Math.max(4, radius - padding),
         dot: Math.max(4, Math.round(icon / 12)),
@@ -696,4 +699,9 @@ export function removeFolder(folders, path) {
  */
 export function folderDropAccepted(coord, separatorEnd) {
     return separatorEnd !== null && coord >= separatorEnd;
+}
+
+/** True when the point lies inside `rect` {x, y, width, height} (a null rect holds nothing). */
+export function rectContains(rect, x, y) {
+    return !!rect && x >= rect.x && x < rect.x + rect.width && y >= rect.y && y < rect.y + rect.height;
 }

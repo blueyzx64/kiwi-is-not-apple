@@ -255,21 +255,21 @@
         <description>Shows a Mission Control item in the dock, next to the apps. Off by default, as on macOS.</description>
       </key>
 
-      <!-- Windows (features/windowControls, features/fullscreenSpace, features/roundedCorners) -->
+      <!-- Windows (features/appButtons: the apps' own titlebar buttons; features/fullscreenSpace, features/roundedCorners) -->
       <key name="enable-app-window-buttons" type="b">
         <default>true</default>
-        <summary>Enable Application Window Buttons</summary>
-        <description>Enable or disable window control buttons in application windows (affects GTK theming).</description>
+        <summary>(Deprecated, unused) Enable Application Window Buttons</summary>
+        <description>(Deprecated, unused) Replaced by app-buttons-style (migrated); kept so older settings migrate.</description>
       </key>
       <key name="button-size" type="s">
         <default>'small'</default>
         <summary>Button size</summary>
-        <description>Determines the size of window control buttons (small: 14px, normal: 16px).</description>
+        <description>Size of the macOS traffic lights in app titlebars (small: 14px, normal: 16px).</description>
       </key>
       <key name="show-window-controls" type="b">
         <default>true</default>
-        <summary>Show Window Controls on Panel</summary>
-        <description>Display window control buttons in the top bar for the focused window (see window-controls-scope).</description>
+        <summary>(Deprecated, unused) Show Window Controls on Panel</summary>
+        <description>(Deprecated, unused) The top-bar window controls were removed: window buttons always stay on the app's own titlebar. Kept so older settings stay valid; nothing reads it.</description>
       </key>
       <key name="window-controls-scope" type="s">
         <choices>
@@ -278,8 +278,8 @@
           <choice value="fullscreen"/>
         </choices>
         <default>'maximized'</default>
-        <summary>Panel window controls scope</summary>
-        <description>Which focused windows get window controls in the top bar: all windows, maximized windows (fullscreen included, the default: other windows keep the buttons in their own titlebar) or fullscreen windows only. Titlebar button removal follows the same scope. Replaces show-window-controls-fullscreen-only.</description>
+        <summary>(Deprecated, unused) Panel window controls scope</summary>
+        <description>(Deprecated, unused) The top-bar window controls were removed: window buttons always stay on the app's own titlebar. Kept so older settings stay valid; nothing reads it.</description>
       </key>
       <key name="window-controls-side" type="s">
         <choices>
@@ -287,8 +287,8 @@
           <choice value="left"/>
         </choices>
         <default>'right'</default>
-        <summary>Window controls side</summary>
-        <description>Which side holds the close, minimize and maximize buttons, in the top bar and in the apps' own titlebars (the GNOME window button-layout, which Kiwi sets and restores). 'right' (default) is the GNOME side: minimize, maximize, close, and in the top bar the far right of the bar, after the clock. 'left' is the macOS side: close, minimize, maximize. Replaces window-controls-position and app-buttons-position.</description>
+        <summary>Window buttons side</summary>
+        <description>Which side of the apps' own titlebars holds the close, minimize and maximize buttons (the GNOME window button-layout, which Kiwi sets and restores). 'right' (default) is the GNOME side: minimize, maximize, close. 'left' is the macOS side: close, minimize, maximize. Window buttons always stay on the app's titlebar; Kiwi draws none in the top bar.</description>
       </key>
       <key name="window-controls-position" type="s">
         <choices>
@@ -302,13 +302,13 @@
       </key>
       <key name="remove-titlebar-buttons" type="b">
         <default>true</default>
-        <summary>Remove titlebar buttons from windows</summary>
-        <description>Remove the close, minimize and maximize buttons from an app's own titlebar where the top bar shows them. With the scope 'all' Kiwi sets the GNOME window button layout (org.gnome.desktop.wm.preferences button-layout) to one without them, which GTK 3, GTK 4/libadwaita, Chromium/Electron and server-side frames honour. With the maximized or fullscreen scope GTK CSS in the user's gtk.css hides the buttons of GTK windows in those states, and the layout loses them only while a window with a server-side frame (X11) is focused in that state. Kiwi restores the user's layout when the controls or this option are turned off or Kiwi is disabled.</description>
+        <summary>(Deprecated, unused) Remove titlebar buttons from windows</summary>
+        <description>(Deprecated, unused) The top-bar window controls were removed: window buttons always stay on the app's own titlebar. Kept so older settings stay valid; nothing reads it.</description>
       </key>
       <key name="hide-maximized-titlebars" type="b">
         <default>false</default>
-        <summary>Hide title bars of maximized windows</summary>
-        <description>Take the title bar off a maximized or full-screen window that has one of its own and nothing else to lose: windows Mutter decorates (X11 frames, via _MOTIF_WM_HINTS, needs the xprop tool) and plain GTK 3 title bars without a header bar (CSS in the user's gtk.css). GTK 4 / libadwaita header bars are never hidden. Off by default.</description>
+        <summary>(Deprecated, unused) Hide title bars of maximized windows</summary>
+        <description>(Deprecated, unused) The top-bar window controls were removed: window buttons always stay on the app's own titlebar. Kept so older settings stay valid; nothing reads it.</description>
       </key>
       <key name="app-buttons-position" type="s">
         <choices>
@@ -325,8 +325,8 @@
           <choice value="macos"/>
         </choices>
         <default>'macos'</default>
-        <summary>App titlebar buttons style (top-bar controls off)</summary>
-        <description>While show-window-controls is off: 'gnome' leaves the apps' buttons in the stock libadwaita/GTK look, 'macos' applies Kiwi's traffic-light GTK CSS (button-type, button-size). Takes the place of enable-app-window-buttons for the apps while the controls are off; that key still decides with the controls on.</description>
+        <summary>App titlebar buttons style</summary>
+        <description>'gnome' leaves the apps' buttons in the stock libadwaita/GTK look, 'macos' applies Kiwi's traffic-light GTK CSS (see button-size). Open apps pick up a change when restarted.</description>
       </key>
       <key name="app-buttons-set" type="s">
         <choices>
@@ -335,7 +335,7 @@
         </choices>
         <default>'all'</default>
         <summary>App titlebar buttons set</summary>
-        <description>Which buttons the apps show in their own titlebar, on the side window-controls-side names: 'all' (close, minimize and maximize) or 'close' only (the stock Fedora layout). Applies with the top-bar controls on (where windows keep their buttons) and off.</description>
+        <description>Which buttons the apps show in their own titlebar, on the side window-controls-side names: 'all' (close, minimize and maximize) or 'close' only (the stock Fedora layout).</description>
       </key>
       <key name="move-window-to-new-workspace" type="b">
         <default>true</default>
@@ -368,15 +368,15 @@
         <description>Windows whose WM_CLASS or app id (for example "org.gnome.Terminal" or "firefox") is listed keep square corners. Not case-sensitive.</description>
       </key>
 
-      <!-- Window tiling, green-button menu, Hide (features/windows, features/windowControls) -->
+      <!-- Window tiling, Hide (features/windows) -->
       <key name="windows-traffic-style" type="s">
         <choices>
           <choice value="glass"/>
           <choice value="flat"/>
         </choices>
         <default>'glass'</default>
-        <summary>Traffic light style</summary>
-        <description>Look of Kiwi's top-bar window controls while macOS window buttons are on: 'glass' (macOS 27 Golden Gate glass beads, the default) or 'flat' (the classic flat traffic lights).</description>
+        <summary>(Deprecated, unused) Traffic light style</summary>
+        <description>(Deprecated, unused) The top-bar window controls were removed: window buttons always stay on the app's own titlebar. Kept so older settings stay valid; nothing reads it.</description>
       </key>
       <key name="windows-green-click" type="s">
         <choices>
@@ -384,18 +384,18 @@
           <choice value="zoom"/>
         </choices>
         <default>'fullscreen'</default>
-        <summary>Green button click</summary>
-        <description>What clicking the green (maximize) top-bar control does: 'fullscreen' (macOS default; the window goes full screen, in its own Space when that option is on) or 'zoom' (fill the screen without full screen). Alt-click does the other one.</description>
+        <summary>(Deprecated, unused) Green button click</summary>
+        <description>(Deprecated, unused) The top-bar window controls were removed: window buttons always stay on the app's own titlebar. Kept so older settings stay valid; nothing reads it.</description>
       </key>
       <key name="windows-green-menu" type="b">
         <default>true</default>
-        <summary>Green button menu</summary>
-        <description>Hovering over the green top-bar control, or pressing and holding it, opens the macOS Fill &amp; Arrange menu: Move &amp; Resize, Fill &amp; Arrange, Center, Full Screen, Move to workspace or display, Return to Previous Size.</description>
+        <summary>(Deprecated, unused) Green button menu</summary>
+        <description>(Deprecated, unused) The top-bar window controls were removed: window buttons always stay on the app's own titlebar. Kept so older settings stay valid; nothing reads it.</description>
       </key>
       <key name="windows-tiling" type="b">
         <default>true</default>
         <summary>Window tiling</summary>
-        <description>Kiwi tiles windows the way macOS 15 does: by dragging to the screen edges, corners and menu bar, from the green-button menu and with keyboard shortcuts. While it runs, GNOME's own edge tiling (org.gnome.mutter edge-tiling) is off; the user's value is saved and restored.</description>
+        <description>Kiwi tiles windows the way macOS 15 does: by dragging to the screen edges, corners, menu bar and the snap layouts at the top centre, and with keyboard shortcuts. While it runs, GNOME's own edge tiling (org.gnome.mutter edge-tiling) is off; the user's value is saved and restored.</description>
       </key>
       <key name="windows-tile-drag-edges" type="b">
         <default>true</default>
@@ -409,8 +409,8 @@
       </key>
       <key name="windows-tile-drag-picker" type="b">
         <default>true</default>
-        <summary>Layout picker at the top centre while dragging</summary>
-        <description>Dragging a window to the top bar at the centre of the screen opens the layout picker (halves, quarters, arrangements) under the notch. Releasing over a layout tiles to it; releasing elsewhere in the top-centre zone fills the screen. Needs windows-tile-drag-menubar.</description>
+        <summary>Snap layouts at the top centre while dragging</summary>
+        <description>Dragging a window to the top edge at the centre of the screen slides a handle down under the top bar (Windows 11 Snap Layouts). Moving onto the handle expands it into a bar of layouts (halves, thirds, quarters); releasing over a zone tiles the window there, releasing elsewhere on the bar does nothing.</description>
       </key>
       <key name="windows-tile-drag-modifier" type="b">
         <default>true</default>
@@ -813,6 +813,11 @@
         <summary>Show recent apps</summary>
         <description>Show the strip of recent apps beside the stage. Off keeps it hidden until the pointer pushes against the screen edge (macOS "Show recent apps in Stage Manager").</description>
       </key>
+      <key name="stage-manager-strip-background" type="b">
+        <default>true</default>
+        <summary>Strip background</summary>
+        <description>Draw a soft glass panel behind the strip of recent apps, so it reads apart from the app windows behind it. Off leaves the entries floating on the desktop (as macOS does).</description>
+      </key>
       <key name="stage-manager-next-shortcut" type="as">
         <default>['&lt;Super&gt;&lt;Alt&gt;Page_Down']</default>
         <summary>Next set shortcut</summary>
@@ -880,7 +885,17 @@
       <key name="split-view" type="b">
         <default>true</default>
         <summary>Full screen Split View</summary>
-        <description>Hover the green button of a full-screen window to tile it to the left or right of the screen and pick the window for the other half (macOS Split View).</description>
+        <description>Tile a full-screen window to the left or right of the screen with a shortcut (split-view-left-shortcut, split-view-right-shortcut) and pick the window for the other half (macOS Split View). Esc cancels the pick; making a window of the pair full screen or maximized ends the pair.</description>
+      </key>
+      <key name="split-view-left-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;&lt;Alt&gt;Left']</default>
+        <summary>Split View: tile left shortcut</summary>
+        <description>Tile the focused full-screen window to the left half and pick the window for the right half. Empty means no shortcut.</description>
+      </key>
+      <key name="split-view-right-shortcut" type="as">
+        <default>['&lt;Control&gt;&lt;Super&gt;&lt;Alt&gt;Right']</default>
+        <summary>Split View: tile right shortcut</summary>
+        <description>Tile the focused full-screen window to the right half and pick the window for the left half. Empty means no shortcut.</description>
       </key>
 
       <!-- Mission Control (features/missionControl) -->
@@ -1841,7 +1856,7 @@
       <key name="show-window-controls-fullscreen-only" type="b">
         <default>false</default>
         <summary>(Deprecated, unused) Show Window Controls on Panel only when Fullscreen</summary>
-        <description>Deprecated: replaced by window-controls-scope, kept so older settings migrate. Has no effect once window-controls-scope is set.</description>
+        <description>(Deprecated, unused) Replaced by window-controls-scope, which the removal of the top-bar window controls retired too. Nothing reads it.</description>
       </key>
 
     </schema>

@@ -33,7 +33,7 @@ The glass look is the only loss.
 
 ## Steps
 Welcome; Choose Your Look (Light / Dark / Auto, accent); Your Dock (position, size); The Menu
-Bar (logo); Window Controls (in the menu bar on/off); Stage Manager on/off; Privacy (clipboard
+Bar (logo); Window Buttons (side right/left); Stage Manager on/off; Privacy (clipboard
 history, notifications in the notch, with what they keep and show); You're All Set. Each step
 is data in `features/onboarding/model.js` `STEPS`; `tests/onboardingModel.test.js` checks every
 key, type and value against the schema.

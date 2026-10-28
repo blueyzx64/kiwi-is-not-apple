@@ -115,7 +115,7 @@ export function pick(table) {            // { 48: implA, 50: implB } → highest
 ```
 
 ```js
-// apps/windowControls/shellAdapter.js
+// apps/appButtons/shellAdapter.js
 const maximize = pick({
     48: w => w.maximize(Meta.MaximizeFlags.BOTH),
     49: w => w.maximize(),              // Mutter 49 dropped the MaximizeFlags argument
@@ -126,7 +126,7 @@ const maximize = pick({
 `set_maximize_flags()`.) Prefer **feature detection** (`'set_maximize_flags' in w`) when the API surface itself
 is detectable; use version tables when behaviour changed without a visible API change.
 `apps/windowTiling.js` already isolates `isMaximized/maximizeWindow/unmaximizeWindow`
-(imported at `apps/windowControls.js:14`) — that is the right seam; move it to `lib/`.
+(imported at `apps/appButtons.js:14`) — that is the right seam; move it to `lib/`.
 
 ## 5. Feature flags via GSettings
 

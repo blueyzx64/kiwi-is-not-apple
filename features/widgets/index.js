@@ -64,7 +64,7 @@ export class DesktopWidgets {
         this._layout = ctx.layout.acquire(cleanup);
         this.desktopLayers = DesktopLayers.acquire(cleanup);
         this._reserve = this.desktopLayers.reserve(cleanup, 'widgets');
-        this._gallery = new Gallery(this);
+        this._gallery = new Gallery(this, cleanup);
         cleanup.add(() => this.closeGallery());
         cleanup.add(() => this._closeMenu());
 

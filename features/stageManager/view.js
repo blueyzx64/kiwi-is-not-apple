@@ -38,10 +38,11 @@ import * as Layout from 'resource:///org/gnome/shell/ui/layout.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import * as A11y from '../../lib/a11y.js';
+import { Glass } from '../../lib/glass.js';
 import { attachThumbEffect } from './thumbEffect.js';
 import {
-    METRICS, clonePose, edgeBarrier, edgeFade, layerRect, revealOffset, slotBox, slotAt, stackLayers,
-    stripLayout, stripVisible, tiltAngle,
+    METRICS, clonePose, edgeBarrier, edgeFade, groupSide, halves, layerRect, revealOffset, slotBox, slotAt, stackLayers,
+    stageArea, stripLayout, stripVisible, tiltAngle,
 } from './geometry.js';
 
 const HOVER_SCALE = 1.1;
@@ -51,6 +52,8 @@ const PRESSURE_THRESHOLD = 40;   // px pushed against the edge, as the auto-hide
 const PRESSURE_TIMEOUT = 600;
 const WHEEL_STEP = 90;           // px scrolled by one wheel notch
 const SMOOTH_STEP = 60;          // px per unit of a smooth (touchpad) scroll delta
+const SIDE_QUIET = { opacity: 85, scale: 0.97 };   // the half the dragged window will not take
+const SIDE_ENTER_SCALE = 0.94;   // a highlight springs up from this
 
 export class StripView {
     /**
@@ -60,6 +63,7 @@ export class StripView {
      * @param {() => number} env.ms a duration (ms) under the animation speed setting
      * @param {(entryId: string, mods: {add: boolean}) => void} env.onActivate a click
      * @param {(entryId: string) => void} env.onDrop an entry dropped on the stage
+     * @param {(dragged: string, target: string, side: 'left'|'right') => void} env.onGroup an entry dropped on another
      * @param {() => void} env.onLayout the strip moved, grew, showed or hid
      * @param {() => ?{radius: number, mask: number[]}} env.corners the corner rounding of thumbnails (thumbEffect.cornerSpec)
      * @param {(text: string) => string} env.gettext
@@ -79,10 +83,14 @@ export class StripView {
         this._scrollTarget = 0;
         this._firstId = null;         // first entry shown last time
         this._shown = null;           // last applied visibility (null: never)
+        this._builtKey = null;        // what the cards were last built from
         this._edge = false;           // the pointer just pushed the edge
         this._dragging = null;        // entry id while an entry is dragged
         this._pending = false;        // an update came during the drag
         this._dropHint = null;        // null | 'near' | 'over': a stage window dragged to the strip
+        this._cards = new Map();      // entry id -> its St.Button
+        this._groupHint = null;       // {entry, side} while a dragged entry hovers another's card
+        this._dragMonitor = null;
         this._anims = new Set();      // running animation handles
         this._dead = false;
 
@@ -112,11 +120,22 @@ export class StripView {
             },
         };
         this.container.add_child(this._drop);
+        // The two halves of the stage, lit while a dragged entry hovers another's card
+        this._sides = {};
+        for (const side of ['left', 'right']) {
+            const half = new St.Widget({ style_class: 'kiwi-stage-side', visible: false, reactive: false, opacity: 0 });
+            half.set_pivot_point(0.5, 0.5);
+            this._sides[side] = half;
+            this.container.add_child(half);
+        }
 
         this._strip = new Clutter.Actor({ reactive: false, visible: false });
         this.container.add_child(this._strip);
         this._floor = new St.Widget({ style_class: 'kiwi-stage-strip', reactive: true, track_hover: true });
         this._strip.add_child(this._floor);
+        // The soft glass under the entries, so they read apart from the app behind them
+        this._glass = Glass.attach(this._floor, { surface: 'panel', role: 'bar' });
+        cleanup.add(() => this._glass.destroy());
         // Entries live in a content actor, moved by the scroll offset
         this._content = new Clutter.Actor({ reactive: false });
         this._floor.add_child(this._content);
@@ -162,6 +181,13 @@ export class StripView {
             this._pressure.destroy();
         });
         cleanup.add(() => this._cancelAnims());
+        cleanup.add(() => this._removeDragMonitor());
+    }
+
+    /** Show or hide the glass backdrop of the strip. */
+    setBackground(on) {
+        if (!this._dead)
+            this._glass.setVisible(on);
     }
 
     /** The layer flights fly in. */
@@ -182,7 +208,19 @@ export class StripView {
             this._pending = true;
             return;
         }
+        // Cards are rebuilt only when what they show changed: a rebuild while the strip is on
+        // screen redraws every card, which reads as a flicker
+        const key = this._contentKey();
+        if (!slide && key === this._builtKey)
+            return;
+        this._builtKey = key;
         this._rebuild(slide);
+    }
+
+    _contentKey() {
+        const { side, workArea, entries, tilt } = this._state;
+        return JSON.stringify([side, tilt, workArea, this._env.corners(),
+            entries.map(e => [e.id, e.set, e.names, e.windows.map(w => w.get_stable_sequence())])]);
     }
 
     /** Cheap: only whether the strip is shown (stage windows moved, overview, full screen). */
@@ -266,6 +304,12 @@ export class StripView {
         this._syncShown();
     }
 
+    /** Where entries dropped on the stage go, and where a new set is tiled (absolute). */
+    stageArea() {
+        const wa = this._state.workArea;
+        return this._dead || !wa ? null : stageArea(wa, this._floorRect, this._state.side);
+    }
+
     // ---- scrolling -----------------------------------------------------------------------------
 
     get _offset() {
@@ -342,6 +386,20 @@ export class StripView {
 
     // ---- build -------------------------------------------------------------------------------
 
+    _spring(actor, prop, to, onDone) {
+        let anim = null;
+        anim = this._env.motion.spring(actor, prop, to, {
+            spring: 'smooth',
+            onDone: finished => {
+                if (anim)
+                    this._anims.delete(anim);
+                onDone?.(finished);
+            },
+        });
+        if (anim.running)
+            this._anims.add(anim);
+    }
+
     _ease(actor, props, request) {
         let anim = null;
         anim = this._env.motion.ease(actor, props, {
@@ -364,6 +422,7 @@ export class StripView {
     }
 
     _clearCards() {
+        this._cards.clear();
         this._thumbs.clear();
         this._slots = [];
         for (const child of this._content.get_children())
@@ -540,8 +599,21 @@ export class StripView {
 
     // Drag an entry: a clone of its stack follows the pointer; dropped on the stage it joins the set
     _makeDraggable(button, holder, entryId) {
+        this._cards.set(entryId, button);
         button._delegate = {
             kiwiStageEntry: entryId,
+            // Another entry dropped on this card forms a set with it
+            handleDragOver: source => (source?.kiwiStageEntry && source.kiwiStageEntry !== entryId
+                ? DND.DragMotionResult.MOVE_DROP : DND.DragMotionResult.CONTINUE),
+            acceptDrop: (source, _actor, x, y) => {
+                const dragged = source?.kiwiStageEntry;
+                const slot = this.slotRect(entryId);
+                if (!dragged || dragged === entryId || !slot)
+                    return false;
+                const side = groupSide({ x, y }, slot);
+                this._cleanup.idle(() => this._env.onGroup(dragged, entryId, side), { name: 'stage-manager-group' });
+                return true;
+            },
             getDragActor: () => {
                 const clone = new Clutter.Clone({ source: holder, reactive: false });
                 clone.set_size(holder.width, holder.height);
@@ -554,17 +626,22 @@ export class StripView {
             this._dragging = entryId;
             holder.opacity = DRAG_OPACITY;
             this._showDropTarget(true);
+            this._dragMonitor = { dragMotion: ev => this._groupMotion(ev) };
+            DND.addDragMonitor(this._dragMonitor);
             this._syncShown();
         });
         draggable.connect('drag-end', () => {
             if (this._dragging !== entryId)
                 return;
             this._dragging = null;
+            this._removeDragMonitor();
+            this._setGroupHint(null);
             this._showDropTarget(false);
             if (!this._dead && holder.get_stage())
                 holder.opacity = 255;
             if (this._pending) {
                 this._pending = false;
+                this._builtKey = this._contentKey();
                 this._rebuild(0);
             } else {
                 this._syncShown();
@@ -578,13 +655,64 @@ export class StripView {
             this._drop.visible = false;
             return;
         }
-        // The stage: the work area beside the strip band
-        const left = this._state.side === 'left';
-        const x = left ? this._floorRect.x + this._floorRect.width + 12 : wa.x + 12;
-        const right = left ? wa.x + wa.width - 12 : this._floorRect.x - 12;
-        this._drop.set_position(x, wa.y + 12);
-        this._drop.set_size(Math.max(1, right - x), Math.max(1, wa.height - 24));
+        const area = this.stageArea();
+        this._drop.set_position(area.x, area.y);
+        this._drop.set_size(area.width, area.height);
+        this._drop.opacity = 255;
         this._drop.visible = true;
+    }
+
+    _removeDragMonitor() {
+        if (!this._dragMonitor)
+            return;
+        DND.removeDragMonitor(this._dragMonitor);
+        this._dragMonitor = null;
+    }
+
+    // The dragged entry is over a card: light the halves of the stage, the pointer's side strongest
+    _groupMotion({ x, y }) {
+        const target = this._dragging ? this.entryAt(x, y) : null;
+        const slot = target && target !== this._dragging ? this.slotRect(target) : null;
+        this._setGroupHint(slot ? { entry: target, side: groupSide({ x, y }, slot) } : null);
+        return DND.DragMotionResult.CONTINUE;
+    }
+
+    _setGroupHint(hint) {
+        const old = this._groupHint;
+        if (old?.entry === hint?.entry && old?.side === hint?.side)
+            return;
+        this._groupHint = hint;
+        if (old?.entry !== hint?.entry) {
+            this._cards.get(old?.entry)?.remove_style_pseudo_class('drop');
+            this._cards.get(hint?.entry)?.add_style_pseudo_class('drop');
+        }
+        const area = this.stageArea();
+        const rects = area ? halves(area) : null;
+        for (const side of ['left', 'right']) {
+            const half = this._sides[side];
+            if (!hint || !rects) {
+                if (half.visible)
+                    this._spring(half, 'opacity', 0, finished => {
+                        if (finished && !this._dead && !this._groupHint)
+                            half.visible = false;
+                    });
+                continue;
+            }
+            if (!half.visible) {
+                half.set_position(rects[side].x, rects[side].y);
+                half.set_size(rects[side].width, rects[side].height);
+                half.opacity = 0;
+                half.set_scale(SIDE_ENTER_SCALE, SIDE_ENTER_SCALE);
+                half.visible = true;
+            }
+            const chosen = side === hint.side;
+            const scale = chosen ? 1 : SIDE_QUIET.scale;
+            this._spring(half, 'opacity', chosen ? 255 : SIDE_QUIET.opacity);
+            this._spring(half, 'scale_x', scale);
+            this._spring(half, 'scale_y', scale);
+        }
+        if (this._drop.visible)
+            this._spring(this._drop, 'opacity', hint ? 0 : 255);
     }
 
     // One window: its live clone (the whole buffer, shadow included) posed so the frame fills

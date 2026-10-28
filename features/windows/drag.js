@@ -5,6 +5,10 @@
 // Releasing over it tiles the window. Dragging a tiled window away gives it back its
 // pre-tile size first.
 //
+// Near the top centre the snap bar (snapBar.js, Windows 11 Snap Layouts) takes over: a handle,
+// then a row of layouts; the zone under the pointer is previewed like an edge zone, and
+// releasing over one tiles there (elsewhere on the bar: nothing).
+//
 // At an edge the outline waits a beat (DWELL_MS) against accidental tiling, as on macOS; with
 // the modifier it shows at once. Pointer tracking only runs while a move grab is active: the
 // dragged window's position-changed (once per move), nothing per frame.
@@ -22,9 +26,9 @@ import { getPointerWatcher } from 'resource:///org/gnome/shell/ui/pointerWatcher
 
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { Glass } from '../../lib/glass.js';
-import { ZONES, leadZone } from '../../core/tileActions.js';
-import { EDGE_PX, PICKER_ZONE, dropZone, hitZone, needsDwell, pickerHit } from './model.js';
-import { TilePicker } from './picker.js';
+import { ZONES } from '../../core/tileActions.js';
+import { EDGE_PX, dropZone, hitZone, needsDwell } from './model.js';
+import { SnapBar } from './snapBar.js';
 
 // How long the pointer rests against an edge before the outline shows (no modifier)
 const DWELL_MS = 150;
@@ -54,13 +58,14 @@ export class TileDrag {
         this._win = null;
         this._zone = null;     // zone under the pointer
         this._shown = null;    // zone the outline shows (after the dwell)
-        this._action = null;   // the picker glyph under the pointer
+        this._snapZone = null; // zone of the snap bar under the pointer
         this._monitor = -1;
         this._dwell = 0;
-        this._anim = null;
+        this._anim = null;     // the preview's rect spring
+        this._fade = null;     // the preview's opacity spring
         this._untilePending = false;
         this._preview = null;
-        this._picker = null;
+        this._snap = null;
     }
 
     enable() {
@@ -75,7 +80,7 @@ export class TileDrag {
             surface: 'overlays', radius: 12, isDark: () => st.color_scheme !== St.SystemColorScheme.PREFER_LIGHT,
         });
         cleanup.add(() => glass.destroy());
-        this._picker = new TilePicker(this._ctx, cleanup);
+        this._snap = new SnapBar(this._ctx, cleanup);
         cleanup.connect(global.display, 'grab-op-begin', (_d, win, op) => this._begin(win, op));
         cleanup.connect(global.display, 'grab-op-end', (_d, win) => this._end(win));
         cleanup.add(() => this._stop());
@@ -84,7 +89,7 @@ export class TileDrag {
     _wanted() {
         const ks = this._ks;
         return ks.bool('windows-tile-drag-edges') || ks.bool('windows-tile-drag-menubar') ||
-            ks.bool('windows-tile-drag-modifier');
+            ks.bool('windows-tile-drag-modifier') || ks.bool('windows-tile-drag-picker');
     }
 
     _begin(win, op) {
@@ -111,12 +116,11 @@ export class TileDrag {
         const monitor = this._monitor;
         // Esc cancels the grab with the button still down: the window goes back, nothing tiles
         const [x, y, mods] = global.get_pointer();
-        const live = this._zoneAt(x, y, mods);
-        const zone = dropZone({
-            live: live?.zone ?? null, shown: this._shown, buttonDown: (mods & Clutter.ModifierType.BUTTON1_MASK) !== 0,
-        });
-        // Over the picker: the glyph under the pointer, else Fill
-        const action = zone === PICKER_ZONE ? pickerHit({ x, y }, this._picker.cells()) ?? 'fill' : zone;
+        const buttonDown = (mods & Clutter.ModifierType.BUTTON1_MASK) !== 0;
+        // On the snap bar only a zone counts, whatever the edges say
+        const action = this._snap.visible
+            ? !buttonDown && this._snapZone
+            : dropZone({ live: this._zoneAt(x, y, mods)?.zone ?? null, shown: this._shown, buttonDown });
         this._stop();
         if (action in ZONES)
             this._engine.tile(win, action, monitor);
@@ -130,9 +134,9 @@ export class TileDrag {
         this._grab = null;
         this._win = null;
         this._zone = null;
-        this._action = null;
+        this._snapZone = null;
         this._cancelDwell();
-        this._picker?.close();
+        this._snap?.close();
         this._hidePreview();
     }
 
@@ -151,8 +155,6 @@ export class TileDrag {
             edges: ks.bool('windows-tile-drag-edges'),
             menuBar: ks.bool('windows-tile-drag-menubar'),
             modifier,
-            picker: ks.bool('windows-tile-drag-picker'),
-            pickerRect: this._picker.rect,
         });
         return { zone, monitor, mon, barBottom };
     }
@@ -170,12 +172,10 @@ export class TileDrag {
         if (!at)
             return;
         const { zone, monitor } = at;
-        if (zone === PICKER_ZONE) {
-            this._onPicker(at, x, y);
+        if (this._followSnap(at, x, y)) {
+            this._zone = null;
             return;
         }
-        this._picker.close();
-        this._action = null;
         if (zone === this._zone && monitor === this._monitor)
             return;
         this._zone = zone;
@@ -199,19 +199,27 @@ export class TileDrag {
         }, { name: 'kiwi tile dwell' });
     }
 
-    // The pointer is in the top-centre zone: the picker is open, the glyph under the pointer is
-    // previewed (Fill while none is)
-    _onPicker({ monitor, mon, barBottom }, x, y) {
+    // The snap bar follows the pointer; while it is up it owns the preview (the zone it lights).
+    // Returns true while the pointer is on it.
+    _followSnap({ monitor, mon, barBottom }, x, y) {
+        if (!this._ks.bool('windows-tile-drag-picker'))
+            return false;
+        const snap = this._snap;
+        const zone = snap.update({ x, y }, mon, barBottom);
+        if (!snap.visible) {
+            this._snapZone = null;
+            return false;
+        }
         this._cancelDwell();
-        this._zone = PICKER_ZONE;
         this._monitor = monitor;
-        this._picker.open(mon, barBottom);
-        const action = pickerHit({ x, y }, this._picker.cells());
-        this._picker.hover(action);
-        if (action === this._action && this._shown)
-            return;
-        this._action = action;
-        this._showPreview(action ? leadZone(action) : 'fill', monitor);
+        if (zone !== this._snapZone) {
+            this._snapZone = zone;
+            if (zone)
+                this._showPreview(zone, monitor);
+            else
+                this._hidePreview();
+        }
+        return true;
     }
 
     _cancelDwell() {
@@ -243,21 +251,23 @@ export class TileDrag {
             preview.show();
         }
         this._shown = zone;
-        this._anim = this._ctx.motion.ease(preview, {
-            x: rect.x, y: rect.y, width: rect.width, height: rect.height, opacity: 255,
-        }, { duration: 'short', curve: 'standard' }, this._cleanup);
+        this._anim = this._ctx.motion.springs(preview, {
+            x: rect.x, y: rect.y, width: rect.width, height: rect.height,
+        }, { spring: 'smooth' }, this._cleanup);
+        this._fade?.cancel();
+        this._fade = this._ctx.motion.spring(preview, 'opacity', 255, { spring: 'quick' }, this._cleanup);
     }
 
     _hidePreview() {
         if (!this._shown)
             return;
         this._shown = null;
-        this._anim?.cancel();
+        this._fade?.cancel();
         const preview = this._preview;
-        this._anim = this._ctx.motion.ease(preview, { opacity: 0 }, {
-            duration: 'micro', curve: 'exit',
-            onDone: () => {
-                if (!this._shown)
+        this._fade = this._ctx.motion.spring(preview, 'opacity', 0, {
+            spring: 'quick',
+            onDone: finished => {
+                if (finished && !this._shown)
                     preview.hide();
             },
         }, this._cleanup);

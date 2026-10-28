@@ -429,6 +429,111 @@ test('Quick Look and windows other features set aside (Hide, Split View) stay ou
     eq(t.stage(), ['files']);
 });
 
+function setOf(t, names) {
+    const t0 = t;
+    t0.open(names[0]);
+    for (const n of names.slice(1)) {
+        t0.later(QUIET_MS);
+        t0.open(n);
+        t0.later(QUIET_MS);
+    }
+}
+
+test('maximizing a window of a 2-window set leaves it alone on the stage; the other goes to the strip', () => {
+    const t = desk({ newWindows: 'join' });
+    setOf(t, ['editor', 'files']);
+    eq(t.stage(), ['files', 'editor']);
+    t.send({ type: 'change', window: { id: t.id('editor'), maximized: true } });
+    eq(t.stage(), ['editor']);
+    eq(t.strip(), ['files']);
+    eq(t.fxOf('hide')[0].ids, [t.id('files')]);
+    eq(t.focusFx(), 'editor');
+    eq(t.sm.entry(t.entryOf('editor')).set, false);
+});
+
+test('maximizing one of a 3-window set sends the other two to the strip together, still a set', () => {
+    const t = desk({ newWindows: 'join' });
+    setOf(t, ['editor', 'files', 'music']);
+    eq(t.stage().length, 3);
+    t.send({ type: 'change', window: { id: t.id('files'), maximized: true } });
+    eq(t.stage(), ['files']);
+    eq(t.strip().length, 1);
+    eq(t.sm.entry(t.sm.strip()[0]).windows.length, 2);
+    eq(t.sm.entry(t.sm.strip()[0]).set, true);
+    eq(t.fxOf('hide')[0].ids.length, 2);
+    // Unmaximizing does not regroup
+    t.send({ type: 'change', window: { id: t.id('files'), maximized: false } });
+    eq(t.stage(), ['files']);
+    eq(t.strip().length, 1);
+});
+
+test('maximizing a lone window, or one already maximized, splits nothing', () => {
+    const t = desk();
+    t.open('editor');
+    t.send({ type: 'change', window: { id: t.id('editor'), maximized: true } });
+    eq(t.stage(), ['editor']);
+    eq(t.fxOf('hide'), []);
+    t.send({ type: 'change', window: { id: t.id('editor'), maximized: true, title: 'x' } });
+    eq(t.fxOf('hide'), []);
+});
+
+test('group: a strip entry dropped on another opens both as a set, tiled by the chosen side', () => {
+    const t = desk();
+    t.open('editor');
+    t.later(QUIET_MS);
+    t.open('files');
+    t.later(QUIET_MS);
+    t.open('music');
+    t.later(QUIET_MS);
+    t.open('calc');
+    eq(t.strip(), ['music', 'files', 'editor']);
+    const [music, files] = t.sm.strip();
+    t.send({ type: 'group', dragged: music, target: files, side: 'left' });
+    eq(t.stage(), ['music', 'files']);
+    eq(t.strip(), ['calc', 'editor']);
+    const tile = t.fxOf('tile')[0];
+    eq(tile.left, [t.id('music')]);
+    eq(tile.right, [t.id('files')]);
+    eq(t.fxOf('show')[0].ids.length, 2);
+    eq(t.fxOf('hide')[0].ids, [t.id('calc')]);
+    eq(t.focusFx(), 'music');
+    eq(t.sm.entry(t.entryOf('music')).set, true);
+});
+
+test('group: the right side, and onto an existing set', () => {
+    const t = desk();
+    for (const n of ['a', 'b', 'c', 'd']) {
+        t.open(n);
+        t.later(QUIET_MS);
+    }
+    const [c, b] = t.sm.strip();
+    t.send({ type: 'group', dragged: c, target: b, side: 'left' });
+    eq(t.stage(), ['c', 'b']);
+    t.later(QUIET_MS);
+    t.send({ type: 'activate', entry: t.sm.strip()[0], add: false });
+    eq(t.stage(), ['d']);
+    eq(t.strip(), ['c+b', 'a']);
+    const [set, lone] = t.sm.strip();
+    t.send({ type: 'group', dragged: lone, target: set, side: 'right' });
+    eq(t.stage(), ['a', 'c', 'b']);
+    const tile = t.fxOf('tile')[0];
+    eq(tile.right, [t.id('a')]);
+    eq(tile.left, [t.id('c'), t.id('b')]);
+});
+
+test('group: ignored for the stage entry, itself, or entries of other workspaces', () => {
+    const t = desk();
+    t.open('editor');
+    t.later(QUIET_MS);
+    t.open('files');
+    const stage = t.sm.stage();
+    const other = t.sm.strip()[0];
+    eq(t.send({ type: 'group', dragged: other, target: stage, side: 'left' }), []);
+    eq(t.send({ type: 'group', dragged: other, target: other, side: 'left' }), []);
+    eq(t.send({ type: 'group', dragged: 'nope', target: other, side: 'left' }), []);
+    eq(t.stage(), ['files']);
+});
+
 if (failed) {
     print(`${failed} test(s) failed`);
     imports.system.exit(1);

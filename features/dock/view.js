@@ -95,8 +95,14 @@ export class DockView {
             if (this.frame === frame)
                 this.alive = false;
         });
-        // The gap between the pill and the edge belongs to the frame (hover, struts)
-        const pad = { bottom: `padding-bottom: ${m.gap}px;`, left: `padding-left: ${m.gap}px;`, right: `padding-right: ${m.gap}px;` };
+        // The gap between the pill and the edge belongs to the frame (hover). The same gap on the
+        // other side is the frame's margin, so the band (the strut) is as deep as both gaps and the
+        // pill; a margin is not hit-testable, so the gap on the windows' side stays theirs
+        const pad = {
+            bottom: `padding-bottom: ${m.gap}px; margin-top: ${m.gap}px;`,
+            left: `padding-left: ${m.gap}px; margin-right: ${m.gap}px;`,
+            right: `padding-right: ${m.gap}px; margin-left: ${m.gap}px;`,
+        };
         this.frame.set_style(pad[position]);
         this.pill = new St.BoxLayout({
             style_class: 'kiwi-dock',
@@ -105,7 +111,7 @@ export class DockView {
             accessible_name: this._host.gettext('Dock'),
             accessible_role: A11y.Role.TOOL_BAR,
         });
-        this.pill.set_style(`border-radius: ${m.radius}px; padding: ${m.padding}px;`);
+        this.pill.set_style(`border-radius: ${m.radius}px; padding: ${m.padding}px; border-width: ${m.border}px;`);
         // The glass's drop shadow is drawn by a host right behind the pill, same rect
         const shadow = new St.Widget({ style_class: 'kiwi-dock-shadow' });
         shadow.set_style(`border-radius: ${m.radius}px;`);

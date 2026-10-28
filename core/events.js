@@ -53,7 +53,7 @@ export const EVENTS = Object.freeze({
     'app-hide-requested': { appId: 'string|null', mode: "'hide' | 'others' | 'all'" },
     // An app was hidden (its windows minimized without effect, WindowState 'hidden') or shown
     'app-hidden': { appId: 'string', hidden: 'boolean' },
-    // Window tiling (features/windows acts; the green-button menu and the Window menu ask).
+    // Window tiling (features/windows acts; the Window menu asks).
     // `mode` is a tiling action of core/tileActions.js: a zone ('left', 'top-right', 'fill',
     // ...), 'center', 'restore' or 'arrange-<name>'.
     'window-tile-requested': { window: 'Meta.Window', mode: 'string' },
@@ -68,12 +68,6 @@ export const EVENTS = Object.freeze({
     // Spotlight's "Start Timer" action (features/spotlight). The timers' owner (the notch's
     // live activities, P5) listens; with no listener Spotlight runs a plain notification timer.
     'timer-start-requested': { seconds: 'number', label: 'string', source: "string ('spotlight'|'control-center')" },
-    // The green button of the top-bar controls (features/windowControls) was hovered or left;
-    // Split View (features/splitView) offers its menu for a full-screen window
-    'green-button-hover': { window: 'Meta.Window|null', actor: 'Clutter.Actor', hovered: 'boolean' },
-    // Split View: tile a full-screen window to one half and pick its partner (the green menu
-    // emits it; features/splitView acts)
-    'split-view-requested': { window: 'Meta.Window', side: "'left' | 'right'" },
     // A Split View pair formed (active) or ended (features/splitView)
     'split-view-changed': { windows: 'Meta.Window[]', active: 'boolean' },
     // features/desktopIcons: the selected icons or where they are changed. A helper that must put

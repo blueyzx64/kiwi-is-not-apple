@@ -4,14 +4,13 @@
 //   splitRects(area, side)          the two halves: the tiled window's and its partner's
 //   isCandidate(win)                which windows can be picked as the partner
 //   thumbnailRects(sizes, area)     the picker's thumbnails on the free half
-//   menuEntries(state)              what the green button offers
 //   survivorAfter(pair, gone)       who stays full screen when a pair ends
 //   preSplitRect(frame, area)       the size a window that leaves a pair goes back to
 //
 // macOS (El Capitan to Sequoia; research native-apps-and-system-ui "Full screen and Split
-// View", 2018-2019 "Window tile menu on the green button"): hovering the green button of a
-// full-screen window offers "Tile Window to Left/Right of Screen"; the window takes that half
-// and the other half shows the Space's other windows to pick the partner from.
+// View"): "Tile Window to Left/Right of Screen" on a full-screen window; the window takes that
+// half and the other half shows the Space's other windows to pick the partner from. Kiwi offers
+// it as two shortcuts, since GNOME apps' own buttons cannot show a hover menu.
 
 /**
  * The halves of a work area (whole pixels, no gap: the windows meet in the middle).
@@ -76,20 +75,6 @@ export function thumbnailRects(sizes, area, { padding = 32, gap = 24, label = 28
         const cy = top + row * (ch + label + gap) + ch / 2;
         return { x: Math.round(cx - width / 2), y: Math.round(cy - height / 2), width, height, scale };
     });
-}
-
-/**
- * The green button's Split View entries.
- *
- * @param {{fullscreen: boolean, inSplit: boolean, candidates: number}} s
- * @returns {string[]} 'tile-left' | 'tile-right' | 'exit' | 'swap'
- */
-export function menuEntries({ fullscreen, inSplit, candidates }) {
-    if (inSplit)
-        return ['swap', 'exit'];
-    if (fullscreen && candidates > 0)
-        return ['tile-left', 'tile-right'];
-    return [];
 }
 
 /**

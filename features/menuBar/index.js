@@ -12,6 +12,7 @@
 //   look         adaptiveBar.js      menubar-transparent (transparent bar, adaptive text)
 //   full screen  fullscreenReveal.js menubar-fullscreen-visible
 //   privacy      privacyDots.js      menubar-privacy-dots
+//   menu places  menuPlacement.js    every bar menu opens under its item, leading edges aligned
 //   clock        here                emits 'notification-center-requested'; Alt-click toggles
 //                                    Do Not Disturb (menubar-clock-option-dnd)
 //   dialogs      aboutDialog.js, forceQuit.js (menubar-force-quit-shortcut)
@@ -40,6 +41,7 @@ import { AppMenuBar } from './appMenuBar.js';
 import { ForceQuit } from './forceQuit.js';
 import { FullscreenReveal } from './fullscreenReveal.js';
 import { LogoMenu } from './logoMenu.js';
+import { MenuPlacement } from './menuPlacement.js';
 import { MenuGlass } from '../../lib/menuGlass.js';
 import { PrivacyDots } from './privacyDots.js';
 
@@ -151,6 +153,11 @@ export class MenuBar {
             fs.start();
             return fs;
         }, ['menubar-fullscreen-visible']);
+        part('placement', () => true, reg => {
+            const placement = new MenuPlacement(reg);
+            placement.start();
+            return placement;
+        }, []);
         part('privacy', () => ks.bool('menubar-privacy-dots'), reg => {
             const dots = new PrivacyDots(this._ctx, reg);
             dots.start();

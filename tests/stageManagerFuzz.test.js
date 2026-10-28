@@ -119,7 +119,15 @@ function run(seed, steps) {
             const id = any();
             change(id, { fullscreen: !windows.get(id).fullscreen });
         } else if (roll < 0.60) {
-            change(any(), { maximized: r() < 0.5 });
+            const id = any();
+            const want = r() < 0.5;
+            const rising = want && !windows.get(id).maximized;
+            const entry = sm.entryOf(id);
+            const staged = entry !== null && sm.stage(sm.entry(entry).ws) === entry;
+            change(id, { maximized: want });
+            // A maximized stage window of a set is alone on the stage; the rest are in the strip
+            if (rising && staged && sm.entryOf(id) !== null && sm.entry(sm.entryOf(id)).windows.length !== 1)
+                throw new Error(`seed ${seed}: maximized window ${id} still shares its entry`);
         } else if (roll < 0.63) {
             const id = any();
             change(id, { above: !windows.get(id).above });
@@ -139,6 +147,15 @@ function run(seed, steps) {
             const strip = sm.strip(active);
             if (strip.length)
                 send({ type: 'move-to-entry', id: any(), entry: pick(strip) });
+        } else if (roll < 0.865) {
+            const strip = sm.strip(active);
+            if (strip.length > 1) {
+                const [dragged, target] = [pick(strip), pick(strip)];
+                const fx = send({ type: 'group', dragged, target, side: r() < 0.5 ? 'left' : 'right' });
+                const tile = fx.find(f => f.type === 'tile');
+                if (tile && [...tile.left, ...tile.right].some(id => sm.isHidden(id) || sm.stage(active) !== sm.entryOf(id)))
+                    throw new Error(`seed ${seed}: tiled window not on the stage`);
+            }
         } else if (roll < 0.88) {
             send({ type: 'toggle-desktop' });
         } else if (roll < 0.91) {
