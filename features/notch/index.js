@@ -41,6 +41,7 @@ import { DragHelper } from '../../lib/dragHelper.js';
 import { watchDrops } from './drop.js';
 import { dropZone } from './model.js';
 import { watchPower } from './sources/power.js';
+import { watchModes } from './sources/modes.js';
 import { watchBluetooth } from './sources/bluetooth.js';
 import { watchTimers } from './sources/timers.js';
 import { watchRecording, stopRecording } from './sources/recording.js';
@@ -53,7 +54,8 @@ const MEDIA_KEY = 'media';
 const HIGH_FACTOR = 1.6;     // high-urgency cards stay this much longer than normal ones
 const RECENT_LIMIT = 3;      // notifications listed in the Now tab
 
-// Live activity sources, each switched by its own key (and all by notch-live-activities)
+// Live activity sources, each switched by its own key (and all by notch-live-activities; a
+// null key: only by that one)
 const SOURCES = Object.freeze([
     ['battery', 'notch-activity-battery'],
     ['bluetooth', 'notch-activity-bluetooth'],
@@ -62,6 +64,7 @@ const SOURCES = Object.freeze([
     ['calendar', 'notch-activity-calendar'],
     ['downloads', 'notch-activity-downloads'],
     ['codes', 'notch-copy-codes'],
+    ['modes', null],
 ]);
 
 const nowMs = () => Math.floor(GLib.get_monotonic_time() / 1000);
@@ -218,7 +221,7 @@ export class NotchFeature {
             this._applyMedia();
             this._applySources();
         });
-        for (const [, key] of SOURCES)
+        for (const [, key] of SOURCES.filter(([, k]) => k))
             ks.watch(key, () => this._applySources());
         this._applySources();
         // The timeout is read from settings on every event; nothing to rebuild.
@@ -637,7 +640,7 @@ export class NotchFeature {
             },
         };
         for (const [id, key] of SOURCES) {
-            const want = all && this._ks.bool(key) && (id !== 'timers' || !!this._ctx.timers);
+            const want = all && (key === null || this._ks.bool(key)) && (id !== 'timers' || !!this._ctx.timers);
             const running = this._sources.get(id);
             if (want === !!running)
                 continue;
@@ -673,6 +676,7 @@ export class NotchFeature {
             });
             break;
         case 'codes': watchCodes(reg, sink); break;
+        case 'modes': watchModes(reg, this._ctx, sink); break;
         }
     }
 

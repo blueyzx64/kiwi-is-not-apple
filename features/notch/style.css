@@ -26,6 +26,14 @@
     padding: 0 12px;
 }
 
+/* compact template: the 22px well hugs the leading end with the same 5px it has above and
+   below (it clears the 16px bottom corner), the trailing slot keeps the 12px end */
+.kiwi-notch-activity,
+.kiwi-notch-compact {
+    spacing: 8px;
+    padding: 0 12px 0 5px;
+}
+
 .kiwi-notch-pill-title {
     font-size: 14px;
     font-weight: 600;
@@ -314,20 +322,24 @@
     color: rgba(255, 255, 255, 0.6);
 }
 
-/* notification list: 44px rows, icon 20 */
+/* ---- the Now tab's cards: activities and notifications share one template (pills.js row()):
+   40px tall, 6px apart (three fit the 136px body), a 28px icon well, title and subtitle one line
+   each ---- */
 .kiwi-notch-list {
-    spacing: 0;
+    spacing: 6px;
 }
 
-.kiwi-notch-recent {
-    height: 44px;
-    padding: 0 8px;
+.kiwi-notch-card-row {
+    height: 40px;
+    padding: 0 8px 0 6px;
+    spacing: 10px;
     border-radius: 12px;
+    background-color: rgba(255, 255, 255, 0.06);
 }
 
 .kiwi-notch-recent:hover,
 .kiwi-notch-recent:focus {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(255, 255, 255, 0.12);
 }
 
 .kiwi-notch-recent-row {
@@ -339,7 +351,7 @@
 }
 
 .kiwi-notch-recent-title {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     color: #ffffff;
 }
@@ -410,6 +422,9 @@
 .kiwi-notch-tint-red { color: #ff453a; }
 .kiwi-notch-tint-green { color: #30d158; }
 .kiwi-notch-tint-blue { color: #0a84ff; }
+.kiwi-notch-tint-yellow { color: #ffd60a; }
+.kiwi-notch-tint-purple { color: #bf5af2; }
+.kiwi-notch-tint-neutral { color: #ffffff; }
 
 /* the code itself, in tabular figures with a little tracking */
 .kiwi-notch-code {
@@ -417,7 +432,7 @@
     letter-spacing: 1px;
 }
 
-/* one action inside the pill: "Copy" for a code, a stop square for a recording */
+/* one action inside the pill's trailing slot: "Copy" for a code */
 .kiwi-notch-pill-action {
     height: 22px;
     min-width: 22px;
@@ -432,24 +447,6 @@
 .kiwi-notch-pill-action:hover,
 .kiwi-notch-pill-action:focus {
     background-color: rgba(255, 255, 255, 0.28);
-}
-
-.kiwi-notch-pill-action-stop {
-    padding: 0;
-    width: 22px;
-    color: #ff453a;
-    background-color: rgba(255, 69, 58, 0.2);
-}
-
-.kiwi-notch-mini-track {
-    height: 4px;
-    border-radius: 2px;
-    background-color: rgba(255, 255, 255, 0.2);
-}
-
-.kiwi-notch-mini-fill {
-    border-radius: 2px;
-    background-color: #0a84ff;
 }
 
 /* ---- tabs in the header band ---- */
@@ -481,24 +478,28 @@
     spacing: 20px;
 }
 
-/* ---- Now: activity rows share the notification rows' 44px grid ---- */
-.kiwi-notch-activity-row {
-    height: 44px;
-    padding: 0 8px;
-    spacing: 10px;
+/* ---- icon wells: the fixed shape every glyph sits in (model.js WELL; the radius is set
+   inline from the shape). A tinted fill behind a tinted glyph; neutral for app icons ---- */
+.kiwi-notch-well {
+    background-color: rgba(255, 255, 255, 0.14);
 }
 
-.kiwi-notch-activity-disc {
-    width: 28px;
-    height: 28px;
-    border-radius: 999px;
-    background-color: rgba(255, 255, 255, 0.1);
+.kiwi-notch-well-green { background-color: rgba(48, 209, 88, 0.2); }
+.kiwi-notch-well-yellow { background-color: rgba(255, 214, 10, 0.2); }
+.kiwi-notch-well-orange { background-color: rgba(255, 159, 10, 0.2); }
+.kiwi-notch-well-red { background-color: rgba(255, 69, 58, 0.2); }
+.kiwi-notch-well-blue { background-color: rgba(10, 132, 255, 0.22); }
+.kiwi-notch-well-purple { background-color: rgba(191, 90, 242, 0.22); }
+
+/* the compact trailing slot: one value, ring or action, right-aligned in a fixed width */
+.kiwi-notch-trailing {
+    min-width: 0;
 }
 
-.kiwi-notch-disc-orange { background-color: rgba(255, 159, 10, 0.18); }
-.kiwi-notch-disc-red { background-color: rgba(255, 69, 58, 0.18); }
-.kiwi-notch-disc-green { background-color: rgba(48, 209, 88, 0.18); }
-.kiwi-notch-disc-blue { background-color: rgba(10, 132, 255, 0.2); }
+.kiwi-notch-ring {
+    width: 18px;
+    height: 18px;
+}
 
 .kiwi-notch-row-action {
     width: 26px;

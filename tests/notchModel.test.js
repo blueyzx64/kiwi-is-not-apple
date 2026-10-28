@@ -4,12 +4,17 @@ import {
     removeFromShelf, moveInShelf, parseUriList, parseGnomeCopiedFiles, parsePlainFiles, displayName, batteryChange,
     UPOWER, connectedHeadphones, newlyConnected, downloadSummary, formatBytes, nextEvent, minutesUntil,
     formatCountdown, formatElapsed, tabDirection, nowRows, pillWidth, SHELF_LIMIT, DROP_FILE_TYPES, inDropZone,
-    dropZone, batteryIconNames,
+    dropZone, batteryIconNames, PRESENTATION, presentation, WELL, TRAILING_W, wellRadius, TINTS, SHAPES,
+    ACCESSORIES, modeChanged,
 } from '../features/notch/model.js';
 
 let failed = 0;
 function test(name, fn) {
     try { fn(); print(`ok   ${name}`); } catch (e) { failed++; print(`FAIL ${name}: ${e.message}`); }
+}
+function ok(c, msg) {
+    if (!c)
+        throw new Error(msg);
 }
 function eq(a, b, msg = '') {
     if (JSON.stringify(a) !== JSON.stringify(b))
@@ -175,6 +180,56 @@ test('a saved screenshot moves its shelf link in place; trashed removes it', () 
     eq(moveInShelf(s, 'file:///p/new.png', null), ['file:///b', 'file:///p/old.png']);
     eq(moveInShelf(s, 'file:///x', 'file:///y'), s, 'not on the shelf');
     eq(moveInShelf(s, 'file:///p/new.png', 'file:///b'), ['file:///b', 'file:///p/old.png'], 'no duplicate');
+});
+
+test('presentation: every kind (and notifications) goes through the table, nothing ad hoc', () => {
+    for (const kind of [...Object.keys(KINDS), 'notification']) {
+        const p = presentation(kind);
+        ok(TINTS.includes(p.tint), `${kind} tint ${p.tint}`);
+        ok(SHAPES.includes(p.shape), `${kind} shape ${p.shape}`);
+        ok(ACCESSORIES.includes(p.compact) && ACCESSORIES.includes(p.row), `${kind} accessories`);
+        ok(typeof p.icon === 'string' && p.icon.length > 0, `${kind} icon`);
+    }
+    for (const kind of Object.keys(PRESENTATION))
+        ok(kind === 'notification' || kind in KINDS, `${kind} is a kind`);
+    let threw = false;
+    try { presentation('nope'); } catch (_e) { threw = true; }
+    ok(threw, 'unknown kinds throw');
+});
+test('presentation: the kinds the notch covers', () => {
+    for (const kind of ['charging-started', 'charged', 'unplugged', 'low-battery', 'low-power', 'download',
+        'download-done', 'timer', 'timer-done', 'recording', 'headphones-connected', 'media', 'focus', 'code'])
+        ok(kind in KINDS, kind);
+    eq(presentation('charging-started').tint, 'green');
+    eq(presentation('low-power').tint, 'yellow');
+    eq(presentation('download').compact, 'ring');
+    eq(presentation('code').compact, 'action');
+});
+test('icon wells: glyphs fit inside with an inset; one size per template; radii', () => {
+    for (const [name, w] of Object.entries(WELL)) {
+        ok(w.glyph < w.size, `${name}: glyph smaller than the well`);
+        ok((w.size - w.glyph) % 2 === 0, `${name}: even inset`);
+    }
+    ok(WELL.compact.size <= 32 - 2 * 4, 'the compact well leaves room above and below in the 32px pill');
+    ok(TRAILING_W >= 48, 'the trailing slot fits "100%" and a Copy chip');
+    eq(wellRadius('circle', 28), 14);
+    eq(wellRadius('squircle', 22), 6);
+});
+test('battery: unplugged and charged are reported once', () => {
+    const d = (state, percentage) => ({ present: true, state, percentage });
+    eq(batteryChange(d(UPOWER.DISCHARGING, 80), d(UPOWER.CHARGING, 80)).unplugged, true);
+    eq(batteryChange(d(UPOWER.DISCHARGING, 80), d(UPOWER.DISCHARGING, 81)).unplugged, false);
+    eq(batteryChange(d(UPOWER.DISCHARGING, 80), null).unplugged, false, 'not at start');
+    eq(batteryChange(d(UPOWER.FULL, 100), d(UPOWER.CHARGING, 99)).full, true);
+    eq(batteryChange(d(UPOWER.FULL, 100), d(UPOWER.FULL, 100)).full, false);
+    eq(batteryChange(d(UPOWER.FULL, 100), d(UPOWER.DISCHARGING, 100)).full, false, 'plugged in when full: "Charging"');
+    eq(batteryChange(d(UPOWER.FULL, 100), d(UPOWER.DISCHARGING, 100)).pluggedIn, true);
+});
+test('modes: only a change from a known state shows', () => {
+    eq(modeChanged(null, { key: 'on' }), false);
+    eq(modeChanged({ key: 'off' }, { key: 'on' }), true);
+    eq(modeChanged({ key: 'on' }, { key: 'on' }), false);
+    eq(modeChanged({ key: 'work' }, { key: null }), true);
 });
 
 if (failed) { print(`${failed} failed`); imports.system.exit(1); }
