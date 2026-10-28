@@ -22,8 +22,9 @@ import { CleanupRegistry } from '../../lib/disposables.js';
 import { Glass } from '../../lib/glass.js';
 import { IconStyle } from '../../lib/iconStyle.js';
 import { ModalSurface } from '../../lib/modalSurface.js';
+import { replayClick } from '../../lib/outsideClick.js';
 import { DockItem } from './items.js';
-import { FAN_MAX, STACK_PAGE, downloadEntry, downloadFinished, fanLayout, isHorizontal, isPartialWrite, sortDownloads, stackView } from './model.js';
+import { FAN_MAX, STACK_PAGE, downloadEntry, downloadFinished, fanLayout, isHorizontal, isPartialWrite, rectContains, sortDownloads, stackView } from './model.js';
 
 Gio._promisify(Gio.File.prototype, 'enumerate_children_async', 'enumerate_children_finish');
 Gio._promisify(Gio.FileEnumerator.prototype, 'next_files_async', 'next_files_finish');
@@ -240,6 +241,7 @@ class StackPopup {
         this._stack = stack;
         this._cleanup = new CleanupRegistry();
         this._grab = null;
+        this._held = 0;      // the button pressed outside, until its release
         const monitor = Main.layoutManager.primaryMonitor;
         this.actor = this._cleanup.actor(new St.Widget({
             name: 'kiwi-dock-stack', reactive: true, can_focus: true,
@@ -248,11 +250,30 @@ class StackPopup {
             x: monitor.x, y: monitor.y, width: monitor.width, height: monitor.height,
         }));
         Main.layoutManager.uiGroup.add_child(this.actor);
-        // A click beside the files (the stack icon included) closes it; the files get theirs
+        // A click beside the files closes it and then goes on to what it hit (another dock app,
+        // a window, the wallpaper), as on macOS; the files get theirs. The stack's own tile only
+        // closes it, so a second click on the tile toggles. The popup steps aside on the press
+        // and replays the click when the button is released (lib/outsideClick.js says why).
+        // (get_event_actor: the source of a press under a modal grab is not the actor.)
         this._cleanup.connect(this.actor, 'button-press-event', (_a, event) => {
-            if (event.get_source() !== this.actor)
+            if (global.stage.get_event_actor(event) !== this.actor)
+                return Clutter.EVENT_PROPAGATE;
+            const [x, y] = event.get_coords();
+            if (rectContains(host.rectOf(stack), x, y)) {
+                stack.closePopup();
+                return Clutter.EVENT_STOP;
+            }
+            this._held = event.get_button();
+            this._popModal();
+            this.actor.get_children().forEach(child => child.hide());
+            return Clutter.EVENT_STOP;
+        });
+        this._cleanup.connect(this.actor, 'button-release-event', () => {
+            const button = this._held;
+            if (!button)
                 return Clutter.EVENT_PROPAGATE;
             stack.closePopup();
+            replayClick(button);
             return Clutter.EVENT_STOP;
         });
         this._cleanup.connect(this.actor, 'key-press-event', (_a, event) => {

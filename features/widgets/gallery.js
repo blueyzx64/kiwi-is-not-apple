@@ -5,8 +5,9 @@
 // place; Done closes it. While it is open the desktop layer is in edit mode (remove badges)
 // and the feature brings the desktop forward.
 //
-// Not modal: the desktop widgets stay draggable while the gallery is open. It closes with
-// Done, Esc, the overview, or the feature's disable.
+// Not modal, but a press anywhere outside it closes it (lib/outsideClick.js, as on macOS) and
+// then goes on to whatever was pressed, so nothing under the gallery gets a click while it is
+// open and no click is lost. It also closes with Done, Esc, the overview, or the feature's disable.
 
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
@@ -15,6 +16,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as A11y from '../../lib/a11y.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { Glass } from '../../lib/glass.js';
+import { OutsideClick } from '../../lib/outsideClick.js';
 import { pixelSize } from '../../core/widgets/view.js';
 import { galleryRect } from './model.js';
 
@@ -25,8 +27,12 @@ const PREVIEW_SCALE = 0.5;
 const SLOT = pixelSize('large', PREVIEW_SCALE);
 
 export class Gallery {
-    /** @param {object} feature DesktopWidgets: host, ctx, _, add(kind, size), addDefaults(), closeGallery() */
-    constructor(feature) {
+    /**
+     * @param {object} feature DesktopWidgets: host, ctx, _, add(kind, size), addDefaults(), closeGallery()
+     * @param {CleanupRegistry} cleanup the feature's: the click catcher outlives one opening, because
+     *   it replays the click that closed the gallery when that click is released
+     */
+    constructor(feature, cleanup) {
         this._feature = feature;
         this._ = feature._;
         this._cleanup = null;
@@ -34,6 +40,7 @@ export class Gallery {
         this._category = null;
         this._sizes = new Map(); // kind -> chosen size
         this.panel = null;
+        this._outside = new OutsideClick(cleanup, 'kiwi-widgets-catcher', [], () => this._feature.closeGallery());
     }
 
     get isOpen() {
@@ -138,6 +145,9 @@ export class Gallery {
             return Clutter.EVENT_STOP;
         });
         cleanup.connect(Main.overview, 'showing', () => this._feature.closeGallery());
+
+        this._outside.start(null, [panel]);
+        cleanup.add(() => this._outside.stop());
 
         this._fill(cleanup);
         this.sync();
