@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Text-cursor indicators (macOS Sonoma): what the badge says and where it goes. Pure.
 //
-//   Caps Lock on   an accent ⇪ right under the caret
-//   Caps Lock off  a muted ⇪ (macOS gives no feedback; Kiwi confirms the key took)
-//   Input source   the new source's short name ("EN", "DE", "あ") under the caret
+//   Caps Lock on   an accent ⇪ under the caret, as long as Caps Lock stays on (it follows the
+//                  caret; without a caret it shows by the pointer for BADGE_MS)
+//   Caps Lock off  nothing, like macOS; a muted ⇪ for BADGE_MS when input-indicator-caps-off
+//                  is on (Kiwi's confirmation that the key took)
+//   Input source   the new source's short name ("EN", "DE", "あ") under the caret, for BADGE_MS
+//
+// Also the pure parts of the other keyboard features in this folder: Caps Lock switches the
+// input source (capsSwitch.js) and the single-key action (inputKey.js).
 //
 // The caret comes from lib/caret.js (the IBus panel service); without one the badge goes next
 // to the pointer.
@@ -19,6 +24,7 @@ export function readConfig(get) {
     return {
         enabled: get.bool('input-indicator'),
         capsLock: get.bool('input-indicator-caps-lock'),
+        capsOff: get.bool('input-indicator-caps-off'),
         source: get.bool('input-indicator-source'),
     };
 }
@@ -48,7 +54,7 @@ export function badgeFor(event, config) {
     if (!config?.enabled)
         return null;
     if (event.type === 'caps') {
-        if (!config.capsLock)
+        if (!config.capsLock || (!event.on && !config.capsOff))
             return null;
         return { text: CAPS_GLYPH, style: event.on ? 'caps-on' : 'caps-off', key: event.on ? 'caps-on' : 'caps-off' };
     }
@@ -110,4 +116,102 @@ export function placeBadge({ caret, pointer, size, area }) {
 /** True when the point lies inside the rect (which monitor a caret or pointer is on). */
 export function contains(rect, x, y) {
     return x >= rect.x && y >= rect.y && x < rect.x + rect.width && y < rect.y + rect.height;
+}
+
+/**
+ * How long a badge stays: the Caps Lock badge stays while Caps Lock is on and a caret is
+ * known (macOS keeps it under the text cursor); everything else fades after BADGE_MS.
+ *
+ * @param {string} style badgeFor().style
+ * @param {boolean} hasCaret
+ * @returns {'persist'|'timed'}
+ */
+export function badgeLifetime(style, hasCaret) {
+    return style === 'caps-on' && hasCaret ? 'persist' : 'timed';
+}
+
+// --- Caps Lock switches the input source (macOS "Use Caps Lock to switch to and from ABC") ---
+
+export const CAPS_HOLD_MS = 350;       // longer than this is a hold: Caps Lock stays on
+const HOLD_SLACK_MS = 25;              // timer and event latency
+
+/**
+ * Tap or hold, from the core idle time measured CAPS_HOLD_MS after the Caps Lock press: a
+ * release resets the idle time, so a key still held shows (about) the whole hold time.
+ *
+ * @param {number} idleMs Meta.IdleMonitor.get_idletime() at the check
+ * @param {number} [holdMs]
+ * @returns {'tap'|'hold'}
+ */
+export function classifyCapsPress(idleMs, holdMs = CAPS_HOLD_MS) {
+    return idleMs >= holdMs - HOLD_SLACK_MS ? 'hold' : 'tap';
+}
+
+// XKB layouts whose letters are not Latin (the base layout, before any '+variant')
+const NON_LATIN_LAYOUTS = new Set([
+    'af', 'am', 'ara', 'bd', 'bg', 'bt', 'by', 'eg', 'et', 'ge', 'gr', 'il', 'in', 'iq', 'ir', 'jo',
+    'kg', 'kh', 'kz', 'la', 'lk', 'ma', 'mk', 'mm', 'mn', 'mv', 'np', 'pk', 'ru', 'rs', 'sy', 'th',
+    'tj', 'ua', 'uz',
+]);
+
+/**
+ * Whether an input source types Latin letters. IBus engines are input methods (Chinese,
+ * Japanese, Korean...) except IBus's own xkb:<layout> engines.
+ *
+ * @param {?{type: string, id: string}} source an InputSource (type 'xkb' or 'ibus')
+ */
+export function isLatinSource(source) {
+    if (!source)
+        return true;
+    let layout = source.id ?? '';
+    if (source.type === 'ibus') {
+        if (!layout.startsWith('xkb:'))
+            return false;
+        layout = layout.slice(4).split(':')[0];
+    }
+    layout = layout.split('+')[0];
+    return !NON_LATIN_LAYOUTS.has(layout);
+}
+
+/**
+ * The source a Caps Lock tap switches to: from a non-Latin source to the most recent Latin
+ * one, from a Latin source to the most recent non-Latin one. Null when there is no pair.
+ *
+ * @param {object[]} mru sources, most recently used first
+ * @param {object} current
+ * @returns {?object}
+ */
+export function capsSwitchTarget(mru, current) {
+    const latin = isLatinSource(current);
+    return (mru ?? []).find(s => s && s.id !== current?.id && isLatinSource(s) !== latin) ?? null;
+}
+
+/** Whether Caps Lock switching applies: at least one Latin and one non-Latin source. */
+export function capsSwitchApplies(sources) {
+    const list = sources ?? [];
+    return list.some(s => isLatinSource(s)) && list.some(s => !isLatinSource(s));
+}
+
+// --- One key, one action (macOS "Press fn key to") ---
+
+export const KEY_ACTIONS = Object.freeze(['none', 'input-source', 'emoji']);
+
+/**
+ * The source the key action switches to: the previously used one (macOS fn switches to the
+ * last used source), else the next in the user's list.
+ *
+ * @param {object[]} mru most recently used first
+ * @param {object[]} list in the user's order
+ * @param {object} current
+ * @returns {?object}
+ */
+export function nextSource(mru, list, current) {
+    const prev = (mru ?? []).find(s => s && s.id !== current?.id);
+    if (prev)
+        return prev;
+    const all = list ?? [];
+    if (all.length < 2)
+        return null;
+    const i = all.findIndex(s => s.id === current?.id);
+    return all[(i + 1) % all.length];
 }
