@@ -27,6 +27,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import * as A11y from '../../lib/a11y.js';
 import { a11ySwitches, isOn, valueFor } from '../../lib/a11ySettingsModel.js';
+import { RADIUS } from '../../lib/designTokens.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { Glass } from '../../lib/glass.js';
 import { Keybindings, MODAL_MODES } from '../../lib/keybindings.js';
@@ -161,7 +162,7 @@ export class KeyboardAccess {
         }));
         Main.layoutManager.uiGroup.add_child(hud);
         const glass = Glass.attach(hud, {
-            surface: 'overlays', role: 'content', radius: 12,
+            surface: 'overlays', role: 'overlay', radius: RADIUS.menu,
             isDark: () => St.Settings.get().color_scheme !== St.SystemColorScheme.PREFER_LIGHT,
         });
         this._cleanup.add(() => glass.destroy());
@@ -236,7 +237,7 @@ export class KeyboardAccess {
             width: PANEL_WIDTH,
             height: 64 + switches.length * ROW_HEIGHT,
             position: 'center',
-            radius: 16,
+            radius: RADIUS.panel,
             styleClass: 'kiwi-a11y-panel',
             build: frame => {
                 openReg = new CleanupRegistry();
@@ -260,7 +261,7 @@ export class KeyboardAccess {
     _buildPanel(frame, reg) {
         const _ = this._ctx.gettext;
         frame.orientation = Clutter.Orientation.VERTICAL;
-        frame.add_child(new St.Label({ text: _('Accessibility Shortcuts'), style_class: 'kiwi-a11y-panel-title' }));
+        frame.add_child(new St.Label({ text: _('Accessibility Shortcuts'), style_class: 'kiwi-a11y-panel-title kiwi-text-title' }));
         const list = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, style_class: 'kiwi-a11y-panel-list' });
         frame.add_child(list);
         const settings = new Map();
@@ -277,7 +278,7 @@ export class KeyboardAccess {
             row.add_child(new St.Label({ text: _(sw.title), x_expand: true, y_align: Clutter.ActorAlign.CENTER }));
             row.add_child(check);
             const button = new St.Button({
-                style_class: 'kiwi-a11y-panel-row', child: row, x_expand: true, accessible_name: _(sw.title),
+                style_class: 'kiwi-a11y-panel-row kiwi-row', child: row, x_expand: true, accessible_name: _(sw.title),
             });
             A11y.toggle(button, _(sw.title));
             const sync = () => {

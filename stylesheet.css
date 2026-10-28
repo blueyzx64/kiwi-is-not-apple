@@ -187,12 +187,17 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
 .kiwi-card {
   border-radius: 18px;
   padding: 12px;
-  background-color: rgba(255, 255, 255, 0.06);
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+/* Light: a whiter tile on the grey glass, as macOS draws its widgets and banners */
 .kiwi-glass-light .kiwi-card,
 .kiwi-modal-light .kiwi-card,
-.kiwi-light .kiwi-card { background-color: rgba(0, 0, 0, 0.045); }
+.kiwi-light .kiwi-card {
+  background-color: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
 
 .kiwi-glass-contrast .kiwi-card,
 .kiwi-modal-opaque .kiwi-card { border: 1px solid rgba(255, 255, 255, 0.45); }
@@ -350,6 +355,29 @@ StEntry.kiwi-search-field StLabel.hint-text {
 .kiwi-modal-light StEntry.kiwi-search-field StLabel.hint-text,
 .kiwi-light StEntry.kiwi-search-field StLabel.hint-text { color: rgba(0, 0, 0, 0.4); }
 
+/* A field that is its own capsule (an StEntry with a primary_icon: Launchpad, the Control
+   Center editor): the same borderless text on a quiet capsule fill, no focus ring */
+StEntry.kiwi-search-field.kiwi-search-capsule-filled,
+StEntry.kiwi-search-field.kiwi-search-capsule-filled:hover,
+StEntry.kiwi-search-field.kiwi-search-capsule-filled:focus {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.kiwi-glass-light StEntry.kiwi-search-field.kiwi-search-capsule-filled,
+.kiwi-glass-light StEntry.kiwi-search-field.kiwi-search-capsule-filled:focus,
+.kiwi-modal-light StEntry.kiwi-search-field.kiwi-search-capsule-filled,
+.kiwi-modal-light StEntry.kiwi-search-field.kiwi-search-capsule-filled:focus,
+.kiwi-light StEntry.kiwi-search-field.kiwi-search-capsule-filled,
+.kiwi-light StEntry.kiwi-search-field.kiwi-search-capsule-filled:focus { background-color: rgba(0, 0, 0, 0.06); }
+
+StEntry.kiwi-search-field StIcon { color: rgba(255, 255, 255, 0.6); padding-right: 6px; }
+
+.kiwi-glass-light StEntry.kiwi-search-field StIcon,
+.kiwi-modal-light StEntry.kiwi-search-field StIcon,
+.kiwi-light StEntry.kiwi-search-field StIcon { color: rgba(0, 0, 0, 0.5); }
+
 .kiwi-glass-contrast StEntry.kiwi-search-field StLabel.hint-text,
 .kiwi-modal-opaque StEntry.kiwi-search-field StLabel.hint-text { color: rgba(255, 255, 255, 0.75); }
 
@@ -392,6 +420,97 @@ StEntry.kiwi-search-field StLabel.hint-text {
 
 .kiwi-toolbar-button:focus,
 .kiwi-row:focus { box-shadow: inset 0 0 0 2px -st-accent-color; }
+
+/* ---- pill button: a small capsule text button on a panel ("Clear All", "Edit Widgets…",
+   "Edit Controls…"); push button: a dialog/alert button, radius 8, the default one in the
+   accent ---- */
+.kiwi-pill-button {
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 9pt;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.kiwi-pill-button:hover,
+.kiwi-pill-button:focus { background-color: rgba(255, 255, 255, 0.2); }
+
+.kiwi-push-button {
+  min-height: 28px;
+  padding: 4px 16px;
+  border-radius: 8px;
+  font-size: 10.5pt;
+  font-weight: normal;
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+.kiwi-push-button:hover { background-color: rgba(255, 255, 255, 0.22); }
+
+.kiwi-glass-light .kiwi-pill-button,
+.kiwi-modal-light .kiwi-pill-button,
+.kiwi-light .kiwi-pill-button,
+.kiwi-glass-light .kiwi-push-button,
+.kiwi-modal-light .kiwi-push-button,
+.kiwi-light .kiwi-push-button { color: #1d1d1f; background-color: rgba(0, 0, 0, 0.07); }
+
+.kiwi-glass-light .kiwi-pill-button:hover,
+.kiwi-glass-light .kiwi-pill-button:focus,
+.kiwi-modal-light .kiwi-pill-button:hover,
+.kiwi-modal-light .kiwi-pill-button:focus,
+.kiwi-light .kiwi-pill-button:hover,
+.kiwi-glass-light .kiwi-push-button:hover,
+.kiwi-modal-light .kiwi-push-button:hover,
+.kiwi-light .kiwi-push-button:hover { background-color: rgba(0, 0, 0, 0.12); }
+
+.kiwi-push-button.kiwi-push-button-default,
+.kiwi-glass-light .kiwi-push-button.kiwi-push-button-default,
+.kiwi-modal-light .kiwi-push-button.kiwi-push-button-default,
+.kiwi-light .kiwi-push-button.kiwi-push-button-default {
+  color: -st-accent-fg-color;
+  background-color: -st-accent-color;
+}
+
+.kiwi-push-button.kiwi-push-button-default:hover { background-color: st-lighten(-st-accent-color, 6%); }
+
+.kiwi-glass-contrast .kiwi-pill-button,
+.kiwi-glass-contrast .kiwi-push-button,
+.kiwi-modal-opaque .kiwi-pill-button,
+.kiwi-modal-opaque .kiwi-push-button { border: 1px solid rgba(255, 255, 255, 0.45); }
+
+.kiwi-pill-button:focus,
+.kiwi-push-button:focus { box-shadow: inset 0 0 0 2px -st-accent-color; }
+
+/* ---- menu: Kiwi's panel menus (lib/menuGlass.js puts .kiwi-menu on the BoxPointer).
+   Radius 12 with 5 px padding, items radius 7 (concentric); the highlighted item is the
+   row selection (a calmer accent, label-coloured text), as macOS highlights menu items. The
+   popup-menu-styling feature's !important accent still wins while it is on. ---- */
+.kiwi-menu .popup-menu-content {
+  border-radius: 12px;
+  padding: 5px;
+}
+
+.kiwi-menu .popup-menu-item {
+  border-radius: 7px;
+}
+
+.kiwi-menu .popup-menu-item:selected,
+.kiwi-menu .popup-menu-item:selected:hover,
+.kiwi-menu .popup-menu-item:selected:active {
+  background-color: st-transparentize(-st-accent-color, 0.25);
+  color: -st-accent-fg-color;
+}
+
+.kiwi-glass-light.kiwi-menu .popup-menu-item:selected,
+.kiwi-menu .kiwi-glass-light .popup-menu-item:selected {
+  background-color: st-transparentize(-st-accent-color, 0.12);
+}
+
+.kiwi-menu .kiwi-glass-contrast .popup-menu-item:selected,
+.kiwi-menu .kiwi-glass-solid .popup-menu-item:selected {
+  background-color: -st-accent-color;
+}
 
 /* ---- hairline separator between the field and the list, or between groups ---- */
 .kiwi-separator { height: 1px; background-color: rgba(255, 255, 255, 0.1); }
@@ -449,10 +568,8 @@ StEntry.kiwi-search-field StLabel.hint-text {
 .kiwi-clip-filter:focus,
 .kiwi-clip-recording:focus,
 .kiwi-stage-card:focus,
-.kiwi-launchpad-search:focus,
 .kiwi-launchpad-delete:focus,
 .kiwi-cc-editor-text-button:focus,
-.kiwi-cc-editor-search:focus,
 .kiwi-cc-np-button:focus,
 .window-control-button:focus,
 .kiwi-widgets-gallery-search:focus,
@@ -607,6 +724,12 @@ StEntry.kiwi-search-field StLabel.hint-text {
    and weather are hidden by the feature. Colours under .kiwi-datemenu-calm (off under high
    contrast) and .kiwi-datemenu-light. Type: 14px titles, 12px secondary text minimum. */
 
+/* Design system: the card is a card-radius panel (18); what sits 8 px inside it (the
+   events, a message) takes the row radius (10), concentric */
+.popup-menu-content.kiwi-datemenu {
+    border-radius: 18px;
+}
+
 .kiwi-datemenu #calendarArea {
     padding: 8px;
 }
@@ -678,7 +801,7 @@ StEntry.kiwi-search-field StLabel.hint-text {
 
 .kiwi-datemenu .events-button {
     padding: 10px 12px;
-    border-radius: 12px;
+    border-radius: 10px;
     border-width: 0;
     box-shadow: none;
 }
@@ -702,7 +825,7 @@ StEntry.kiwi-search-field StLabel.hint-text {
 
 /* The notification list (only when "Keep notification panel" is on): quiet cards */
 .kiwi-datemenu .message {
-    border-radius: 12px;
+    border-radius: 10px;
     box-shadow: none;
 }
 
@@ -1756,19 +1879,10 @@ StEntry.kiwi-search-field StLabel.hint-text {
 }
 
 /* ---- Edit Controls (editor.js) and Kiwi's own controls ---- */
+/* Buttons are design-system .kiwi-pill-button, the search field .kiwi-search-field with
+   .kiwi-search-capsule-filled, the gallery .kiwi-section-header / .kiwi-row (styles/base.css) */
 .quick-settings.kiwi-control-center .kiwi-cc-edit-controls {
     margin-top: 8px;
-    padding: 6px 12px;
-    border-radius: 999px;
-    font-size: 9.5pt;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.78);
-    background-color: rgba(255, 255, 255, 0.08);
-}
-
-.quick-settings.kiwi-control-center .kiwi-cc-edit-controls:hover,
-.quick-settings.kiwi-control-center .kiwi-cc-edit-controls:focus {
-    background-color: rgba(255, 255, 255, 0.16);
 }
 
 .quick-settings.kiwi-control-center .kiwi-cc-editor {
@@ -1780,28 +1894,7 @@ StEntry.kiwi-search-field StLabel.hint-text {
     spacing: 6px;
 }
 
-.quick-settings.kiwi-control-center .kiwi-cc-editor-title {
-    font-size: 11pt;
-    font-weight: 700;
-}
-
-.quick-settings.kiwi-control-center .kiwi-cc-editor-text-button {
-    padding: 4px 12px;
-    border-radius: 999px;
-    font-size: 9.5pt;
-    font-weight: 600;
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
-.quick-settings.kiwi-control-center .kiwi-cc-editor-done {
-    color: #ffffff;
-    background-color: -st-accent-color;
-}
-
-.quick-settings.kiwi-control-center .kiwi-cc-editor-text-button:hover {
-    background-color: rgba(255, 255, 255, 0.18);
-}
-
+.quick-settings.kiwi-control-center .kiwi-cc-editor-done,
 .quick-settings.kiwi-control-center .kiwi-cc-editor-done:hover {
     background-color: st-lighten(-st-accent-color, 6%);
 }
@@ -1850,17 +1943,6 @@ StEntry.kiwi-search-field StLabel.hint-text {
 
 .quick-settings.kiwi-control-center .kiwi-cc-edit-empty {
     padding: 8px;
-    font-size: 9pt;
-    color: rgba(255, 255, 255, 0.6);
-}
-
-.quick-settings.kiwi-control-center .kiwi-cc-editor-search {
-    padding: 4px 8px;
-    border-radius: 10px;
-    font-size: 9.5pt;
-    background-color: rgba(255, 255, 255, 0.08);
-    border: none;
-    box-shadow: none;
 }
 
 .quick-settings.kiwi-control-center .kiwi-cc-editor-preview-scroll {
@@ -1875,29 +1957,8 @@ StEntry.kiwi-search-field StLabel.hint-text {
     spacing: 8px;
 }
 
-.quick-settings.kiwi-control-center .kiwi-cc-gallery-title {
-    padding: 0 4px 2px 4px;
-    font-size: 8.5pt;
-    font-weight: 700;
-    color: rgba(255, 255, 255, 0.55);
-}
-
-.quick-settings.kiwi-control-center .kiwi-cc-gallery-item {
-    padding: 5px 8px;
-    border-radius: 10px;
-}
-
 .quick-settings.kiwi-control-center .kiwi-cc-gallery-item > StBoxLayout {
     spacing: 8px;
-}
-
-.quick-settings.kiwi-control-center .kiwi-cc-gallery-item:hover,
-.quick-settings.kiwi-control-center .kiwi-cc-gallery-item:focus {
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
-.quick-settings.kiwi-control-center .kiwi-cc-gallery-label {
-    font-size: 9.5pt;
 }
 
 .quick-settings.kiwi-control-center .kiwi-cc-gallery-add {
@@ -1909,10 +1970,7 @@ StEntry.kiwi-search-field StLabel.hint-text {
 }
 
 /* light style */
-.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-edit-controls,
-.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-edit-tile,
-.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-editor-search,
-.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-editor-text-button {
+.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-edit-tile {
     color: rgba(0, 0, 0, 0.8);
     background-color: rgba(0, 0, 0, 0.06);
     border-color: rgba(0, 0, 0, 0.2);
@@ -1933,15 +1991,8 @@ StEntry.kiwi-search-field StLabel.hint-text {
     background-color: -st-accent-color;
 }
 
-.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-gallery-title,
-.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-edit-empty,
 .quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-gallery-added {
     color: rgba(0, 0, 0, 0.5);
-}
-
-.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-gallery-item:hover,
-.quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-gallery-item:focus {
-    background-color: rgba(0, 0, 0, 0.06);
 }
 
 .quick-settings.kiwi-control-center.kiwi-cc-light .kiwi-cc-gallery-add {
@@ -2037,7 +2088,7 @@ StEntry.kiwi-search-field StLabel.hint-text {
 /* The Shell's modal dialogs as macOS alerts. lib/glass.js gives the card its fill and rim
    (surface 'overlays'); with glass off the stock card colour stays. */
 .modal-dialog.kiwi-dialog {
-  border-radius: 20px;
+  border-radius: 26px;
   padding: 22px 22px 18px;
   spacing: 14px;
   box-shadow: none;
@@ -2045,7 +2096,7 @@ StEntry.kiwi-search-field StLabel.hint-text {
 
 .kiwi-dialog-shadow {
   background-color: transparent;
-  border-radius: 20px;
+  border-radius: 26px;
 }
 
 .kiwi-dialog .modal-dialog-content-box {
@@ -2057,19 +2108,21 @@ StEntry.kiwi-search-field StLabel.hint-text {
   margin-bottom: 2px;
 }
 
+/* Type scale (design system): title 12.75pt bold, body 9.75pt (callout) */
 .kiwi-dialog .message-dialog-title {
-  font-size: 15px;
+  font-size: 12.75pt;
   font-weight: bold;
 }
 
 .kiwi-dialog .message-dialog-description {
-  font-size: 13px;
+  font-size: 9.75pt;
 }
 
 .kiwi-dialog .modal-dialog-button-box {
   padding-top: 4px;
 }
 
+/* The stock buttons take the design system's push-button shape (radius 8, padding 6/16) */
 .kiwi-dialog .modal-dialog-button-box .modal-dialog-button {
   font-weight: normal;
   min-width: 76px;
@@ -2437,7 +2490,7 @@ StEntry.kiwi-search-field StLabel.hint-text {
    settings. */
 .kiwi-hover-panel {
     padding: 14px 20px;
-    border-radius: 14px;
+    border-radius: 18px;
     spacing: 10px;
     color: #1d1d1f;
     background-color: rgba(246, 246, 248, 0.92);
@@ -2561,26 +2614,20 @@ StEntry.kiwi-search-field StLabel.hint-text {
     font-weight: 600;
 }
 
-/* Accessibility Shortcuts panel (a ModalSurface frame) */
+/* Accessibility Shortcuts panel (a ModalSurface frame, radius 26): design-system rows
+   (.kiwi-row: hover fill, focus ring) and title (.kiwi-text-title), rows 8 px from the edge */
 .kiwi-a11y-panel {
-    padding: 14px 10px 10px;
+    padding: 14px 8px 8px;
 }
 .kiwi-a11y-panel-title {
-    font-size: 15px;
-    font-weight: 700;
-    padding: 0 8px 8px;
+    padding: 0 10px 8px;
 }
 .kiwi-a11y-panel-row {
     height: 40px;
     padding: 0 10px;
-    border-radius: 8px;
 }
-.kiwi-a11y-panel-row:hover,
 .kiwi-a11y-panel-row:focus {
     background-color: rgba(127, 127, 127, 0.16);
-}
-.kiwi-a11y-panel-row:focus {
-    box-shadow: inset 0 0 0 2px -st-accent-color;
 }
 .kiwi-a11y-panel-row-box {
     spacing: 10px;
@@ -2592,7 +2639,7 @@ StEntry.kiwi-search-field StLabel.hint-text {
 /* Keyboard Viewer: a floating glass keyboard */
 .kiwi-kbd-viewer {
     padding: 8px 10px 10px;
-    border-radius: 14px;
+    border-radius: 18px;
     color: #1d1d1f;
     background-color: rgba(236, 236, 240, 0.9);
     border: 1px solid rgba(0, 0, 0, 0.12);
@@ -2607,7 +2654,7 @@ StEntry.kiwi-search-field StLabel.hint-text {
     padding-bottom: 8px;
 }
 .kiwi-kbd-viewer-title {
-    font-size: 12px;
+    font-size: 9pt;
     font-weight: 600;
 }
 .kiwi-kbd-viewer-close {
@@ -2668,26 +2715,11 @@ StEntry.kiwi-search-field StLabel.hint-text {
     background-color: rgba(18, 20, 28, 0.42);
 }
 
-.kiwi-launchpad-search {
-    min-height: 28px;
-    padding: 2px 10px;
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.26);
-    background-color: rgba(255, 255, 255, 0.18);
-    color: rgba(255, 255, 255, 0.96);
-    caret-color: rgba(255, 255, 255, 0.96);
-    selection-background-color: -st-accent-color;
-    font-size: 10.5pt;
-}
-
-.kiwi-launchpad-search StLabel.hint-text {
-    color: rgba(255, 255, 255, 0.62);
-}
-
+/* The search field is the design system's capsule field (.kiwi-search-field
+   .kiwi-search-capsule-filled, styles/base.css); glass gives it its fill. Launchpad always
+   sits on its dark backdrop, so the field keeps light text in both schemes. */
 .kiwi-launchpad-search-icon {
     icon-size: 14px;
-    color: rgba(255, 255, 255, 0.72);
-    padding-right: 6px;
 }
 
 .kiwi-launchpad-tile {
@@ -2726,7 +2758,7 @@ StEntry.kiwi-search-field StLabel.hint-text {
 
 .kiwi-launchpad-folder-panel {
     padding: 16px 16px 8px;
-    border-radius: 32px;
+    border-radius: 26px;
     background-color: rgba(60, 62, 70, 0.62);
     border: 1px solid rgba(255, 255, 255, 0.18);
     spacing: 12px;
@@ -2794,21 +2826,18 @@ StEntry.kiwi-search-field StLabel.hint-text {
 .kiwi-launchpad-alert {
     padding: 20px 16px 16px;
     spacing: 10px;
-    border-radius: 18px;
+    border-radius: 26px;
     background-color: rgba(52, 54, 60, 0.94);
     border: 1px solid rgba(255, 255, 255, 0.16);
 }
 
 .kiwi-launchpad-alert-title {
     color: rgba(255, 255, 255, 0.98);
-    font-size: 11pt;
-    font-weight: 700;
     text-align: center;
 }
 
 .kiwi-launchpad-alert-body {
     color: rgba(255, 255, 255, 0.82);
-    font-size: 9.5pt;
     text-align: center;
 }
 
@@ -2817,27 +2846,7 @@ StEntry.kiwi-search-field StLabel.hint-text {
     padding-top: 6px;
 }
 
-.kiwi-launchpad-alert-button {
-    min-height: 28px;
-    border-radius: 8px;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.96);
-    background-color: rgba(255, 255, 255, 0.16);
-}
-
-.kiwi-launchpad-alert-button:hover {
-    background-color: rgba(255, 255, 255, 0.24);
-}
-
-.kiwi-launchpad-alert-button.default {
-    background-color: -st-accent-color;
-}
-
-.kiwi-launchpad-alert-button.default:hover {
-    background-color: -st-accent-color;
-    box-shadow: inset 0 0 0 100px rgba(255, 255, 255, 0.12);
-}
-
+/* Buttons: design-system .kiwi-push-button (-default for Delete) */
 .kiwi-launchpad-alert-button:focus {
     box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.5);
 }
@@ -2877,6 +2886,12 @@ StEntry.kiwi-search-field StLabel.hint-text {
   padding-left: 24px;
   color: rgba(128, 128, 128, 0.95);
   font-feature-settings: "tnum";
+}
+
+/* On the highlighted item (the design system's accent selection) the shortcut reads as
+   secondary text on the accent */
+.kiwi-menu .popup-menu-item:selected .kiwi-menubar-accel {
+  color: rgba(255, 255, 255, 0.78);
 }
 
 .kiwi-menubar-menu-item:insensitive .kiwi-menubar-accel {
@@ -3982,8 +3997,10 @@ StEntry.kiwi-search-field StLabel.hint-text {
 
 /* feature: notification-center (features/notificationCenter)
    The right-side column (lib/modalSurface.js position 'right', glass frame .kiwi-nc): the
-   date widget, grouped notification stacks and the widgets area. Cards are lighter rounded
-   tiles on the glass, as in macOS Big Sur's Notification Center. */
+   date widget, grouped notification stacks and the widgets area. Look from the design
+   system (styles/base.css): cards .kiwi-card, buttons .kiwi-pill-button / .kiwi-push-button,
+   text .kiwi-text-* and .kiwi-secondary-text, group titles .kiwi-section-header. This file
+   keeps layout and the NC-only pieces (month grid, close badge, stack peeks). */
 
 .kiwi-nc {
   padding: 0;
@@ -3992,18 +4009,6 @@ StEntry.kiwi-search-field StLabel.hint-text {
 .kiwi-nc .kiwi-nc-content {
   padding: 12px;
   spacing: 14px;
-}
-
-.kiwi-nc .kiwi-nc-card {
-  border-radius: 16px;
-  background-color: rgba(255, 255, 255, 0.09);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 10px 12px;
-}
-
-.kiwi-modal-light.kiwi-nc .kiwi-nc-card {
-  background-color: rgba(255, 255, 255, 0.62);
-  border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 /* Date widget */
@@ -4059,38 +4064,6 @@ StEntry.kiwi-search-field StLabel.hint-text {
   padding: 0 4px;
 }
 
-.kiwi-nc .kiwi-nc-section-title {
-  font-weight: 700;
-  font-size: 1.05em;
-}
-
-.kiwi-nc .kiwi-nc-group-title {
-  font-weight: 600;
-  opacity: 0.8;
-}
-
-.kiwi-nc .kiwi-nc-pill {
-  border-radius: 999px;
-  padding: 3px 10px;
-  font-size: 0.8em;
-  font-weight: 600;
-  background-color: rgba(255, 255, 255, 0.12);
-}
-
-.kiwi-nc .kiwi-nc-pill:hover,
-.kiwi-nc .kiwi-nc-pill:focus {
-  background-color: rgba(255, 255, 255, 0.22);
-}
-
-.kiwi-modal-light.kiwi-nc .kiwi-nc-pill {
-  background-color: rgba(0, 0, 0, 0.07);
-}
-
-.kiwi-modal-light.kiwi-nc .kiwi-nc-pill:hover,
-.kiwi-modal-light.kiwi-nc .kiwi-nc-pill:focus {
-  background-color: rgba(0, 0, 0, 0.13);
-}
-
 .kiwi-nc .kiwi-nc-pill-icon {
   padding: 3px 5px;
 }
@@ -4101,7 +4074,18 @@ StEntry.kiwi-search-field StLabel.hint-text {
 
 .kiwi-nc .kiwi-nc-empty {
   padding: 18px 0;
-  opacity: 0.55;
+}
+
+/* Cards are design-system .kiwi-card (radius 18, padding 12, the scheme's fill); a
+   notification card is a little tighter */
+.kiwi-nc .kiwi-nc-notification {
+  padding: 10px 12px;
+}
+
+.kiwi-nc .kiwi-nc-actions .kiwi-nc-action {
+  min-height: 24px;
+  padding: 4px 8px;
+  font-size: 9pt;
 }
 
 /* Notification cards and stacks */
@@ -4131,42 +4115,13 @@ StEntry.kiwi-search-field StLabel.hint-text {
   border-radius: 8px;
 }
 
-.kiwi-nc .kiwi-nc-title {
-  font-weight: 700;
-  font-size: 0.9em;
-}
-
 .kiwi-nc .kiwi-nc-age {
-  font-size: 0.75em;
-  opacity: 0.55;
   padding-left: 6px;
-}
-
-.kiwi-nc .kiwi-nc-body {
-  font-size: 0.85em;
-  opacity: 0.85;
 }
 
 .kiwi-nc .kiwi-nc-actions {
   spacing: 6px;
   padding-top: 8px;
-}
-
-.kiwi-nc .kiwi-nc-action {
-  border-radius: 8px;
-  padding: 4px 8px;
-  font-size: 0.8em;
-  font-weight: 600;
-  background-color: rgba(255, 255, 255, 0.12);
-}
-
-.kiwi-nc .kiwi-nc-action:hover,
-.kiwi-nc .kiwi-nc-action:focus {
-  background-color: rgba(255, 255, 255, 0.22);
-}
-
-.kiwi-modal-light.kiwi-nc .kiwi-nc-action {
-  background-color: rgba(0, 0, 0, 0.07);
 }
 
 .kiwi-nc .kiwi-nc-close {
@@ -4215,23 +4170,6 @@ StEntry.kiwi-search-field StLabel.hint-text {
 
 .kiwi-nc .kiwi-nc-widgets {
   spacing: 16px;
-}
-
-.kiwi-nc .kiwi-nc-edit-widgets {
-  border-radius: 999px;
-  padding: 4px 14px;
-  font-size: 0.85em;
-  font-weight: 600;
-  background-color: rgba(255, 255, 255, 0.12);
-}
-
-.kiwi-nc .kiwi-nc-edit-widgets:hover,
-.kiwi-nc .kiwi-nc-edit-widgets:focus {
-  background-color: rgba(255, 255, 255, 0.2);
-}
-
-.kiwi-modal-light.kiwi-nc .kiwi-nc-edit-widgets {
-  background-color: rgba(0, 0, 0, 0.08);
 }
 
 /* Placeholders, only while no widget is registered */
@@ -4284,7 +4222,7 @@ StEntry.kiwi-search-field StLabel.hint-text {
 }
 
 .kiwi-osd-caption {
-  font-size: 12px;
+  font-size: 9pt;
   font-weight: 600;
 }
 
@@ -4777,7 +4715,7 @@ StEntry.kiwi-search-field StLabel.hint-text {
 /* Only the selected app shows its name, as on macOS; the label keeps its height so the row
    does not jump */
 .kiwi-switcher-label {
-  font-size: 13px;
+  font-size: 9.75pt;
   font-weight: 500;
   color: transparent;
   text-align: center;
