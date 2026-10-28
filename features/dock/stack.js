@@ -2,7 +2,9 @@
 // The Downloads stack: a dock tile showing a pile of the newest files, kept current by a file
 // monitor, that opens as a Fan, a Grid or a List (model.stackView). Files sort by Date Added;
 // packages (.rpm, .flatpakref, .AppImage) carry a badge; partial downloads show greyed, and the
-// tile bounces when one finishes. Files can be opened or dragged onto app icons or the Trash.
+// tile bounces when one finishes. Files can be opened, dragged onto app icons or the Trash,
+// or dragged out into any app window (Files, an editor, a chat): with the drag-out helper
+// installed the drop is handed to the app as a real Wayland drop (lib/dragOut.js says how).
 //
 // Shell API: Main.pushModal/popModal, ui/dnd.js, lib/modalSurface.js registerForeign (one
 // Kiwi overlay at a time).
@@ -156,6 +158,9 @@ export class FolderStackItem extends DockItem {
             }
             await enumerator.close_async(GLib.PRIORITY_DEFAULT, null);
         }
+        // The close is not cancellable: the tile may have gone meanwhile (dock rebuilt, disabled)
+        if (this._cancellable.is_cancelled())
+            return;
         const order = sortDownloads(found.map(f => f.entry));
         const byName = new Map(found.map(f => [f.entry.name, f]));
         const before = this.files.map(f => f.entry);
@@ -372,8 +377,14 @@ class StackPopup {
                 getDragActorSource: () => icon,
             };
             const drag = DND.makeDraggable(button);
-            drag.connect('drag-begin', () => this._dragBegin());
-            drag.connect('drag-end', () => this._stack.closePopup());
+            drag.connect('drag-begin', () => {
+                this._dragBegin();
+                this._host.fileDragBegin(f);
+            });
+            drag.connect('drag-end', () => {
+                this._host.fileDragEnd();
+                this._stack.closePopup();
+            });
         }
         return button;
     }

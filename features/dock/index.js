@@ -44,6 +44,8 @@ import { KiwiSettings } from '../../lib/settings.js';
 import { WindowState } from '../../core/windowState.js';
 import { LauncherEntryWatcher } from '../../lib/launcherEntry.js';
 import { BackgroundApps } from '../../lib/backgroundApps.js';
+import { DragOut, windowAt } from '../../lib/dragOut.js';
+import { dragIconName } from '../../lib/dragHelperModel.js';
 import {
     Reveal, STACK_VIEWS, addFolder, bounceAgain, bounceSteps, clickAction, dockItems, dockMetrics,
     folderDropAccepted, isHorizontal, menuEntries, minimizedSlot, pinPosition, pushRecent, readConfig,
@@ -108,6 +110,8 @@ export class Dock {
         this._tileRects = new Map();       // minimized window id -> where its tile was
         this._badges = new LauncherEntryWatcher(cleanup, appId => this._badgeChanged(appId));
         this._background = new BackgroundApps(cleanup, () => this._queueSync());
+        // Files dragged out of a stack into apps (needs the drag-out helper)
+        this._dragOut = new DragOut(cleanup);
 
         keepOtherDocksOff(ctx.originals, cleanup);
 
@@ -385,7 +389,9 @@ export class Dock {
     }
 
     _noteRecent(appId) {
-        if (!appId || this._favorites.isFavorite(appId) || !this._appSystem.lookup_app(appId))
+        const app = appId ? this._appSystem.lookup_app(appId) : null;
+        // Hidden apps (NoDisplay, such as Kiwi's drag-out helper) are no suggestions
+        if (!app || this._favorites.isFavorite(appId) || app.get_app_info()?.should_show() === false)
             return;
         const next = pushRecent(this._recents, appId);
         if (next.join('\n') === this._recents.join('\n'))
@@ -903,6 +909,30 @@ export class Dock {
         item.actor.show();
         this.unhold();
         this._queueSync();
+    }
+
+    /**
+     * A file from an open stack is being dragged (the stack has stepped aside). Over an app
+     * window a drop hands the file to that app (macOS: drag from a stack into any app).
+     *
+     * @param {{file: Gio.File, gicon: Gio.Icon, contentType: string}} f the stack's row
+     */
+    fileDragBegin(f) {
+        if (!this._dragOut.available)
+            return;
+        this._dragOut.prepare();
+        const icon = dragIconName(f.gicon) ||
+            (f.contentType ? dragIconName(Gio.content_type_get_icon(f.contentType)) : '');
+        this._view.showFileCatcher({
+            over: (x, y) => windowAt(x, y) !== null,
+            drop: (x, y) => windowAt(x, y) !== null && this._dragOut.dropAt(x, y, f.file.get_uri(), icon),
+        });
+    }
+
+    fileDragEnd() {
+        this._view.hideFileCatcher();
+        // No drop for an app (on the dock, or snapped back): the helper goes
+        this._dragOut.cancel();
     }
 
     /** Can this drag source leave the dock (pinned, or a recent app that is not running)? */

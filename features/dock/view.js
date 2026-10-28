@@ -137,12 +137,19 @@ export class DockView {
         // focus inside keeps an auto-hidden dock up like the pointer does
         A11y.focusGroup(reg, this.frame, this._host.gettext('Dock'), 'user-desktop-symbolic');
         const dockUp = () => this.frame.hover || A11y.focusWithin(this.frame);
-        reg.connect(this.frame, 'notify::hover', () => this._host.dockHovered(dockUp()));
-        reg.connect(global.stage, 'notify::key-focus', () => this._host.dockHovered(dockUp()));
+        // The stage outlives the chrome: on shutdown the Shell destroys the frame without
+        // disabling Kiwi, and a focus change after that must not read the destroyed frame
+        const syncUp = () => {
+            if (this.alive && this.frame === frame)
+                this._host.dockHovered(dockUp());
+        };
+        reg.connect(this.frame, 'notify::hover', syncUp);
+        reg.connect(global.stage, 'notify::key-focus', syncUp);
         reg.connect(this.edge, 'notify::hover', () => this._host.edgeHovered(this.edge.hover));
         // A relayout moves icons: the minimize targets follow (not per frame: allocation only)
         reg.connect(this.pill, 'notify::allocation', () => this._host.dockRelayout());
         reg.add(() => {
+            this.hideFileCatcher();
             this._removePlaceholder();
             this._slide?.cancel();
             this._slide = null;
@@ -394,6 +401,34 @@ export class DockView {
     hideRemoveCatcher() {
         this._catcher?.destroy();
         this._catcher = null;
+    }
+
+    /**
+     * While a file from a stack is dragged: a stage-wide drop target under the dock, so a file
+     * dropped on an app window is not snapped back but handed to that app (index.js, through
+     * lib/dragOut.js). The dock's icons and the Trash are above it and still take their drops.
+     *
+     * @param {{over: (x, y) => boolean, drop: (x, y) => boolean}} handlers stage coordinates;
+     *   over: would a drop here go to an app
+     */
+    showFileCatcher(handlers) {
+        this.hideFileCatcher();
+        const [width, height] = global.stage.get_size();
+        const catcher = new St.Widget({ reactive: true, x: 0, y: 0, width, height });
+        const uiGroup = Main.layoutManager.uiGroup;
+        uiGroup.add_child(this._cleanup.actor(catcher));
+        uiGroup.set_child_below_sibling(catcher, this.band);
+        catcher._delegate = {
+            handleDragOver: (_source, _actor, x, y) => (handlers.over(x, y)
+                ? DND.DragMotionResult.COPY_DROP : DND.DragMotionResult.CONTINUE),
+            acceptDrop: (_source, _actor, x, y) => handlers.drop(x, y),
+        };
+        this._fileCatcher = catcher;
+    }
+
+    hideFileCatcher() {
+        this._fileCatcher?.destroy();
+        this._fileCatcher = null;
     }
 
     /** The puff of smoke where an item left the dock. */
