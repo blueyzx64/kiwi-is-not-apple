@@ -18,7 +18,7 @@ import GLib from 'gi://GLib';
 import Meta from 'gi://Meta';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
-import { addToShelf, removeFromShelf, CLIPBOARD_FILE_TYPES, displayName } from './model.js';
+import { addToShelf, moveInShelf, removeFromShelf, CLIPBOARD_FILE_TYPES, displayName } from './model.js';
 
 const KEY = 'notch-shelf';
 const INFO_ATTRS = 'standard::display-name,standard::icon,standard::content-type';
@@ -28,8 +28,9 @@ export class Shelf {
      * @param {CleanupRegistry} cleanup
      * @param {KiwiSettings} ks
      * @param {() => void} onChange the list, an item's info or the clipboard offer changed
+     * @param {?EventHub} [events] ctx.events, for 'screenshot-saved'
      */
-    constructor(cleanup, ks, onChange) {
+    constructor(cleanup, ks, onChange, events = null) {
         this._ks = ks;
         this._onChange = onChange;
         this._info = new Map();     // uri -> {name, gicon, missing}
@@ -54,6 +55,16 @@ export class Shelf {
             if (ks.bool('notch-shelf-screenshots') && file)
                 this.add([file.get_uri()]);
         });
+        // Kiwi's screenshots feature then moves GNOME's file to its Save to folder and macOS
+        // name: the link follows, else the shelf keeps pointing at a file that is gone
+        events?.on('screenshot-saved', ({ from, to }) => this.moved(from, to), cleanup);
+    }
+
+    /** A linked file moved (`to`) or went to the Trash (`to` null). */
+    moved(from, to) {
+        const next = moveInShelf(this.uris, from, to);
+        if (JSON.stringify(next) !== JSON.stringify(this.uris))
+            this._ks.setStrv(KEY, next);
     }
 
     /** @returns {string[]} the links, newest first */

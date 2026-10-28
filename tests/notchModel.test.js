@@ -1,7 +1,7 @@
 // Run: gjs -m tests/notchModel.test.js
 import {
     KINDS, activityTiming, rankActivities, pillActivity, nextActivityExpiry, detectCode, addToShelf,
-    removeFromShelf, parseUriList, parseGnomeCopiedFiles, parsePlainFiles, displayName, batteryChange,
+    removeFromShelf, moveInShelf, parseUriList, parseGnomeCopiedFiles, parsePlainFiles, displayName, batteryChange,
     UPOWER, connectedHeadphones, newlyConnected, downloadSummary, formatBytes, nextEvent, minutesUntil,
     formatCountdown, formatElapsed, tabDirection, nowRows, pillWidth, SHELF_LIMIT, DROP_FILE_TYPES, inDropZone,
     dropZone,
@@ -147,4 +147,12 @@ test('drop: uri-list first, the zone grows around a small pill', () => {
     const open = dropZone({ x: 316, y: 0, w: 648, h: 192 }, { x: 0, y: 0, width: 1280 });
     eq(open, { x: 300, y: 0, w: 680, h: 208 });
 });
+test('a saved screenshot moves its shelf link in place; trashed removes it', () => {
+    const s = ['file:///p/new.png', 'file:///b', 'file:///p/old.png'];
+    eq(moveInShelf(s, 'file:///p/new.png', 'file:///p/Screenshot%20at.png'), ['file:///p/Screenshot%20at.png', 'file:///b', 'file:///p/old.png']);
+    eq(moveInShelf(s, 'file:///p/new.png', null), ['file:///b', 'file:///p/old.png']);
+    eq(moveInShelf(s, 'file:///x', 'file:///y'), s, 'not on the shelf');
+    eq(moveInShelf(s, 'file:///p/new.png', 'file:///b'), ['file:///b', 'file:///p/old.png'], 'no duplicate');
+});
+
 if (failed) { print(`${failed} failed`); imports.system.exit(1); }

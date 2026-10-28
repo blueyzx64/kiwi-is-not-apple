@@ -140,6 +140,25 @@ export function removeFromShelf(shelf, uri) {
     return shelf.filter(u => u !== uri);
 }
 
+/**
+ * A linked file moved (a screenshot saved under its macOS name): the link follows it, in the
+ * same place. `to` null (it went to the Trash) removes the link. Unchanged when `from` is not
+ * on the shelf.
+ */
+export function moveInShelf(shelf, from, to) {
+    if (!shelf.includes(from))
+        return shelf;
+    if (!to)
+        return removeFromShelf(shelf, from);
+    const out = [];
+    for (const u of shelf) {
+        const next = u === from ? to : u;
+        if (!out.includes(next))
+            out.push(next);
+    }
+    return out;
+}
+
 /** text/uri-list (RFC 2483): one URI per line, # comments, CRLF or LF */
 export function parseUriList(text) {
     return String(text ?? '')

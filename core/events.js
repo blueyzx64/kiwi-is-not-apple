@@ -42,6 +42,10 @@ export const EVENTS = Object.freeze({
     // (path of the video file when GNOME reports it, else null). The notch shows it live.
     'recording-started': { kind: "'screen'|'area'" },
     'recording-stopped': { path: 'string|null' },
+    // features/screenshots: GNOME's file for a capture (`from`, the uri 'screenshot-taken' gave)
+    // was moved to its Save to folder and macOS name (`to`), or went to the Trash (`to` null).
+    // The notch shelf, which links captures from 'screenshot-taken', follows it.
+    'screenshot-saved': { from: 'string', to: 'string|null' },
     // Requests between features (the owner of the policy listens, see features.js)
     'minimize-requested': { window: 'Meta.Window', source: 'string' },
     // The menu bar (features/menuBar): the clock was clicked. The Notification Center (P5)

@@ -45,7 +45,10 @@ export class RenameEditor {
         this._scrim.add_child(this._entry);
         Main.uiGroup.add_child(this._scrim);
 
-        this._grab = Main.pushModal(this._scrim, { actionMode: Shell.ActionMode.NONE });
+        // POPUP, as for a menu: the Shell's own shortcuts that are meant to work over a popup
+        // (Print and the other screenshot keys, the Kiwi toolbar shortcut) still work while the
+        // name is edited. NONE turned them all off until the field closed.
+        this._grab = Main.pushModal(this._scrim, { actionMode: Shell.ActionMode.POPUP });
         if (!this._grab) {
             this._scrim.destroy();
             this._done = true;

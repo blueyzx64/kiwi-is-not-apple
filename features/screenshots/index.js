@@ -382,8 +382,10 @@ export class Screenshots {
             this._pending = null;
         if (pending.done)
             return;
-        pending.done = trashFile(pending.file, null).then(() => null)
-            .catch(e => console.warn(`${LOG} deleting the screenshot failed: ${e.message}`));
+        pending.done = trashFile(pending.file, null).then(() => {
+            this._announce(pending.file, null);
+            return null;
+        }).catch(e => console.warn(`${LOG} deleting the screenshot failed: ${e.message}`));
     }
 
     /**
@@ -408,8 +410,22 @@ export class Screenshots {
         pending.done = commitFile(pending.file, plan).catch(e => {
             console.warn(`${LOG} saving the screenshot failed: ${e.message}`);
             return pending.file;
+        }).then(file => {
+            this._announce(pending.file, file);
+            return file;
         });
         return pending.done;
+    }
+
+    /** Tell the features that linked GNOME's file (the notch shelf) where it is now. */
+    _announce(from, to) {
+        if (to?.equal(from))
+            return;
+        try {
+            this._ctx.events.emit('screenshot-saved', { from: from.get_uri(), to: to?.get_uri() ?? null });
+        } catch (e) {
+            console.warn(`${LOG} screenshot-saved listeners failed: ${e.message}`);
+        }
     }
 
     /** Save a capture that is still waiting (a new capture came, or Kiwi stops). */

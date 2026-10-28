@@ -2,7 +2,7 @@
 import {
     Selection, bandRect, desktopInFront, blockedCells, cellAt, cellRect, dingEnabled, flowCell, flowOrder, gridFor, inGrid, isDoubleClick, isDrag,
     layoutCells, menuActions, metricsFor, moveCells, neighbour, parseArrangement, pruneArrangement,
-    rubberBandHits, serializeArrangement, showsAsDrive, sortEntries, stemLength, typeAhead, uniqueName, validateName,
+    renameFieldBox, rubberBandHits, serializeArrangement, showsAsDrive, sortEntries, stemLength, typeAhead, uniqueName, validateName,
 } from '../features/desktopIcons/model.js';
 
 let failed = 0;
@@ -328,6 +328,12 @@ test('DING is found by uuid, unless extensions are switched off', () => {
     eq(dingEnabled(['gtk4-ding@smedius.gitlab.com']), true);
     eq(dingEnabled(['kiwi@kemma']), false);
     eq(dingEnabled(['ding@rastersoft.com'], true), false);
+});
+
+test('the rename field waits for a laid-out label (a new folder has none yet)', () => {
+    eq(renameFieldBox({ x: 1200, y: 120, labelWidth: 60, cellW: 100 }), { x: 1184, y: 118, width: 92 });
+    eq(renameFieldBox({ x: NaN, y: NaN, labelWidth: 60, cellW: 100 }), null, 'unallocated tile');
+    eq(renameFieldBox({ x: 10, y: 10, labelWidth: 60, cellW: undefined }), null, 'no grid');
 });
 
 if (failed) {
