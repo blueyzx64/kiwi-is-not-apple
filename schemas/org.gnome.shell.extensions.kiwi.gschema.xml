@@ -1290,7 +1290,7 @@
       </key>
       <key name="gestures-app-expose" type="b">
         <default>true</default>
-        <summary>Swipe down with four fingers for App Exposé</summary>
+        <summary>Swipe down with three or four fingers for App Exposé</summary>
         <description>Shows every window of the front app.</description>
       </key>
       <key name="gestures-launchpad" type="b">

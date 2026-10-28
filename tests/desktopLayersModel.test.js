@@ -1,5 +1,5 @@
 // Run: gjs -m tests/desktopLayersModel.test.js
-import { ReserveStore, stackOrder } from '../core/desktopLayersModel.js';
+import { ReserveStore, mirrorRect, overlapsMonitor, stackOrder } from '../core/desktopLayersModel.js';
 
 let failed = 0;
 function test(name, fn) {
@@ -27,6 +27,22 @@ test('reserved rectangles: each owner replaces its own, others see them', () => 
     eq(s.all('icons').length, 2);
     eq(s.set('widgets', []), true);
     eq(s.all('icons').length, 1);
+});
+
+test('a layer belongs to the monitors it overlaps', () => {
+    const left = { x: 0, y: 0, width: 1920, height: 1080 };
+    const right = { x: 1920, y: 0, width: 1280, height: 800 };
+    eq(overlapsMonitor({ ...left }, left), true);
+    eq(overlapsMonitor({ ...left }, right), false, 'touching edges do not overlap');
+    eq(overlapsMonitor({ ...right }, right), true);
+    eq(overlapsMonitor({ x: 1900, y: 10, width: 100, height: 10 }, right), true);
+});
+
+test('a mirrored layer keeps its place on the monitor, scaled with the card', () => {
+    const m = { x: 1920, y: 0 };
+    eq(mirrorRect({ x: 1920, y: 0, width: 1280, height: 800 }, m, 1, 1), { x: 0, y: 0, width: 1280, height: 800 });
+    eq(mirrorRect({ x: 1920, y: 0, width: 1280, height: 800 }, m, 0.5, 0.5), { x: 0, y: 0, width: 640, height: 400 });
+    eq(mirrorRect({ x: 2020, y: 100, width: 200, height: 100 }, m, 0.5, 0.25), { x: 50, y: 25, width: 100, height: 25 });
 });
 
 if (failed) {

@@ -10,9 +10,9 @@
 // - Widget style (widgets-style): automatic dims them to monochrome while an app window is
 //   in front and gives full colour when the desktop is (nothing focused: a wallpaper click,
 //   Show Desktop, Stage Manager's desktop); monochrome always; full-color never.
-// - Data runs only while the widgets can be seen: not in the overview and not under a
-//   maximized or full-screen window (features/widgets/model.js widgetsLive). With no widget
-//   placed nothing runs at all.
+// - Data runs only while the widgets can be seen: on the desktop and in Mission Control (which
+//   shows them through core/desktopLayers.js mirrors), not under a maximized or full-screen
+//   window (features/widgets/model.js widgetsLive). With no widget placed nothing runs at all.
 // - The layout is JSON in widgets-layout (core/widgets/model.js), keyed per monitor, so a
 //   second screen's widgets come back with it. Nothing is placed by default (as Sonoma);
 //   the gallery and the prefs offer "Add Default Widgets".

@@ -7,7 +7,8 @@
 //   - a + after the last Space that adds one;
 //   - dragging a label along the bar reorders the Spaces.
 // The thumbnails themselves (live windows, dropping a window on a Space, the active frame)
-// stay the stock ones. The bar always shows, also with one Space (macOS), and hides in App
+// stay the stock ones, over the wallpaper and the desktop's icons and widgets (a mirror from
+// core/desktopLayers.js). The bar always shows, also with one Space (macOS), and hides in App
 // Exposé.
 //
 // Shell API (GNOME 50, js/ui/workspaceThumbnail.js): ThumbnailsBox._thumbnails, ._shouldShow,
@@ -24,6 +25,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as DND from 'resource:///org/gnome/shell/ui/dnd.js';
 import { ThumbnailsBox, ThumbnailState } from 'resource:///org/gnome/shell/ui/workspaceThumbnail.js';
 
+import { DesktopLayers } from '../../core/desktopLayers.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { canRemoveSpace, centringShift, reorderIndex, spaceLabels } from './model.js';
 
@@ -33,6 +35,14 @@ const LABEL_GAP = 6;
 const LABEL_SPILL = 18;
 const CLOSE_INSET = 8;
 const PLUS_GAP = 16;
+
+/**
+ * Whether an actor has been laid out at a real size. Not has_allocation(): read from inside a
+ * notify::allocation handler (the box allocating its thumbnails) it says false while the
+ * new box is already set, and on a touchpad swipe into Mission Control those are the only
+ * allocations the thumbnails get, so the + stayed hidden.
+ */
+const laidOut = actor => !!actor?.get_parent() && actor.get_allocation_box().get_width() > 0;
 
 export class SpacesBar {
     /**
@@ -122,6 +132,9 @@ export class SpacesBar {
         c.connect(global.workspace_manager, 'workspaces-reordered', () => this._refresh());
         c.connect(global.workspace_manager, 'notify::n-workspaces', () => this._refresh());
         c.connect(Main.overview, 'hidden', () => this._undecorateAll());
+        // Once Mission Control is fully in: place everything again, whatever the order of
+        // the allocations on the way in (keyboard and swipe differ)
+        c.connect(Main.overview, 'shown', () => this._placeAll());
         c.add(() => this._undecorateAll());
         c.add(() => this._plus?.destroy());
         this._refresh();
@@ -167,6 +180,13 @@ export class SpacesBar {
         this._centre();
     }
 
+    _placeAll() {
+        for (const t of this._decor.keys())
+            this._place(t);
+        this._placePlus();
+        this._centre();
+    }
+
     /**
      * The stock box centres its thumbnails as if every Space, one still collapsing in or out
      * included, had its full width, and as if the box got the width it asks for: the group
@@ -177,7 +197,7 @@ export class SpacesBar {
     _centre() {
         const box = this._box;
         const first = box._thumbnails?.[0];
-        box.translation_x = first?.has_allocation() ? Math.round(centringShift({
+        box.translation_x = laidOut(first) ? Math.round(centringShift({
             maxWidth: box._maxThumbnailScale * box._porthole.width,
             thumbnailWidth: first.get_allocation_box().get_width(),
             spacing: box.get_theme_node().get_length('spacing'),
@@ -222,7 +242,7 @@ export class SpacesBar {
      */
     _place(t) {
         const d = this._decor.get(t);
-        if (d && t.has_allocation()) {
+        if (d && laidOut(t)) {
             // The allocation, not width and height: those read the preferred size while the
             // thumbnail waits for a layout, which this very pass is
             const [w, h] = [t.get_allocation_box().get_width(), t.get_allocation_box().get_height()];
@@ -240,7 +260,7 @@ export class SpacesBar {
         const host = plus?.get_parent();
         const last = this._box._thumbnails?.at(-1);
         // A Space added this frame has no allocation yet: the plus waits for it
-        if (!host?.has_allocation() || !last?.has_allocation() || !this._plusWanted)
+        if (!laidOut(host) || !laidOut(last) || !this._plusWanted)
             return;
         // The last Space's edge as the box lays it out: a Space still collapsed (coming) or
         // collapsing (going) takes only the part of its width that is left
@@ -279,6 +299,14 @@ export class SpacesBar {
         });
         wallpaper.backgroundActor.content.brightness = 1;
         cleanup.add(() => wallpaper.destroy());
+        // And the desktop's icons and widgets on it (core/desktopLayers.js), under the windows
+        const mirror = DesktopLayers.current?.mirror(t.monitorIndex);
+        const monitor = Main.layoutManager.monitors[t.monitorIndex];
+        if (mirror && monitor) {
+            mirror.set_position(monitor.x, monitor.y);
+            mirror.set_size(monitor.width, monitor.height);
+            t._contents.insert_child_above(cleanup.actor(mirror), wallpaper.backgroundActor);
+        }
         const d = { label, close, cleanup, removable: false, labelWidth: 0 };
         cleanup.connect(close, 'clicked', () => this._removeSpace(t.metaWorkspace));
         cleanup.connect(close, 'notify::hover', () => this._syncClose());

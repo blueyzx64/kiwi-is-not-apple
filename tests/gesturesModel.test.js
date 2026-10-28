@@ -1,7 +1,7 @@
 // Run: gjs -m tests/gesturesModel.test.js
 import {
-    DEFAULT_CONFIG, DRAG_THRESHOLD, GestureTracker, SWIPE_DISTANCE, blocksStock, classify,
-    ownsPinch, routeGesture,
+    DEFAULT_CONFIG, DRAG_THRESHOLD, GestureTracker, PINCH_SWIPE_TRAVEL, SWIPE_DISTANCE, blocksStock,
+    classify, ownsPinch, pinchIsSwipe, routeGesture,
 } from '../features/gestures/model.js';
 import { DESKTOP_ACTIONS } from '../core/desktopActionsModel.js';
 
@@ -61,8 +61,9 @@ test('classify pinches', () => {
 test('routes: the macOS defaults', () => {
     const c = DEFAULT_CONFIG;
     eq(routeGesture('swipe-down', 4, c, DESK), 'app-expose');
-    eq(routeGesture('swipe-down', 3, c, DESK), null);
-    eq(routeGesture('swipe-down', 4, c, { overview: true }), null);
+    eq(routeGesture('swipe-down', 3, c, DESK), 'app-expose');
+    eq(routeGesture('swipe-down', 2, c, DESK), null);
+    eq(routeGesture('swipe-down', 4, c, { overview: true }), null);  // GNOME's closes it
     eq(routeGesture('pinch-in', 4, c, DESK), 'launchpad');
     eq(routeGesture('spread-out', 4, c, DESK), 'desktop');
     eq(routeGesture('swipe-up', 4, c, DESK), null);       // GNOME's
@@ -103,6 +104,51 @@ test('a swipe down on the desktop never reaches GNOME\'s overview tracker', () =
     eq(blocksStock('vertical', down, DEFAULT_CONFIG, { overview: false, naturalScroll: false }), false);
     // In Mission Control a swipe down closes it (GNOME's)
     eq(blocksStock('vertical', down, DEFAULT_CONFIG, { overview: true }), false);
+});
+
+test('a swipe libinput took for a pinch is a swipe, a real pinch stays a pinch', () => {
+    // Fingers closing as they swipe up: the centre moves far, the scale drops
+    eq(classify(run('pinch', 4, 0, -300, 0.7)), 'swipe-up');
+    eq(classify(run('pinch', 3, 10, -250, 0.6)), 'swipe-up');
+    eq(classify(run('pinch', 4, 0, 300, 0.8)), 'swipe-down');
+    eq(classify(run('pinch', 4, -280, 20, 1.2)), 'swipe-left');
+    eq(classify(run('pinch', 4, 0, 300, 0.7), { naturalScroll: false }), 'swipe-up');
+    // Thumb and three fingers: the centre hardly moves
+    eq(classify(run('pinch', 4, 0, -30, 0.5)), 'pinch-in');
+    eq(classify(run('pinch', 4, 15, 20, 1.6)), 'spread-out');
+    // Moving a little while pinching hard is still a pinch
+    eq(classify(run('pinch', 4, 0, -PINCH_SWIPE_TRAVEL, 0.45)), 'pinch-in');
+    eq(pinchIsSwipe({ dx: 0, dy: -PINCH_SWIPE_TRAVEL + 1, scale: 1 }), false);
+    eq(pinchIsSwipe({ dx: 0, dy: -PINCH_SWIPE_TRAVEL, scale: 1 }), true);
+});
+
+test('a swipe up only ever opens Mission Control, never Launchpad', () => {
+    const c = DEFAULT_CONFIG;
+    for (const fingers of [3, 4]) {
+        for (const scale of [0.3, 0.5, 0.7, 0.75, 1]) {
+            const g = classify(run('pinch', fingers, 0, -400, scale));
+            eq(g, 'swipe-up', `scale ${scale}`);
+            eq(routeGesture(g, fingers, c, { overview: false, stock: false }), 'mission-control');
+            eq(routeGesture(g, fingers, c, { overview: true, stock: false }), null, 'stays in Mission Control');
+        }
+        const g = classify(run('swipe', fingers, 0, -400));
+        eq(routeGesture(g, fingers, c, DESK), null, 'GNOME\'s tracker opens it');
+        eq(routeGesture(g, fingers, c, { overview: true }), null);
+    }
+});
+
+test('a swipe that came as a pinch does what GNOME\'s swipe would', () => {
+    const c = DEFAULT_CONFIG;
+    const asPinch = overview => ({ overview, stock: false });
+    eq(routeGesture('swipe-down', 4, c, asPinch(true)), 'close-overview');
+    eq(routeGesture('swipe-down', 3, c, asPinch(false)), 'app-expose');
+    eq(routeGesture('swipe-left', 4, c, asPinch(false)), 'space-next');
+    eq(routeGesture('swipe-right', 3, c, asPinch(true)), 'space-previous');
+    const off = { ...c, missionControl: false, spaces: false };
+    eq(routeGesture('swipe-up', 4, off, asPinch(false)), null);
+    eq(routeGesture('swipe-down', 4, off, asPinch(true)), null);
+    eq(routeGesture('swipe-left', 4, off, asPinch(false)), null);
+    eq(DESKTOP_ACTIONS.includes('mission-control'), true);
 });
 
 if (failed) {

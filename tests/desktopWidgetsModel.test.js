@@ -30,7 +30,7 @@ test('only a focused, shown app window is in front', () => {
     eq(windowInFront({ type: 'normal', minimized: true }), false);
     eq(windowInFront({ type: 'other', minimized: false }), false);
 });
-test('data pauses in the overview and under a maximized window of that monitor', () => {
+test('data pauses under a maximized window of that monitor, not in Mission Control', () => {
     const w = (o = {}) => ({ monitor: 0, workspace: 0, minimized: false, maximized: false, fullscreen: false, type: 'normal', ...o });
     const base = { overview: false, editing: false, monitor: 0, workspace: 0 };
     eq(widgetsLive({ ...base, windows: [w()] }), true);
@@ -39,7 +39,7 @@ test('data pauses in the overview and under a maximized window of that monitor',
     eq(widgetsLive({ ...base, windows: [w({ maximized: true, minimized: true })] }), true);
     eq(widgetsLive({ ...base, windows: [w({ maximized: true, monitor: 1 })] }), true);
     eq(widgetsLive({ ...base, windows: [w({ maximized: true, workspace: 1 })] }), true);
-    eq(widgetsLive({ ...base, overview: true, windows: [] }), false);
+    eq(widgetsLive({ ...base, overview: true, windows: [w({ maximized: true })] }), true, 'Mission Control shows them');
     eq(widgetsLive({ ...base, overview: true, editing: true, windows: [w({ maximized: true })] }), true);
 });
 test('a drag starts past the threshold', () => {

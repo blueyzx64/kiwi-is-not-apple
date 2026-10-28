@@ -17,7 +17,7 @@ export function buildPrefs({ settings, _ }) {
         { key: 'gestures-mission-control', title: _('Mission Control'),
             subtitle: _('Swipe up with three or four fingers') },
         { key: 'gestures-app-expose', title: _('App Exposé'),
-            subtitle: _('Swipe down with four fingers') },
+            subtitle: _('Swipe down with three or four fingers') },
         { key: 'gestures-spaces', title: _('Swipe Between Spaces'),
             subtitle: _('Swipe left or right with three or four fingers') },
         { key: 'gestures-launchpad', title: _('Launchpad'),

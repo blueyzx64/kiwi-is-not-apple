@@ -7,7 +7,7 @@
 //     dash and no find-as-you-type. The app grid is not part of it: Launchpad and Super+A.
 //   - App Exposé: only one app's windows, spread, with its minimized windows in a strip at
 //     the bottom (expose.js). Ctrl+Down, the dock's "Show All Windows", and the event
-//     'app-expose-requested' (Super+` down, four-finger swipe down, hot corners).
+//     'app-expose-requested' (Super+` down, three/four-finger swipe down, hot corners).
 //   - Entry points: F3 and Ctrl+Up (mission-control-shortcut), GNOME's three/four-finger swipe
 //     up (shell-behaviour stops it at the window picker), the optional dock item. The Super
 //     tap stays with Spotlight.
@@ -99,6 +99,7 @@ export class MissionControl {
         this._spaces.enable();
 
         c.connect(Main.overview, 'showing', () => this._onShowing());
+        c.connect(Main.overview, 'hiding', () => this._strip.fadeOut());
         c.connect(Main.overview, 'hidden', () => this._onHidden());
         c.connect(global.workspace_manager, 'active-workspace-changed', () => this._touchActive());
         this._touchActive();
@@ -107,7 +108,7 @@ export class MissionControl {
             this._pending = null;
         });
 
-        // Super+` down, the four-finger swipe down and hot corners (core/desktopActions.js)
+        // Super+` down, the three/four-finger swipe down and hot corners (core/desktopActions.js)
         this._ctx.events.on('app-expose-requested', ({ appId }) => this.toggleAppExpose(appId), c);
 
         // Also while a Kiwi modal (Launchpad) is open: opening closes it, as on macOS
