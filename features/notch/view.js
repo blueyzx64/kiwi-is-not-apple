@@ -36,9 +36,9 @@ import * as A11y from '../../lib/a11y.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { SIZES } from './stateMachine.js';
 import { cardSize } from './dashboardModel.js';
-import { tabDirection, TABS } from './model.js';
+import { tabDirection, TABS, presentation, WELL } from './model.js';
 import { label, icon, themed, button, artwork, artButton, track, CenterLayout } from './ui.js';
-import { pill, tickMs } from './pills.js';
+import { pill, tickMs, iconWell, trailingSlot } from './pills.js';
 import { OutsideClick } from '../../lib/outsideClick.js';
 import { InputRing } from '../../lib/inputRing.js';
 import { nowTab, trayTab, widgetsTab, DASH_SIZE } from './tabs.js';
@@ -930,7 +930,7 @@ export class NotchView {
         if (activity.kind === 'media' || activity.kind === 'media-paused' || !activity.kind) {
             const data = activity.data;
             const row = this._row('kiwi-notch-activity kiwi-notch-pill-media');
-            row.add_child(artButton(artwork({ art: data.art, appIcon: ctx.media?.appIcon }, 20, 'kiwi-notch-artwork-small'),
+            row.add_child(artButton(artwork({ art: data.art, appIcon: ctx.media?.appIcon }, WELL.compact.size, 'kiwi-notch-artwork-small'),
                 this._('Show the player'), this._h.onRaisePlayer));
             row.add_child(label(data.title, 'kiwi-notch-pill-title', { x_expand: true }));
             row.add_child(this._bars(data.playing));
@@ -963,10 +963,13 @@ export class NotchView {
         const row = this._row('kiwi-notch-compact');
         if (!notification)
             return row;
-        row.add_child(icon(this._notificationIcon(notification), 18));
+        // The compact template (pills.js): app icon in its well, the title, one trailing slot
+        row.add_child(iconWell(this._notificationIcon(notification), presentation('notification'), 'compact'));
         row.add_child(label(notification.title, 'kiwi-notch-pill-title', { x_expand: true }));
+        const slot = trailingSlot();
         if (badge > 0)
-            row.add_child(label(`+${badge}`, 'kiwi-notch-badge'));
+            slot.kiwiSet(label(`+${badge}`, 'kiwi-notch-badge'));
+        row.add_child(slot);
         return row;
     }
 
@@ -983,7 +986,7 @@ export class NotchView {
         card.accessible_name = [notification.source?.title, notification.title].filter(Boolean).join(': ');
 
         const header = new St.BoxLayout({ style_class: 'kiwi-notch-card-header' });
-        header.add_child(icon(this._notificationIcon(notification), 20, 'kiwi-notch-card-icon'));
+        header.add_child(iconWell(this._notificationIcon(notification), presentation('notification'), 'banner'));
         const app = notification.source?.title ?? '';
         const when = notification.datetime?.format?.('%H:%M') ?? '';
         header.add_child(label(app, 'kiwi-notch-card-app', { x_expand: true }));
@@ -1002,6 +1005,7 @@ export class NotchView {
         header.add_child(close);
         card.add_child(header);
 
+        // One line of title, at most two of body (the card's fixed height), both ellipsized
         card.add_child(label(notification.title, 'kiwi-notch-card-title'));
         const body = new St.Label({ style_class: 'kiwi-notch-card-body', x_expand: true, y_expand: true });
         body.clutter_text.line_wrap = true;

@@ -102,8 +102,10 @@ export function watchDownloads(cleanup, sink, onFinished) {
                         const to = other.get_basename();
                         if (PARTIAL_FILE.test(to))
                             partials.set(to, partials.get(to) ?? 0);
-                        else if (was)
+                        else if (was) {
+                            sink.activity('download-done', 'download-done', { label: to }, { fresh: true });
                             onFinished(other.get_uri());
+                        }
                     }
                     publish();
                 } else if ((type === E.CREATED || type === E.MOVED_IN) && PARTIAL_FILE.test(name)) {

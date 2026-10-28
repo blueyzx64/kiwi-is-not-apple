@@ -22,6 +22,11 @@ export const KINDS = Object.freeze({
     'code': { priority: 110, ttlMs: 30000, pill: true },
     'low-battery': { priority: 105, ttlMs: 8000, pill: true },
     'charging-started': { priority: 100, ttlMs: 4000, pill: true },
+    'charged': { priority: 100, ttlMs: 4000, pill: true },
+    'unplugged': { priority: 100, ttlMs: 3000, pill: true },
+    'low-power': { priority: 100, ttlMs: 3000, pill: true },
+    'focus': { priority: 100, ttlMs: 3000, pill: true },
+    'download-done': { priority: 95, ttlMs: 5000, pill: true },
     'headphones-connected': { priority: 100, ttlMs: 4000, pill: true },
     'recording': { priority: 90, ttlMs: null, pill: true },
     'timer': { priority: 80, ttlMs: null, pill: true },
@@ -33,6 +38,78 @@ export const KINDS = Object.freeze({
     'charging': { priority: 20, ttlMs: null, pill: false },
     'headphones': { priority: 10, ttlMs: null, pill: false },
 });
+
+// ---- presentation ----------------------------------------------------------------------
+// Every notch event is drawn through one of a few fixed templates (Dynamic Island style), so
+// no kind lays itself out ad hoc:
+//   compact  the 32px pill: [icon well] [title, ellipsized] [one trailing accessory in a
+//            fixed-width slot]
+//   row      a card in the Now tab: [icon well] [title / subtitle, one line each, ellipsized]
+//            [trailing accessory: action buttons or a progress ring]
+//   banner   the notification card: app icon in a well, app name and time in the band level
+//            with the top bar, then title (one line) and body (two lines)
+// An icon well is a fixed square, a circle or a rounded square ("squircle"), with a tinted
+// fill; the glyph sits inside it at a fixed inset, so no icon is ever larger than its well.
+// view code reads WELL, TRAILING_W and presentation(kind); tests check every kind has one.
+
+/** Icon wells per template (logical px): the well and the glyph inside it. */
+export const WELL = Object.freeze({
+    compact: Object.freeze({ size: 22, glyph: 14 }),
+    row: Object.freeze({ size: 28, glyph: 16 }),
+    banner: Object.freeze({ size: 22, glyph: 18 }),
+});
+
+/** The compact pill's trailing slot (px): one value, a ring or one action, right-aligned. */
+export const TRAILING_W = 56;
+
+/** Corner radius of a well: a circle, or Apple's ~22 % rounded square. */
+export function wellRadius(shape, size) {
+    return shape === 'circle' ? Math.round(size / 2) : Math.round(size * 0.27);
+}
+
+export const TINTS = Object.freeze(['green', 'yellow', 'orange', 'red', 'blue', 'purple', 'accent', 'neutral']);
+export const SHAPES = Object.freeze(['circle', 'squircle']);
+export const ACCESSORIES = Object.freeze(['value', 'ring', 'action', 'none']);
+
+/**
+ * kind -> how it is drawn. icon: a symbolic icon name, 'battery' (the level glyph,
+ * batteryIconNames), 'data' (the icon the event carries, e.g. a Focus mode's), 'app' (the
+ * notification's app icon) or 'art' (media cover art). compact: the pill's trailing accessory;
+ * row: the Now card's trailing accessory.
+ */
+export const PRESENTATION = Object.freeze({
+    'charging-started': { tint: 'green', shape: 'squircle', icon: 'battery', compact: 'value', row: 'none' },
+    'charging': { tint: 'green', shape: 'squircle', icon: 'battery', compact: 'value', row: 'none' },
+    'charged': { tint: 'green', shape: 'squircle', icon: 'battery', compact: 'value', row: 'none' },
+    'unplugged': { tint: 'neutral', shape: 'squircle', icon: 'battery', compact: 'value', row: 'none' },
+    'low-battery': { tint: 'red', shape: 'squircle', icon: 'battery', compact: 'value', row: 'none' },
+    'low-power': { tint: 'yellow', shape: 'circle', icon: 'power-profile-power-saver-symbolic', compact: 'value', row: 'none' },
+    'focus': { tint: 'purple', shape: 'circle', icon: 'data', compact: 'value', row: 'none' },
+    'download': { tint: 'blue', shape: 'circle', icon: 'folder-download-symbolic', compact: 'ring', row: 'ring' },
+    'download-done': { tint: 'blue', shape: 'circle', icon: 'folder-download-symbolic', compact: 'value', row: 'none' },
+    'timer': { tint: 'orange', shape: 'circle', icon: 'alarm-symbolic', compact: 'value', row: 'action' },
+    'timer-done': { tint: 'orange', shape: 'circle', icon: 'alarm-symbolic', compact: 'value', row: 'none' },
+    'recording': { tint: 'red', shape: 'circle', icon: 'media-record-symbolic', compact: 'value', row: 'action' },
+    'headphones-connected': { tint: 'neutral', shape: 'circle', icon: 'audio-headphones-symbolic', compact: 'value', row: 'none' },
+    'headphones': { tint: 'neutral', shape: 'circle', icon: 'audio-headphones-symbolic', compact: 'value', row: 'none' },
+    'code': { tint: 'accent', shape: 'squircle', icon: 'dialog-password-symbolic', compact: 'action', row: 'action' },
+    'event-soon': { tint: 'red', shape: 'squircle', icon: 'x-office-calendar-symbolic', compact: 'value', row: 'none' },
+    'event': { tint: 'red', shape: 'squircle', icon: 'x-office-calendar-symbolic', compact: 'value', row: 'none' },
+    'media': { tint: 'neutral', shape: 'squircle', icon: 'art', compact: 'none', row: 'none' },
+    'media-paused': { tint: 'neutral', shape: 'squircle', icon: 'art', compact: 'none', row: 'none' },
+    'notification': { tint: 'neutral', shape: 'squircle', icon: 'app', compact: 'value', row: 'none' },
+});
+
+/**
+ * @param {string} kind a KINDS key, or 'notification'
+ * @returns {{tint: string, shape: string, icon: string, compact: string, row: string}}
+ */
+export function presentation(kind) {
+    const p = PRESENTATION[kind];
+    if (!p)
+        throw new Error(`notch: no presentation for '${kind}'`);
+    return p;
+}
 
 /** Pill widths per kind (logical px); a code needs room for its Copy button. */
 export const PILL_WIDTH = Object.freeze({ default: 250, code: 300, recording: 270, download: 270 });
@@ -271,8 +348,10 @@ export const CRITICAL_BATTERY = 10;
  * What the battery means for the notch.
  * @param {{present: boolean, state: number, percentage: number}} now
  * @param {{state: number, percentage: number}|null} before the previous reading (null at start)
- * @returns {{charging: boolean, pluggedIn: boolean, low: boolean, percent: number}|null}
- *   pluggedIn: a charger was just connected; low: the level just crossed 20 % or 10 % going down
+ * @returns {{charging: boolean, pluggedIn: boolean, unplugged: boolean, full: boolean, low: boolean,
+ *   percent: number}|null}
+ *   pluggedIn: a charger was just connected; unplugged: it was just removed; full: the battery
+ *   just finished charging; low: the level just crossed 20 % or 10 % going down
  */
 export function batteryChange(now, before) {
     if (!now?.present)
@@ -285,6 +364,8 @@ export function batteryChange(now, before) {
     return {
         charging,
         pluggedIn: !!before && charging && !wasCharging,
+        unplugged: !!before && !charging && wasCharging,
+        full: !!before && now.state === UPOWER.FULL && before.state !== UPOWER.FULL && wasCharging,
         low: !charging && !!(crossed(LOW_BATTERY) || crossed(CRITICAL_BATTERY)),
         percent,
     };
@@ -410,4 +491,15 @@ export function nowRows(activityCount, notificationCount, maxRows = 3) {
     // Without room for every notification, the last row becomes "N more"
     const notifications = fitsAll ? notificationCount : Math.max(0, room - 1);
     return { activities, notifications, more: notificationCount - notifications };
+}
+
+/**
+ * A mode (Low Power Mode, a Focus) worth a pill: only a real change from a known state, never
+ * the first reading (the Shell starting, Kiwi enabling).
+ * @param {?{key: string|null}} before the last known state (null: none yet)
+ * @param {{key: string|null}} now key: what identifies the state (a mode id, 'on'/'off')
+ * @returns {boolean}
+ */
+export function modeChanged(before, now) {
+    return !!before && before.key !== now.key;
 }

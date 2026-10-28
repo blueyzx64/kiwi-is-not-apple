@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Live activities from the battery (UPower's display device, the same one the Shell's battery
-// indicator reads): "Charging" when a charger is plugged in, "Low Battery" when the level
-// crosses 20 % and 10 %, and the quiet "charging" row in the Now tab while it charges.
+// indicator reads): "Charging" when a charger is plugged in, "Charged" when it is full, "On
+// Battery" when it is unplugged, "Low Battery" when the level crosses 20 % and 10 %, and the
+// quiet "charging" row in the Now tab while it charges.
 // Signal driven (g-properties-changed); nothing is polled.
 
 import Gio from 'gi://Gio';
@@ -41,6 +42,10 @@ export function watchPower(cleanup, sink) {
         sink.activity('battery', 'charging', change.charging ? { percent: change.percent } : null);
         if (change.pluggedIn)
             sink.activity('battery-alert', 'charging-started', { percent: change.percent }, { fresh: true });
+        else if (change.full)
+            sink.activity('battery-alert', 'charged', { percent: change.percent }, { fresh: true });
+        else if (change.unplugged)
+            sink.activity('battery-alert', 'unplugged', { percent: change.percent }, { fresh: true });
         else if (change.low)
             sink.activity('battery-alert', 'low-battery', { percent: change.percent }, { fresh: true });
     };

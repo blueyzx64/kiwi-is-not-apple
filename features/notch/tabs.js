@@ -16,8 +16,8 @@ import * as A11y from '../../lib/a11y.js';
 import { label, icon, themed, button, artwork, artButton, track, column, setText } from './ui.js';
 import { trackProgress, seekTarget, formatClock } from './dashboardModel.js';
 export { DASH_SIZE } from './dashboardModel.js';
-import { nowRows } from './model.js';
-import { row as activityRow } from './pills.js';
+import { nowRows, presentation } from './model.js';
+import { row as activityRow, iconWell } from './pills.js';
 import { dragIconName } from './shelfHelperModel.js';
 
 const WIDTH = Object.freeze({ hero: 340, list: 248, clipboard: 196, inner: 608 });
@@ -177,14 +177,14 @@ function listColumn(env, ctx) {
     }
     for (const item of recent) {
         const b = new St.Button({
-            style_class: 'kiwi-notch-recent',
+            style_class: 'kiwi-notch-card-row kiwi-notch-recent',
             can_focus: true,
             x_expand: true,
             x_align: Clutter.ActorAlign.FILL,
             accessible_name: item.title,
         });
         const row = new St.BoxLayout({ style_class: 'kiwi-notch-recent-row', x_expand: true });
-        row.add_child(icon(item.gicon ?? themed('dialog-information-symbolic'), 20, 'kiwi-notch-recent-icon'));
+        row.add_child(iconWell(item.gicon ?? themed('dialog-information-symbolic'), presentation('notification'), 'row'));
         const text = new St.BoxLayout({
             orientation: Clutter.Orientation.VERTICAL, x_expand: true, y_align: Clutter.ActorAlign.CENTER,
         });
