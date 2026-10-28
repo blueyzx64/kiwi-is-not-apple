@@ -3,14 +3,14 @@
 // the Notification Center's widgets area, the notch's Widgets tab).
 //
 //   import { Widgets } from '../../core/widgets/index.js';
-//   const host = Widgets.acquire(cleanup, ctx.gettext);   // released with cleanup
+//   const host = Widgets.acquire(cleanup, ctx.gettext, ctx);   // released with cleanup
 //   host.registry.kinds();                                // [{id, title, category, sizes, ...}]
 //   host.registry.sizesFor('weather', 'center');          // no extra-large outside the desktop
 //   const view = host.createView('weather', { size: 'small', config: {} }, cleanup);
 //   box.add_child(view.actor); view.setActive(true);      // see view.js
 //
-// Data providers (clock, calendar, weather, batteries, media, system) are shared between all
-// views of all surfaces and lazy: a provider runs only while at least one ACTIVE view uses
+// Data providers (clock, calendar, weather, batteries, media, system, notes, reminders, photos,
+// recent files, timers, apps) are shared between all views of all surfaces and lazy: a provider runs only while at least one ACTIVE view uses
 // it, so with no visible widget nothing runs (no timer, no D-Bus subscription).
 // Layout helpers for any surface (grid, snapping, persistence) are in ./model.js.
 //
@@ -24,20 +24,43 @@ import { WeatherProvider } from './providers/weather.js';
 import { BatteriesProvider } from './providers/batteries.js';
 import { MediaProvider } from './providers/media.js';
 import { SystemProvider } from './providers/system.js';
+import { NotesProvider } from './providers/notes.js';
+import { RemindersProvider } from './providers/reminders.js';
+import { PhotosProvider } from './providers/photos.js';
+import { RecentProvider } from './providers/recent.js';
+import { TimersProvider } from './providers/timers.js';
+import { AppsProvider } from './providers/apps.js';
 import clock from './kinds/clock.js';
 import calendar from './kinds/calendar.js';
 import weather from './kinds/weather.js';
 import batteries from './kinds/batteries.js';
 import nowPlaying from './kinds/nowPlaying.js';
 import system from './kinds/system.js';
+import upNext from './kinds/upNext.js';
+import reminders from './kinds/reminders.js';
+import notes from './kinds/notes.js';
+import photos from './kinds/photos.js';
+import recentFiles from './kinds/recentFiles.js';
+import timers from './kinds/timers.js';
+import apps from './kinds/apps.js';
 
 /** Built-in kinds in gallery order. */
-const KINDS = [clock, calendar, weather, batteries, nowPlaying, system];
+const KINDS = [clock, calendar, upNext, reminders, weather, notes, photos, batteries, nowPlaying, timers, apps,
+    recentFiles, system];
 
 class WidgetHost {
-    constructor(gettext) {
+    /**
+     * @param {(s: string) => string} gettext
+     * @param {{settings?: object, timers?: object, events?: object}} services Kiwi's settings
+     *   (notes), the timer service and the event hub (timers); a provider without its service
+     *   shows its empty state
+     */
+    constructor(gettext, services = {}) {
         this.gettext = gettext;
-        const env = { gettext };
+        // `cache` outlives a provider's stop (the photo list), not the host
+        const env = { gettext, settings: services.settings ?? null, timers: services.timers ?? null,
+            events: services.events ?? null, cache: new Map() };
+        this._env = env;
         this.pool = new ProviderPool({
             time: () => new TimeProvider(env),
             calendar: () => new CalendarProvider(env),
@@ -45,6 +68,12 @@ class WidgetHost {
             batteries: () => new BatteriesProvider(env),
             media: () => new MediaProvider(env),
             system: () => new SystemProvider(env),
+            notes: () => new NotesProvider(env),
+            reminders: () => new RemindersProvider(env),
+            photos: () => new PhotosProvider(env),
+            recent: () => new RecentProvider(env),
+            timers: () => new TimersProvider(env),
+            apps: () => new AppsProvider(env),
         });
         this.registry = new WidgetRegistry();
         for (const k of KINDS)
@@ -68,6 +97,11 @@ class WidgetHost {
         return view;
     }
 
+    /** Kiwi services the kinds may use: {gettext, settings, timers, events}. */
+    get env() {
+        return this._env;
+    }
+
     /** Provider ids running now (for tests and the idle check). */
     activeProviders() {
         return this.pool.active();
@@ -75,6 +109,7 @@ class WidgetHost {
 
     stop() {
         this.pool.stopAll();
+        this._env.cache.clear();
     }
 }
 
@@ -85,10 +120,12 @@ export const Widgets = {
     /**
      * @param {{add: Function}} cleanup the use ends when it is disposed
      * @param {(s: string) => string} gettext the extension's
+     * @param {{settings: object, timers: object, events: object}} [services] from ctx; the
+     *   first holder's are kept for the host's life
      * @returns {WidgetHost}
      */
-    acquire(cleanup, gettext) {
-        host ??= new WidgetHost(gettext);
+    acquire(cleanup, gettext, services = {}) {
+        host ??= new WidgetHost(gettext, services);
         refs++;
         const mine = host;
         let released = false;
