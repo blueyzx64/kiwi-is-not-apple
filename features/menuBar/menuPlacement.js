@@ -41,14 +41,6 @@ export class MenuPlacement {
         this._cleanup.add(() => delete manager.addMenu);   // back to the prototype's
         for (const menu of manager._menus ?? [])
             this._place(menu);
-        this._cleanup.add(() => {
-            for (const [menu, saved] of this._saved) {
-                menu._arrowAlignment = saved.arrow;
-                menu._boxPointer.setSourceAlignment(saved.source);
-                menu._boxPointer.remove_style_class_name(MENU_CLASS);
-            }
-            this._saved.clear();
-        });
     }
 
     _place(menu) {
@@ -60,8 +52,22 @@ export class MenuPlacement {
         menu._arrowAlignment = this._rtl ? 1 : 0;
         pointer.add_style_class_name(MENU_CLASS);
         this._cleanup.connect(menu, 'open-state-changed', (_m, open) => open && this._align(menu));
-        this._cleanup.connect(menu, 'destroy', () => this._saved.delete(menu));
-        this._align(menu);
+        const forget = () => this._saved.delete(menu);
+        this._cleanup.connect(menu, 'destroy', forget);
+        this._cleanup.connect(pointer, 'destroy', forget);   // the owner may destroy just the actors
+        // Registered after the destroy handlers: disposal runs this first, and a menu that is
+        // already gone is no longer in the map
+        this._cleanup.add(() => this._restore(menu));
+    }
+
+    _restore(menu) {
+        const saved = this._saved.get(menu);
+        if (!saved)
+            return;
+        this._saved.delete(menu);
+        menu._arrowAlignment = saved.arrow;
+        menu._boxPointer.setSourceAlignment(saved.source);
+        menu._boxPointer.remove_style_class_name(MENU_CLASS);
     }
 
     // The item's size changes (the app name), so measure when the menu opens
