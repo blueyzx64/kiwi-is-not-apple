@@ -34,3 +34,12 @@ The owner tested 3.0.0 on real hardware (Fedora 44, GNOME 50) and reported the b
    - If that's impossible, find the best per-window alternative and report the limits.
 3. **Optional setting "Hide title bars of maximized windows", OFF by default.** It acts only where it's safe: server-side and X11 frames (via _MOTIF_WM_HINTS on Xwayland windows) and plain GTK3 title bars (CSS). It never hides GTK4/libadwaita header bars.
 - Green button click stays FULL SCREEN (owner, option A). Zoom stays on Alt-click and the green menu.
+
+## Round 3: owner feedback (2026-10-28). The same quality bar applies.
+1. REMOVE the top-bar window controls entirely. Window buttons always stay on the app's own titlebar (side right by default). The "Hide title bars of maximized windows" option goes too, because maximized windows would have no buttons otherwise.
+2. Stage Manager flickers into view and disappears again on minimize or maximize.
+3. Dock Downloads popup: once it's open, clicking other dock items doesn't work and the popup doesn't dismiss.
+4. Notch shelf drag-out fails when a window is maximized or touching the top bar.
+5. Widgets card or gallery: clicking outside doesn't close it, while items under it can still be clicked.
+6. Windows in the Stage Manager strip (not on stage) must not show in Mission Control.
+7. Going from Mission Control back to the desktop, the top bar glitches and briefly loses its transparency.
