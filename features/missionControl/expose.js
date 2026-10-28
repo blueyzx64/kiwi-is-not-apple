@@ -4,7 +4,12 @@
 // The overview reserves the strip's height through the (hidden) dash's preferred height,
 // so the window picker above never overlaps it (index.js).
 //
-// Shell API: Main.layoutManager.overviewGroup, primaryMonitor, Main.activateWindow;
+// The strip sits in the overview group below the overview itself, so the window previews
+// zooming in and out pass over it, and it fades out as the overview starts to hide (it was
+// on top of everything, at full opacity, until the overview had gone).
+//
+// Shell API: Main.layoutManager.overviewGroup, Main.overview._overview, primaryMonitor,
+// Main.activateWindow;
 // Clutter.Clone of a minimized window actor (the overview clones minimized windows the
 // same way).
 
@@ -29,6 +34,7 @@ export class ExposeStrip {
         this._motion = motion;
         this._ = _;
         this._cleanup = null;
+        this._strip = null;
     }
 
     get shown() {
@@ -87,7 +93,14 @@ export class ExposeStrip {
             this.hide();
             return;
         }
-        Main.layoutManager.overviewGroup.add_child(strip);
+        // Below the overview's own actor: the previews are drawn above it on the way in and out
+        const group = Main.layoutManager.overviewGroup;
+        const overview = Main.overview._overview;
+        if (overview?.get_parent() === group)
+            group.insert_child_below(strip, overview);
+        else
+            group.add_child(strip);
+        this._strip = strip;
         const [, width] = strip.get_preferred_width(-1);
         const [, height] = strip.get_preferred_height(width);
         const w = Math.min(width, monitor.width - 32);
@@ -97,8 +110,16 @@ export class ExposeStrip {
         this._motion.ease(strip, { opacity: 255 }, { duration: 'medium', curve: 'enter' }, c);
     }
 
+    /** The overview starts to hide: fade out with it (hide() follows when it has gone). */
+    fadeOut() {
+        if (!this._cleanup || !this._strip)
+            return;
+        this._motion.ease(this._strip, { opacity: 0 }, { duration: 'short', curve: 'exit' }, this._cleanup);
+    }
+
     hide() {
         this._cleanup?.dispose();
         this._cleanup = null;
+        this._strip = null;
     }
 }
