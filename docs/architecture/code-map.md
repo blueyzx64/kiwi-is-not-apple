@@ -167,6 +167,7 @@ pinch, hot corner), `split-view-changed` (Split View), `recording-started` /
 | `osd/` | `osd` | the volume / brightness / keyboard backlight pill (glass, core/motion), a `ctx.osd` sink; `osd-style` 'golden-gate' (macOS 27.2: one icon, 16-segment bar, centred under the matching menu-bar item, pinned `kiwi-menubar-pin-*` or the stock QS indicator, else Control Center; pure `segmentFill`, `pickAnchor`, `ggPosition`) or 'tahoe' (macOS 26 track under Control Center); output name and mute from the Shell's Gvc mixer; `state` getter for tests |
 | `dialogs/` | `dialogs` | the Shell's modal dialogs (auth, end session, Run, others) as glass alerts: icon on top, natural-width buttons at the right, accent default; `ModalDialog.prototype.open` injection, undone on close and disable |
 | `colorFilters/` | `color-filters` | greyscale, protanopia / deuteranopia / tritanopia corrections and colour tint: one shader effect (a colour matrix as uniforms) on `global.stage` |
+| `pointer/` | `pointer` | shake to locate (`ShakeDetector`, a big copy of the cursor sprite over `Meta.CursorTracker` `position-invalidated`), hide while typing (`TypingHider` on `lib/caret.js` `onMoved`, `inhibit_cursor_visibility`), cursor size and a recoloured Xcursor theme (`theme.js`, `~/.local/share/icons/Kiwi-Pointer-*`) through core/originals |
 
 Shared-resource rules (defined once in `features.js`): `app-buttons` alone owns `button-layout`; `control-center` beats `dnd-button`; `stage-manager` beats
 `move-window-to-new-workspace`; the notch forces the calendar to the right.
