@@ -29,6 +29,9 @@ export function buildPrefs({ settings, extension }) {
     bar.add(switchRow(settings, _('Apps’ Own Menus'),
         _('Show the menus apps export (GTK menu bars, and Qt, Electron or LibreOffice under Xwayland) in place of the generic File, Edit and View'),
         'menubar-native-menus'));
+    bar.add(switchRow(settings, _('Files as Finder'),
+        _('Call Files “Finder” in the menu bar, the dock, Launchpad and Spotlight, with Finder’s File, View, Go and Window menus'),
+        'menubar-finder-name'));
     // macOS Tahoe's wording: "Show menu bar background" is the opposite of a transparent bar
     const background = new Adw.SwitchRow({
         title: _('Show Menu Bar Background'),

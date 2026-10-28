@@ -28,6 +28,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as DND from 'resource:///org/gnome/shell/ui/dnd.js';
 
 import * as A11y from '../../lib/a11y.js';
+import { AppNames } from '../../core/appNames.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { Glass } from '../../lib/glass.js';
 import { decodeWallpaper, resolveWallpaper } from '../../lib/wallpaperDecode.js';
@@ -216,7 +217,7 @@ class FolderPanel {
             const app = view.store.app(id);
             if (!app)
                 continue;
-            const tile = new Tile(view, { kind: 'app', id, name: app.get_name() });
+            const tile = new Tile(view, { kind: 'app', id, name: AppNames.of(app) });
             tile.folderId = this.folderId;
             this.cleanup.add(() => tile.destroy());
             this.tiles.set(id, tile);
@@ -629,7 +630,7 @@ export class LaunchpadView {
             for (const id of this.shown) {
                 const app = this.store.app(id);
                 if (app && !this.tiles.has(id))
-                    this._tile({ kind: 'app', id, name: app.get_name() });
+                    this._tile({ kind: 'app', id, name: AppNames.of(app) });
             }
             this.focus = this.shown.length ? 0 : -1;
         } else {

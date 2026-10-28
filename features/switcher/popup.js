@@ -14,6 +14,7 @@ import St from 'gi://St';
 import * as SwitcherPopup from 'resource:///org/gnome/shell/ui/switcherPopup.js';
 
 import * as A11y from '../../lib/a11y.js';
+import { AppNames } from '../../core/appNames.js';
 import { Glass } from '../../lib/glass.js';
 import { indexAfterRemoval, initialIndex, keyAction, pickAfterHide, step } from './model.js';
 
@@ -48,7 +49,7 @@ class KiwiSwitcherAppItem extends St.BoxLayout {
         this.add_child(app.create_icon_texture(iconSize));
         this.label = new St.Label({
             style_class: 'kiwi-switcher-label',
-            text: app.get_name(),
+            text: AppNames.of(app),
             // As wide as the icon: a long name ellipsizes instead of widening every item
             width: iconSize,
         });
@@ -85,7 +86,7 @@ class KiwiAppSwitcherPopup extends SwitcherPopup.SwitcherPopup {
         this._items = apps.map(app => {
             const item = new AppItem(app, iconSize);
             const button = this._switcherList.addItem(item, item.label);
-            button.accessible_name = app.get_name();
+            button.accessible_name = AppNames.of(app);
             return item;
         });
         this._glass = Glass.attach(this._switcherList, { surface: 'overlays', role: 'content' });

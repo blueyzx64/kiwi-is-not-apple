@@ -57,6 +57,11 @@
         <summary>Apps' own menus</summary>
         <description>Show the menus an app exports in place of the generic File, Edit and View: GTK menu bars (org.gtk.Menus) and DBusMenu menu bars from Qt, Electron, LibreOffice and other X11 apps. While on, Kiwi runs the com.canonical.AppMenu.Registrar service unless another program already does.</description>
       </key>
+      <key name="menubar-finder-name" type="b">
+        <default>true</default>
+        <summary>Show Files as Finder</summary>
+        <description>Call GNOME Files (Nautilus) "Finder" where Kiwi draws app names (the menu bar, the dock, Launchpad, Spotlight and the app switcher) and give it Finder's menus: File (Find…, tabs), View, Go (Recents, Documents, Desktop, Downloads, Home, Computer, Network, Applications) and Window. The app's own .desktop file is not changed.</description>
+      </key>
       <key name="menubar-atspi-menus" type="b">
         <default>false</default>
         <summary>Read menus through accessibility (experimental)</summary>

@@ -26,6 +26,8 @@
 //
 // Pure JS (no gi imports): runs under `gjs -m` in tests.
 
+import { profileMenus } from './profiles.js';
+
 /** Top-level menus, left to right. */
 export const MENU_ORDER = Object.freeze(['app', 'file', 'edit', 'view', 'window', 'help']);
 
@@ -226,15 +228,19 @@ function tidy(items) {
  *    workspaces: {count, active, current}, windows: [{id, title, focused}]}
  * @param {object} [p.accels] slot -> accelerator string (wm shortcuts, Kiwi shortcuts)
  * @param {Function} p._ gettext
+ * @param {?object} [p.profile] an app profile (core/appMenus/profiles.js appProfile): its name
+ *   replaces appName, its labels rename slots, its menu plan adds items and menus
  * @returns {{id: string, title: string, items: object[]}[]}
  */
-export function buildMenus({ appName, actions = [], generic = {}, accels = {}, _ }) {
+export function buildMenus({ appName: ownName, actions = [], generic = {}, accels = {}, _, profile = null }) {
+    const appName = profile?.name ?? ownName;
+    const relabel = (slot, label) => (profile?.labels?.[slot] ? _(profile.labels[slot]) : label);
     const filled = slotsFromActions(actions);
     const ctx = { filled, accels };
     const win = !!generic.hasWindow;
     // A replacer function: an app name with '$&' or '$1' is inserted as is
     const fmt = (s, v) => s.replace('%s', () => v);
-    const item = (slot, label, opts) => slotItem(slot, label, ctx, opts);
+    const item = (slot, label, opts) => slotItem(slot, relabel(slot, label), ctx, opts);
 
     const about = item('about', fmt(_('About %s'), appName));
     if (!filled.has('about') && !generic.hasAbout)
@@ -310,14 +316,14 @@ export function buildMenus({ appName, actions = [], generic = {}, accels = {}, _
         item('shortcuts', _('Keyboard Shortcuts'), { optional: true }),
     ]);
 
-    const menus = [
+    const menus = applyProfileMenus([
         { id: 'app', title: appName, items: app },
         { id: 'file', title: _('File'), items: file },
         { id: 'edit', title: _('Edit'), items: edit },
         { id: 'view', title: _('View'), items: view },
         { id: 'window', title: _('Window'), items: windowMenu },
         { id: 'help', title: _('Help'), items: help },
-    ];
+    ], profileMenus(profile, actions, _));
     for (const menu of menus) {
         for (const it of menu.items) {
             const alternate = alternateFor(it, { appName, hasWindow: win, accels, _ });
@@ -327,6 +333,27 @@ export function buildMenus({ appName, actions = [], generic = {}, accels = {}, _
     }
     // Edit and View appear only when the app provides something for them
     return menus.filter(m => m.items.some(i => i.kind === 'item') || m.id === 'help');
+}
+
+// A profile's menu plan into the built menus: items go before `before` (else at the end of
+// the menu); a menu the generic set lacks is added before Window
+function applyProfileMenus(menus, plan) {
+    for (const part of plan) {
+        let menu = menus.find(m => m.id === part.id);
+        if (!menu) {
+            menu = { id: part.id, title: part.title ?? part.id, items: [] };
+            const at = menus.findIndex(m => m.id === 'window');
+            menus.splice(at < 0 ? menus.length : at, 0, menu);
+        }
+        const at = part.before ? menu.items.findIndex(i => i.id === part.before) : -1;
+        const items = [...menu.items];
+        if (at < 0)
+            items.push(SEP, ...part.items);
+        else
+            items.splice(at, 0, ...part.items, SEP);
+        menu.items = tidy(items);
+    }
+    return menus;
 }
 
 function workspaceSubmenu(ws, _) {

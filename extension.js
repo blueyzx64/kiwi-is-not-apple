@@ -26,6 +26,7 @@ import { restoreLegacyButtonLayout, runAllMigrations } from './lib/migrations.js
 import { runCleanup } from './lib/cleanup/index.js';
 import { Glass } from './lib/glass.js';
 import { IconStyle } from './lib/iconStyle.js';
+import { AppNames } from './core/appNames.js';
 import { EventHub } from './core/events.js';
 import { DesktopService } from './core/desktop.js';
 import { LayoutService } from './core/layout.js';
@@ -69,6 +70,7 @@ export default class KiwiExtension extends Extension {
         this._settings = this.getSettings();
         Glass.configure(this._settings);
         IconStyle.configure(this._settings);
+        AppNames.configure(this._settings);
 
         // Before anything reads settings or owns a GNOME key: a migration write during the
         // registry's first pass would re-enter it with half-migrated values, and a GNOME key a
@@ -180,6 +182,7 @@ export default class KiwiExtension extends Extension {
         this._events?.clear();
         this._appMenus = this._motion = this._layout = this._desktop = this._events = this._osd = this._timers = null;
         this._originals = null;
+        AppNames.configure(null);
         IconStyle.configure(null);
         Glass.configure(null);
         this._settings = null;

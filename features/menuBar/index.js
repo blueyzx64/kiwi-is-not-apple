@@ -8,7 +8,8 @@
 //   logo         logoMenu.js         menubar-logo ('fedora' | 'kiwi' | 'none')
 //   app menus    appMenuBar.js       menubar-app-menu; menus from core/appMenus (ctx.appMenus);
 //                                    menubar-native-menus (GTK menu bars, DBusMenu),
-//                                    menubar-atspi-menus / -popovers (experimental)
+//                                    menubar-atspi-menus / -popovers (experimental),
+//                                    menubar-finder-name (Files as Finder, core/appMenus/profiles.js)
 //   look         adaptiveBar.js      menubar-transparent (transparent bar, adaptive text)
 //   full screen  fullscreenReveal.js menubar-fullscreen-visible
 //   privacy      privacyDots.js      menubar-privacy-dots
@@ -144,7 +145,7 @@ export class MenuBar {
             });
             apps.start();
             return apps;
-        }, ['menubar-app-menu', 'menubar-native-menus', 'menubar-atspi-menus', 'menubar-atspi-popovers']);
+        }, ['menubar-app-menu', 'menubar-native-menus', 'menubar-atspi-menus', 'menubar-atspi-popovers', 'menubar-finder-name']);
         part('look', () => ks.bool('menubar-transparent'), reg => {
             const look = new AdaptiveBar(this._ctx, reg, { solidOnWindow: ks.bool('menubar-solid-on-window') });
             look.start();
