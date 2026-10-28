@@ -43,3 +43,4 @@ The owner tested 3.0.0 on real hardware (Fedora 44, GNOME 50) and reported the b
 5. Widgets card or gallery: clicking outside doesn't close it, while items under it can still be clicked.
 6. Windows in the Stage Manager strip (not on stage) must not show in Mission Control.
 7. Going from Mission Control back to the desktop, the top bar glitches and briefly loses its transparency.
+8. (owner) The drag-to-top tiling picker must look and animate like Windows 11 Snap Layouts, as the GNOME extension Tiling Shell's "Snap Assistant" does it. Dragging a window towards the top centre reveals a small handle, which expands into a bar of layouts; hover a zone to preview; drop to snap. This is queued after R3A (agent R3F).
