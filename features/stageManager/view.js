@@ -79,6 +79,7 @@ export class StripView {
         this._scrollTarget = 0;
         this._firstId = null;         // first entry shown last time
         this._shown = null;           // last applied visibility (null: never)
+        this._builtKey = null;        // what the cards were last built from
         this._edge = false;           // the pointer just pushed the edge
         this._dragging = null;        // entry id while an entry is dragged
         this._pending = false;        // an update came during the drag
@@ -182,7 +183,19 @@ export class StripView {
             this._pending = true;
             return;
         }
+        // Cards are rebuilt only when what they show changed: a rebuild while the strip is on
+        // screen redraws every card, which reads as a flicker
+        const key = this._contentKey();
+        if (!slide && key === this._builtKey)
+            return;
+        this._builtKey = key;
         this._rebuild(slide);
+    }
+
+    _contentKey() {
+        const { side, workArea, entries, tilt } = this._state;
+        return JSON.stringify([side, tilt, workArea, this._env.corners(),
+            entries.map(e => [e.id, e.set, e.names, e.windows.map(w => w.get_stable_sequence())])]);
     }
 
     /** Cheap: only whether the strip is shown (stage windows moved, overview, full screen). */
@@ -565,6 +578,7 @@ export class StripView {
                 holder.opacity = 255;
             if (this._pending) {
                 this._pending = false;
+                this._builtKey = this._contentKey();
                 this._rebuild(0);
             } else {
                 this._syncShown();

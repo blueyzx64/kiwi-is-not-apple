@@ -48,6 +48,11 @@ test('windowPlace: all windows in Mission Control', () => {
     eq(windowPlace({ appId: 'b', minimized: true }, view), 'spread');
 });
 
+test('windowPlace: a window in the Stage Manager strip is in no overview', () => {
+    eq(windowPlace({ appId: 'a', minimized: false, staged: true }, { mode: MODE.ALL, appId: null }), 'hidden');
+    eq(windowPlace({ appId: 'a', minimized: false, staged: true }, { mode: MODE.APP, appId: 'a' }), 'hidden');
+});
+
 test('windowPlace: App Exposé spreads the app, strips its minimized windows, hides the rest', () => {
     const view = { mode: MODE.APP, appId: 'a' };
     eq(windowPlace({ appId: 'a', minimized: false }, view), 'spread');

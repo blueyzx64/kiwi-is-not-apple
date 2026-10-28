@@ -32,7 +32,7 @@ import { ControlsState } from 'resource:///org/gnome/shell/ui/overviewControls.j
 import * as Workspace from 'resource:///org/gnome/shell/ui/workspace.js';
 import { SearchController } from 'resource:///org/gnome/shell/ui/searchController.js';
 
-import { skipsTaskbar } from '../../core/windowState.js';
+import { WindowState, skipsTaskbar } from '../../core/windowState.js';
 import { KiwiSettings } from '../../lib/settings.js';
 import { Keybindings, MODAL_MODES } from '../../lib/keybindings.js';
 import { ModalSurface } from '../../lib/modalSurface.js';
@@ -70,6 +70,7 @@ export class MissionControl {
         this._ = ctx.gettext ?? (s => s);
         this._view = ALL;
         this._pending = null;
+        this._static = null;         // SettingOwners of the static-Spaces keys, once taken
         this._recent = [];
         this.startupSkipped = false;
         this.startupState = null;
@@ -260,7 +261,10 @@ export class MissionControl {
             console.warn(`${LOG} SearchController._shouldTriggerSearch not found; typing still searches`);
     }
 
-    /** App Exposé shows the chosen app's windows only (minimized ones go to the strip). */
+    /**
+     * Windows in Stage Manager's strip (WindowState 'staged') are in no overview. App Exposé
+     * shows the chosen app's windows only (minimized ones go to the strip).
+     */
     _filterWindows() {
         const self = this;
         const proto = Workspace.Workspace?.prototype;
@@ -270,9 +274,12 @@ export class MissionControl {
         }
         this._cleanup.inject(proto, '_isOverviewWindow', function (orig, win) {
             const ok = orig.call(this, win);
-            if (!ok || self._view.mode === MODE.ALL)
+            if (!ok)
                 return ok;
-            return windowPlace({ appId: appOf(win)?.get_id() ?? null, minimized: win.minimized }, self._view) === 'spread';
+            const staged = WindowState.has(win, 'staged');
+            if (!staged && self._view.mode === MODE.ALL)
+                return ok;
+            return windowPlace({ appId: appOf(win)?.get_id() ?? null, minimized: win.minimized, staged }, self._view) === 'spread';
         });
     }
 
@@ -329,6 +336,36 @@ export class MissionControl {
     }
 
     /**
+     * Static Spaces on (idempotent; given back on disable). The Spaces bar's + calls it too, so
+     * the new Space stays even where GNOME's dynamic workspaces were left on.
+     */
+    holdStaticSpaces() {
+        if (!Meta.prefs_get_dynamic_workspaces())
+            return;
+        if (!this._static) {
+            const c = this._cleanup;
+            const { originals } = this._ctx;
+            const mutter = new Gio.Settings({ schema_id: 'org.gnome.mutter' });
+            const wm = new Gio.Settings({ schema_id: 'org.gnome.desktop.wm.preferences' });
+            const count = new SettingOwner(originals, wm, 'num-workspaces', {
+                type: 'i', transform: () => global.workspace_manager.n_workspaces, yieldToUser: true,
+            });
+            const dynamic = new SettingOwner(originals, mutter, 'dynamic-workspaces', {
+                type: 'b', value: false, yieldToUser: true,
+            });
+            this._static = { count, dynamic };
+            c.add(() => {
+                count.release();
+                dynamic.release();
+                this._static = null;
+            });
+        }
+        // Again after the user turned dynamic workspaces back on (the owners let go then)
+        this._static.count.sync(true);
+        this._static.dynamic.sync(true);
+    }
+
+    /**
      * GNOME settings Mission Control changes, each through core/originals (given back on
      * disable and after a crash):
      *   - static Spaces: org.gnome.mutter dynamic-workspaces off, after num-workspaces is set to
@@ -340,22 +377,8 @@ export class MissionControl {
     _ownSettings() {
         const c = this._cleanup;
         const { originals } = this._ctx;
-        if (this._ks.bool(KEYS.staticSpaces)) {
-            const mutter = new Gio.Settings({ schema_id: 'org.gnome.mutter' });
-            if (mutter.get_boolean('dynamic-workspaces')) {
-                const wm = new Gio.Settings({ schema_id: 'org.gnome.desktop.wm.preferences' });
-                const count = new SettingOwner(originals, wm, 'num-workspaces', {
-                    type: 'i', transform: () => global.workspace_manager.n_workspaces, yieldToUser: true,
-                });
-                count.sync(true);
-                c.add(() => count.release());
-                const dynamic = new SettingOwner(originals, mutter, 'dynamic-workspaces', {
-                    type: 'b', value: false, yieldToUser: true,
-                });
-                dynamic.sync(true);
-                c.add(() => dynamic.release());
-            }
-        }
+        if (this._ks.bool(KEYS.staticSpaces))
+            this.holdStaticSpaces();
         const switcher = new Gio.Settings({ schema_id: 'org.gnome.shell.app-switcher' });
         const currentOnly = new SettingOwner(originals, switcher, 'current-workspace-only', {
             type: 'b', value: true,
