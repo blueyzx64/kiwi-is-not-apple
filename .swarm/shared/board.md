@@ -285,3 +285,4 @@ No more installer work: no new pieces (Trash-drag uninstall, fly-to-dock, update
 - Release v3.0.0 published (zip + kiwi-shelf-helper RPM) via a manual run of pack-release.yml with tag input; tag pushes are blocked from this session.
 - PR #13 merged (docs revamp).
 - R3A → merged: top-bar window controls, green menu and hide-titlebars removed; the app buttons keep side right and the traffic look; Split View on Ctrl+Super+Alt+Left/Right; 8 keys deprecated; migration restores the user's layout.
+- R3D → merged: the notch drag-out failed over maximized and top-touching windows because the notch's input plate covered the dashboard footprint during the drag; it's hidden while dragging. 5/5 real drops open in Text Editor.
