@@ -122,7 +122,8 @@ pinch, hot corner), `split-view-changed` (Split View), `recording-started` /
 | `quickSettings.js` | `readyQuickSettings()`, `whenQuickSettingsReady(cleanup, fn, name)` (bounded wait), `stockKeys(qs)` (stock items by model key) |
 | `menuGlass.js`, `lazyMenu.js` | glass on Kiwi's panel menus; a panel popup filled as it opens |
 | `menuBarPins.js` | the `menubar-pinned` contract (Always / When Active / Never) for the Control Center editor, the prefs and menu-bar-items |
-| `batteryModel.js` | battery time from UPower values (user row, Battery item) |
+| `batteryModel.js` | battery time from UPower values (user row, Battery item); `batteryDetails` for Option-click |
+| `optionKey.js` | Option (Alt) alternates in Kiwi's menus: `setAlternate(item, alt)`, `OptionAlternates.attach(menu, cleanup, {enabled})`, `isOptionHeld()` (menu bar, pinned items) |
 | `keepHidden.js` | keep a Shell actor hidden while a feature runs, give back its wanted visibility |
 | `jobQueue.js` | promise queue (`createJobQueue`) |
 | `launcherEntry.js` (+`Model`) | `com.canonical.Unity.LauncherEntry` badges, progress, urgent (entries go with their sender) |
@@ -133,7 +134,7 @@ pinch, hot corner), `split-view-changed` (Split View), `recording-started` /
 
 | Folder | Registry ids (features.js) | Notes |
 |---|---|---|
-| `appButtons/` | `app-buttons`, `gtk-theme` | the apps' own titlebar buttons (`index.js`): side and button set through the WM `button-layout`, owned by `buttonLayout.js` (a `SettingOwner`, the user's layout restored exactly); GTK stylesheets in `gtk/` (traffic lights, app fixes) imported into the user's gtk.css by `gtkTheme.js`. No window buttons in the top bar |
+| `appButtons/` | `app-buttons`, `gtk-theme` | the apps' own titlebar buttons (`index.js`): side and button set through the WM `button-layout`, owned by `buttonLayout.js` (a `SettingOwner`, the user's layout restored exactly); GTK stylesheets in `gtk/` (traffic lights and their press bounce, more distinct active window, toolbar button shapes, app fixes) imported into the user's gtk.css by `gtkTheme.js`; the unsaved-changes dot over the close button (`unsavedDots.js`, a Shell actor on the window actor). No window buttons in the top bar |
 | `menuBar/` | `menu-bar` | the macOS menu bar: logo menu, app name and menus (core/appMenus), transparent adaptive bar, full-screen reveal, privacy dots, About This PC, Force Quit, clock hook, Activities policy |
 | `calendar/` | `calendar`, `quick-settings-notifications`, `dnd-button` | date menu on the right as a card; notification list in Quick Settings; Kiwi's Do Not Disturb (beaten by `control-center`) |
 | `controlCenter/` | `control-center` | Quick Settings restyled; Edit Controls (`editor.js`, `customModel.js`: gallery, sizes, `control-center-layout`, empty = default plan), Kiwi's own controls (`controls.js`: feature and accessibility switches, Screenshot, Screen Recording, Timer, Keep Awake, Low Power Mode) |

@@ -68,9 +68,12 @@ export function appButtonsLayout(original, { position = 'right', set = 'all' } =
 /**
  * The GTK stylesheets (in gtk/) Kiwi imports into ~/.config/gtk-<version>.0/gtk.css, in
  * order: one traffic-light set (titlebuttons<v>.css, plus its small size) when the style is
- * 'macos', then the app fixes of popup-menu-styling (last, so they can override the rest).
+ * 'macos', with the press bounce (macOS 27) unless motion is reduced or off; the macOS
+ * accessibility and window looks (toolbar button shapes, a more distinct active window); then
+ * the app fixes of popup-menu-styling (last, so they can override the rest).
  *
- * @param {{style: string, size: string, appFixes: boolean}} config
+ * @param {{style: string, size: string, appFixes: boolean, bounce?: boolean,
+ *   reducedMotion?: boolean, toolbarShapes?: boolean, distinctActive?: boolean}} config
  * @param {'3'|'4'} version GTK major version
  * @returns {string[]} file names
  */
@@ -80,8 +83,60 @@ export function gtkSheets(config, version) {
         sheets.push(`titlebuttons${version}.css`);
         if (config.size === 'small')
             sheets.push(`titlebuttons-size-small${version}.css`);
+        if (config.bounce && !config.reducedMotion)
+            sheets.push(`titlebuttons-bounce-${config.size === 'small' ? 'small' : 'normal'}${version}.css`);
     }
+    if (config.distinctActive)
+        sheets.push(`active-window${version}.css`);
+    if (config.toolbarShapes)
+        sheets.push(`toolbar-shapes${version}.css`);
     if (config.appFixes)
         sheets.push(`fixes${version}.css`);
     return sheets;
+}
+
+// A window title that marks unsaved changes, as GNOME and GTK apps write it: a leading "*"
+// (gedit, GIMP, Inkscape, LibreOffice under some themes), a "•" before or after the name
+// (Text Editor's style, VS Code), or "(modified)"/"[Modified]" (Vim, Emacs-style titles).
+const MODIFIED_TITLE = [
+    /^\s*\*\s*\S/,
+    /^\s*[•●]\s*\S/,
+    /\S\s*[•●]\s*(?:[-–—|]|$)/,
+    /\s[([](?:modified|unsaved|edited)[)\]]/i,
+];
+
+/**
+ * Whether a window title marks unsaved changes (the dot in the red close button). A heuristic:
+ * apps that show it only inside the window (a tab dot, a subtitle) are not seen.
+ *
+ * @param {?string} title
+ * @returns {boolean}
+ */
+export function isModifiedTitle(title) {
+    const t = String(title ?? '');
+    return t.length > 1 && MODIFIED_TITLE.some(re => re.test(t));
+}
+
+// The macOS traffic lights of gtk/titlebuttons*.css, measured from the window's frame (the
+// visible window, not its shadow): the close button's centre, in logical px, measured on
+// libadwaita headerbars (Text Editor, an Adw.HeaderBar) on Shell 50. A plain Gtk.HeaderBar
+// puts it about 7 px further in; the Shell cannot tell the toolkits apart, so the common
+// libadwaita geometry serves all.
+export const CLOSE_BUTTON = Object.freeze({
+    normal: { inset: 26, top: 23 },
+    small: { inset: 25, top: 23 },
+});
+
+/**
+ * Where the unsaved dot goes inside a window actor.
+ *
+ * @param {{frame: {x, y, width}, buffer: {x, y}, side: 'left'|'right', size: string}} p
+ *   frame and buffer rects in stage px (Meta.Window get_frame_rect / get_buffer_rect)
+ * @returns {{x: number, y: number}} the dot's centre relative to the window actor
+ */
+export function closeDotCenter({ frame, buffer, side, size }) {
+    const g = CLOSE_BUTTON[size === 'small' ? 'small' : 'normal'];
+    const left = frame.x - buffer.x;
+    const x = side === 'left' ? left + g.inset : left + frame.width - g.inset;
+    return { x: Math.round(x), y: Math.round(frame.y - buffer.y + g.top) };
 }

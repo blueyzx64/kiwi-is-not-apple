@@ -1,7 +1,7 @@
 // Run: gjs -m tests/appButtonsModel.test.js
 // The apps' own titlebar buttons: layout, GTK sheets, and the owner of the WM button-layout.
 import {
-    parseButtonLayout, gtkSheets, appButtonsLayout,
+    parseButtonLayout, gtkSheets, appButtonsLayout, isModifiedTitle, closeDotCenter,
 } from '../features/appButtons/model.js';
 import { ButtonLayoutOwner, WM_SCHEMA } from '../features/appButtons/buttonLayout.js';
 import { OriginalsStore, STORE_KEY, restoreStale, originalId } from '../core/originals.js';
@@ -167,6 +167,36 @@ test('gtkSheets: never a sheet that hides the titlebar buttons', () => {
     for (const style of ['macos', 'gnome'])
         for (const v of ['3', '4'])
             eq(gtkSheets(cfg({ style, appFixes: true }), v).some(n => n.startsWith('hide-')), false);
+});
+
+test('gtkSheets: bounce follows the size, and not with reduced motion', () => {
+    eq(gtkSheets(cfg({ bounce: true }), '4'), ['titlebuttons4.css', 'titlebuttons-bounce-normal4.css']);
+    eq(gtkSheets(cfg({ bounce: true, size: 'small' }), '3'),
+        ['titlebuttons3.css', 'titlebuttons-size-small3.css', 'titlebuttons-bounce-small3.css']);
+    eq(gtkSheets(cfg({ bounce: true, reducedMotion: true }), '4'), ['titlebuttons4.css']);
+    eq(gtkSheets(cfg({ bounce: true, style: 'gnome' }), '4'), []);
+});
+test('gtkSheets: active window and toolbar shapes, before the app fixes', () => {
+    eq(gtkSheets(cfg({ style: 'gnome', distinctActive: true, toolbarShapes: true, appFixes: true }), '4'),
+        ['active-window4.css', 'toolbar-shapes4.css', 'fixes4.css']);
+});
+
+// --- unsaved changes in the title
+test('isModifiedTitle: the usual marks', () => {
+    for (const t of ['*Untitled Document 1 - gedit', '* notes.txt', '• notes.md', '● main.js - kiwi - Visual Studio Code',
+        'notes.txt •', 'notes.txt • - Text Editor', 'report.odt [Modified]', 'init.vim (modified) - VIM'])
+        eq([t, isModifiedTitle(t)], [t, true]);
+});
+test('isModifiedTitle: not a separator or a plain title', () => {
+    for (const t of ['Notes • Kiwi', 'Files', 'a*b - Calculator', '', null, '*', 'Inbox (3) - Mail'])
+        eq([t, isModifiedTitle(t)], [t, false]);
+});
+test('closeDotCenter: from the frame, inside the shadow margin, on either side', () => {
+    const frame = { x: 130, y: 120, width: 600 };
+    const buffer = { x: 100, y: 100 };
+    eq(closeDotCenter({ frame, buffer, side: 'left', size: 'normal' }), { x: 56, y: 43 });
+    eq(closeDotCenter({ frame, buffer, side: 'right', size: 'normal' }), { x: 604, y: 43 });
+    eq(closeDotCenter({ frame, buffer: frame, side: 'left', size: 'small' }).x, 25);
 });
 
 // --- app buttons (UX round 2, #8)

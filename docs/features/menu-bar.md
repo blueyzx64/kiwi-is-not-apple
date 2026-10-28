@@ -9,7 +9,9 @@ Turns GNOME's top bar into the macOS menu bar: logo menu, the focused app's name
 - **Ctrl+F2** moves the keyboard focus into the menus.
 - **Clock:** a click opens the Notification Center ([notification-center-focus.md](notification-center-focus.md)); Alt-click toggles Do Not Disturb.
 - **Full screen:** the bar hides and slides in when the pointer touches the top edge.
-- **Privacy dots:** orange microphone, green camera, purple screen sharing; click to see which app.
+- **Privacy dots:** orange microphone, green camera, purple screen sharing; click to see which app. With **Differentiate Without Colour** they also differ in shape (round microphone, ringed camera, square screen), and the Dock's background-app indicator becomes a hollow ring.
+- **Option (Alt) in menus:** while Alt is held with a Kiwi menu open, items with an alternate change in place, as on macOS: About This PC → System Information… (GNOME Settings, System > About), Minimize → Minimize All, Close Window → Close All, Quit → Force Quit (the Dock's Option-Quit; "Quit and Keep Windows" needs app support). Hide has none: Hide Others is already its own item. Alt-click on the pinned Battery item adds the power draw and stored energy. Menus of other menu bar items (tray icons, GNOME's own) are not Kiwi's and do not change.
+- **Show Menu Bar Background** (Tahoe's wording) is the opposite of `menubar-transparent`: the prefs switch is bound inverted, no new key.
 - **Status items:** tray icons of apps (StatusNotifierItem) with their menus, controls pinned from the Control Center ("Show in Menu Bar"), battery percentage, an item order and an overflow chevron for items that do not fit.
 
 ## Settings (Menu Bar page; default)
@@ -19,11 +21,13 @@ Turns GNOME's top bar into the macOS menu bar: logo menu, the focused app's name
 | `menubar-app-menu` | on |
 | `menubar-native-menus` | on |
 | `menubar-atspi-menus`, `menubar-atspi-popovers` (experimental) | off |
-| `menubar-transparent` | on |
+| `menubar-transparent` (prefs: Show Menu Bar Background, inverted) | on |
 | `menubar-solid-on-window` | off |
 | `menubar-fullscreen-visible` | off |
 | `menubar-privacy-dots` | on |
 | `menubar-command-glyphs` (write shortcuts as ⌘ ⌥ ⌃ ⇧) | on |
+| `menubar-option-alternates` (Option changes menu items) | on |
+| `a11y-differentiate-without-color` (shapes for the privacy dots and the Dock's background-app indicator) | off |
 | `menubar-clock-option-dnd` | on |
 | `menubar-focus-shortcut` | Ctrl+F2 |
 | `menubar-force-quit-shortcut` | Super+Alt+Escape |
@@ -38,4 +42,4 @@ Turns GNOME's top bar into the macOS menu bar: logo menu, the focused app's name
 - If the AppIndicator extension is enabled it owns the tray; Kiwi then only orders and hides its icons.
 
 ## Code
-`features/menuBar/` (index, `appMenuBar.js`, `adaptiveBar.js`, `logoMenu.js`, `privacyDots.js`, `fullscreenReveal.js`, `forceQuit.js`, `aboutDialog.js`), `features/menuBarItems/`, `features/calendar/`, `core/appMenus/`, `core/panelLayout.js`.
+`features/menuBar/` (index, `appMenuBar.js`, `adaptiveBar.js`, `logoMenu.js`, `privacyDots.js`, `fullscreenReveal.js`, `forceQuit.js`, `aboutDialog.js`), `lib/optionKey.js` (Option alternates), `core/appMenus/model.js` `ALTERNATES`, `features/menuBarItems/`, `features/calendar/`, `core/appMenus/`, `core/panelLayout.js`.

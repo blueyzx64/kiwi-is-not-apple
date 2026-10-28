@@ -35,6 +35,7 @@ import { AtspiProvider } from '../../core/appMenus/atspi.js';
 import { fitMenus } from './model.js';
 import { LazyMenu, menuHeading, menuItem } from './menuItems.js';
 import { MenuGlass } from '../../lib/menuGlass.js';
+import { OptionAlternates } from '../../lib/optionKey.js';
 
 export const APPS_CLAIM = 'kiwi-menubar-apps';
 const OVERFLOW_ID = 'overflow';
@@ -168,10 +169,11 @@ export class AppMenuBar {
      * @param {{native: boolean, atspi: boolean, popovers: boolean}} [opts.providers] which
      *   menu bar providers to run
      */
-    constructor(ctx, cleanup, { keys, providers = {} }) {
+    constructor(ctx, cleanup, { keys, providers = {}, optionAlternates = () => true }) {
         this._ctx = ctx;
         this._cleanup = cleanup;
         this._keys = keys;
+        this._optionAlternates = optionAlternates;
         this._providerOpts = providers;
         this._buttons = [];
         this._more = null;       // the "»" button holding the menus that do not fit
@@ -397,6 +399,7 @@ export class AppMenuBar {
         const b = new TopMenu(title, button => this._onOpen(button));
         Main.panel.menuManager.addMenu(b.menu);
         this._glass.add(b.menu);
+        OptionAlternates.attach(b.menu, this._cleanup, { enabled: this._optionAlternates });
         this._cleanup.connect(b.menu, 'open-state-changed', (_m, open) => {
             // Connected after the menu manager's handler, so it runs once the grab took
             // the key focus: macOS puts the cursor in Help's search field
@@ -544,6 +547,10 @@ export class AppMenuBar {
                     accel: it.accel, keys: this._keys(), enabled: it.enabled,
                     checked: checks ? !!it.checked : null, radio: !!it.radio,
                     onActivate: () => this._service.activate(target, it.command),
+                    alternate: it.alternate ? {
+                        label: it.alternate.label, accel: it.alternate.accel, enabled: it.alternate.enabled,
+                        onActivate: () => this._service.activate(target, it.alternate.command),
+                    } : null,
                 }));
             }
         }

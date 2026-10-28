@@ -1,0 +1,6 @@
+/* feature: app-buttons */
+/* The unsaved-changes dot over the red close traffic light (unsavedDots.js), as on macOS */
+.kiwi-unsaved-dot {
+    border-radius: 3px;
+    background-color: rgba(77, 0, 0, 0.78);
+}

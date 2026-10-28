@@ -116,6 +116,37 @@ export const WM_ACCEL_SLOTS = Object.freeze({
 
 const SEP = Object.freeze({ kind: 'separator' });
 
+// Option (Alt) alternates, as macOS menus have them: slot -> the item shown in its place while
+// Alt is held. `label(_)` may hold %s for the app name; the command is always a generic one, so it
+// works for every app. Quit's alternate is Force Quit (the Dock's Option-Quit on macOS; the
+// app menu's "Quit and Keep Windows" needs app support Kiwi cannot ask for). Hide has none:
+// Hide Others is already its own item in the App menu.
+export const ALTERNATES = Object.freeze({
+    'minimize': { id: 'minimize-all', label: _ => _('Minimize All'), name: 'minimize-all', needsWindow: true },
+    'close-window': { id: 'close-all', label: _ => _('Close All'), name: 'close-all', needsWindow: true },
+    'quit': { id: 'force-quit', label: _ => _('Force Quit %s'), name: 'force-quit' },
+});
+
+/**
+ * The Option alternate of an item, or null.
+ *
+ * @param {object} item a built menu item
+ * @param {{appName: string, hasWindow: boolean, accels?: object, _: Function}} p
+ * @returns {?{id: string, label: string, enabled: boolean, accel: ?string, command: object}}
+ */
+export function alternateFor(item, { appName, hasWindow, accels = {}, _ }) {
+    const alt = item?.kind === 'item' ? ALTERNATES[item.id] : null;
+    if (!alt)
+        return null;
+    return {
+        id: alt.id,
+        label: alt.label(_).replace('%s', () => appName),
+        enabled: alt.needsWindow ? !!hasWindow : true,
+        accel: alt.accelSlot ? accels[alt.accelSlot] ?? null : null,
+        command: { provider: 'generic', name: alt.name },
+    };
+}
+
 /** @returns {Map<string, {action, accel}>} slot -> the app's action that fills it */
 function slotsFromActions(actions = []) {
     const byName = new Map();
@@ -287,6 +318,13 @@ export function buildMenus({ appName, actions = [], generic = {}, accels = {}, _
         { id: 'window', title: _('Window'), items: windowMenu },
         { id: 'help', title: _('Help'), items: help },
     ];
+    for (const menu of menus) {
+        for (const it of menu.items) {
+            const alternate = alternateFor(it, { appName, hasWindow: win, accels, _ });
+            if (alternate)
+                it.alternate = alternate;
+        }
+    }
     // Edit and View appear only when the app provides something for them
     return menus.filter(m => m.items.some(i => i.kind === 'item') || m.id === 'help');
 }

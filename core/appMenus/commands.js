@@ -70,6 +70,27 @@ export class GenericCommands {
         case 'quit':
             app?.request_quit();
             return !!app;
+        case 'force-quit':
+            // Option-Quit: the app's clients are killed (Meta.Window.kill, as Force Quit… does)
+            for (const w of app?.get_windows() ?? [])
+                w.kill();
+            return !!app?.get_windows().length;
+        case 'close-all':
+        case 'minimize-all': {
+            // The app's user-facing windows (desktop model), on every workspace, as macOS does
+            const ids = new Set((app?.get_windows() ?? []).map(w => w.get_stable_sequence()));
+            const windows = this._desktop.model.windows({ minimized: false })
+                .filter(info => ids.has(info.id) && isUserFacing(info))
+                .map(info => this._desktop.metaWindow(info.id))
+                .filter(Boolean);
+            for (const w of windows) {
+                if (name === 'close-all')
+                    w.delete(now());
+                else if (w.can_minimize() && !WindowState.interceptMinimize(w))
+                    w.minimize();
+            }
+            return windows.length > 0;
+        }
         case 'new-window':
             if (!app?.can_open_new_window())
                 return false;

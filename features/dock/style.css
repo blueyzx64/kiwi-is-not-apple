@@ -42,6 +42,12 @@
     box-shadow: none;
 }
 
+/* Differentiate Without Colour (a11y-differentiate-without-color): a hollow ring, not only grey */
+.kiwi-dock-shapes .kiwi-dock-dot.kiwi-dock-dot-background {
+    background-color: transparent;
+    border: 1px solid rgba(220, 220, 226, 0.85);
+}
+
 /* LauncherEntry: the red count at the icon's top right, and a progress bar along its foot */
 .kiwi-dock-badge {
     min-width: 12px;

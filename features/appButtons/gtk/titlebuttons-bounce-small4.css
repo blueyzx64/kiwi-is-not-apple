@@ -1,0 +1,18 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
+/* GTK4 - Traffic lights bounce (macOS 27 Golden Gate): the light shrinks while pressed and
+ * springs back past its size on release (an overshooting curve). Imported only with the macOS
+ * look, app-buttons-bounce on and Reduce Motion off; GTK skips transitions with animations off. */
+
+windowcontrols button.close,
+windowcontrols button.minimize,
+windowcontrols button.maximize {
+  transition: background-size 280ms cubic-bezier(0.34, 1.8, 0.64, 1);
+}
+
+windowcontrols button.close:active,
+windowcontrols button.minimize:active,
+windowcontrols button.maximize:active {
+  background-size: 11px 11px;
+  transition: background-size 90ms ease-out;
+}

@@ -123,6 +123,7 @@ export class MenuBar {
                 ctx: this._ctx, cleanup: reg, keys,
                 actions: { about: () => this._about.open(), forceQuit: () => this._forceQuit.open() },
                 forceQuitAccel: () => ks.strv('menubar-force-quit-shortcut')[0] ?? null,
+                optionAlternates: () => ks.bool('menubar-option-alternates'),
             });
             reg.add(() => logo.destroy());
             new MenuGlass(reg).add(logo.menu);
@@ -134,6 +135,7 @@ export class MenuBar {
         part('apps', () => ks.bool('menubar-app-menu'), reg => {
             const apps = new AppMenuBar(this._ctx, reg, {
                 keys,
+                optionAlternates: () => ks.bool('menubar-option-alternates'),
                 providers: {
                     native: ks.bool('menubar-native-menus'),
                     atspi: ks.bool('menubar-atspi-menus'),

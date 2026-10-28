@@ -60,6 +60,7 @@ import { readAutostart, setAutostart } from './autostart.js';
 import { keepOtherDocksOff } from './dashToDock.js';
 
 const LAYOUT_KEYS = ['dock-position', 'dock-icon-size'];
+const SHAPES_KEY = 'a11y-differentiate-without-color';
 const CONTENT_KEYS = ['dock-show-recents', 'dock-running-dots', 'dock-minimize-to-app', 'dock-downloads',
     'dock-background-apps', 'dock-folders', 'dock-badges', 'dock-launchpad', 'launchpad',
     'dock-mission-control'];
@@ -151,6 +152,15 @@ export class Dock {
             this.config = readConfig(this._ks);
             this._magnifier?.setHovered(this._view.frame.hover);
         });
+        // Differentiate Without Colour: the background-app indicator becomes a hollow ring
+        const shapes = () => {
+            if (this._ks.bool(SHAPES_KEY))
+                this._view.band.add_style_class_name('kiwi-dock-shapes');
+            else
+                this._view.band.remove_style_class_name('kiwi-dock-shapes');
+        };
+        this._ks.watch(SHAPES_KEY, shapes);
+        shapes();
         this._ks.watch('dock-downloads-view', () => {
             this.config = readConfig(this._ks);
         });

@@ -158,6 +158,18 @@
 .kiwi-privacy-camera { background-color: #30d158; }
 .kiwi-privacy-screen { background-color: #bf5af2; }
 
+/* Differentiate Without Colour (a11y-differentiate-without-color): the dots also differ in
+   shape: a round microphone dot, a ringed camera dot, a square screen dot */
+.kiwi-privacy-dots.kiwi-privacy-shapes .kiwi-privacy-camera {
+  background-color: transparent;
+  border: 2px solid #30d158;
+  width: 3px;
+  height: 3px;
+}
+.kiwi-privacy-dots.kiwi-privacy-shapes .kiwi-privacy-screen {
+  border-radius: 1px;
+}
+
 /* ---- About This PC ---- */
 .kiwi-about {
   padding: 28px 28px 22px;

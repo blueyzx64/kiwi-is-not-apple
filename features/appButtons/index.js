@@ -6,13 +6,20 @@
 // The look (stock GNOME or Kiwi's macOS CSS) is the GTK CSS of gtkTheme.js, which reads
 // app-buttons-style.
 
+//
+// With the macOS look, unsavedDots.js puts the unsaved-changes dot in the red close button of
+// windows whose title marks unsaved changes (app-buttons-unsaved-dot).
+
 import Gio from 'gi://Gio';
 
+import { CleanupRegistry } from '../../lib/disposables.js';
 import { KiwiSettings } from '../../lib/settings.js';
 import { ButtonLayoutOwner, WM_SCHEMA } from './buttonLayout.js';
 import { appButtonsLayout } from './model.js';
+import { UnsavedDots } from './unsavedDots.js';
 
 const KEYS = ['window-controls-side', 'app-buttons-set'];
+const DOT_KEYS = ['app-buttons-unsaved-dot', 'app-buttons-style'];
 
 export class AppButtonsFeature {
     constructor(ctx, cleanup) {
@@ -39,7 +46,38 @@ export class AppButtonsFeature {
             this._owner = null;
         });
         this._owner.sync(true);
-        ks.watch(KEYS, () => this._owner?.reapply());
+        ks.watch(KEYS, () => {
+            this._owner?.reapply();
+            this._dots?.refresh();
+        });
+
+        // The unsaved dot: its own registry, so its setting turns it on and off live
+        cleanup.add(() => this._stopDots());
+        const syncDots = () => {
+            this._stopDots();
+            if (ks.bool('app-buttons-unsaved-dot') && ks.string('app-buttons-style') === 'macos') {
+                this._dotsReg = new CleanupRegistry();
+                this._dots = new UnsavedDots(this._dotsReg, {
+                    side: () => ks.string('window-controls-side'),
+                    size: () => ks.string('button-size'),
+                });
+                this._dots.start();
+            }
+        };
+        ks.watch(DOT_KEYS, syncDots);
+        ks.watch('button-size', () => this._dots?.refresh());
+        syncDots();
+    }
+
+    /** The unsaved-dot tracker while it runs (tests, the harness). */
+    get unsavedDots() {
+        return this._dots ?? null;
+    }
+
+    _stopDots() {
+        this._dotsReg?.dispose();
+        this._dotsReg = null;
+        this._dots = null;
     }
 
     disable() {

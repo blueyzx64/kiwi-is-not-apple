@@ -1,0 +1,15 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
+/* GTK3 - Show toolbar button shapes (macOS Accessibility > Display): the flat buttons of
+ * headerbars and toolbars get a subtle border, so their clickable area shows. The traffic
+ * lights are left alone. Imported with app-buttons-toolbar-shapes. */
+
+headerbar button:not(.titlebutton):not(.suggested-action):not(.destructive-action),
+.toolbar button.flat,
+toolbar button {
+  box-shadow: inset 0 0 0 1px alpha(currentColor, 0.28);
+}
+
+headerbar button:not(.titlebutton):backdrop {
+  box-shadow: inset 0 0 0 1px alpha(currentColor, 0.16);
+}

@@ -24,9 +24,10 @@ import { Slider } from 'resource:///org/gnome/shell/ui/slider.js';
 import { spawn } from 'resource:///org/gnome/shell/misc/util.js';
 
 import { MprisWatcher } from '../../core/mprisWatcher.js';
-import { batteryTime } from '../../lib/batteryModel.js';
+import { batteryDetails, batteryTime } from '../../lib/batteryModel.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { LazyMenu } from '../../lib/lazyMenu.js';
+import { isOptionHeld } from '../../lib/optionKey.js';
 import { MenuGlass } from '../../lib/menuGlass.js';
 import { stockKeys } from '../../lib/quickSettings.js';
 import { PINNABLE, batteryText, parsePins, pinShown } from '../../lib/menuBarPins.js';
@@ -389,6 +390,15 @@ class PinnedItem {
             row.connect('toggled', () => lp.toggle());
             this.menuReg.add(this._ctx.events.on('low-power-changed', ({ active }) => row.setToggleState(active)));
             menu.addMenuItem(row);
+        }
+        // Option-click (macOS): the battery's details too
+        const details = this._ctx.settings.get_boolean('menubar-option-alternates') && isOptionHeld()
+            ? batteryDetails(proxy) : [];
+        if (details.length) {
+            menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+            const labels = { rate: _('Power Draw:'), energy: _('Energy:') };
+            for (const { kind, text } of details)
+                menu.addMenuItem(info(`${labels[kind]} ${text}`));
         }
         const health = lp?.health ?? null;
         if (health) {

@@ -2,6 +2,7 @@
 // Privacy dots (research BM "Microphone and camera in-use indicators"): an orange dot while
 // an app records from the microphone, green for the camera, purple while the screen is
 // shared or recorded, next to the Control Center. Clicking them lists who is using what.
+// With Differentiate Without Colour (a11y-differentiate-without-color) they differ in shape too.
 //
 // The data is the Shell's own: its microphone rule on the shared mixer control (a running
 // source with a recording client other than volume meters, not muted), the camera
@@ -30,6 +31,7 @@ import { MenuGlass } from '../../lib/menuGlass.js';
 
 export const PRIVACY_ROLE = 'kiwi-menubar-privacy';
 const KINDS = ['screen', 'camera', 'mic'];
+const SHAPES_KEY = 'a11y-differentiate-without-color';
 
 const PrivacyButton = GObject.registerClass(
 class KiwiPrivacyButton extends PanelMenu.Button {
@@ -40,6 +42,7 @@ class KiwiPrivacyButton extends PanelMenu.Button {
         this.add_style_class_name('kiwi-menubar-privacy');
         const box = new St.BoxLayout({ style_class: 'kiwi-privacy-dots', y_align: Clutter.ActorAlign.CENTER });
         this.add_child(box);
+        this.box = box;
         this.dots = {};
         for (const kind of KINDS) {
             const dot = new St.Widget({ style_class: `kiwi-privacy-dot kiwi-privacy-${kind}`, visible: false, y_align: Clutter.ActorAlign.CENTER });
@@ -81,6 +84,17 @@ export class PrivacyDots {
             id: PRIVACY_ROLE, actor: button.container, box: 'right',
             anchor: { before: ['quickSettings'], fallback: 'last' },
         });
+
+        // Differentiate Without Colour: the dots get shapes too
+        const settings = this._ctx.settings;
+        const shapes = () => {
+            if (settings.get_boolean(SHAPES_KEY))
+                button.box.add_style_class_name('kiwi-privacy-shapes');
+            else
+                button.box.remove_style_class_name('kiwi-privacy-shapes');
+        };
+        cleanup.connect(settings, `changed::${SHAPES_KEY}`, shapes);
+        shapes();
 
         // Microphone: the Shell's rule, on its own mixer control
         const sync = () => this._sync();

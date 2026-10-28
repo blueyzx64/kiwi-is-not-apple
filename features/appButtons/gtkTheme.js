@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // GTK stylesheets for the apps' own titlebars: the macOS traffic lights of app-buttons-style
-// 'macos' and the app fixes of popup-menu-styling. Which sheets: model.js gtkSheets().
+// 'macos' (with the press bounce of app-buttons-bounce), the more distinct active window
+// (app-buttons-distinct-active), toolbar button shapes (app-buttons-toolbar-shapes) and the
+// app fixes of popup-menu-styling. Which sheets: model.js gtkSheets().
 //
 // Imports are written only to the user's ~/.config/gtk-{3,4}.0/gtk.css, between Kiwi's two
 // marker comments, so the extension never writes inside its own installation directory
@@ -28,7 +30,8 @@ const MANAGED_BLOCK_REGEX = /\/\* Kiwi \(is not Apple\) - managed imports: begin
 // Single-line imports into the extension that versions <= 1.9.1 wrote without markers.
 const LEGACY_IMPORT_REGEX = /^[^\n]*@import[^\n]*kiwi@kemma[^\n]*\n?/gm;
 
-const KEYS = ['button-size', 'popup-menu-styling', 'app-buttons-style'];
+const KEYS = ['button-size', 'popup-menu-styling', 'app-buttons-style', 'app-buttons-bounce',
+    'app-buttons-distinct-active', 'app-buttons-toolbar-shapes'];
 
 /**
  * gtk.css text with Kiwi's block replaced by `block` ('' removes it), user rules untouched.
@@ -81,6 +84,8 @@ export class GtkTheme {
         const ks = new KiwiSettings(this._ctx.settings);
         ks.attach(this._cleanup);
         ks.watch(KEYS, () => this._update(ks));
+        // The bounce follows Reduce Motion and the animations setting (core/motion)
+        this._ctx.events.on('motion-changed', () => this._update(ks), this._cleanup);
         // On stop (lock, disable): Kiwi's imports out of the user's files again
         this._cleanup.add(() => this._write(() => ''));
         this._update(ks);
@@ -91,10 +96,15 @@ export class GtkTheme {
     }
 
     _block(ks, version) {
+        const env = this._ctx.motion?.env ?? { reducedMotion: false, animations: true };
         const sheets = gtkSheets({
             style: ks.string('app-buttons-style'),
             size: ks.string('button-size'),
             appFixes: ks.bool('popup-menu-styling'),
+            bounce: ks.bool('app-buttons-bounce'),
+            reducedMotion: env.reducedMotion || !env.animations,
+            distinctActive: ks.bool('app-buttons-distinct-active'),
+            toolbarShapes: ks.bool('app-buttons-toolbar-shapes'),
         }, version);
         if (!sheets.length)
             return '';
