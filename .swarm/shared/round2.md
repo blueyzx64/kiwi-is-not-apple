@@ -46,3 +46,4 @@ The owner tested 3.0.0 on real hardware (Fedora 44, GNOME 50) and reported the b
 8. (owner) The drag-to-top tiling picker must look and animate like Windows 11 Snap Layouts, as the GNOME extension Tiling Shell's "Snap Assistant" does it. Dragging a window towards the top centre reveals a small handle, which expands into a bar of layouts; hover a zone to preview; drop to snap. This is queued after R3A (agent R3F).
 9. (owner) Maximize, then full screen: the top bar stays visible (a glitch). In full screen it must hide and reveal only on a push, with a darker tinted bar while revealed over full screen → R3E.
 10. (owner) The overview has no button to add a new desktop (the + isn't visible) → R3B.
+11. (owner) Maximized windows touch the dock; they need a gap above the dock equal to its bottom margin → R3C.
