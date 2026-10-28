@@ -283,3 +283,4 @@ No more installer work: no new pieces (Trash-drag uninstall, fly-to-dock, update
 - R2C → merged: dock icons bounce and magnify beyond the band (no rest clip); Genie rebuilt as a strip-sliced offscreen effect on a clone container that really funnels into the icon or tile (bottom, left, right; reverse on restore), p95 25 ms with 0 jitter. The orchestrator put the funnel above all windows (verified: genie-over-mid.png). The dock stays visible on maximized windows (the vanishing was green=full screen). Not checked: Genie with SM on.
 - PR #10 merged into main (4b6559b).
 - Release v3.0.0 published (zip + kiwi-shelf-helper RPM) via a manual run of pack-release.yml with tag input; tag pushes are blocked from this session.
+- PR #13 merged (docs revamp).
