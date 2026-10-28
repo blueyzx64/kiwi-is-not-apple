@@ -84,6 +84,13 @@ export function buildPrefs({ settings, window, extension }) {
     settings.bind('stage-manager-show-recent', recentApps, 'active', Gio.SettingsBindFlags.DEFAULT);
     strip.add(recentApps);
 
+    const background = new Adw.SwitchRow({
+        title: _('Strip background'),
+        subtitle: _('A soft glass panel behind the recent apps, so they stand out from the windows behind'),
+    });
+    settings.bind('stage-manager-strip-background', background, 'active', Gio.SettingsBindFlags.DEFAULT);
+    strip.add(background);
+
     const autohide = new Adw.SwitchRow({
         title: _('Hide recent apps under windows'),
         subtitle: _('The strip steps aside while a window overlaps it; push the screen edge to bring it back'),

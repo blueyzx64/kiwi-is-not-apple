@@ -4266,6 +4266,19 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
     padding: 3px 10px;
 }
 
+/* A dragged entry over another's card: the card and the two halves of the stage light up */
+.kiwi-stage-card:drop {
+    background-color: rgba(255, 255, 255, 0.14);
+    border: 2px solid -st-accent-color;
+    border-radius: 18px;
+}
+
+.kiwi-stage-side {
+    border-radius: 22px;
+    background-color: rgba(255, 255, 255, 0.16);
+    border: 3px solid -st-accent-color;
+}
+
 /* While an entry is dragged, the stage is a drop target: "Add to Stage" */
 .kiwi-stage-drop {
     border-radius: 18px;

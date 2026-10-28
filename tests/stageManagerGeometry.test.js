@@ -1,6 +1,6 @@
 // Run: gjs -m tests/stageManagerGeometry.test.js
 import {
-    METRICS, balancedFit, clonePose, dropHint, edgeBarrier, edgeFade, layerRect, revealOffset, overlaps, slotAt, stackLayers,
+    METRICS, balancedFit, clonePose, dropHint, groupSide, halves, stageArea, edgeBarrier, edgeFade, layerRect, revealOffset, overlaps, slotAt, stackLayers,
     stageRect, stripLayout, stripSide, stripVisible, scaleMs, tiltAngle, workspaceDirection,
 } from '../features/stageManager/geometry.js';
 
@@ -149,6 +149,23 @@ test('small helpers', () => {
     eq(workspaceDirection(1, 1), 0);
     eq(slotAt([{ x: 0, y: 0, width: 10, height: 10 }], { x: 5, y: 5 }), 0);
     eq(slotAt([{ x: 0, y: 0, width: 10, height: 10 }], { x: 15, y: 5 }), -1);
+});
+
+test('stageArea is the work area beside the strip; halves tile it with a gap', () => {
+    const floor = { x: 0, y: 100, width: 200, height: 500 };
+    eq(stageArea(wa, floor, 'left'), { x: 212, y: 44, width: 1056, height: 744 });
+    eq(stageArea(wa, { ...floor, x: 1080 }, 'right'), { x: 12, y: 44, width: 1056, height: 744 });
+    eq(stageArea(wa, null, 'left').x, 12);
+    const h = halves({ x: 212, y: 44, width: 1056, height: 744 });
+    eq(h.left, { x: 212, y: 44, width: 522, height: 744 });
+    eq(h.right, { x: 746, y: 44, width: 522, height: 744 });
+    eq(h.right.x - (h.left.x + h.left.width), 12);
+});
+
+test('groupSide: the half of the card under the pointer', () => {
+    const card = { x: 20, y: 100, width: 160, height: 120 };
+    eq(groupSide({ x: 60, y: 150 }, card), 'left');
+    eq(groupSide({ x: 140, y: 150 }, card), 'right');
 });
 
 if (failed) {

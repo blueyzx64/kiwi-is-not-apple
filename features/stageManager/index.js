@@ -12,7 +12,7 @@
 //   - the strip, the drop target and the flights are one container (view.js), destroyed on
 //     disable, after every window got its actor back.
 //
-// Input: strip clicks (Shift adds to the set), entry drags onto the stage (adds), stage
+// Input: strip clicks (Shift adds to the set), entry drags onto the stage (adds), entry drags onto another entry (a set, tiled to the side chosen), stage
 // window drags dropped on a strip entry (joins it; never a resize, never the tiling edge zone), the wallpaper click
 // (stage-manager-wallpaper-click), Alt-click anywhere outside the windows (the dock, the app
 // grid: the next window opens into the current stage), the window controls' minimize
@@ -35,8 +35,8 @@ import { Keybindings } from '../../lib/keybindings.js';
 import { KiwiSettings } from '../../lib/settings.js';
 import { Flights } from './flights.js';
 import { isClick } from '../../lib/clickModel.js';
-import { isMaximized } from '../../lib/compat.js';
-import { METRICS, dropHint, overlaps, pointRect, scaleMs, stageRect, stripSide, workspaceDirection } from './geometry.js';
+import { isMaximized, unmaximizeWindow } from '../../lib/compat.js';
+import { METRICS, dropHint, halves, overlaps, pointRect, scaleMs, stageRect, stripSide, workspaceDirection } from './geometry.js';
 import { StageMachine } from './model.js';
 import { StripView } from './view.js';
 import { WindowHider } from './windows.js';
@@ -107,8 +107,10 @@ export class StageManager {
             corners,
             onActivate: (id, { add }) => this._send({ type: 'activate', entry: id, add }),
             onDrop: id => this._send({ type: 'activate', entry: id, add: true }),
+            onGroup: (dragged, target, side) => this._send({ type: 'group', dragged, target, side }),
             onLayout: () => this._syncGeometryWatch(),
         });
+        this._view.setBackground(ks.bool('stage-manager-strip-background'));
         this._side = this._wantSide();
         this._claim = this._layout.claim(cleanup, {
             id: STRIP_CLAIM, edge: this._side, size: METRICS.stripWidth, reserve: 'none',
@@ -168,6 +170,7 @@ export class StageManager {
         }, cleanup);
 
         ks.watch(VIEW_KEYS, () => this._layoutChanged());
+        ks.watch(['stage-manager-strip-background'], () => this._view.setBackground(ks.bool('stage-manager-strip-background')));
         ks.watch(['stage-manager-new-windows'], () => this._send({
             type: 'config',
             newWindows: ks.string('stage-manager-new-windows'),
@@ -224,11 +227,11 @@ export class StageManager {
     // The model's view of a window. The transient parent is read live (a portal dialog gets
     // it after it is created), and so are the flags of features that set windows aside.
     _info(window) {
-        const { id, appId, type, workspace, monitor, fullscreen, above, skipTaskbar, title, minimized } = window;
+        const { id, appId, type, workspace, monitor, fullscreen, maximized, above, skipTaskbar, title, minimized } = window;
         const win = this._desktop.metaWindow(id);
         const parent = win?.get_transient_for()?.get_stable_sequence() ?? window.parent ?? null;
         const flagged = !!win && SET_ASIDE.some(f => WindowState.has(win, f));
-        return { id, appId, type, parent, workspace, monitor, fullscreen, above, skipTaskbar, title, minimized, flagged };
+        return { id, appId, type, parent, workspace, monitor, fullscreen, maximized, above, skipTaskbar, title, minimized, flagged };
     }
 
     _init() {
@@ -339,6 +342,9 @@ export class StageManager {
         const motion = this._ctx.motion.env.animations;
         const hide = fx.find(f => f.type === 'hide');
         const show = fx.find(f => f.type === 'show');
+        const tile = fx.find(f => f.type === 'tile');
+        // Where a new set's windows land: placed now (they are hidden), so the flights end there
+        const placed = tile ? this._tile(tile) : new Map();
         // Where the windows coming back are now (their clones), before the strip is redrawn
         const froms = new Map();
         for (const id of show?.ids ?? []) {
@@ -373,7 +379,7 @@ export class StageManager {
             if (!this._isAttached(win))
                 win.raise();
             if (animate)
-                this._flights.fly(win, { from, to: rectOf(win.get_frame_rect()), toStage: true, opacity: opacity ?? 255 });
+                this._flights.fly(win, { from, to: placed.get(win) ?? rectOf(win.get_frame_rect()), toStage: true, opacity: opacity ?? 255 });
         }
         for (const f of fx) {
             switch (f.type) {
@@ -395,6 +401,28 @@ export class StageManager {
         }
         this._reconcile();
         this._syncGeometryWatch();
+    }
+
+    // The windows of a new set take the two halves of the stage; one that is maximized is
+    // restored first. Returns the rect each was given.
+    _tile({ left, right }) {
+        const area = this._view.stageArea();
+        const placed = new Map();
+        if (!area)
+            return placed;
+        const rects = halves(area);
+        for (const [ids, rect] of [[left, rects.left], [right, rects.right]]) {
+            for (const id of ids) {
+                const win = this._desktop.metaWindow(id);
+                if (!win)
+                    continue;
+                if (isMaximized(win))
+                    unmaximizeWindow(win);
+                win.move_resize_frame(true, rect.x, rect.y, rect.width, rect.height);
+                placed.set(win, rect);
+            }
+        }
+        return placed;
     }
 
     _timer(key, ms) {

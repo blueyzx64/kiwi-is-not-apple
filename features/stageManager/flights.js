@@ -84,7 +84,7 @@ export class Flights {
         clone.set_size(buffer.width, buffer.height);
         clone.set_pivot_point(a.pivotX, a.pivotY);
         clone.set_position(a.x, a.y);
-        clone.set_scale(a.scale, a.scale);
+        clone.set_scale(a.scaleX, a.scaleY);
         clone.scale_z = a.scale;
         clone.rotation_angle_y = reduced ? 0 : start.angle ?? 0;
         attachThumbEffect(clone, buffer, { x: frame.x - buffer.x, y: frame.y - buffer.y, width: frame.width, height: frame.height },
@@ -104,7 +104,7 @@ export class Flights {
             global.stage.disconnect(flight.painted);
             flight.painted = 0;
             flight.anim = this._motion.ease(clone, {
-                x: b.x, y: b.y, scale_x: b.scale, scale_y: b.scale, scale_z: b.scale,
+                x: b.x, y: b.y, scale_x: b.scaleX, scale_y: b.scaleY, scale_z: b.scale,
                 rotation_angle_y: reduced ? 0 : end.angle ?? 0,
                 opacity: reduced && !toStage ? 0 : 255,
             }, {
@@ -146,7 +146,7 @@ export class Flights {
         const cx = c.x + f.frame.x - f.buffer.x + f.frame.width / 2;
         const cy = c.y + f.frame.y - f.buffer.y + f.frame.height / 2;
         const width = f.frame.width * s;
-        const height = f.frame.height * s;
+        const height = f.frame.height * c.scale_y;
         return { x: cx - width / 2, y: cy - height / 2, width, height, angle: c.rotation_angle_y };
     }
 
