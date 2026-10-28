@@ -43,7 +43,7 @@ import { FEATURES } from './features.js';
 // during a refresh would re-enter the registry, so they do not trigger a pass.
 const KEYS_THAT_NEVER_AFFECT_FEATURES = new Set(['clipboard-recording', 'migrations-done', STORE_KEY,
     STORE_BACKUP_KEY, 'dock-recent-apps', 'screenshots-last-selection', 'emoji-recents', 'emoji-skin-tone',
-    'timers-state', 'notch-shelf', 'widgets-layout', 'desktop-icons-layout', 'menubar-item-registry', 'focus-state', 'focus-last']);
+    'timers-state', 'notch-shelf', 'widgets-layout', 'widgets-notes', 'desktop-icons-layout', 'menubar-item-registry', 'focus-state', 'focus-last']);
 
 // Schemas whose keys Kiwi may own through core/originals.js
 const openSettings = schemaId =>

@@ -170,6 +170,9 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
 .kiwi-widgets-gallery-add:focus,
 .kiwi-widgets-gallery-size:focus,
 .kiwi-widget-remove:focus,
+.kiwi-widget-check:focus,
+.kiwi-widget-file-button:focus,
+.kiwi-widget-app-button:focus,
 .kiwi-notch-scrub-hit:focus {
   box-shadow: inset 0 0 0 2px -st-accent-color;
 }

@@ -175,6 +175,9 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
 .kiwi-widgets-gallery-add:focus,
 .kiwi-widgets-gallery-size:focus,
 .kiwi-widget-remove:focus,
+.kiwi-widget-check:focus,
+.kiwi-widget-file-button:focus,
+.kiwi-widget-app-button:focus,
 .kiwi-notch-scrub-hit:focus {
   box-shadow: inset 0 0 0 2px -st-accent-color;
 }
@@ -4893,6 +4896,205 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
 
 .kiwi-glass-light .kiwi-widget-button:hover {
   background-color: rgba(0, 0, 0, 0.14);
+}
+
+/* Numbers that change in place (timers, gauges) keep their width */
+.kiwi-widget-tabular {
+  font-feature-settings: "tnum";
+}
+
+/* Accents of the apps the widgets stand for (macOS system colours, dark and light) */
+.kiwi-widget-accent-blue {
+  color: #0a84ff;
+}
+
+.kiwi-glass-light .kiwi-widget-accent-blue {
+  color: #0064d2;
+}
+
+.kiwi-widget-accent-orange {
+  color: #ff9f0a;
+}
+
+.kiwi-glass-light .kiwi-widget-accent-orange {
+  color: #c55a00;
+}
+
+/* Up Next */
+.kiwi-widget-next {
+  spacing: 2px;
+}
+
+.kiwi-widget-agenda {
+  spacing: 5px;
+}
+
+.kiwi-widget-day-title {
+  padding-top: 4px;
+  letter-spacing: 0.4px;
+}
+
+/* Reminders: the count big in the list's colour, an open circle per reminder */
+.kiwi-widget-reminders-name,
+.kiwi-widget-reminders-count {
+  color: #0a84ff;
+}
+
+.kiwi-glass-light .kiwi-widget-reminders-name,
+.kiwi-glass-light .kiwi-widget-reminders-count {
+  color: #0064d2;
+}
+
+.kiwi-widget-reminders-count {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.kiwi-widget-reminder {
+  spacing: 8px;
+  padding: 3px 0;
+}
+
+.kiwi-widget-check {
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  border-radius: 9px;
+  border: 1.5px solid rgba(255, 255, 255, 0.45);
+}
+
+.kiwi-glass-light .kiwi-widget-check {
+  border-color: rgba(0, 0, 0, 0.35);
+}
+
+.kiwi-widget-check:hover {
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+.kiwi-widget-check.kiwi-widget-check-done {
+  background-color: #0a84ff;
+  border-color: #0a84ff;
+}
+
+/* Note: a sticky note filling the card (bleed), its colour one of macOS Stickies' */
+.kiwi-widget-note {
+  padding: 14px 16px;
+}
+
+.kiwi-widget-note-yellow {
+  background-color: #fef08a;
+  color: #3b3200;
+}
+
+.kiwi-widget-note-blue {
+  background-color: #bde3ff;
+  color: #0b2a44;
+}
+
+.kiwi-widget-note-green {
+  background-color: #c6f4b4;
+  color: #173a0c;
+}
+
+.kiwi-widget-note-pink {
+  background-color: #ffcbe3;
+  color: #45122b;
+}
+
+.kiwi-widget-note-purple {
+  background-color: #e2d0ff;
+  color: #2b1450;
+}
+
+.kiwi-widget-note-text {
+  font-size: 14px;
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  color: inherit;
+  caret-color: inherit;
+  selected-color: #ffffff;
+  selection-background-color: rgba(0, 100, 210, 0.85);
+}
+
+.kiwi-widget-note-text:focus {
+  box-shadow: none;
+}
+
+.kiwi-widget-note-text .hint-text {
+  color: rgba(0, 0, 0, 0.4);
+}
+
+.kiwi-widget-note-glass .kiwi-widget-note-text .hint-text {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.kiwi-glass-light .kiwi-widget-note-glass .kiwi-widget-note-text .hint-text {
+  color: rgba(0, 0, 0, 0.4);
+}
+
+/* Photos: the picture is the card; without one, a centred note */
+.kiwi-widget-photos-empty {
+  padding: 16px;
+  spacing: 8px;
+}
+
+/* Recent files and favourite apps: rows and tiles that act in place */
+.kiwi-widget-file-button,
+.kiwi-widget-app-button {
+  border-radius: 8px;
+  padding: 3px 4px;
+  color: inherit;
+}
+
+.kiwi-widget-file-button:hover,
+.kiwi-widget-app-button:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.kiwi-glass-light .kiwi-widget-file-button:hover,
+.kiwi-glass-light .kiwi-widget-app-button:hover {
+  background-color: rgba(0, 0, 0, 0.08);
+}
+
+.kiwi-widget-file {
+  spacing: 8px;
+}
+
+.kiwi-widget-app {
+  spacing: 4px;
+}
+
+.kiwi-widget-app-name {
+  max-width: 72px;
+}
+
+/* Timers */
+.kiwi-widget-timers {
+  spacing: 8px;
+}
+
+.kiwi-widget-timer {
+  spacing: 10px;
+}
+
+.kiwi-widget-preset {
+  border-radius: 999px;
+  padding: 5px 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ff9f0a;
+  background-color: rgba(255, 159, 10, 0.18);
+}
+
+.kiwi-widget-preset:hover {
+  background-color: rgba(255, 159, 10, 0.3);
+}
+
+.kiwi-glass-light .kiwi-widget-preset {
+  color: #c55a00;
+  background-color: rgba(255, 149, 0, 0.16);
 }
 
 /* Desktop layer */

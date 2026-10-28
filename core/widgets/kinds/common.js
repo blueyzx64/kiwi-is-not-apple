@@ -27,6 +27,30 @@ export function icon(name, size, styleClass = 'kiwi-widget-icon') {
 /** A flexible spacer for box layouts. */
 export const spacer = () => new St.Widget({ x_expand: true, y_expand: true });
 
+/**
+ * A round button that acts in place (an interactive widget's control): an icon, or a text
+ * label when `text` is given. Surfaces never drag or open the widget from a press on it.
+ */
+export function iconButton({ name, iconName = null, text = null, size = 16, styleClass = '', onClick }) {
+    const b = new St.Button({
+        style_class: `kiwi-widget-button ${styleClass}`.trim(),
+        accessible_name: name,
+        can_focus: true,
+        child: text !== null ? new St.Label({ text, y_align: Clutter.ActorAlign.CENTER }) : icon(iconName, size),
+    });
+    b.connect('clicked', () => {
+        try {
+            onClick();
+        } catch (e) {
+            console.error(`[Kiwi] widget button '${name}' failed:`, e);
+        }
+    });
+    return b;
+}
+
+/** A CSS colour from a "#rrggbb" string of someone else's data, or null when it is not one. */
+export const safeColor = c => (/^#[0-9a-fA-F]{6}$/.test(c ?? '') ? c : null);
+
 /** Open the first installed app of a list of desktop ids. */
 export function openApp(...ids) {
     const sys = Shell.AppSystem.get_default();
@@ -88,4 +112,6 @@ export const COLORS = {
     yellow: [1, 0.8, 0, 1],
     red: [1, 0.23, 0.19, 1],
     blue: [0.04, 0.52, 1, 1],
+    orange: [1, 0.58, 0, 1],
+    purple: [0.69, 0.32, 0.87, 1],
 };
