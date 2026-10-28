@@ -4,6 +4,7 @@
 // prefs/pages/menuBar.js puts these groups on the Menu Bar page.
 
 import Adw from 'gi://Adw';
+import Gio from 'gi://Gio';
 
 import { comboRow, shortcutRow, switchRow } from '../../prefs/widgets.js';
 
@@ -28,9 +29,13 @@ export function buildPrefs({ settings, extension }) {
     bar.add(switchRow(settings, _('Apps’ Own Menus'),
         _('Show the menus apps export (GTK menu bars, and Qt, Electron or LibreOffice under Xwayland) in place of the generic File, Edit and View'),
         'menubar-native-menus'));
-    bar.add(switchRow(settings, _('Transparent Menu Bar'),
-        _('No background over the wallpaper, with text that follows its brightness'),
-        'menubar-transparent'));
+    // macOS Tahoe's wording: "Show menu bar background" is the opposite of a transparent bar
+    const background = new Adw.SwitchRow({
+        title: _('Show Menu Bar Background'),
+        subtitle: _('Off: no background over the wallpaper, with text that follows its brightness'),
+    });
+    settings.bind('menubar-transparent', background, 'active', Gio.SettingsBindFlags.INVERT_BOOLEAN);
+    bar.add(background);
     bar.add(switchRow(settings, _('Solid When a Window Touches It'),
         _('Off: the bar stays transparent over maximized windows. On: it turns solid while a window touches it'),
         'menubar-solid-on-window'));
@@ -40,6 +45,9 @@ export function buildPrefs({ settings, extension }) {
     bar.add(switchRow(settings, _('Privacy Dots'),
         _('Orange for the microphone, green for the camera, purple for screen sharing. Click to see which app'),
         'menubar-privacy-dots'));
+    bar.add(switchRow(settings, _('Differentiate Without Colour'),
+        _('The privacy dots and the Dock’s background-app indicator also differ in shape'),
+        'a11y-differentiate-without-color'));
     bar.add(switchRow(settings, _('Alt-Click the Clock for Do Not Disturb'),
         _('Clicking the clock opens the calendar and notifications'), 'menubar-clock-option-dnd'));
 
@@ -54,6 +62,9 @@ export function buildPrefs({ settings, extension }) {
         'menubar-atspi-popovers'));
 
     const keys = new Adw.PreferencesGroup({ title: _('Keyboard') });
+    keys.add(switchRow(settings, _('Option Changes Menu Items'),
+        _('Hold Alt in a menu: Minimize becomes Minimize All, Close Window becomes Close All, Quit becomes Force Quit. Alt-click Battery for details'),
+        'menubar-option-alternates'));
     keys.add(switchRow(settings, _('Shortcut Symbols'),
         _('Write shortcuts in menus as ⌘ ⌥ ⌃ ⇧ (Super is ⌘). Off writes them in words'), 'menubar-command-glyphs'));
     keys.add(shortcutRow(settings, _, { key: 'menubar-focus-shortcut', title: _('Use the Menu Bar with the Keyboard'), example: '<Control>F2' }));

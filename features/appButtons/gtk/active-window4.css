@@ -1,0 +1,22 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
+/* GTK4 - A more distinct active window (macOS 27 Golden Gate): the focused window casts a
+ * deeper shadow, inactive ones a lighter one, and their titles fade. Windows that draw their
+ * own titlebar only (client-side decorations); maximized, tiled and full-screen windows keep
+ * the theme's look. Imported with app-buttons-distinct-active. */
+
+window.csd:not(.maximized):not(.fullscreen):not(.tiled):not(.tiled-top):not(.tiled-bottom):not(.tiled-left):not(.tiled-right):not(.solid-csd) {
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.14),
+              0 3px 10px 1px rgba(0, 0, 0, 0.22),
+              0 10px 30px 8px rgba(0, 0, 0, 0.20);
+}
+
+window.csd:backdrop:not(.maximized):not(.fullscreen):not(.tiled):not(.tiled-top):not(.tiled-bottom):not(.tiled-left):not(.tiled-right):not(.solid-csd) {
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.10),
+              0 2px 8px 1px rgba(0, 0, 0, 0.08);
+}
+
+headerbar:backdrop .title,
+headerbar:backdrop .subtitle {
+  opacity: 0.55;
+}

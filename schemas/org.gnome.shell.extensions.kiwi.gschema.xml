@@ -87,6 +87,16 @@
         <summary>Privacy dots</summary>
         <description>Show an orange dot while an app uses the microphone, a green one for the camera and a purple one while the screen is shared or recorded, in place of GNOME's privacy icons. Click a dot to see which app.</description>
       </key>
+      <key name="menubar-option-alternates" type="b">
+        <default>true</default>
+        <summary>Option (Alt) changes menu items</summary>
+        <description>While Alt is held with a Kiwi menu open, items that have an alternate change in place, as Option does on macOS: Minimize becomes Minimize All, Close Window becomes Close All, Quit becomes Force Quit, About This PC becomes System Information. Alt-clicking some menu bar items (Battery) shows more details.</description>
+      </key>
+      <key name="a11y-differentiate-without-color" type="b">
+        <default>false</default>
+        <summary>Differentiate without colour</summary>
+        <description>Kiwi's status cues that differ only by colour also get distinct shapes, like macOS Accessibility > Display: the privacy dots (a round microphone dot, a ringed camera dot, a square screen dot) and the Dock's background-app indicator (a hollow ring instead of a grey dot).</description>
+      </key>
       <key name="menubar-command-glyphs" type="b">
         <default>true</default>
         <summary>Shortcut glyphs</summary>
@@ -327,6 +337,26 @@
         <default>'macos'</default>
         <summary>App titlebar buttons style</summary>
         <description>'gnome' leaves the apps' buttons in the stock libadwaita/GTK look, 'macos' applies Kiwi's traffic-light GTK CSS (see button-size). Open apps pick up a change when restarted.</description>
+      </key>
+      <key name="app-buttons-unsaved-dot" type="b">
+        <default>true</default>
+        <summary>Unsaved-changes dot in the close button</summary>
+        <description>With the macOS look, a dark dot sits in the red close button of a window whose title marks unsaved changes (a leading "*" or a "•", as many GNOME and GTK apps write it). Apps that show unsaved changes another way get no dot.</description>
+      </key>
+      <key name="app-buttons-bounce" type="b">
+        <default>true</default>
+        <summary>Traffic lights bounce</summary>
+        <description>With the macOS look, the traffic lights shrink while pressed and spring back, as in macOS 27. Off with Reduce Motion or animations off. Open apps pick up a change when restarted.</description>
+      </key>
+      <key name="app-buttons-distinct-active" type="b">
+        <default>true</default>
+        <summary>More distinct active window</summary>
+        <description>The focused app window gets a deeper shadow and inactive windows a lighter one with dimmed titlebar content, as in macOS 27 (apps that draw their own titlebar: GTK 3 and 4). Open apps pick up a change when restarted.</description>
+      </key>
+      <key name="app-buttons-toolbar-shapes" type="b">
+        <default>false</default>
+        <summary>Show toolbar button shapes</summary>
+        <description>A subtle border around the flat buttons in app headerbars so their clickable area shows, like macOS Accessibility > Display > Show toolbar button shapes (GTK 3 and 4 apps). Open apps pick up a change when restarted.</description>
       </key>
       <key name="app-buttons-set" type="s">
         <choices>

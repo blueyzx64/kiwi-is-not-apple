@@ -5,7 +5,7 @@
 
 import Adw from 'gi://Adw';
 
-import { comboRow } from '../../prefs/widgets.js';
+import { comboRow, switchRow, watchKey } from '../../prefs/widgets.js';
 
 /**
  * @param {{settings: Gio.Settings, window: Adw.PreferencesWindow, extension: object}} args
@@ -52,5 +52,29 @@ export function buildPrefs({ settings, extension }) {
         labels: [_('Small'), _('Normal')],
     }));
 
-    return [group];
+    const cues = new Adw.PreferencesGroup({
+        title: _('Window Cues'),
+        description: _('macOS signals on the apps’ own titlebars. Open apps pick up the GTK looks when restarted.'),
+    });
+    const dot = switchRow(settings, _('Unsaved Changes Dot'),
+        _('A dot in the red close button while the window title marks unsaved changes'),
+        'app-buttons-unsaved-dot');
+    const bounce = switchRow(settings, _('Traffic Lights Bounce'),
+        _('The buttons shrink while pressed and spring back. Off with Reduce Motion'),
+        'app-buttons-bounce');
+    cues.add(dot);
+    cues.add(bounce);
+    cues.add(switchRow(settings, _('More Distinct Active Window'),
+        _('A deeper shadow on the focused window, a lighter one and a faded title on the others'),
+        'app-buttons-distinct-active'));
+    cues.add(switchRow(settings, _('Show Toolbar Button Shapes'),
+        _('A subtle border around the buttons in app headerbars, so their clickable area shows'),
+        'app-buttons-toolbar-shapes'));
+    // The dot and the bounce belong to the traffic lights: only with the macOS look
+    const syncCues = () => {
+        dot.sensitive = bounce.sensitive = settings.get_string('app-buttons-style') === 'macos';
+    };
+    syncCues();
+    watchKey(settings, 'app-buttons-style', cues, syncCues);
+    return [group, cues];
 }

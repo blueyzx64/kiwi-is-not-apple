@@ -1,6 +1,6 @@
 // Run: gjs -m tests/appMenusModel.test.js
 import {
-    buildMenus, searchMenus, formatAccel, parseAccel, parseDescribeAll, mergeNativeMenus, cacheKeys,
+    alternateFor, buildMenus, searchMenus, formatAccel, parseAccel, parseDescribeAll, mergeNativeMenus, cacheKeys,
 } from '../core/appMenus/model.js';
 
 let failed = 0;
@@ -156,6 +156,27 @@ test('cache keys separate the app and the window', () => {
 test('app names with $ patterns are shown as they are', () => {
     const m = buildMenus({ appName: 'Cash $& $1 $$', _, generic: {} });
     eq(m[0].items.find(i => i.id === 'quit').label, 'Quit Cash $& $1 $$');
+});
+
+test('Option alternates: Quit, Close Window and Minimize get one; Hide does not', () => {
+    const m = buildMenus({ appName: 'Files', generic: { hasWindow: true }, _ });
+    eq(item(m, 'app', 'hide').alternate, undefined);
+    eq(item(m, 'app', 'quit').alternate.label, 'Force Quit Files');
+    eq(item(m, 'app', 'quit').alternate.command.name, 'force-quit');
+    eq(item(m, 'file', 'close-window').alternate.label, 'Close All');
+    eq(item(m, 'window', 'minimize').alternate.label, 'Minimize All');
+    eq(item(m, 'window', 'minimize').alternate.enabled, true);
+    eq(item(m, 'app', 'about').alternate, undefined);
+});
+
+test('Option alternates: window commands need a window; app actions keep a generic alternate', () => {
+    const acts = parseDescribeAll({ quit: [true, '', []] }, 'app');
+    const m = buildMenus({ appName: 'X', actions: acts, generic: { hasWindow: false }, _ });
+    eq(item(m, 'window', 'minimize')?.alternate?.enabled ?? false, false);
+    eq(item(m, 'app', 'quit').command.provider, 'gtk');
+    eq(item(m, 'app', 'quit').alternate.command, { provider: 'generic', name: 'force-quit' });
+    eq(alternateFor({ kind: 'separator' }, { appName: 'X', hasWindow: true, _ }), null);
+    eq(alternateFor({ kind: 'item', id: 'quit' }, { appName: 'A $& B', hasWindow: true, _ }).label, 'Force Quit A $& B');
 });
 
 if (failed)

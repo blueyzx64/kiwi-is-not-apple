@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The logo menu, macOS's Apple menu (research UI "Menu bar"): About This PC, System
 // Settings…, Kiwi Settings…, App Store…, Recent Items, Force Quit…, Sleep, Restart…,
-// Shut Down…, Lock Screen, Log Out.
+// Shut Down…, Lock Screen, Log Out. Holding Option (Alt) turns About This PC into System
+// Information… (lib/optionKey.js, menubar-option-alternates).
 //
 // The power and session items call the Shell's own SystemActions, so they follow logind and
 // the lockdown settings exactly like the system menu (and appear only when allowed). Recent
@@ -19,8 +20,10 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as SystemActions from 'resource:///org/gnome/shell/misc/systemActions.js';
+import * as Util from 'resource:///org/gnome/shell/misc/util.js';
 
 import { CleanupRegistry } from '../../lib/disposables.js';
+import { OptionAlternates } from '../../lib/optionKey.js';
 import { fillPlaceholders, parseOsRelease, parseRecentXbel, systemLogoNames } from './model.js';
 import { menuHeading, menuItem } from './menuItems.js';
 import { tintWithText } from './logoTint.js';
@@ -32,6 +35,16 @@ const RECENT_APPS = 5;
 const RECENT_DOCS = 8;
 const SETTINGS_APP = 'org.gnome.Settings.desktop';
 const SOFTWARE_APP = 'org.gnome.Software.desktop';
+// macOS's System Information: GNOME Settings, System > About (its detailed system details)
+const SYSTEM_INFO_ARGV = ['gnome-control-center', 'system', 'about'];
+
+function spawnSystemInfo() {
+    try {
+        Util.spawn(SYSTEM_INFO_ARGV);
+    } catch (e) {
+        console.error('[Kiwi] System Information failed:', e);
+    }
+}
 
 export const LogoMenu = GObject.registerClass(
 class KiwiLogoMenu extends PanelMenu.Button {
@@ -42,8 +55,9 @@ class KiwiLogoMenu extends PanelMenu.Button {
      * @param {{about: Function, forceQuit: Function}} p.actions
      * @param {() => object} p.keys shortcut label options
      * @param {() => ?string} p.forceQuitAccel
+     * @param {() => boolean} [p.optionAlternates] whether Alt shows the alternates
      */
-    _init({ ctx, cleanup, actions, keys, forceQuitAccel }) {
+    _init({ ctx, cleanup, actions, keys, forceQuitAccel, optionAlternates = () => true }) {
         const _ = ctx.gettext;
         super._init(0.0, _('Logo Menu'), false);
         this.add_style_class_name('kiwi-menubar-logo');
@@ -68,7 +82,11 @@ class KiwiLogoMenu extends PanelMenu.Button {
         const sep = () => this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         const launch = id => appSystem.lookup_app(id)?.activate();
 
-        add(_('About This PC'), actions.about);
+        // Option: About This PC becomes System Information… (GNOME Settings' About page)
+        this._aboutItem = add(_('About This PC'), actions.about, {
+            alternate: { label: _('System Information…'), onActivate: () => spawnSystemInfo() },
+        });
+        OptionAlternates.attach(this.menu, cleanup, { enabled: optionAlternates });
         sep();
         add(_('System Settings…'), () => launch(SETTINGS_APP));
         add(_('Kiwi Settings…'), () => ctx.extension.openPreferences());
@@ -104,6 +122,11 @@ class KiwiLogoMenu extends PanelMenu.Button {
             cleanup.connect(sys, `notify::${prop}`, sync);
             sync();
         }
+    }
+
+    /** The About This PC item (Option shows System Information…; tests, the harness). */
+    get aboutItem() {
+        return this._aboutItem;
     }
 
     /** @param {string} logo 'fedora' | 'kiwi' */
