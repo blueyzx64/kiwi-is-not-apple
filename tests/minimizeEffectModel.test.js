@@ -1,7 +1,8 @@
 // Run: gjs -m tests/minimizeEffectModel.test.js
 // features/minimizeEffect/model.js: the Genie mesh and the effect choice.
 import {
-    chooseMode, genieFrame, genieOpacity, genieRow, genieVertex, readConfig, scaleTarget,
+    GENIE_MAX_STRIPS, chooseMode, genieFrame, genieOpacity, genieRow, genieStrips, genieVertex, readConfig,
+    scaleTarget,
 } from '../features/minimizeEffect/model.js';
 
 let failed = 0;
@@ -166,6 +167,39 @@ test('scale: keeps the aspect ratio, centred in the icon', () => {
     near(t.scale, 0.08, 'scale', 0.001);
     near(t.x + WIN.width * t.scale / 2, ICON.x + 24, 'centre x');
     near(t.y + WIN.height * t.scale / 2, ICON.y + 24, 'centre y');
+});
+test('strips: none taller than about one device pixel at any progress, on every edge', () => {
+    const cases = [
+        ['bottom', { x: 585, y: 230, width: 750, height: 570 }, { x: 958, y: 1015, width: 48, height: 48 }],
+        ['bottom', { x: 0, y: 0, width: 1920, height: 300 }, { x: 1700, y: 1015, width: 48, height: 48 }],
+        ['left', WIN, { x: 8, y: 500, width: 48, height: 48 }],
+        ['right', WIN, { x: 1860, y: 80, width: 48, height: 48 }],
+    ];
+    const row = { s: 0, centre: 0, width: 0 };
+    for (const [position, win, icon] of cases) {
+        for (const scale of [1, 2]) {
+            const f = genieFrame(position, win, icon);
+            const n = genieStrips(f, scale);
+            // Past the cap (a huge funnel on a HiDPI screen) strips share the length evenly
+            const most = 1.1 * Math.max(1, (f.extent + 1.5 * f.reach) * scale / n);
+            for (let p = 0; p <= 1.0001; p += 0.05) {
+                let prev = genieRow(f, 0, p, row).s;
+                for (let i = 1; i <= n; i++) {
+                    const s = genieRow(f, i / n, p, row).s;
+                    // Never backwards (strips would overlap) and at most ~1 device px
+                    if (s < prev - 1e-9)
+                        throw new Error(`${position} p=${p}: strip ${i} goes backwards`);
+                    if ((s - prev) * scale > most)
+                        throw new Error(`${position} x${scale} p=${p}: strip ${i} is ${((s - prev) * scale).toFixed(2)} px`);
+                    prev = s;
+                }
+            }
+        }
+    }
+});
+test('strips: at least one, at most the cap', () => {
+    eq(genieStrips({ extent: 0, reach: 0 }), 1);
+    eq(genieStrips(genieFrame('bottom', { x: 0, y: -9000, width: 10, height: 9000 }, ICON)), GENIE_MAX_STRIPS);
 });
 
 if (failed)

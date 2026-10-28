@@ -5,6 +5,7 @@
 //   chooseMode(...)          which effect a minimize or restore gets
 //   genieFrame(...)          a window and its target in the dock's frame of reference
 //   genieRow(...)            where one line of the window (across the funnel) is at a given progress
+//   genieStrips(...)         how many strips the Genie draws the window with
 //   genieVertex(...)         where one point of the window mesh is at a given progress
 //   genieOpacity(p)          the fade at the very end of the funnel
 //   scaleTarget(...)         the end transform of the Scale effect
@@ -135,6 +136,24 @@ export function genieRow(f, d, p, out) {
     const sBent = f.sFar + d * f.extent + bend * f.reach * w;
     out.s = sBent + (f.sT - sBent) * slide;
     return out;
+}
+
+/** The most strips a Genie draws (a 4K-high window at scale 1 still gets about 1 px each). */
+export const GENIE_MAX_STRIPS = 2400;
+
+/**
+ * How many strips (lines of the window across the funnel) the Genie draws: enough that none
+ * is taller than about one device pixel at any progress, so the funnel's curved sides show no
+ * steps. A strip is tallest where the near edge is pulled towards the icon: genieRow's
+ * ds/dd is at most extent + 1.5 * reach (the slide only shrinks it).
+ *
+ * @param {object} f genieFrame()
+ * @param {number} [scale] device pixels per logical pixel
+ * @returns {number} 1..GENIE_MAX_STRIPS
+ */
+export function genieStrips(f, scale = 1) {
+    const longest = (f.extent + 1.5 * f.reach) * Math.max(1, scale);
+    return Math.max(1, Math.min(GENIE_MAX_STRIPS, Math.ceil(longest)));
 }
 
 const ROW = { s: 0, centre: 0, width: 0 };
