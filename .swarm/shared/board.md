@@ -286,3 +286,4 @@ No more installer work: no new pieces (Trash-drag uninstall, fly-to-dock, update
 - PR #13 merged (docs revamp).
 - R3A → merged: top-bar window controls, green menu and hide-titlebars removed; the app buttons keep side right and the traffic look; Split View on Ctrl+Super+Alt+Left/Right; 8 keys deprecated; migration restores the user's layout.
 - R3D → merged: the notch drag-out failed over maximized and top-touching windows because the notch's input plate covered the dashboard footprint during the drag; it's hidden while dragging. 5/5 real drops open in Text Editor.
+- R3F → merged: Windows 11 Snap Layouts bar (handle → bar of 6 layouts, zone hover with a spring preview, drop to snap; springs, 0 jitter; light/dark, reduced motion). The orchestrator checked snap-handle and snap-hover-thirds. Limit: the preview sits behind the dragged window.
