@@ -39,7 +39,7 @@ Apple often adds a cue and walks it back two releases later. Follow the newest r
 - **Caveats (on macOS):** colour varies by app accent; some users dislike it and cannot turn it off.
 - **Port to GNOME 50:** exists (`features/inputIndicator/`, caret from IBus via `lib/caret.js`).
 - **Blockers / risks:** apps that report no caret get the badge by the pointer.
-- **Kiwi status:** **partial.** The badge fades after `BADGE_MS` = 1.5 s even while Caps Lock stays on, and Kiwi shows a muted ⇪ when Caps Lock turns **off**, which macOS does not.
+- **Kiwi status:** **have** (feat/signifiers): ⇪ stays and follows the caret while Caps Lock is on; the Caps-off badge is opt-in (`input-indicator-caps-off`).
 - **Recommendation:** Port (P1), **S**. Keep `caps-on` up and following the caret until Caps Lock is off; make the off badge opt-in or drop it.
 
 ### 1.2 Input source indicator at the caret
@@ -52,21 +52,21 @@ Apple often adds a cue and walks it back two releases later. Follow the newest r
 - **Introduced / changed:** Sonoma (badge); earlier releases used a floating feedback window with a level meter.
 - **What it is:** the caret is highlighted and pulses, a 🎤 sits above or below it; both pause while you type and return after.
 - **Port to GNOME 50:** needs a dictation engine first (none in GNOME).
-- **Kiwi status:** none.
+- **Kiwi status:** none (no dictation on GNOME).
 - **Recommendation:** Skip until a dictation helper exists.
 
 ### 1.4 ⇪ in password fields
 - **Introduced / changed:** long-standing (login window, password sheets).
 - **What it is:** a ⇪ glyph at the trailing edge of a password field while Caps Lock is on.
 - **Port to GNOME 50:** Kiwi already restyles the Shell's modal dialogs (`features/dialogs/`); swap the Shell's "Caps lock is on" text for the glyph in the entry. Lock screen / GDM is out of reach for an extension.
-- **Kiwi status:** none.
+- **Kiwi status:** **have** (`dialogs-caps-lock-icon`, `features/dialogs/capsLock.js`).
 - **Recommendation:** Port (P1), **S**.
 
 ### 1.5 Press and hold for accents
 - **Introduced / changed:** Lion; key repeat set to Off disables it.
 - **What it is:** holding a letter shows its accented variants numbered 1–9; click or press the number.
 - **Port to GNOME 50:** needs an IBus engine (out of process), not Shell code.
-- **Kiwi status:** none.
+- **Kiwi status:** **have** through the Kiwi input engine (`helpers/kiwi-input`, `input-press-and-hold`; needs `sudo make input-install` and a "(Kiwi)" input source).
 - **Recommendation:** Later (P3), **L**. High value for typists in Latin languages.
 
 ### 1.6 Inline predictions and autocorrect underline
@@ -77,7 +77,7 @@ Apple often adds a cue and walks it back two releases later. Follow the newest r
 ### 1.7 Text Replacements
 - **What it is:** a short abbreviation expands to a phrase as you type, synced across devices.
 - **Port to GNOME 50:** IBus engine or the Quick Paste technique; fragile across toolkits.
-- **Kiwi status:** none.
+- **Kiwi status:** **have** through the Kiwi input engine (`input-replacements`, `input-replacements-list`).
 - **Recommendation:** Later (P3), **M**.
 
 ---
@@ -88,17 +88,17 @@ Apple often adds a cue and walks it back two releases later. Follow the newest r
 - **Introduced / changed:** long-standing; present in the Golden Gate guide.
 - **What it is:** with Sticky Keys on, latched or locked modifiers show as ⌃ ⌥ ⇧ ⌘ symbols in a screen corner the user picks ("Screen area for display"); optional beep when a modifier is set. Toggle with Shift ×5.
 - **Port to GNOME 50:** read `org.gnome.desktop.a11y.keyboard` and the latched/locked modifier state from Clutter's keymap; draw a glass HUD in the chosen corner.
-- **Kiwi status:** **partial**: Sticky Keys is a Control Center control (`features/controlCenter/customModel.js`), no on-screen display.
+- **Kiwi status:** **have** (`kbd-a11y-sticky-display`, `kbd-a11y-sticky-corner`; `features/keyboardAccess/`).
 - **Recommendation:** Port (P1), **S–M**.
 
 ### 2.2 Slow Keys
 - **What it is:** a key must be held for an acceptance delay; optional click sounds.
-- **Kiwi status:** none (GNOME has the setting, no visible feedback).
+- **Kiwi status:** **partial**: a Slow Keys chip (`kbd-a11y-slowkeys-indicator`); Mutter gives no accept/reject signal, so no progress.
 - **Recommendation:** Later (P3), **S**: a progress ring on the Sticky Keys HUD while a key is being accepted.
 
 ### 2.3 Accessibility Shortcuts panel
 - **What it is:** ⌥⌘F5 (or Touch ID ×3) opens a small panel of toggles: Sticky Keys, Slow Keys, Zoom, VoiceOver, etc.
-- **Kiwi status:** none.
+- **Kiwi status:** **have** (Super+Alt+F5, `kbd-a11y-panel-shortcut`).
 - **Recommendation:** Port (P2), **S**: a glass panel listing the a11y toggles Control Center already knows.
 
 ### 2.4 Keyboard navigation (⌃F7)
@@ -141,28 +141,31 @@ Apple often adds a cue and walks it back two releases later. Follow the newest r
 ### 2.10 Zoom follows keyboard focus
 - **What it is:** the magnifier follows the caret always, only while typing, or never; move the image to centre or just enough.
 - **Port to GNOME 50:** GNOME's magnifier already has caret tracking.
+- **Kiwi status:** **have** (`kbd-a11y-zoom-follow`: always / only when typing / never, owned through core/originals).
 - **Recommendation:** Skip.
 
 ### 2.11 Keyboard Viewer (Accessibility Keyboard)
 - **Introduced / changed:** merged into the Accessibility Keyboard in Catalina.
 - **What it is:** the current layout on screen; holding ⌥ or ⇧ shows what each key types; opened from the input menu; light/dark, fades after inactivity.
 - **Port to GNOME 50:** a glass panel drawing the XKB layout for the current source and levels.
-- **Kiwi status:** none.
+- **Kiwi status:** **have** (`kbd-a11y-viewer-shortcut`, "Show Keyboard Viewer" in the input-source menu).
 - **Recommendation:** Port (P2), **M**. Useful for finding `~ | { }` on non-US layouts.
 
 ### 2.12 Caps Lock switches input source
 - **What it is:** with a non-Latin source, Caps Lock toggles to ABC; holding it until the LED lights types capitals.
 - **Port to GNOME 50:** XKB `grp:caps_toggle` exists but not the tap/hold split.
+- **Kiwi status:** **have** (`input-caps-lock-switch`, off by default).
 - **Recommendation:** Later (P3), **M**.
 
 ### 2.13 Per-document input source
 - **What it is:** "Automatically switch to a document's input source".
 - **Port to GNOME 50:** GNOME has per-window sources.
+- **Kiwi status:** **have** (`input-per-window`, owns GNOME's per-window key).
 - **Recommendation:** Skip.
 
 ### 2.14 Globe / fn key
 - **What it is:** press to change input source, show Emoji & Symbols, start dictation, or nothing; double press for dictation; fn-E for emoji.
-- **Kiwi status:** emoji picker on Ctrl+Super+Space; no single-key choice.
+- **Kiwi status:** **have** (`input-key-action`, `input-key-shortcut`).
 - **Recommendation:** Later (P3), **S**: an "on key press" setting for one chosen key.
 
 ---
@@ -173,7 +176,7 @@ Apple often adds a cue and walks it back two releases later. Follow the newest r
 - **Introduced / changed:** El Capitan; Accessibility → Display → Pointer.
 - **What it is:** shaking the mouse or swiping fast makes the pointer briefly large.
 - **Port to GNOME 50:** detect the shake from pointer motion in the Shell; scale the cursor sprite (or an overlay of it).
-- **Kiwi status:** none.
+- **Kiwi status:** **have** (`pointer-shake-to-locate`, `features/pointer/`).
 - **Recommendation:** Port (P2), **M**.
 
 ### 3.2 Pointer size, outline and fill colours
@@ -184,7 +187,7 @@ Apple often adds a cue and walks it back two releases later. Follow the newest r
 ### 3.3 Hide the pointer while typing
 - **What it is:** AppKit hides the pointer on the first keystroke in a text view and shows it again on movement (not a System Settings option).
 - **Port to GNOME 50:** hide the cursor from the Shell on key press when a text input has focus; show on motion.
-- **Kiwi status:** none.
+- **Kiwi status:** **have** (`pointer-size`, `pointer-custom-colors`: a recoloured copy of the theme in `~/.local/share/icons/Kiwi-Pointer-*`).
 - **Recommendation:** Port (P1), **S**.
 
 ---
@@ -194,14 +197,14 @@ Apple often adds a cue and walks it back two releases later. Follow the newest r
 ### 4.1 Holding Option changes menus
 - **What it is:** items swap while ⌥ is held (Open → Open and Close Window, Hide → Hide Others, About This Mac → System Information). Option-click on menu-bar items shows more (Wi-Fi details, sound input devices).
 - **Port to GNOME 50:** the menu bar owns its menus (`features/menuBar/`, `core/appMenus/`); add alternates to Kiwi's own menus and the pinned items. App menus only where the provider exposes alternates.
-- **Kiwi status:** none.
+- **Kiwi status:** **have** (`pointer-hide-while-typing`; needs an app that reports its caret through IBus).
 - **Recommendation:** Port (P2), **M**.
 
 ### 4.2 Unsaved-changes dot in the close button
 - **What it is:** a dark dot in the red button while the document has unsaved changes; the title icon is dimmed and cannot be dragged.
 - **Port to GNOME 50:** needs a signal from the app: a leading/trailing `*` or `•` in the title, or GTK's `modified` state where exposed. The dot is drawn by the GTK stylesheet (`features/appButtons/gtk/`) or a Shell overlay.
 - **Blockers / risks:** heuristic; no portable "document edited" API.
-- **Kiwi status:** none.
+- **Kiwi status:** **have** (`menubar-option-alternates`: About → System Information, Minimize → Minimize All, Close → Close All, Quit → Force Quit; Option-click Battery). Hide → Hide Others skipped (already its own item).
 - **Recommendation:** Port (P2), **M**, after a feasibility check.
 
 ### 4.3 Show window title icons
@@ -211,21 +214,24 @@ Apple often adds a cue and walks it back two releases later. Follow the newest r
 ### 4.4 Show toolbar button shapes
 - **What it is:** a subtle border around toolbar buttons so the clickable area is visible.
 - **Port to GNOME 50:** GTK stylesheet (`gtk-theme`) for headerbar buttons.
+- **Kiwi status:** **have** (`app-buttons-toolbar-shapes`, GTK3 and GTK4 CSS).
 - **Recommendation:** Port (P2), **S**.
 
 ### 4.5 Differentiate without colour
 - **What it is:** shapes as well as colour for status.
 - **Port to GNOME 50:** Kiwi's own surfaces (privacy dots, dock dots, Focus icon).
+- **Kiwi status:** **have** (`a11y-differentiate-without-color`: privacy-dot shapes, hollow Dock background-app dot).
 - **Recommendation:** Port (P2), **S**: audit Kiwi's colour-only cues.
 
 ### 4.6 Traffic-light bounce (Golden Gate)
 - **What it is:** the glass traffic lights bounce when clicked or dragged.
-- **Kiwi status:** **partial** (glass style, no bounce).
+- **Kiwi status:** **have** as a GTK CSS transition (`app-buttons-bounce`).
 - **Recommendation:** Later (P3), **S** for Kiwi-drawn buttons.
 
 ### 4.7 More distinct active window (Golden Gate)
 - **What it is:** the active window stands out more from inactive ones.
 - **Port to GNOME 50:** shadow strength and glass tint by focus.
+- **Kiwi status:** **have** for GTK apps with client-side titlebars (`app-buttons-distinct-active`).
 - **Recommendation:** Port (P2), **S**.
 
 ### 4.8 Show Borders (Golden Gate)
@@ -233,7 +239,7 @@ Apple often adds a cue and walks it back two releases later. Follow the newest r
 
 ### 4.9 Menu bar background toggle (Tahoe)
 - **What it is:** "Show Menu Bar Background" puts a backing behind the transparent bar.
-- **Kiwi status:** **partial** (transparency level, opaque on window).
+- **Kiwi status:** **have** ("Show Menu Bar Background", bound to `menubar-transparent`).
 - **Recommendation:** Port (P2), **S**: one switch matching Tahoe's wording.
 
 ---
@@ -244,7 +250,7 @@ Apple often adds a cue and walks it back two releases later. Follow the newest r
 - **Introduced / changed:** see the lineage table.
 - **What it is:** a segmented bar with a single larger icon at the left, under the menu-bar icon that matches (Sound, Display), only for keyboard changes. Description from the 27.2 beta; the final design is not verified.
 - **Port to GNOME 50:** `ctx.osd` sink already exists; change the pill's layout and anchor it to the matching menu-bar item (fallback: Control Center button).
-- **Kiwi status:** **partial** (Tahoe pill).
+- **Kiwi status:** **have** (`osd-style` golden-gate default, tahoe kept).
 - **Recommendation:** Port (P1), **S–M**.
 
 ---
