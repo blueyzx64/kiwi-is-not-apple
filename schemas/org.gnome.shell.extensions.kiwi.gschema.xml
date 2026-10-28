@@ -733,6 +733,21 @@
         <summary>Input key</summary>
         <description>The key for input-key-action, for example Menu or F13 (a single key, like the macOS Globe key) or a chord. Empty means none.</description>
       </key>
+      <key name="input-press-and-hold" type="b">
+        <default>true</default>
+        <summary>Press and hold for accents</summary>
+        <description>With a Kiwi input source, holding a letter shows its accented variants, numbered 1 to 9 (macOS). Off when key repeat is off. Read by the Kiwi input engine (helpers/kiwi-input), not by the extension.</description>
+      </key>
+      <key name="input-replacements" type="b">
+        <default>true</default>
+        <summary>Text Replacements</summary>
+        <description>With a Kiwi input source, a shortcut followed by a space or punctuation becomes its phrase; Backspace right after puts the shortcut back (macOS). Read by the Kiwi input engine.</description>
+      </key>
+      <key name="input-replacements-list" type="a(ss)">
+        <default>[('omw', 'On my way!')]</default>
+        <summary>Text Replacements list</summary>
+        <description>Pairs of shortcut and phrase. A shortcut is one word without spaces.</description>
+      </key>
       <key name="emoji-picker" type="b">
         <default>true</default>
         <summary>Emoji and Symbols</summary>

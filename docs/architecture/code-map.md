@@ -36,7 +36,9 @@ lib/cleanup/          the v3 one-shot cleanup of 2.x user files
 features/<name>/      one folder per feature
 prefs.js  prefs/      the preferences window (sidebar shell, widgets, pages)
 tests/                gjs -m unit tests (tests/run.sh)
-tools/                build-css.sh, check-pack.sh, smoke/
+tools/                build-css.sh, check-pack.sh, smoke/, input/ (input engine test)
+helpers/              out-of-process programs, separate packages (not in the zip):
+                      kiwi-shelf-helper (notch shelf drag-out), kiwi-input (IBus engine)
 docs/                 architecture, feature specs, research
 ```
 
@@ -131,6 +133,18 @@ pinch, hot corner), `split-view-changed` (Split View), `recording-started` /
 | `launcherEntry.js` (+`Model`) | `com.canonical.Unity.LauncherEntry` badges, progress, urgent (entries go with their sender) |
 | `backgroundApps.js` (+`Model`) | the Background portal's `org.freedesktop.background.Monitor` list; `stop(app)` |
 | `cleanup/` | v3 one-shot cleanup: `index.js` (`runCleanup`, steps, `CLEANUP_ID`), `mozilla.js` (+`mozillaModel.js`), `cleanupModel.js` (gtk.css, environment.d, dock colours), `fileOps.js` (async Gio helpers, `enqueueUserFileJob`) |
+| `inputSourcesModel.js` | the Kiwi input engine's source names (`kiwiEngineName`), "Add Kiwi input sources" (`withKiwiSources`, append only), Text Replacements rows (`cleanReplacements`); used by `prefs/textInput.js` |
+
+### helpers/kiwi-input (IBus engine, separate package)
+A Shell extension cannot see keys typed into apps on Wayland, so press and hold for accents and
+Text Replacements live in an IBus engine (`sudo make input-install` or `make input-rpm`; IBus
+reads components only from `/usr/share/ibus/component`). One engine per XKB layout
+(`kiwi:us:euro`, layout and variant kept). `kiwi-input-engine.js` (adapter: IBus.Engine,
+lookup table, timers, settings), pure `accentsModel.js` (macOS variants), `holdModel.js` (key
+state machine), `replacementsModel.js` (match, expand, Backspace undo), `enginesModel.js`
+(engine list, `--xml`). Settings: Kiwi's `input-press-and-hold`, `input-replacements`,
+`input-replacements-list`. Prefs: `prefs/textInput.js` on the Keyboard page. Tests:
+`tests/kiwiInputModel.test.js`, `tools/input/engine-test.sh` (a private ibus-daemon).
 
 ## 5. features/
 

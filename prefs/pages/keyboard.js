@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Keyboard: the text-cursor indicators, Emoji & Symbols and keyboard accessibility (macOS
-// System Settings > Keyboard and Accessibility > Keyboard).
+// Keyboard: the text-cursor indicators, Emoji & Symbols, Text Input (press and hold, Text
+// Replacements) and keyboard accessibility (macOS System Settings > Keyboard and
+// Accessibility > Keyboard).
 
 import Adw from 'gi://Adw';
 
 import * as inputIndicatorPrefs from '../../features/inputIndicator/prefs.js';
 import * as emojiPrefs from '../../features/emoji/prefs.js';
+import * as textInputPrefs from '../textInput.js';
 import * as keyboardAccessPrefs from '../../features/keyboardAccess/prefs.js';
 import { addFeatureGroups } from '../widgets.js';
 
@@ -15,6 +17,7 @@ export function build(args) {
     const page = new Adw.PreferencesPage({ title: args._('Keyboard'), icon_name: PAGE.icon });
     addFeatureGroups(page, inputIndicatorPrefs, args);
     addFeatureGroups(page, emojiPrefs, args);
+    addFeatureGroups(page, textInputPrefs, args);
     addFeatureGroups(page, keyboardAccessPrefs, args);
     return page;
 }
