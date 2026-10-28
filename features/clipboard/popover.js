@@ -19,7 +19,7 @@ import { ListScroller, addRow, buildFilterTabs, navAction, sectionLabel } from '
 
 const WIDTH = 340;
 const MAX_ROWS = 80;
-const ROW_TILE = 24;
+const ROW_TILE = 'M';      // icon well size (lib/designTokens.js)
 const PAGE_ROWS = 5;
 
 export class ClipboardPopover {
@@ -44,12 +44,13 @@ export class ClipboardPopover {
         cleanup.add(ctl.connectChanged(() => this._menu.isOpen && this._refresh()));
         cleanup.add(() => this._detachGlass());
         this._attachGlass();
-        // Secondary text needs its own shade per style to stay readable
+        // The design system's light marker, so secondary text, pills and the search capsule take
+        // their light shade on a light popover whether or not the glass is on
         Glass.watch(cleanup, ({ env }) => {
             if (env.dark)
-                this._root.remove_style_class_name('kiwi-clip-light');
+                this._root.remove_style_class_name('kiwi-light');
             else
-                this._root.add_style_class_name('kiwi-clip-light');
+                this._root.add_style_class_name('kiwi-light');
         });
     }
 
@@ -65,7 +66,7 @@ export class ClipboardPopover {
         this._root = root;
 
         this._entry = new St.Entry({
-            style_class: 'kiwi-clip-search', hint_text: _('Search'), accessible_name: _('Search Clipboard'), can_focus: true, x_expand: true,
+            style_class: 'kiwi-clip-search kiwi-search-field kiwi-search-capsule-filled kiwi-text-body', hint_text: _('Search'), accessible_name: _('Search Clipboard'), can_focus: true, x_expand: true,
             primary_icon: new St.Icon({ icon_name: 'edit-find-symbolic', style_class: 'kiwi-clip-search-icon' }),
         });
         this._entry.clutter_text.connect('text-changed', () => {
@@ -102,12 +103,12 @@ export class ClipboardPopover {
         });
         toggle.connect('clicked', () => this._ctl.setRecording(!this._ctl.recording));
         this._recLabel = new St.Label({
-            style_class: 'kiwi-clip-recording-label', x_expand: true, y_align: Clutter.ActorAlign.CENTER,
+            style_class: 'kiwi-clip-recording-label kiwi-secondary-text kiwi-text-caption', x_expand: true, y_align: Clutter.ActorAlign.CENTER,
         });
         foot.add_child(toggle);
         foot.add_child(this._recLabel);
         const clear = new St.Button({
-            label: _('Clear'), accessible_name: _('Clear Clipboard History'), style_class: 'kiwi-clip-clear', can_focus: true, y_align: Clutter.ActorAlign.CENTER,
+            label: _('Clear'), accessible_name: _('Clear Clipboard History'), style_class: 'kiwi-clip-clear kiwi-pill-button', can_focus: true, y_align: Clutter.ActorAlign.CENTER,
         });
         clear.connect('clicked', () => this._ctl.clear());
         foot.add_child(clear);
@@ -242,15 +243,15 @@ export class ClipboardPopover {
         });
         box.add_child(new St.Icon({
             icon_name: searching ? 'edit-find-symbolic' : 'edit-paste-symbolic',
-            style_class: 'kiwi-clip-empty-icon', x_align: Clutter.ActorAlign.CENTER,
+            style_class: 'kiwi-clip-empty-icon kiwi-tertiary-text', x_align: Clutter.ActorAlign.CENTER,
         }));
         box.add_child(new St.Label({
             text: searching ? _('No matches') : _('Nothing copied yet'),
-            style_class: 'kiwi-clip-empty-title', x_align: Clutter.ActorAlign.CENTER,
+            style_class: 'kiwi-clip-empty-title kiwi-text-headline', x_align: Clutter.ActorAlign.CENTER,
         }));
         box.add_child(new St.Label({
             text: searching ? _('Try another word or filter.') : _('Text, links and images you copy appear here.'),
-            style_class: 'kiwi-clip-empty-hint', x_align: Clutter.ActorAlign.CENTER,
+            style_class: 'kiwi-clip-empty-hint kiwi-secondary-text kiwi-text-caption', x_align: Clutter.ActorAlign.CENTER,
         }));
         return box;
     }

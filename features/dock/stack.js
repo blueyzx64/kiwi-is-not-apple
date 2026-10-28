@@ -20,6 +20,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as DND from 'resource:///org/gnome/shell/ui/dnd.js';
 
 import * as A11y from '../../lib/a11y.js';
+import { RADIUS } from '../../lib/designTokens.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { Glass } from '../../lib/glass.js';
 import { IconStyle } from '../../lib/iconStyle.js';
@@ -325,10 +326,12 @@ class StackPopup {
 
     // ---- rows ----
 
-    _fileButton(f, { iconSize, vertical, label = true, badgeAfterName = false }) {
+    // row: an entry of the grid or list panel, a design-system .kiwi-row (the fan's floating
+    // names keep their own pills)
+    _fileButton(f, { iconSize, vertical, label = true, badgeAfterName = false, row = false }) {
         const _ = this._host.gettext;
         const button = new St.Button({
-            style_class: `kiwi-dock-stack-file${f.entry.partial ? ' kiwi-dock-stack-partial' : ''}`,
+            style_class: `kiwi-dock-stack-file${row ? ' kiwi-row' : ''}${f.entry.partial ? ' kiwi-dock-stack-partial' : ''}`,
             accessible_name: f.entry.partial ? _('%s (downloading)').format(f.entry.label) : f.entry.label,
             reactive: true, can_focus: true, track_hover: true,
             button_mask: St.ButtonMask.ONE | St.ButtonMask.THREE,
@@ -403,9 +406,10 @@ class StackPopup {
         this.actor.hide();
     }
 
-    _openFolderButton(text) {
+    _openFolderButton(text, pill = false) {
         const button = new St.Button({
-            style_class: 'kiwi-dock-stack-open', label: text, reactive: true, can_focus: true,
+            style_class: pill ? 'kiwi-dock-stack-open-pill kiwi-pill-button' : 'kiwi-dock-stack-open',
+            label: text, reactive: true, can_focus: true,
         });
         button.connect('clicked', () => {
             this._host.openUri(this._stack.dir.get_uri());
@@ -455,9 +459,9 @@ class StackPopup {
         const m = this._host.metrics;
         const _ = this._host.gettext;
         const panel = new St.BoxLayout({ style_class: `kiwi-dock-stack-panel kiwi-dock-stack-panel-${view}`, orientation: Clutter.Orientation.VERTICAL });
-        const glass = Glass.attach(panel, { surface: 'menus', role: 'content' });
+        const glass = Glass.attach(panel, { surface: 'menus', role: 'content', radius: RADIUS.card });
         this._cleanup.add(() => glass.destroy());
-        panel.add_child(new St.Label({ style_class: 'kiwi-dock-stack-title', text: this._stack.dir.get_basename() }));
+        panel.add_child(new St.Label({ style_class: 'kiwi-dock-stack-title kiwi-section-header', text: this._stack.dir.get_basename() }));
 
         const scroll = new St.ScrollView({ style_class: 'kiwi-dock-stack-scroll', hscrollbar_policy: St.PolicyType.NEVER });
         const iconSize = view === 'grid' ? Math.round(m.icon * 1.1) : Math.round(m.icon * 0.6);
@@ -467,7 +471,7 @@ class StackPopup {
             body = new St.Widget({ layout_manager: layout, style_class: 'kiwi-dock-stack-grid' });
             fill = (from, to) => files.slice(from, to).forEach((f, k) => {
                 const i = from + k;
-                const button = this._fileButton(f, { iconSize, vertical: true });
+                const button = this._fileButton(f, { iconSize, vertical: true, row: true });
                 // Name under the icon in a grid
                 const box = button.get_child();
                 box.set_child_at_index(box.get_last_child(), 0);
@@ -476,7 +480,7 @@ class StackPopup {
         } else {
             body = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, style_class: 'kiwi-dock-stack-list' });
             fill = (from, to) => files.slice(from, to).forEach(f => {
-                const button = this._fileButton(f, { iconSize, vertical: false, badgeAfterName: true });
+                const button = this._fileButton(f, { iconSize, vertical: false, badgeAfterName: true, row: true });
                 const box = button.get_child();
                 box.set_child_at_index(box.get_last_child(), 0);
                 button.x_expand = true;
@@ -497,13 +501,15 @@ class StackPopup {
             }
         });
         if (!files.length)
-            body = new St.Label({ style_class: 'kiwi-dock-stack-empty', text: this._stack.isDownloads ? _('No downloads') : _('Empty folder') });
+            body = new St.Label({ style_class: 'kiwi-dock-stack-empty kiwi-secondary-text', text: this._stack.isDownloads ? _('No downloads') : _('Empty folder') });
         // A ScrollView needs a scrollable child: a box around the grid, list or note
         const content = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL });
         content.add_child(body);
         scroll.set_child(content);
         panel.add_child(scroll);
-        panel.add_child(this._openFolderButton(_('Open in Files')));
+        const open = this._openFolderButton(_('Open in Files'), true);
+        open.x_align = Clutter.ActorAlign.CENTER;
+        panel.add_child(open);
         this.actor.add_child(panel);
 
         // Size: the content, capped to a few rows with the rest scrolling

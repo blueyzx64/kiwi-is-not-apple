@@ -459,6 +459,17 @@ StEntry.kiwi-search-field StIcon { color: rgba(255, 255, 255, 0.6); padding-righ
 .kiwi-modal-light .kiwi-push-button:hover,
 .kiwi-light .kiwi-push-button:hover { background-color: rgba(0, 0, 0, 0.12); }
 
+/* A pill in toggle mode (filter and category pills): the chosen one in the accent, as a
+   checked toolbar button */
+.kiwi-pill-button:checked,
+.kiwi-pill-button:checked:hover,
+.kiwi-glass-light .kiwi-pill-button:checked,
+.kiwi-modal-light .kiwi-pill-button:checked,
+.kiwi-light .kiwi-pill-button:checked {
+  color: -st-accent-fg-color;
+  background-color: st-transparentize(-st-accent-color, 0.15);
+}
+
 .kiwi-push-button.kiwi-push-button-default,
 .kiwi-glass-light .kiwi-push-button.kiwi-push-button-default,
 .kiwi-modal-light .kiwi-push-button.kiwi-push-button-default,
@@ -558,20 +569,14 @@ StEntry.kiwi-search-field StIcon { color: rgba(255, 255, 255, 0.6); padding-righ
 .kiwi-menubar-search:focus,
 .kiwi-about-button:focus,
 .kiwi-force-quit-button:focus,
-.kiwi-mc-space-close:focus,
 .kiwi-mc-space-label:focus,
-.kiwi-clip-filter:focus,
 .kiwi-clip-recording:focus,
 .kiwi-stage-card:focus,
 .kiwi-launchpad-delete:focus,
 .kiwi-cc-editor-text-button:focus,
 .kiwi-cc-np-button:focus,
 .window-control-button:focus,
-.kiwi-widgets-gallery-search:focus,
-.kiwi-widgets-gallery-pill:focus,
-.kiwi-widgets-gallery-chip:focus,
 .kiwi-widgets-gallery-add:focus,
-.kiwi-widgets-gallery-size:focus,
 .kiwi-widget-remove:focus,
 .kiwi-widget-check:focus,
 .kiwi-widget-file-button:focus,

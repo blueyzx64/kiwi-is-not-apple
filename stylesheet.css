@@ -464,6 +464,17 @@ StEntry.kiwi-search-field StIcon { color: rgba(255, 255, 255, 0.6); padding-righ
 .kiwi-modal-light .kiwi-push-button:hover,
 .kiwi-light .kiwi-push-button:hover { background-color: rgba(0, 0, 0, 0.12); }
 
+/* A pill in toggle mode (filter and category pills): the chosen one in the accent, as a
+   checked toolbar button */
+.kiwi-pill-button:checked,
+.kiwi-pill-button:checked:hover,
+.kiwi-glass-light .kiwi-pill-button:checked,
+.kiwi-modal-light .kiwi-pill-button:checked,
+.kiwi-light .kiwi-pill-button:checked {
+  color: -st-accent-fg-color;
+  background-color: st-transparentize(-st-accent-color, 0.15);
+}
+
 .kiwi-push-button.kiwi-push-button-default,
 .kiwi-glass-light .kiwi-push-button.kiwi-push-button-default,
 .kiwi-modal-light .kiwi-push-button.kiwi-push-button-default,
@@ -563,20 +574,14 @@ StEntry.kiwi-search-field StIcon { color: rgba(255, 255, 255, 0.6); padding-righ
 .kiwi-menubar-search:focus,
 .kiwi-about-button:focus,
 .kiwi-force-quit-button:focus,
-.kiwi-mc-space-close:focus,
 .kiwi-mc-space-label:focus,
-.kiwi-clip-filter:focus,
 .kiwi-clip-recording:focus,
 .kiwi-stage-card:focus,
 .kiwi-launchpad-delete:focus,
 .kiwi-cc-editor-text-button:focus,
 .kiwi-cc-np-button:focus,
 .window-control-button:focus,
-.kiwi-widgets-gallery-search:focus,
-.kiwi-widgets-gallery-pill:focus,
-.kiwi-widgets-gallery-chip:focus,
 .kiwi-widgets-gallery-add:focus,
-.kiwi-widgets-gallery-size:focus,
 .kiwi-widget-remove:focus,
 .kiwi-widget-check:focus,
 .kiwi-widget-file-button:focus,
@@ -934,29 +939,13 @@ StEntry.kiwi-search-field StIcon { color: rgba(255, 255, 255, 0.6); padding-righ
    Only kiwi- classes; no backdrop-filter (the glass
    comes from lib/glass.js behind the frame). Corners are concentric: frame 26, row 12. */
 
-/* ---- shared rows ---- */
-.kiwi-clip-section {
-  font-size: 12px;
-  font-weight: 600;
-  color: rgba(128, 128, 128, 1);
-  padding: 8px 10px 2px 10px;
-}
-
+/* ---- shared rows ----
+   Rows are .kiwi-row (hover, the calmer accent selection and the focus ring), captions
+   .kiwi-section-header, secondary lines .kiwi-secondary-text, tiles icon wells
+   (docs/architecture/design-system.md). Only the layout is set here. */
 .kiwi-clip-row {
-  border-radius: 10px;
   padding: 0;
   margin: 1px 0;
-}
-
-.kiwi-clip-row:hover,
-.kiwi-clip-row:focus {
-  background-color: rgba(128, 128, 128, 0.16);
-}
-
-.kiwi-clip-row:selected,
-.kiwi-clip-row:selected:hover {
-  background-color: -st-accent-color;
-  color: -st-accent-fg-color;
 }
 
 .kiwi-clip-row-box {
@@ -968,30 +957,7 @@ StEntry.kiwi-search-field StIcon { color: rgba(255, 255, 255, 0.6); padding-righ
   spacing: 1px;
 }
 
-.kiwi-clip-title {
-  font-size: 14px;
-}
-
-.kiwi-clip-sub,
-.kiwi-clip-time {
-  font-size: 12px;
-  color: rgba(128, 128, 128, 1);
-}
-
-.kiwi-clip-row:selected .kiwi-clip-sub,
-.kiwi-clip-row:selected .kiwi-clip-time {
-  color: -st-accent-fg-color;
-}
-
-.kiwi-clip-tile {
-  border-radius: 8px;
-  background-color: rgba(128, 128, 128, 0.22);
-}
-
-.kiwi-clip-tile-image {
-  background-color: rgba(128, 128, 128, 0.12);
-}
-
+/* A colour entry's well is the colour itself, with a hairline so white or black still shows */
 .kiwi-clip-tile-color {
   border: 1px solid rgba(128, 128, 128, 0.4);
 }
@@ -1008,11 +974,6 @@ StEntry.kiwi-search-field StIcon { color: rgba(255, 255, 255, 0.6); padding-righ
 .kiwi-clip-action:hover,
 .kiwi-clip-action:focus {
   background-color: rgba(128, 128, 128, 0.3);
-}
-
-.kiwi-clip-empty {
-  padding: 28px 12px;
-  color: rgba(128, 128, 128, 1);
 }
 
 /* ---- list and its overlay scrollbar (both surfaces) ----
@@ -1055,56 +1016,13 @@ StEntry.kiwi-search-field StIcon { color: rgba(255, 255, 255, 0.6); padding-righ
   spacing: 6px;
 }
 
-.kiwi-clip-search {
-  border-radius: 8px;
-  padding: 5px 8px;
-  min-height: 0;
-  font-size: 14px;
-  background-color: rgba(128, 128, 128, 0.16);
-  border: none;
-  box-shadow: none;
-}
-
-.kiwi-qp-search {
-  border-radius: 10px;
-  padding: 6px 10px;
-  background-color: rgba(128, 128, 128, 0.18);
-  border: none;
-  box-shadow: none;
-}
-
-.kiwi-clip-search:focus,
-.kiwi-qp-search:focus {
-  box-shadow: inset 0 0 0 2px st-transparentize(-st-accent-color, 0.4);
-}
-
 .kiwi-clip-search-icon {
   icon-size: 14px;
-  padding-right: 6px;
-  color: rgba(128, 128, 128, 1);
 }
 
 .kiwi-clip-filters {
-  spacing: 2px;
+  spacing: 4px;
   padding: 0 2px;
-}
-
-.kiwi-clip-filter {
-  border-radius: 6px;
-  padding: 1px 8px;
-  font-size: 12px;
-  color: rgba(128, 128, 128, 1);
-  background-color: transparent;
-}
-
-.kiwi-clip-filter:hover {
-  background-color: rgba(128, 128, 128, 0.12);
-}
-
-.kiwi-clip-filter:checked {
-  font-weight: 600;
-  color: inherit;
-  background-color: rgba(128, 128, 128, 0.2);
 }
 
 .kiwi-clip-scroll {
@@ -1114,10 +1032,6 @@ StEntry.kiwi-search-field StIcon { color: rgba(255, 255, 255, 0.6); padding-righ
 .kiwi-clip-row-compact .kiwi-clip-row-box {
   spacing: 8px;
   padding: 5px 8px;
-}
-
-.kiwi-clip-row-compact .kiwi-clip-tile {
-  border-radius: 6px;
 }
 
 .kiwi-clip-time {
@@ -1132,17 +1046,6 @@ StEntry.kiwi-search-field StIcon { color: rgba(255, 255, 255, 0.6); padding-righ
 .kiwi-clip-empty-icon {
   icon-size: 28px;
   padding-bottom: 6px;
-  color: rgba(128, 128, 128, 0.8);
-}
-
-.kiwi-clip-empty-title {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.kiwi-clip-empty-hint {
-  font-size: 12px;
-  color: rgba(128, 128, 128, 1);
 }
 
 .kiwi-clip-foot {
@@ -1156,60 +1059,14 @@ StEntry.kiwi-search-field StIcon { color: rgba(255, 255, 255, 0.6); padding-righ
   height: 20px;
 }
 
-.kiwi-clip-recording-label,
-.kiwi-clip-hint {
-  font-size: 12px;
-  color: rgba(128, 128, 128, 1);
-}
-
-.kiwi-clip-clear {
-  border-radius: 6px;
-  padding: 2px 8px;
-  font-size: 12px;
-  background-color: transparent;
-}
-
-.kiwi-clip-clear:hover,
-.kiwi-clip-clear:focus {
-  background-color: rgba(128, 128, 128, 0.18);
-}
-
-/* Secondary text: a fixed shade per style for contrast (4.5:1 on the popover fill) */
-.kiwi-clip-popover .kiwi-clip-time,
-.kiwi-clip-popover .kiwi-clip-section,
-.kiwi-clip-popover .kiwi-clip-filter,
-.kiwi-clip-popover .kiwi-clip-empty-hint,
-.kiwi-clip-popover .kiwi-clip-recording-label,
-.kiwi-clip-popover .kiwi-clip-search-icon {
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.kiwi-clip-popover.kiwi-clip-light .kiwi-clip-time,
-.kiwi-clip-popover.kiwi-clip-light .kiwi-clip-section,
-.kiwi-clip-popover.kiwi-clip-light .kiwi-clip-filter,
-.kiwi-clip-popover.kiwi-clip-light .kiwi-clip-empty-hint,
-.kiwi-clip-popover.kiwi-clip-light .kiwi-clip-recording-label,
-.kiwi-clip-popover.kiwi-clip-light .kiwi-clip-search-icon {
-  color: rgba(0, 0, 0, 0.56);
-}
-
-.kiwi-clip-popover .kiwi-clip-filter:checked {
-  color: #ffffff;
-}
-
-.kiwi-clip-popover.kiwi-clip-light .kiwi-clip-filter:checked {
-  color: #1d1d1f;
-}
-
-.kiwi-clip-popover .kiwi-clip-row:selected .kiwi-clip-time {
-  color: -st-accent-fg-color;
-}
-
 /* ---- Quick Paste ---- */
 .kiwi-quick-paste {
   padding: 14px;
   spacing: 10px;
-  border-radius: 26px;
+}
+
+.kiwi-qp-search-icon {
+  icon-size: 16px;
 }
 
 .kiwi-qp-body {
@@ -1224,14 +1081,8 @@ StEntry.kiwi-search-field StIcon { color: rgba(255, 255, 255, 0.6); padding-righ
   spacing: 8px;
 }
 
-.kiwi-qp-preview {
-  border-radius: 14px;
-  padding: 12px;
-  background-color: rgba(128, 128, 128, 0.14);
-}
-
 .kiwi-qp-text {
-  font-size: 14px;
+  font-size: 10.5pt;
 }
 
 .kiwi-qp-swatch {
@@ -1244,36 +1095,12 @@ StEntry.kiwi-search-field StIcon { color: rgba(255, 255, 255, 0.6); padding-righ
   font-family: monospace;
 }
 
-.kiwi-qp-meta,
-.kiwi-qp-hints {
-  font-size: 12px;
-  color: rgba(128, 128, 128, 0.95);
-}
-
 .kiwi-qp-hints {
   padding: 0 4px;
 }
 
 .kiwi-qp-buttons {
   spacing: 8px;
-}
-
-.kiwi-qp-button {
-  border-radius: 99px;
-  padding: 5px 16px;
-  background-color: rgba(128, 128, 128, 0.22);
-}
-
-.kiwi-qp-button:hover,
-.kiwi-qp-button:focus {
-  background-color: rgba(128, 128, 128, 0.36);
-}
-
-.kiwi-qp-primary,
-.kiwi-qp-primary:hover,
-.kiwi-qp-primary:focus {
-  background-color: -st-accent-color;
-  color: -st-accent-fg-color;
 }
 
 /* ==== features/controlCenter/style.css ==== */
@@ -2304,11 +2131,10 @@ StEntry.kiwi-search-field StIcon { color: rgba(255, 255, 255, 0.6); padding-righ
     box-shadow: 0 0 8px rgba(255, 255, 255, 0.45);
 }
 
-.kiwi-dock-menu .popup-menu-content {
-    border-radius: 14px;
-}
-
-/* ---- Downloads stack ---- */
+/* ---- Downloads stack ----
+   The fan's files float over the desktop with their names on dark pills; the grid and list
+   panel is glass (radius 18, RADIUS.card) with a .kiwi-section-header title, .kiwi-row
+   entries and a .kiwi-pill-button to open the folder (docs/architecture/design-system.md). */
 .kiwi-dock-stack-file {
     padding: 4px;
     border-radius: 10px;
@@ -2316,8 +2142,8 @@ StEntry.kiwi-search-field StIcon { color: rgba(255, 255, 255, 0.6); padding-righ
     color: #f5f5f7;
 }
 
-.kiwi-dock-stack-file:hover,
-.kiwi-dock-stack-file:focus {
+#kiwi-dock-stack > .kiwi-dock-stack-file:hover,
+#kiwi-dock-stack > .kiwi-dock-stack-file:focus {
     background-color: rgba(255, 255, 255, 0.14);
 }
 
@@ -2348,17 +2174,17 @@ StEntry.kiwi-search-field StIcon { color: rgba(255, 255, 255, 0.6); padding-righ
 }
 
 .kiwi-dock-stack-panel {
-    padding: 12px;
+    padding: 8px;
     border-radius: 18px;
     background-color: rgba(36, 36, 40, 0.94);
     border: 1px solid rgba(255, 255, 255, 0.16);
     color: #f5f5f7;
-    spacing: 8px;
+    spacing: 6px;
 }
 
-.kiwi-dock-stack-title {
-    font-weight: 700;
-    padding: 0 6px;
+.kiwi-dock-stack-panel.kiwi-glass-light,
+.kiwi-dock-stack-panel.kiwi-glass-light .kiwi-dock-stack-file {
+    color: #1d1d1f;
 }
 
 .kiwi-dock-stack-grid .kiwi-dock-stack-name {
@@ -2376,7 +2202,6 @@ StEntry.kiwi-search-field StIcon { color: rgba(255, 255, 255, 0.6); padding-righ
 
 .kiwi-dock-stack-empty {
     padding: 16px;
-    color: rgba(245, 245, 247, 0.7);
 }
 
 .kiwi-dock-stack-open {
@@ -2391,6 +2216,10 @@ StEntry.kiwi-search-field StIcon { color: rgba(255, 255, 255, 0.6); padding-righ
 .kiwi-dock-stack-open:hover,
 .kiwi-dock-stack-open:focus {
     background-color: rgba(60, 60, 66, 0.92);
+}
+
+.kiwi-dock-stack-open-pill {
+    margin-top: 2px;
 }
 
 /* The optional Mission Control tile (missionControlItem.js) */
@@ -3246,17 +3075,14 @@ StEntry.kiwi-search-field StIcon { color: rgba(255, 255, 255, 0.6); padding-righ
 
 .kiwi-mc-space-label {
     color: #ffffff;
-    font-size: 9.5pt;
     font-weight: 600;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
 }
 
+/* A .kiwi-toolbar-button, small and solid: it sits on a thumbnail's corner over any wallpaper */
 .kiwi-mc-space-close {
     width: 20px;
     height: 20px;
-    padding: 0;
-    border-radius: 10px;
-    color: #ffffff;
     background-color: rgba(58, 58, 60, 0.92);
     border: 1px solid rgba(255, 255, 255, 0.28);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
@@ -3306,7 +3132,6 @@ StEntry.kiwi-search-field StIcon { color: rgba(255, 255, 255, 0.6); padding-righ
 
 .kiwi-mc-expose-title {
     color: #ffffff;
-    font-size: 9pt;
     margin-top: 6px;
     max-width: 180px;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);

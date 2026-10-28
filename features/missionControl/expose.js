@@ -81,7 +81,7 @@ export class ExposeStrip {
             }));
             column.add_child(clip);
             column.add_child(new St.Label({
-                style_class: 'kiwi-mc-expose-title',
+                style_class: 'kiwi-mc-expose-title kiwi-text-callout',
                 text: win.get_title() || '',
                 x_align: Clutter.ActorAlign.CENTER,
             }));
