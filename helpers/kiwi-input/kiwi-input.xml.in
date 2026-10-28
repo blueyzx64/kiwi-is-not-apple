@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Kiwi input engine. IBus reads components only from its own data dir
+     (/usr/share/ibus/component) or IBUS_COMPONENT_PATH, so this is a system install.
+     The engines come from the engine's xml option: one per XKB layout; the user's dconf is
+     observed so a new GNOME layout gets its engine at the next IBus start. -->
+<component>
+    <name>org.kiwi.Input</name>
+    <description>Kiwi: press and hold for accents, Text Replacements</description>
+    <exec>@LIBEXECDIR@/kiwi-input-engine --ibus</exec>
+    <version>@VERSION@</version>
+    <author>Kiwi (is not Apple)</author>
+    <license>GPL-3.0-or-later</license>
+    <homepage>https://github.com/blueyzx64/kiwi-is-not-apple</homepage>
+    <textdomain>kiwi</textdomain>
+    <observed-paths>
+        <path>~/.config/dconf/user</path>
+    </observed-paths>
+    <engines exec="@LIBEXECDIR@/kiwi-input-engine --xml" />
+</component>

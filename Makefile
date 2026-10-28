@@ -9,7 +9,8 @@ EXTRA_FLAGS := $(addprefix --extra-source=,$(EXTRA))
 # Shell styles: stylesheet.css is built from these (and committed)
 CSS_SRC := styles/base.css $(sort $(wildcard features/*/style.css))
 
-.PHONY: all css css-check pack pack-check pot install uninstall test lint schema-check check clean smoke helper-rpm helper-install
+.PHONY: all css css-check pack pack-check pot install uninstall test lint schema-check check clean smoke helper-rpm helper-install \
+	input-install input-uninstall input-rpm input-test
 
 all: check
 
@@ -82,6 +83,47 @@ helper-rpm:
 helper-install:
 	install -Dm0755 $(HELPER_DIR)/kiwi-shelf-helper.js $(HOME)/.local/bin/kiwi-shelf-helper
 	install -Dm0644 $(HELPER_DIR)/org.kiwi.ShelfHelper.desktop $(HOME)/.local/share/applications/org.kiwi.ShelfHelper.desktop
+
+# The Kiwi input engine (press and hold for accents, Text Replacements) is its own package too
+# (not in the extension zip). ibus-daemon reads components only from its own data dir
+# (/usr/share/ibus/component), so this is a system install; there is no per-user one.
+#   sudo make input-install     /usr/share/kiwi-input, /usr/libexec/kiwi-input-engine and the
+#                               IBus component (INPUT_ROOT=dir stages it elsewhere, for packaging)
+#   sudo make input-uninstall   removes exactly those files
+#   make input-rpm              dist/input/RPMS/noarch/kiwi-input-*.rpm (needs rpmbuild)
+#   make input-test             the engine on a private ibus-daemon (tools/input/engine-test.sh)
+INPUT_DIR   := helpers/kiwi-input
+INPUT_NAME  := kiwi-input
+INPUT_VER   := $(shell sed -n 's/^Version:[[:space:]]*//p' $(INPUT_DIR)/$(INPUT_NAME).spec)
+INPUT_TOP   := $(CURDIR)/$(DISTDIR)/input
+INPUT_JS    := kiwi-input-engine.js accentsModel.js enginesModel.js holdModel.js replacementsModel.js
+INPUT_SRC   := $(addprefix $(INPUT_DIR)/,$(INPUT_JS) kiwi-input-engine.sh.in kiwi-input.xml.in $(INPUT_NAME).spec)
+INPUT_ROOT  ?=
+
+input-install:
+	install -d $(INPUT_ROOT)/usr/share/kiwi-input $(INPUT_ROOT)/usr/libexec $(INPUT_ROOT)/usr/share/ibus/component
+	install -m0644 $(addprefix $(INPUT_DIR)/,$(INPUT_JS)) $(INPUT_ROOT)/usr/share/kiwi-input/
+	sed 's|@DATADIR@|/usr/share|' $(INPUT_DIR)/kiwi-input-engine.sh.in >$(INPUT_ROOT)/usr/libexec/kiwi-input-engine
+	chmod 0755 $(INPUT_ROOT)/usr/libexec/kiwi-input-engine
+	sed -e 's|@LIBEXECDIR@|/usr/libexec|g' -e 's|@VERSION@|$(INPUT_VER)|' $(INPUT_DIR)/kiwi-input.xml.in \
+		>$(INPUT_ROOT)/usr/share/ibus/component/kiwi-input.xml
+	@echo "Installed. Log out and back in (or run 'ibus restart' as yourself), then add a '(Kiwi)' input source."
+
+input-uninstall:
+	rm -f $(addprefix $(INPUT_ROOT)/usr/share/kiwi-input/,$(INPUT_JS))
+	-rmdir $(INPUT_ROOT)/usr/share/kiwi-input
+	rm -f $(INPUT_ROOT)/usr/libexec/kiwi-input-engine $(INPUT_ROOT)/usr/share/ibus/component/kiwi-input.xml
+
+input-rpm:
+	rm -rf $(INPUT_TOP)
+	mkdir -p $(INPUT_TOP)/SOURCES $(INPUT_TOP)/stage/$(INPUT_NAME)-$(INPUT_VER)
+	cp $(INPUT_SRC) $(INPUT_TOP)/stage/$(INPUT_NAME)-$(INPUT_VER)/
+	tar -C $(INPUT_TOP)/stage -czf $(INPUT_TOP)/SOURCES/$(INPUT_NAME)-$(INPUT_VER).tar.gz $(INPUT_NAME)-$(INPUT_VER)
+	rpmbuild -bb --define "_topdir $(INPUT_TOP)" --define "dist %{nil}" $(INPUT_DIR)/$(INPUT_NAME).spec
+	@ls $(INPUT_TOP)/RPMS/*/*.rpm
+
+input-test:
+	tools/input/engine-test.sh
 
 clean:
 	rm -rf $(DISTDIR)

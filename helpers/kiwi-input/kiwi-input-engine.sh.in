@@ -1,0 +1,3 @@
+#!/bin/sh
+# Launcher: the engine is an ES module next to its pure models.
+exec gjs -m @DATADIR@/kiwi-input/kiwi-input-engine.js "$@"

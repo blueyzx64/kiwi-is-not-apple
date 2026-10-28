@@ -92,7 +92,7 @@ export default [
         // Pure models and core logic run under plain `gjs -m` in tests: no Shell, no GTK
         files: ['core/*Model.js', 'core/**/model.js', 'core/appMenus/*Model.js', 'core/events.js', 'core/originals.js', 'features/**/model.js', 'features/**/*Model.js',
             'lib/*Model.js', 'lib/featureRegistry.js', 'lib/settings.js', 'lib/jobQueue.js',
-            'lib/migrations.js', 'lib/cleanup/*Model.js'],
+            'lib/migrations.js', 'lib/cleanup/*Model.js', 'helpers/kiwi-input/*Model.js'],
         rules: {
             'no-restricted-imports': restrict({group: ['gi://*', 'resource://*'], message: 'Pure module: no gi:// or resource:// imports (move it to the adapter).'}),
         },
