@@ -395,7 +395,7 @@
       <key name="windows-tiling" type="b">
         <default>true</default>
         <summary>Window tiling</summary>
-        <description>Kiwi tiles windows the way macOS 15 does: by dragging to the screen edges, corners, menu bar and the layout picker at the top centre, and with keyboard shortcuts. While it runs, GNOME's own edge tiling (org.gnome.mutter edge-tiling) is off; the user's value is saved and restored.</description>
+        <description>Kiwi tiles windows the way macOS 15 does: by dragging to the screen edges, corners, menu bar and the snap layouts at the top centre, and with keyboard shortcuts. While it runs, GNOME's own edge tiling (org.gnome.mutter edge-tiling) is off; the user's value is saved and restored.</description>
       </key>
       <key name="windows-tile-drag-edges" type="b">
         <default>true</default>
@@ -409,8 +409,8 @@
       </key>
       <key name="windows-tile-drag-picker" type="b">
         <default>true</default>
-        <summary>Layout picker at the top centre while dragging</summary>
-        <description>Dragging a window to the top bar at the centre of the screen opens the layout picker (halves, quarters, arrangements) under the notch. Releasing over a layout tiles to it; releasing elsewhere in the top-centre zone fills the screen. Needs windows-tile-drag-menubar.</description>
+        <summary>Snap layouts at the top centre while dragging</summary>
+        <description>Dragging a window to the top edge at the centre of the screen slides a handle down under the top bar (Windows 11 Snap Layouts). Moving onto the handle expands it into a bar of layouts (halves, thirds, quarters); releasing over a zone tiles the window there, releasing elsewhere on the bar does nothing.</description>
       </key>
       <key name="windows-tile-drag-modifier" type="b">
         <default>true</default>

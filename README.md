@@ -21,7 +21,7 @@ Each area has a page in [docs/features](docs/features/README.md) with its settin
 
 ### Windows
 - Window buttons stay on each app's own titlebar, on the right by default (left is a setting), with the macOS traffic-light look or the stock GNOME one. Kiwi draws none in the top bar.
-- Sequoia-style tiling: drag to edges, corners or the top bar; drag to the top centre for a layout picker; Ctrl+Super shortcuts for halves, Fill, Center, Return to Previous Size and arrangements of several windows.
+- Sequoia-style tiling: drag to edges, corners or the top bar; drag to the top centre for Windows 11-style snap layouts; Ctrl+Super shortcuts for halves, Fill, Center, Return to Previous Size and arrangements of several windows.
 - Full screen in its own Space, Split View (Ctrl+Super+Alt+Left or Right on a full-screen window), and Hide and Hide Others (Super+H, Alt+Super+H).
 - Show Desktop (top-bar button, Super+D, click on empty wallpaper) and rounded window corners.
 

@@ -41,6 +41,7 @@ export const SPRINGS = Object.freeze({
     snappy: Object.freeze({ response: 0.3, damping: 0.86 }),
     smooth: Object.freeze({ response: 0.42, damping: 1 }),
     bouncy: Object.freeze({ response: 0.5, damping: 0.68 }),
+    quick: Object.freeze({ response: 0.2, damping: 1 }),   // hover and highlight: fast, never past the target
 });
 
 /** Longest crossfade under reduced motion. */

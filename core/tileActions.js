@@ -2,7 +2,7 @@
 // The vocabulary of window tiling, shared by everything that asks for a tile: the zones (as
 // fractions of a work area), the multi-window arrangements and the action strings of the
 // 'window-tile-requested' event (core/events.js). The tiling engine (features/windows) acts on them;
-// the drag picker (features/windows) and the menu bar's Window menu draw and request them. Pure JS, no gi imports.
+// the drag snap bar (features/windows) and the menu bar's Window menu draw and request them. Pure JS, no gi imports.
 
 // Marks a string for translation; the view translates it
 const N_ = s => s;
@@ -18,6 +18,11 @@ export const ZONES = Object.freeze({
     'top-right': Object.freeze({ x: 1 / 2, y: 0, w: 1 / 2, h: 1 / 2 }),
     'bottom-left': Object.freeze({ x: 0, y: 1 / 2, w: 1 / 2, h: 1 / 2 }),
     'bottom-right': Object.freeze({ x: 1 / 2, y: 1 / 2, w: 1 / 2, h: 1 / 2 }),
+    'left-third': Object.freeze({ x: 0, y: 0, w: 1 / 3, h: 1 }),
+    'center-third': Object.freeze({ x: 1 / 3, y: 0, w: 1 / 3, h: 1 }),
+    'right-third': Object.freeze({ x: 2 / 3, y: 0, w: 1 / 3, h: 1 }),
+    'left-two-thirds': Object.freeze({ x: 0, y: 0, w: 2 / 3, h: 1 }),
+    'right-two-thirds': Object.freeze({ x: 1 / 3, y: 0, w: 2 / 3, h: 1 }),
 });
 
 /**
@@ -55,38 +60,31 @@ export function parseAction(action) {
 }
 
 /**
- * The zone to show for an action: a zone is its own; an arrangement puts the active window in
- * its first zone.
- *
- * @param {string} action see parseAction
- * @returns {?string} a key of ZONES
+ * The layouts of the snap bar (the drag-to-top picker, Windows 11 Snap Layouts): each splits the
+ * screen into zones, every zone a key of ZONES (so each one is also a tile action). Windows 11's
+ * set, in its order. A new layout is a new entry; the bar sizes itself to the list. The names
+ * are gettext keys (marked with N_) for the accessible labels.
  */
-export function leadZone(action) {
-    const parsed = parseAction(action);
-    if (parsed?.kind === 'zone')
-        return parsed.name;
-    return parsed?.kind === 'arrange' ? ARRANGEMENTS[parsed.name][0] : null;
-}
-
-/**
- * The layouts of the picker (the drag picker): the glyph rows with
- * their section titles. the names are gettext keys (marked with N_).
- */
-export const PICKER_SECTIONS = Object.freeze([
+export const SNAP_LAYOUTS = Object.freeze([
+    Object.freeze({ id: 'halves', name: N_('Two Halves'), zones: Object.freeze(['left', 'right']) }),
     Object.freeze({
-        title: N_('Move & Resize'),
-        rows: Object.freeze([
-            Object.freeze([['left', N_('Left')], ['right', N_('Right')], ['top', N_('Top')], ['bottom', N_('Bottom')]]),
-            Object.freeze([['top-left', N_('Top Left')], ['top-right', N_('Top Right')],
-                ['bottom-left', N_('Bottom Left')], ['bottom-right', N_('Bottom Right')]]),
-        ]),
+        id: 'wide-left', name: N_('Two Thirds and One Third'),
+        zones: Object.freeze(['left-two-thirds', 'right-third']),
     }),
     Object.freeze({
-        title: N_('Fill & Arrange'),
-        rows: Object.freeze([
-            Object.freeze([['fill', N_('Fill')], ['arrange-left-right', N_('Left & Right')],
-                ['arrange-right-left', N_('Right & Left')], ['arrange-top-bottom', N_('Top & Bottom')],
-                ['arrange-quarters', N_('Quarters')]]),
-        ]),
+        id: 'wide-right', name: N_('One Third and Two Thirds'),
+        zones: Object.freeze(['left-third', 'right-two-thirds']),
+    }),
+    Object.freeze({
+        id: 'thirds', name: N_('Three Columns'),
+        zones: Object.freeze(['left-third', 'center-third', 'right-third']),
+    }),
+    Object.freeze({
+        id: 'main-left', name: N_('Large Left and Two Stacked'),
+        zones: Object.freeze(['left', 'top-right', 'bottom-right']),
+    }),
+    Object.freeze({
+        id: 'quarters', name: N_('Four Quarters'),
+        zones: Object.freeze(['top-left', 'top-right', 'bottom-left', 'bottom-right']),
     }),
 ]);
