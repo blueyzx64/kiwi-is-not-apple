@@ -29,6 +29,7 @@ import * as DND from 'resource:///org/gnome/shell/ui/dnd.js';
 
 import * as A11y from '../../lib/a11y.js';
 import { AppNames } from '../../core/appNames.js';
+import { RADIUS } from '../../lib/designTokens.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { Glass } from '../../lib/glass.js';
 import { decodeWallpaper, resolveWallpaper } from '../../lib/wallpaperDecode.js';
@@ -209,7 +210,7 @@ class FolderPanel {
         this.grid._delegate = this;
         this.panel.add_child(this.grid);
         this.layer.add_child(this.panel);
-        this._glass = Glass.attach(this.panel, { surface: 'overlays', role: 'content', radius: 32 });
+        this._glass = Glass.attach(this.panel, { surface: 'overlays', role: 'overlay', radius: RADIUS.panel });
         this.cleanup.add(() => this._glass.destroy());
 
         this.tiles = new Map();
@@ -335,12 +336,14 @@ export class LaunchpadView {
 
         const searchWidth = Math.min(280, mon.width - 32);
         this.search = new St.Entry({
-            style_class: 'kiwi-launchpad-search', hint_text: _('Search'), accessible_name: _('Search Apps'), can_focus: true,
+            // Design system: a borderless field on a glass capsule (styles/base.css)
+            style_class: 'kiwi-launchpad-search kiwi-search-field kiwi-search-capsule-filled kiwi-text-body',
+            hint_text: _('Search'), accessible_name: _('Search Apps'), can_focus: true,
             x: Math.round((mon.width - searchWidth) / 2), y: m.searchTop, width: searchWidth,
             primary_icon: new St.Icon({ icon_name: 'edit-find-symbolic', style_class: 'kiwi-launchpad-search-icon' }),
         });
         this.content.add_child(this.search);
-        this._searchGlass = Glass.attach(this.search, { surface: 'overlays', role: 'bar', radius: 10 });
+        this._searchGlass = Glass.attach(this.search, { surface: 'overlays', role: 'bar', radius: RADIUS.capsule });
         this.cleanup.add(() => this._searchGlass.destroy());
         this.cleanup.connect(this.search.clutter_text, 'text-changed', () => this._setQuery(this.search.text));
         this.cleanup.connect(this.search.clutter_text, 'activate', () => this._activateFocus());
@@ -856,20 +859,20 @@ export class LaunchpadView {
         });
         box.add_child(new St.Bin({ child: app.create_icon_texture(64), x_align: Clutter.ActorAlign.CENTER }));
         box.add_child(new St.Label({
-            style_class: 'kiwi-launchpad-alert-title', text: _('Delete “%s”?').replace('%s', app.get_name()),
+            style_class: 'kiwi-launchpad-alert-title kiwi-text-headline', text: _('Delete “%s”?').replace('%s', app.get_name()),
             x_align: Clutter.ActorAlign.CENTER,
         }));
         const body = new St.Label({
-            style_class: 'kiwi-launchpad-alert-body', x_align: Clutter.ActorAlign.CENTER,
+            style_class: 'kiwi-launchpad-alert-body kiwi-text-callout', x_align: Clutter.ActorAlign.CENTER,
             text: _('GNOME Software will remove this app. You can install it again from GNOME Software.'),
         });
         body.clutter_text.line_wrap = true;
         body.clutter_text.x_align = Clutter.ActorAlign.CENTER;
         box.add_child(body);
         const buttons = new St.BoxLayout({ style_class: 'kiwi-launchpad-alert-buttons', x_expand: true });
-        const cancel = new St.Button({ style_class: 'kiwi-launchpad-alert-button', label: _('Cancel'), x_expand: true, can_focus: true });
+        const cancel = new St.Button({ style_class: 'kiwi-launchpad-alert-button kiwi-push-button', label: _('Cancel'), x_expand: true, can_focus: true });
         const del = new St.Button({
-            style_class: 'kiwi-launchpad-alert-button default', label: _('Delete'), x_expand: true, can_focus: true,
+            style_class: 'kiwi-launchpad-alert-button kiwi-push-button kiwi-push-button-default', label: _('Delete'), x_expand: true, can_focus: true,
         });
         cancel.connect('clicked', () => this._closeAlert());
         del.connect('clicked', () => {
@@ -884,7 +887,7 @@ export class LaunchpadView {
         const [, natH] = box.get_preferred_height(280);
         box.set_position(Math.round((this.monitor.width - 280) / 2), Math.round((this.monitor.height - natH) / 2.4));
         box.set_pivot_point(0.5, 0.5);
-        const glass = Glass.attach(box, { surface: 'overlays', role: 'content', radius: 18 });
+        const glass = Glass.attach(box, { surface: 'overlays', role: 'overlay', radius: RADIUS.panel });
         reg.add(() => glass.destroy());
         box.set_scale(0.9, 0.9);
         layer.opacity = 0;
