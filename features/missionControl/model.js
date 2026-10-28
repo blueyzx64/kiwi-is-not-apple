@@ -47,12 +47,15 @@ export const canRemoveSpace = count => count > 1;
 /**
  * Where a window goes in the overview.
  *
- * @param {{appId: ?string, minimized: boolean}} w
+ * @param {{appId: ?string, minimized: boolean, staged?: boolean}} w staged: Stage Manager
+ *   keeps it in its strip (WindowState 'staged'), off the stage: no overview shows it
  * @param {{mode: string, appId: ?string}} view
  * @returns {'spread'|'strip'|'hidden'} spread: in the stock window picker; strip: App
  *   Exposé's row of minimized windows; hidden: not shown
  */
 export function windowPlace(w, view) {
+    if (w.staged)
+        return 'hidden';
     if (view.mode !== MODE.APP)
         return 'spread';
     if (!view.appId || w.appId !== view.appId)

@@ -1,7 +1,7 @@
 // Run: gjs -m tests/stageManagerGeometry.test.js
 import {
     METRICS, balancedFit, clonePose, dropHint, edgeBarrier, edgeFade, layerRect, revealOffset, overlaps, slotAt, stackLayers,
-    stripLayout, stripSide, stripVisible, scaleMs, tiltAngle, workspaceDirection,
+    stageRect, stripLayout, stripSide, stripVisible, scaleMs, tiltAngle, workspaceDirection,
 } from '../features/stageManager/geometry.js';
 
 let failed = 0;
@@ -13,6 +13,14 @@ function eq(a, b, msg = '') {
         throw new Error(`${msg} expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`);
 }
 const wa = { x: 0, y: 32, width: 1280, height: 768 };
+
+test('stageRect: a maximized window already covers the work area, whatever its frame says', () => {
+    const frame = { x: 380, y: 209, width: 520, height: 340 };
+    eq(stageRect(frame, true, wa), wa);
+    eq(stageRect(frame, false, wa), frame);
+    eq(stageRect(frame, true, null), frame);
+    eq(overlaps(stageRect(frame, true, wa), { x: 0, y: 100, width: 200, height: 600 }), true);
+});
 
 test('the strip takes the side opposite a side dock', () => {
     eq(stripSide('left', 'left'), 'right');

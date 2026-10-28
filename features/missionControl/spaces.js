@@ -189,7 +189,7 @@ export class SpacesBar {
     /** The + lives in the first Space and sits after the last one's visible edge. */
     _attachPlus() {
         const thumbs = this._thumbnails();
-        this._plusWanted = this._host.staticSpaces() && thumbs.length > 0;
+        this._plusWanted = thumbs.length > 0;
         if (!this._plusWanted) {
             if (this._plus)
                 this._plus.visible = false;
@@ -357,6 +357,7 @@ export class SpacesBar {
     }
 
     _addSpace() {
+        this._host.holdStaticSpaces();
         global.workspace_manager.append_new_workspace(false, global.get_current_time());
     }
 

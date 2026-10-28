@@ -24,6 +24,18 @@ export function overlaps(a, b) {
         a.y < b.y + b.height && b.y < a.y + a.height;
 }
 
+/**
+ * Where a stage window is going to be. A client takes a few frames to answer a maximize or
+ * restore, so the frame rect still shows the old size while the window already is maximized;
+ * the strip reacts to the state, not to the frame, and so hides or shows once, on time.
+ * @param {rect} frame the window's frame rect now
+ * @param {boolean} maximized
+ * @param {?rect} workArea the work area of its monitor
+ */
+export function stageRect(frame, maximized, workArea) {
+    return maximized && workArea ? workArea : frame;
+}
+
 function clamp(v, lo, hi) {
     return Math.max(lo, Math.min(hi, v));
 }

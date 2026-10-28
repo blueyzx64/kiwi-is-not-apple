@@ -35,7 +35,8 @@ import { Keybindings } from '../../lib/keybindings.js';
 import { KiwiSettings } from '../../lib/settings.js';
 import { Flights } from './flights.js';
 import { isClick } from '../../lib/clickModel.js';
-import { METRICS, dropHint, overlaps, pointRect, scaleMs, stripSide, workspaceDirection } from './geometry.js';
+import { isMaximized } from '../../lib/compat.js';
+import { METRICS, dropHint, overlaps, pointRect, scaleMs, stageRect, stripSide, workspaceDirection } from './geometry.js';
 import { StageMachine } from './model.js';
 import { StripView } from './view.js';
 import { WindowHider } from './windows.js';
@@ -492,9 +493,10 @@ export class StageManager {
 
     _syncConditions() {
         const floor = this._view.floorRect();
+        const workArea = this._layout.workArea(this._layout.primaryIndex);
         let overlapped = false;
         for (const win of this._stageWindows()) {
-            if (overlaps(rectOf(win.get_frame_rect()), floor)) {
+            if (overlaps(stageRect(rectOf(win.get_frame_rect()), isMaximized(win), workArea), floor)) {
                 overlapped = true;
                 break;
             }
@@ -596,6 +598,10 @@ export class StageManager {
     // What the pointer of a dragged stage window is over: an entry, the strip, or neither
     _dragProbe() {
         const [x, y] = global.get_pointer();
+        // A press on the titlebar (a double-click to maximize) is no drag yet: the strip stays put
+        const { start } = this._drag;
+        if (Math.hypot(x - start.x, y - start.y) <= St.Settings.get().drag_threshold)
+            return { hint: null, entry: null };
         const hint = dropHint({ x, y }, {
             floor: this._view.floorRect(),
             onEntry: this._view.entryAt(x, y) !== null,
@@ -614,7 +620,8 @@ export class StageManager {
         if (!moving || id === undefined || !this._machine.stageWindows().includes(id))
             return;
         this._endDrag();
-        const drag = { win, frame: rectOf(win.get_frame_rect()), token: 0 };
+        const [x, y] = global.get_pointer();
+        const drag = { win, frame: rectOf(win.get_frame_rect()), start: { x, y }, token: 0 };
         this._drag = drag;
         drag.token = this._cleanup.timeout(WINDOW_DRAG_SAMPLE_MS, () => {
             this._view.setDropHint(this._dragProbe().hint);
