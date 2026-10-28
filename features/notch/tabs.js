@@ -13,7 +13,7 @@ import St from 'gi://St';
 import * as Util from 'resource:///org/gnome/shell/misc/util.js';
 
 import * as A11y from '../../lib/a11y.js';
-import { label, icon, themed, button, artwork, track, column, setText } from './ui.js';
+import { label, icon, themed, button, artwork, artButton, track, column, setText } from './ui.js';
 import { trackProgress, seekTarget, formatClock } from './dashboardModel.js';
 export { DASH_SIZE } from './dashboardModel.js';
 import { nowRows } from './model.js';
@@ -34,7 +34,7 @@ function mediaColumn(env, media, width, live) {
 
     // Art, title and artist, the app icon in the top-right corner
     const top = new St.BoxLayout({ style_class: 'kiwi-notch-media-top' });
-    top.add_child(artwork(media, 68, 'kiwi-notch-artwork-large'));
+    top.add_child(artButton(artwork(media, 68, 'kiwi-notch-artwork-large'), env._('Show the player'), env.h.onRaisePlayer));
     const text = new St.BoxLayout({
         style_class: 'kiwi-notch-media-text',
         orientation: Clutter.Orientation.VERTICAL,

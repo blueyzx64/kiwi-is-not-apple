@@ -37,7 +37,7 @@ import { CleanupRegistry } from '../../lib/disposables.js';
 import { SIZES } from './stateMachine.js';
 import { cardSize } from './dashboardModel.js';
 import { tabDirection, TABS } from './model.js';
-import { label, icon, themed, button, artwork, track, CenterLayout } from './ui.js';
+import { label, icon, themed, button, artwork, artButton, track, CenterLayout } from './ui.js';
 import { pill, tickMs } from './pills.js';
 import { OutsideClick } from '../../lib/outsideClick.js';
 import { InputRing } from '../../lib/inputRing.js';
@@ -62,7 +62,7 @@ export class NotchView {
     /**
      * @param {CleanupRegistry} cleanup everything made here is released on dispose
      * @param {object} handlers {onClick, onDismiss, onHover(bool), onExpand, onAction(id, index),
-     *   onMedia('previous'|'toggle'|'next'), onToggleDnd, onToggleMic, onCopy(entryId), onCollapse,
+     *   onMedia('previous'|'toggle'|'next'), onRaisePlayer (the art: the playing app to the front), onToggleDnd, onToggleMic, onCopy(entryId), onCollapse,
      *   onOpenNotification(notification), onOpenList, onSeek(fraction 0..1), onTab(tab),
      *   onActivityAction(activity, id), onShelf(action, uri), onShelfLayout(layout|null), isShelfHelperWindow(window), onTimerPreset(minutes),
      *   onOpenWeather, onOpenCalendar, getPosition(): Promise<number|null>}
@@ -170,9 +170,9 @@ export class NotchView {
             this._pressOnSurface = !this._onControl(this._eventActor(event));
             // The press decides: the hover delay must not open the dashboard between press and
             // release, or the click would land on a shape already growing (and pin it, or close
-            // it, depending on a race)
-            if (this._pressOnSurface)
-                this._cancelHoverIntent();
+            // it, depending on a race). Nor after a press on a control of the pill (the art
+            // bringing the player to the front): that click was the intent.
+            this._cancelHoverIntent();
             return this._pressOnSurface ? Clutter.EVENT_STOP : Clutter.EVENT_PROPAGATE;
         });
         cleanup.connect(this._island, 'button-release-event', (_a, event) =>
@@ -930,7 +930,8 @@ export class NotchView {
         if (activity.kind === 'media' || activity.kind === 'media-paused' || !activity.kind) {
             const data = activity.data;
             const row = this._row('kiwi-notch-activity kiwi-notch-pill-media');
-            row.add_child(artwork({ art: data.art, appIcon: ctx.media?.appIcon }, 20, 'kiwi-notch-artwork-small'));
+            row.add_child(artButton(artwork({ art: data.art, appIcon: ctx.media?.appIcon }, 20, 'kiwi-notch-artwork-small'),
+                this._('Show the player'), this._h.onRaisePlayer));
             row.add_child(label(data.title, 'kiwi-notch-pill-title', { x_expand: true }));
             row.add_child(this._bars(data.playing));
             return row;

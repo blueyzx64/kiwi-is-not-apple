@@ -63,6 +63,17 @@
     border-radius: 6px;
 }
 
+/* the art as a button (the playing app to the front): no fill of its own; the focus ring sits
+   just outside the art, which would cover an inset one */
+.kiwi-notch-art-button {
+    border-radius: 8px;
+    padding: 0;
+}
+
+.kiwi-notch-art-button:focus {
+    box-shadow: 0 0 0 2px -st-accent-color;
+}
+
 .kiwi-notch-artwork-large {
     border-radius: 12px;
 }

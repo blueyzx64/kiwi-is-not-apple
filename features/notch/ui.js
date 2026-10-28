@@ -92,6 +92,25 @@ export function artwork(media, size, styleClass) {
     return bin;
 }
 
+/**
+ * The art as a button that brings the playing app to the front (handlers.onRaisePlayer). A press
+ * on it belongs to the button, not to the notch, so it neither opens nor closes the dashboard.
+ * Without a handler it is the plain art.
+ * @param {St.Widget} art from artwork()
+ * @param {string} name accessible name
+ * @param {?function(): void} onClick
+ */
+export function artButton(art, name, onClick) {
+    if (!onClick)
+        return art;
+    const b = new St.Button({
+        style_class: 'kiwi-notch-art-button', child: art, can_focus: true,
+        accessible_name: name, y_align: Clutter.ActorAlign.CENTER,
+    });
+    b.connect('clicked', () => onClick());
+    return b;
+}
+
 // Lays its one child out from the left edge at `fraction` of the width. Sizing the fill here,
 // inside the allocation, avoids a relayout queued from an allocation handler.
 export const FractionLayout = GObject.registerClass(

@@ -130,6 +130,7 @@ export class NotchFeature {
             onHover: value => this._dispatch({ type: 'hover', value }),
             onAction: (id, index) => this._action(id, index),
             onMedia: command => this._media(command),
+            onRaisePlayer: () => this._raisePlayer(),
             onSeek: fraction => this._seek(fraction),
             onCopy: id => {
                 const service = this._ctx.features.instance('clipboard-history');
@@ -776,6 +777,14 @@ export class NotchFeature {
         const target = player?.canSeek ? seekTarget(fraction, player.length) : null;
         if (target !== null)
             player.seek(target).catch(() => {});
+    }
+
+    // The art: the playing app to the front while its player is still on the bus (never a
+    // launch, lib/mpris.js raise()), and the dashboard makes way for it
+    _raisePlayer() {
+        const player = this._bestPlayer();
+        if (player?.raise())
+            this._dispatch({ type: 'collapse' });
     }
 
     _media(command) {
