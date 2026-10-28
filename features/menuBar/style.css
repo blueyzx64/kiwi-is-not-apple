@@ -53,6 +53,12 @@
   min-width: 200px;
 }
 
+/* ---- bar menus (menuPlacement.js): no arrow, so no room for one; a 2px gap under the bar ---- */
+.kiwi-bar-menu {
+  -arrow-rise: 2px;
+  -arrow-base: 0;
+}
+
 /* ---- transparent bar (adaptiveBar.js). Four classes so it outranks the glass fill ---- */
 #panel.kiwi-menubar.kiwi-menubar-clear.kiwi-menubar-on-light,
 #panel.kiwi-menubar.kiwi-menubar-clear.kiwi-menubar-on-dark {

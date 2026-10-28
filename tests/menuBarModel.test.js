@@ -1,6 +1,6 @@
 // Run: gjs -m tests/menuBarModel.test.js
 import {
-    chooseText, touchesBar, barLook, parseOsRelease, systemLogoNames, parseCpuInfo, parseMemTotal,
+    chooseText, touchesBar, barLook, leadingAlignment, parseOsRelease, systemLogoNames, parseCpuInfo, parseMemTotal,
     formatBytes, deviceModel, chassisIcon, gpuNames, parseRecentXbel, forceQuitRows,
     privacyDots, micApps, confirmationHolds, fillPlaceholders, fitMenus,
 } from '../features/menuBar/model.js';
@@ -216,6 +216,14 @@ test('privacy dots and mic apps', () => {
 test('systemLogoNames tries the symbolic icon first', () => {
     eq(systemLogoNames('fedora-logo-icon'), ['fedora-logo-icon-symbolic', 'fedora-logo-icon']);
     eq(systemLogoNames('x-symbolic'), ['x-symbolic']);
+});
+
+test('menu placement aligns leading edges', () => {
+    eq(leadingAlignment({ rtl: false, width: 0, contentStart: 3, contentWidth: 0 }), 0);
+    eq(leadingAlignment({ rtl: true, width: 0, contentStart: 3, contentWidth: 0 }), 1);
+    eq(leadingAlignment({ rtl: false, width: 100, contentStart: 0, contentWidth: 100 }), 0);
+    eq(leadingAlignment({ rtl: false, width: 100, contentStart: 10, contentWidth: 80 }), -0.125);
+    eq(leadingAlignment({ rtl: true, width: 100, contentStart: 10, contentWidth: 80 }), 1.125);
 });
 
 if (failed)
