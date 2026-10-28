@@ -71,13 +71,10 @@ export function touchesBar(frame, area) {
  * @param {boolean} s.transparent the "transparent menu bar" setting
  * @param {boolean} s.windowAtTop a window touches the bar or is maximized
  * @param {boolean} s.solidOnWindow the "solid when a window touches the bar" setting
- * @param {boolean} s.overview Mission Control / the overview is showing
  * @param {boolean} s.solidOnly high contrast or reduced transparency
- * @returns {'clear'|'solid'|'overview'}
+ * @returns {'clear'|'solid'}
  */
-export function barLook({ transparent, windowAtTop, solidOnWindow, overview, solidOnly }) {
-    if (overview)
-        return 'overview';
+export function barLook({ transparent, windowAtTop, solidOnWindow, solidOnly }) {
     if (!transparent || solidOnly || (solidOnWindow && windowAtTop))
         return 'solid';
     return 'clear';

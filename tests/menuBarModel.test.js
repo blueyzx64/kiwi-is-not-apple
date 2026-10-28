@@ -150,12 +150,11 @@ test('a window touches the bar at the top of the work area', () => {
 });
 
 test('bar look', () => {
-    eq(barLook({ transparent: true, windowAtTop: false, solidOnWindow: true, overview: false, solidOnly: false }), 'clear');
-    eq(barLook({ transparent: true, windowAtTop: true, solidOnWindow: true, overview: false, solidOnly: false }), 'solid');
-eq(barLook({ transparent: true, windowAtTop: true, solidOnWindow: false, overview: false, solidOnly: false }), 'clear');
-    eq(barLook({ transparent: false, windowAtTop: false, overview: false, solidOnly: false }), 'solid');
-    eq(barLook({ transparent: true, windowAtTop: false, overview: false, solidOnly: true }), 'solid');
-    eq(barLook({ transparent: true, windowAtTop: true, overview: true, solidOnly: false }), 'overview');
+    eq(barLook({ transparent: true, windowAtTop: false, solidOnWindow: true, solidOnly: false }), 'clear');
+    eq(barLook({ transparent: true, windowAtTop: true, solidOnWindow: true, solidOnly: false }), 'solid');
+eq(barLook({ transparent: true, windowAtTop: true, solidOnWindow: false, solidOnly: false }), 'clear');
+    eq(barLook({ transparent: false, windowAtTop: false, solidOnly: false }), 'solid');
+    eq(barLook({ transparent: true, windowAtTop: false, solidOnly: true }), 'solid');
 });
 
 test('os-release, cpuinfo and meminfo', () => {
