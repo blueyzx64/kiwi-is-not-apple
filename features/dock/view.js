@@ -216,11 +216,11 @@ export class DockView {
     }
 
     /**
-     * Rect of an item's icon on screen, as it is when the dock shows (an auto-hidden dock's
-     * slide is left out), in stage coordinates.
+     * Rect of an item's icon (or of `actor`, its tile) on screen, as it is when the dock shows
+     * (an auto-hidden dock's slide is left out), in stage coordinates. A magnified icon gives
+     * its magnified rect: where it is drawn now.
      */
-    rectOf(item) {
-        const actor = item?.iconActor;
+    rectOf(item, actor = item?.iconActor) {
         if (!this.alive || !actor?.mapped)
             return null;
         const [x, y] = actor.get_transformed_position();

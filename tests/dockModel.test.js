@@ -5,7 +5,7 @@ import {
     autostartState, autostartText, badgeProgress, badgeText, bounceAgain, bounceSteps, clickAction,
     dockItems, dockMetrics, downloadEntry, downloadFinished, dropIndex, fanLayout, folderDropAccepted,
     magnify, magnifyScale, menuEntries, nextWindow, packageKind, pinPosition, pushRecent, readConfig,
-    isPartialWrite, rectContains, removeFolder, sortDownloads, stableOrder, stackView,
+    isPartialWrite, minimizedSlot, rectContains, removeFolder, sortDownloads, stableOrder, stackView,
 } from '../features/dock/model.js';
 
 let failed = 0;
@@ -367,6 +367,14 @@ test('rectContains: inside, the far edges excluded, null holds nothing', () => {
     eq(rectContains(r, 40, 30), false);
     eq(rectContains(r, 20, 60), false);
     eq(rectContains(null, 0, 0), false);
+});
+
+test('minimizedSlot: the new tile takes the next item\'s place, half a tile back (the slab re-centres)', () => {
+    // Bottom dock: Downloads at x=1077 (56 px tiles); the new tile ends up 28 px left of it
+    eq(minimizedSlot({ x: 1077, y: 1011, width: 56, height: 56 }, 56, true), { x: 1049, y: 1011, width: 56, height: 56 });
+    // A side dock grows along y; the cross axis is centred on the next tile
+    eq(minimizedSlot({ x: 4, y: 600, width: 60, height: 56 }, 56, false), { x: 6, y: 572, width: 56, height: 56 });
+    eq(minimizedSlot(null, 56, true), null);
 });
 
 if (failed) {

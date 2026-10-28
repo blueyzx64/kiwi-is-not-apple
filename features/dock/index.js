@@ -16,6 +16,7 @@
 //   minimizeTarget(win)    where a window minimizes to: its app icon, or the minimized-window
 //                          slot ("Minimize windows into application icon" off); the Genie and
 //                          Scale effects (features/minimizeEffect) fly there
+//   restoreSource(win)     where a restored window comes out of (the same place)
 //
 // P2 extras: launch and attention bounce, magnification (magnify.js), LauncherEntry badges and
 // progress (lib/launcherEntry.js), grey dots for background apps (lib/backgroundApps.js), the
@@ -45,8 +46,8 @@ import { LauncherEntryWatcher } from '../../lib/launcherEntry.js';
 import { BackgroundApps } from '../../lib/backgroundApps.js';
 import {
     Reveal, STACK_VIEWS, addFolder, bounceAgain, bounceSteps, clickAction, dockItems, dockMetrics,
-    folderDropAccepted, isHorizontal, menuEntries, pinPosition, pushRecent, readConfig, removeFolder,
-    stableOrder,
+    folderDropAccepted, isHorizontal, menuEntries, minimizedSlot, pinPosition, pushRecent, readConfig,
+    removeFolder, stableOrder,
 } from './model.js';
 import { DockView } from './view.js';
 import { Magnifier } from './magnify.js';
@@ -104,6 +105,7 @@ export class Dock {
         this._fileMenus = new WeakMap();   // stack row -> its menu owner
         this._launching = new Set();          // app ids starting (shown and bouncing)
         this._itemKey = '';
+        this._tileRects = new Map();       // minimized window id -> where its tile was
         this._badges = new LauncherEntryWatcher(cleanup, appId => this._badgeChanged(appId));
         this._background = new BackgroundApps(cleanup, () => this._queueSync());
 
@@ -182,21 +184,48 @@ export class Dock {
         return this._view.rectOf(this._view.item(appId));
     }
 
-    /** @returns {?{x,y,width,height}} where `win` (a Meta.Window) minimizes to */
+    /**
+     * Where `win` (a Meta.Window) minimizes to, as the dock is laid out now (magnified or not):
+     * its app's icon (a pinned or a running-only one), or with "Minimize windows into
+     * application icon" off (macOS's default) its own tile in the right section, or where
+     * that tile is about to appear.
+     *
+     * @returns {?{x,y,width,height}}
+     */
     minimizeTarget(win) {
-        if (this.config.minimizeToApp) {
-            // The model's app id: a web app's window maps to its installed app (core/desktop)
-            const appId = this._desktop.model.window(win.get_stable_sequence())?.appId;
-            return appId ? this.iconRect(appId) : null;
-        }
-        // The minimized-window tiles start right after the separator before the stack
-        const sep = this._view.rectOf(this._view.item('separator-system'));
-        if (!sep)
+        // The model's window: a web app's window maps to its installed app (core/desktop)
+        const w = this._desktop.model.window(win.get_stable_sequence());
+        if (this.config.minimizeToApp)
+            return w?.appId ? this.iconRect(w.appId) : null;
+        const tile = w ? this._view.rectOf(this._view.item(`window-${w.id}`)) : null;
+        return tile ?? this._minimizedSlot();
+    }
+
+    /**
+     * Where a window being restored comes out of: the same place it went into. Its tile may
+     * already be gone (the dock syncs on the state change), so the last place it was is kept.
+     *
+     * @returns {?{x,y,width,height}}
+     */
+    restoreSource(win) {
+        if (this.config.minimizeToApp)
+            return this.minimizeTarget(win);
+        const w = this._desktop.model.window(win.get_stable_sequence());
+        if (!w)
             return null;
-        const t = this.metrics.tile;
-        return this.horizontal
-            ? { x: sep.x + sep.width, y: sep.y + Math.round(sep.height / 2 - t / 2), width: t, height: t }
-            : { x: sep.x + Math.round(sep.width / 2 - t / 2), y: sep.y + sep.height, width: t, height: t };
+        return this._view.rectOf(this._view.item(`window-${w.id}`)) ?? this._tileRects.get(w.id) ?? null;
+    }
+
+    // The new tile of a window being minimized: in place of the item after the minimized ones
+    _minimizedSlot() {
+        let past = false;
+        for (const item of this._view.items()) {
+            if (item.id === 'separator-system')
+                past = true;
+            else if (past && item.spec.kind !== 'window')
+                return minimizedSlot(this._view.rectOf(item, item.actor), this.metrics.tile, this.horizontal);
+        }
+        return null;
     }
 
     rectOf(item) {
@@ -378,13 +407,22 @@ export class Dock {
     }
 
     _syncGeometry() {
+        const tiles = new Map();
         for (const w of this._desktop.model.windows()) {
             const win = this._desktop.metaWindow(w.id);
-            const rect = win && (this.config.minimizeToApp || !w.minimized
-                ? this.minimizeTarget(win) : this._view.rectOf(this._view.item(`window-${w.id}`)));
+            const tile = !this.config.minimizeToApp && w.minimized
+                ? this._view.rectOf(this._view.item(`window-${w.id}`)) : null;
+            if (tile)
+                tiles.set(w.id, tile);
+            // The last place a window's tile had stays known while the window lives: the
+            // restore (restoreSource) may come after the sync that removed the tile
+            else if (this._tileRects.has(w.id))
+                tiles.set(w.id, this._tileRects.get(w.id));
+            const rect = win && (tile ?? this.minimizeTarget(win));
             if (rect)
                 win.set_icon_geometry(new Mtk.Rectangle(rect));
         }
+        this._tileRects = tiles;
     }
 
     dockRelayout() {

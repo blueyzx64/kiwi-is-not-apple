@@ -15,6 +15,7 @@
 //   bounceSteps                the launch and attention bounce
 //   badgeText                  the red count on an icon
 //   folderStack / addFolder    folder stacks kept in the dock
+//   minimizedSlot              where a window being minimized lands (its new tile)
 //
 // macOS references: docs/research/macos/native-apps-and-system-ui.md (Dock) and
 // installer-and-app-lifecycle.md (Downloads stack).
@@ -704,4 +705,27 @@ export function folderDropAccepted(coord, separatorEnd) {
 /** True when the point lies inside `rect` {x, y, width, height} (a null rect holds nothing). */
 export function rectContains(rect, x, y) {
     return !!rect && x >= rect.x && x < rect.x + rect.width && y >= rect.y && y < rect.y + rect.height;
+}
+
+// ---- minimize targets ----------------------------------------------------------------------------
+
+/**
+ * Where the tile of a window being minimized will be ("Minimize windows into application
+ * icon" off, macOS's default): the new tile goes at the end of the minimized windows, so it
+ * takes the place of the item after them (the first stack, or the Trash). The slab is centred
+ * on its edge, so it grows by one tile and everything moves back by half a tile.
+ *
+ * @param {?{x,y,width,height}} next the tile after the minimized windows, as laid out now (stage)
+ * @param {number} tile the tile size
+ * @param {boolean} horizontal a bottom dock
+ * @returns {?{x,y,width,height}} the new tile's rect, or null without `next`
+ */
+export function minimizedSlot(next, tile, horizontal) {
+    if (!next)
+        return null;
+    const half = tile / 2;
+    // The cross axis: centred on the next tile (they share the row)
+    return horizontal
+        ? { x: Math.round(next.x - half), y: Math.round(next.y + next.height / 2 - half), width: tile, height: tile }
+        : { x: Math.round(next.x + next.width / 2 - half), y: Math.round(next.y - half), width: tile, height: tile };
 }
