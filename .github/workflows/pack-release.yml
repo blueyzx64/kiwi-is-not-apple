@@ -1,8 +1,10 @@
-name: Pack and upload GNOME extension on release
+name: Pack and upload GNOME extension and shelf helper RPM on release
 
 on:
   release:
     types: [published]
+  push:
+    tags: ['v*']      # a pushed version tag creates the release with both assets
   workflow_dispatch:  # allows manual triggering for testing
 
 permissions:
@@ -19,7 +21,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y gnome-shell zip jq gettext
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y gnome-shell zip jq gettext rpm
 
       - id: pack
         name: Pack extension and set asset name
@@ -49,13 +51,36 @@ jobs:
           echo "asset=$newname" >> "$GITHUB_OUTPUT"
           echo "asset_name=${newname%.zip}" >> "$GITHUB_OUTPUT"
 
+      - id: helper
+        name: Build the shelf helper RPM (helpers/kiwi-shelf-helper, not in the extension zip)
+        run: |
+          set -euo pipefail
+          make helper-rpm DISTDIR=dist
+          rpm=$(ls -1 dist/helper/RPMS/noarch/kiwi-shelf-helper-*.noarch.rpm | head -n1)
+          echo "rpm=$rpm" >> "$GITHUB_OUTPUT"
+
       - name: Verify package
         run: ls -la | sed -n '1,200p'
 
-      - name: Upload pack to release
+      - name: Upload pack and RPM to release
         if: github.event_name == 'release'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.event.release.tag_name }}
           ASSET: ${{ steps.pack.outputs.asset }}
-        run: gh release upload "$TAG" "$ASSET" --clobber
+          RPM: ${{ steps.helper.outputs.rpm }}
+        run: gh release upload "$TAG" "$ASSET" "$RPM" --clobber
+
+      - name: Create release from a pushed tag
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          ASSET: ${{ steps.pack.outputs.asset }}
+          RPM: ${{ steps.helper.outputs.rpm }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$ASSET" "$RPM" --clobber
+          else
+            gh release create "$TAG" "$ASSET" "$RPM" --title "Kiwi $TAG" --notes-file .github/release-notes.md
+          fi
