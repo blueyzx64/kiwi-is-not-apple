@@ -4,7 +4,7 @@
 //   3/4-finger swipe up        Mission Control   GNOME's own overview swipe (shell-behaviour
 //                                                clamps it at the window picker)
 //   3/4-finger swipe left/right switch Spaces    GNOME's own workspace swipe
-//   4-finger swipe down        App Exposé        Kiwi (core/desktopActions.js)
+//   3/4-finger swipe down      App Exposé        Kiwi (core/desktopActions.js)
 //   pinch, thumb + 3 fingers   Launchpad         Kiwi
 //   spread, thumb + 3 fingers  Show Desktop      Kiwi
 //
@@ -14,6 +14,10 @@
 // only when the user turned that gesture off (model.blocksStock), so GNOME's gestures and
 // their animations stay GNOME's. The detailed signal means no cost for any other event.
 //
+// A swipe libinput reported as a pinch (fingers closing as they swipe up) never reaches
+// GNOME's trackers: it used to open Launchpad. model.classify names it a swipe, and Kiwi runs
+// what the swipe would have done: Mission Control, closing it, or the next Space.
+//
 // Not possible: macOS opens the Notification Center with a 2-finger swipe in from the right
 // edge of the trackpad. Libinput reports no touchpad edge position for gestures, and 2-finger
 // motion is scrolling that goes to the app under the pointer (Mutter hands the Shell only
@@ -21,6 +25,7 @@
 
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
+import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
@@ -106,12 +111,37 @@ export class Gestures {
         if (phase === Clutter.TouchpadGesturePhase.END) {
             const sample = this._tracker.finish();
             const gesture = classify(sample, { naturalScroll });
-            const action = routeGesture(gesture, sample.fingers, this._config, { overview });
+            const action = routeGesture(gesture, sample.fingers, this._config,
+                { overview, stock: sample.kind === 'swipe' });
             if (action)
-                this._actions.run(action, { source: 'gesture' });
+                this._run(action);
         } else if (phase === Clutter.TouchpadGesturePhase.CANCEL) {
             this._tracker.reset();
         }
         return keep;
+    }
+
+    _run(action) {
+        switch (action) {
+        case 'close-overview':
+            Main.overview.hide();
+            return;
+        case 'space-next':
+        case 'space-previous':
+            this._switchSpace(action === 'space-next');
+            return;
+        default:
+            this._actions.run(action, { source: 'gesture' });
+        }
+    }
+
+    /** The neighbouring Space, as GNOME's workspace swipe would go (left to right, mirrored in RTL). */
+    _switchSpace(next) {
+        const wm = global.workspace_manager;
+        const rtl = Clutter.get_default_text_direction() === Clutter.TextDirection.RTL;
+        const active = wm.get_active_workspace();
+        const target = active.get_neighbor(next !== rtl ? Meta.MotionDirection.RIGHT : Meta.MotionDirection.LEFT);
+        if (target && target !== active)
+            Main.wm.actionMoveWorkspace(target);
     }
 }
