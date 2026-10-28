@@ -63,9 +63,11 @@ export function buildPrefs({ settings, extension }) {
     main.add(switchRow(settings, _('Keep images'),
         _('Images over 5 MB are never kept.'), 'clipboard-images'));
     main.add(_sizeRow(settings, _));
+    // Super+V: Kiwi takes it from GNOME's notification list while the clipboard runs (Super+M stays)
     main.add(shortcutRow(settings, _, {
-        key: 'clipboard-shortcut', title: _('Quick Paste shortcut'), example: '<Super><Shift>v',
-        suggestion: { accel: '<Super><Shift>v', label: _('Use Super+Shift+V') },
+        key: 'clipboard-shortcut', title: _('Quick Paste shortcut'), example: '<Super>v',
+        suggestion: { accel: '<Super>v', label: _('Use Super+V') },
+        takesOver: ['org.gnome.shell.keybindings toggle-message-tray'],
     }));
 
     const privacy = new Adw.PreferencesGroup({

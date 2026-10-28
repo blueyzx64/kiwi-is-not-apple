@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Clipboard history: records what was copied (text, links, colours, images), shows it in a
-// top-bar popover and in Quick Paste (Super+Shift+V), and pastes into the previous window.
+// top-bar popover and in Quick Paste, and pastes into the previous window.
 //
+// - clipboard-shortcut (default Super+V, like Windows' and Raycast's clipboard history) opens
+//   Quick Paste, the keyboard surface; the top-bar icon opens the popover. Super+V is GNOME's
+//   "Show notification list" (toggle-message-tray, with Super+M): while the clipboard runs,
+//   that key loses only the accelerators clipboard-shortcut uses, through core/originals
+//   (crash-safe; the user's exact value comes back on disable). Super+M keeps working.
 // - Watches Meta.Selection 'owner-changed'; no polling.
 // - Policy (dedupe, cap, pins, mime and size limits, password-manager secrets) is model.js.
 // - History is saved under ~/.local/share/kiwi/clipboard/ (store.js) and reloaded on enable,
@@ -16,14 +21,16 @@ import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 
+import { SettingOwner } from '../../core/originals.js';
 import { PanelLayout } from '../../core/panelLayout.js';
 import { MENU_CLOSE_ARGS } from '../../lib/compat.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { Keybindings, MODAL_MODES } from '../../lib/keybindings.js';
+import { freeAccels } from '../../lib/keybindingsModel.js';
 import { FOCUS_SETTLE_MS, sendPasteChord } from '../../lib/paste.js';
 import { KiwiSettings } from '../../lib/settings.js';
 import {
-    DEFAULTS, History, TEXT_MIME, checkDimensions, checkSize, imageDimensions, imageFileName,
+    DEFAULTS, History, TEXT_MIME, checkDimensions, filterTabs, checkSize, imageDimensions, imageFileName,
     isBlankText, isPasswordManagerApp, isSecret, looksSecret, makeEntry, mergeLoaded, orphanFiles, pickMime, shouldRecord,
 } from './model.js';
 import { ClipboardPopover } from './popover.js';
@@ -34,6 +41,8 @@ Gio._promisify(Meta.Selection.prototype, 'transfer_async', 'transfer_finish');
 
 const LOG = '[Kiwi]';
 const SHORTCUT_KEY = 'clipboard-shortcut';
+const SHELL_KEYS = 'org.gnome.shell.keybindings';
+const MESSAGE_TRAY_KEY = 'toggle-message-tray';
 const SAVE_DELAY_MS = 600;
 const MiB = 1024 * 1024;
 const RAM_IMAGE_BUDGET = 64 * MiB;
@@ -83,6 +92,8 @@ export class ClipboardHistory {
         cleanup.connect(this._selection, 'owner-changed', (_s, type) => this._onOwnerChanged(type));
 
         this._quick = new QuickPaste(cleanup, this, this._);
+        this._takeShellAccels(cleanup);
+        // Added after GNOME's binding let go of the same accelerators (removed before it is back)
         Keybindings.add(cleanup, SHORTCUT_KEY, this._ctx.settings, () => this._onShortcut(), { modes: MODAL_MODES });
         cleanup.idle(() => this._warnConflicts(), { name: 'clipboard-conflicts' });
 
@@ -110,6 +121,25 @@ export class ClipboardHistory {
 
     disable() {
         // Cleanup registry runs _teardown
+    }
+
+    /**
+     * Super+V: GNOME's notification list gives up the accelerators clipboard-shortcut uses
+     * (only those; Super+M stays) while the clipboard runs. Owned through core/originals, so
+     * the user's own value of toggle-message-tray comes back on disable and after a crash.
+     */
+    _takeShellAccels(cleanup) {
+        const ours = () => this._ks.strv(SHORTCUT_KEY);
+        const owner = new SettingOwner(this._ctx.originals, new Gio.Settings({ schema_id: SHELL_KEYS }),
+            MESSAGE_TRAY_KEY, { type: 'as', transform: original => freeAccels(original, ours()) });
+        const sync = () => {
+            const original = owner.original;
+            owner.sync(freeAccels(original, ours()).length !== original.length);
+            owner.reapply();
+        };
+        this._ks.watch([SHORTCUT_KEY], sync);
+        sync();
+        cleanup.add(() => owner.release());
     }
 
     _teardown() {
@@ -153,6 +183,11 @@ export class ClipboardHistory {
 
     setRecording(on) {
         this._ks.setBool('clipboard-recording', !!on);
+    }
+
+    /** core/motion.js, for the list's scrolling and scrollbar fades. */
+    get motion() {
+        return this._ctx.motion ?? null;
     }
 
     get shortcut() {
@@ -410,6 +445,11 @@ export class ClipboardHistory {
 
     view(query) {
         return this._history.view(query);
+    }
+
+    /** The category tabs (All, Text, Links, Images) with their counts. */
+    filterTabs() {
+        return filterTabs(this._history.items);
     }
 
     get(id) {

@@ -83,6 +83,36 @@
   color: rgba(128, 128, 128, 1);
 }
 
+/* ---- list and its overlay scrollbar (both surfaces) ----
+   macOS overlay scroller: a thin capsule over the list's right edge, shown only while the list
+   moves or the pointer is on it (ListScroller in view.js fades it). The rows stop short of it:
+   the list's right padding is the bar's gutter (bar 6px + 4px air), so the time labels and the
+   selected row's highlight are never under it. */
+.kiwi-clip-list {
+  padding-right: 10px;
+}
+
+.kiwi-clip-scroll StScrollBar,
+.kiwi-qp-list StScrollBar {
+  min-width: 6px;
+  padding: 3px 0;
+}
+
+.kiwi-clip-scroll StScrollBar > .vhandle,
+.kiwi-qp-list StScrollBar > .vhandle {
+  min-width: 6px;
+  border: none;
+  border-radius: 3px;
+  background-color: rgba(128, 128, 128, 0.5);
+}
+
+.kiwi-clip-scroll StScrollBar > .vhandle:hover,
+.kiwi-qp-list StScrollBar > .vhandle:hover,
+.kiwi-clip-scroll StScrollBar > .vhandle:active,
+.kiwi-qp-list StScrollBar > .vhandle:active {
+  background-color: rgba(128, 128, 128, 0.75);
+}
+
 /* ---- panel popover: minimal, one line per entry ---- */
 .kiwi-clip-popover-item {
   padding: 0;
@@ -254,8 +284,8 @@
   spacing: 12px;
 }
 
-.kiwi-qp-list {
-  padding-right: 4px;
+.kiwi-qp-filters {
+  padding: 0;
 }
 
 .kiwi-qp-side {

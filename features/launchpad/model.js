@@ -427,16 +427,6 @@ export function folderNameFor(categoryLists) {
     return best ? FOLDER_NAMES[best] : null;
 }
 
-/**
- * GNOME's "Show all apps" accelerators with Launchpad's own taken out (Launchpad replaces the
- * app grid there, Super+A by default). Accelerators are compared normalized.
- *
- * @param {string[]} stock org.gnome.shell.keybindings toggle-application-view (the user's)
- * @param {string[]} ours launchpad-shortcut
- * @param {(accel: string) => string} normalize lib/keybindingsModel.js normalizeAccel
- * @returns {string[]}
- */
-export function freeAccels(stock, ours, normalize) {
-    const taken = new Set(ours.map(normalize).filter(Boolean));
-    return stock.filter(a => !taken.has(normalize(a)));
-}
+// GNOME's "Show all apps" accelerators with Launchpad's own taken out: shared with the
+// clipboard (Super+V), so it lives in lib/keybindingsModel.js
+export { freeAccels } from '../../lib/keybindingsModel.js';

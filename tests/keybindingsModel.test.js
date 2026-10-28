@@ -1,5 +1,5 @@
 // Run: gjs -m tests/keybindingsModel.test.js
-import { BindingTable, KNOWN_DEFAULTS, findConflicts, normalizeAccel } from '../lib/keybindingsModel.js';
+import { BindingTable, KNOWN_DEFAULTS, fallbackDefaults, findConflicts, freeAccels, normalizeAccel } from '../lib/keybindingsModel.js';
 
 let failed = 0;
 function test(name, fn) {
@@ -50,6 +50,22 @@ test('BindingTable refuses double claim and frees on release', () => {
     eq(t.release('a'), true);
     eq(t.claim('a'), true);
     eq(t.names().join(), 'a');
+});
+
+test('freeAccels: Super+V leaves toggle-message-tray, Super+M stays', () => {
+    eq(freeAccels(['<Super>v', '<Super>m'], ['<Super>v']).join(), '<Super>m');
+    eq(freeAccels(['<Super>V', '<Super>m'], ['<super>v']).join(), '<Super>m');
+    eq(freeAccels(['<Super>v', '<Super>m'], []).join(), '<Super>v,<Super>m');
+    eq(freeAccels(['<Super>v', '<Super>m'], ['<Super><Shift>v']).join(), '<Super>v,<Super>m');
+    eq(freeAccels([], ['<Super>v']).length, 0);
+    eq(freeAccels(['<Super>v'], ['']).join(), '<Super>v');
+});
+test('fallbackDefaults: only schemas that are not installed', () => {
+    eq(fallbackDefaults([]).size, 0);
+    const shell = fallbackDefaults(['org.gnome.shell.keybindings']);
+    eq(shell.get('<super>v'), 'org.gnome.shell.keybindings toggle-message-tray');
+    eq(shell.has('<super>space'), false);
+    eq(fallbackDefaults(['org.gnome.desktop.wm.keybindings']).has('<super>space'), true);
 });
 
 if (failed) {

@@ -90,7 +90,9 @@ export function isAccel(text) {
  *   as an EntryRow has no subtitle)
  * @returns {Adw.EntryRow}
  */
-export function shortcutRow(settings, _, { key, title, example, suggestion = null, onNote = null }) {
+export function shortcutRow(settings, _, { key, title, example, suggestion = null, onNote = null, takesOver = [] }) {
+    // GNOME keys ("schema key") that Kiwi takes these accelerators from while the feature runs
+    const ownNote = hit => _('Kiwi takes it over from GNOME: %s').replace('%s', hit.with);
     const row = new Adw.EntryRow({ title });
     const read = () => settings.get_strv(key)[0] ?? '';
     row.text = read();
@@ -105,14 +107,14 @@ export function shortcutRow(settings, _, { key, title, example, suggestion = nul
         } else if (text) {
             const hit = findConflicts([text], KNOWN_DEFAULTS)[0];
             if (hit)
-                note = _('Also used by GNOME: %s').replace('%s', hit.with);
+                note = takesOver.includes(hit.with) ? ownNote(hit) : _('Also used by GNOME: %s').replace('%s', hit.with);
         }
         if (onNote)
             onNote(note);
         else
             row.title = note ? `${base}: ${note}` : base;
     };
-    if (suggestion && findConflicts([suggestion.accel], KNOWN_DEFAULTS).length === 0) {
+    if (suggestion && findConflicts([suggestion.accel], KNOWN_DEFAULTS).every(c => takesOver.includes(c.with))) {
         const use = new Gtk.Button({ label: suggestion.label, valign: Gtk.Align.CENTER, css_classes: ['flat'] });
         use.connect('clicked', () => {
             settings.set_strv(key, [suggestion.accel]);

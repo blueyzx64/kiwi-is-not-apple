@@ -509,11 +509,7 @@ export class History {
     view({ filter = 'all', query = '' } = {}) {
         const needle = query.trim().toLowerCase();
         const match = e => {
-            if (filter === 'text' && !(e.kind === 'text' && e.type !== 'link'))
-                return false;
-            if (filter === 'links' && e.type !== 'link')
-                return false;
-            if (filter === 'images' && e.kind !== 'image')
+            if (!matchesFilter(e, filter))
                 return false;
             if (!needle)
                 return true;
@@ -681,6 +677,89 @@ export function orphanFiles(listed, history) {
 
 // Shared with every feature that types into a window (lib/pasteModel.js)
 export { pasteChordFor } from '../../lib/pasteModel.js';
+
+/* ------------------------------------------------- filters and keyboard */
+
+/** The category tabs, in the order Left/Right walks them. */
+export const FILTERS = Object.freeze(['all', 'text', 'links', 'images']);
+
+/**
+ * Whether an entry belongs to a category tab. Colours count as text, links do not.
+ *
+ * @param {{kind: string, type: string}} entry
+ * @param {string} filter one of FILTERS; anything else matches everything
+ */
+export function matchesFilter(entry, filter) {
+    switch (filter) {
+    case 'text': return entry.kind === 'text' && entry.type !== 'link';
+    case 'links': return entry.type === 'link';
+    case 'images': return entry.kind === 'image';
+    default: return true;
+    }
+}
+
+/**
+ * The category tabs with how many entries each holds (for the accessible names and to know
+ * which tabs are worth a key press).
+ *
+ * @param {object[]} entries every entry in the history
+ * @returns {{id: string, count: number}[]} one per FILTERS, in order
+ */
+export function filterTabs(entries) {
+    return FILTERS.map(id => ({ id, count: entries.filter(e => matchesFilter(e, id)).length }));
+}
+
+/**
+ * Left (-1) / Right (+1) between the tabs, like a macOS segmented control: stops at the
+ * ends, no wrap. An unknown current tab counts as 'all'.
+ *
+ * @param {string} current
+ * @param {number} delta
+ * @returns {string}
+ */
+export function stepFilter(current, delta) {
+    const at = Math.max(0, FILTERS.indexOf(current));
+    const next = Math.max(0, Math.min(FILTERS.length - 1, at + Math.sign(delta)));
+    return FILTERS[next];
+}
+
+/**
+ * Up/Down in a list of `count` rows: clamped, never wraps; -1 when there are no rows.
+ *
+ * @param {number} index current row (-1: none)
+ * @param {number} delta
+ * @param {number} count
+ */
+export function stepSelection(index, delta, count) {
+    if (count <= 0)
+        return -1;
+    const from = index < 0 ? (delta > 0 ? -1 : 0) : index;
+    return Math.max(0, Math.min(count - 1, from + delta));
+}
+
+/**
+ * Scroll position that shows the band [top, bottom] (content coordinates), moving as little as
+ * possible: the value unchanged when the band is already in view, the band's top when it is
+ * above (or taller than the page), its bottom edge at the page's end when it is below.
+ * `margin` keeps a little of the neighbouring rows in view. Clamped to [lower, upper - page].
+ *
+ * @param {{top: number, bottom: number}} band
+ * @param {{value: number, pageSize: number, lower?: number, upper: number}} adj
+ * @param {number} [margin]
+ * @returns {number}
+ */
+export function ensureVisible({ top, bottom }, { value, pageSize, lower = 0, upper }, margin = 0) {
+    const max = Math.max(lower, upper - pageSize);
+    const clamp = v => Math.max(lower, Math.min(max, v));
+    const t = top - margin;
+    const b = bottom + margin;
+    let next = value;
+    if (t < value || b - t > pageSize)
+        next = t;
+    else if (b > value + pageSize)
+        next = b - pageSize;
+    return clamp(next);
+}
 
 /* ---------------------------------------------------------------- view */
 
