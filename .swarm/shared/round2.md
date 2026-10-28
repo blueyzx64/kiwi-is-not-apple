@@ -49,3 +49,4 @@ The owner tested 3.0.0 on real hardware (Fedora 44, GNOME 50) and reported the b
 11. (owner) Maximized windows touch the dock; they need a gap above the dock equal to its bottom margin → R3C.
 12. (owner) Top-bar menus open a few px off from the clicked item; align them under the item's leading edge as on macOS → R3E.
 13. (owner) SM sets: when one window of a set is maximized, split the set; the maximized window stays on stage alone and the other windows go to the strip as their own entry. 14. (owner) Drag a strip card onto another strip card to form a set and open it on stage, with left/right side highlights showing where the dragged window will be placed; they tile side by side → R3G.
+15. (owner) Give the SM strip a backdrop again (soft tinted glass, setting on by default) so thumbnails stand apart from app content → R3G.
