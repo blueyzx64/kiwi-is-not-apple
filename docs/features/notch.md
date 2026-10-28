@@ -21,4 +21,4 @@ Drop targets under the notch: a maximized window, or one touching the top bar, r
 - It takes the centre of the top bar through `core/panelLayout.js`.
 
 ## Code
-`stateMachine.js` and `model.js` are pure; `view.js`, `pills.js`, `tabs.js`, `ui.js` draw; `sources/` feeds activities; `shelf.js`, `drop.js`, `shelfHelper.js` run the shelf.
+`stateMachine.js` and `model.js` are pure; `view.js`, `pills.js`, `tabs.js`, `ui.js` draw; `sources/` feeds activities; `shelf.js`, `drop.js` and `lib/dragHelper.js` run the shelf.
