@@ -66,6 +66,8 @@ export class NotificationCenter {
         this._modal = new ModalSurface(cleanup, {
             id: 'notification-center', accessibleName: this._ctx.gettext('Notification Center'), position: 'right', width: WIDTH, radius: RADIUS.panel, dim: false,
             styleClass: 'kiwi-nc',
+            // the same glass as Control Center and the calendar card, which open beside it
+            glass: { surface: 'menus', role: 'content' },
             build: frame => this._build(frame),
             onClosed: () => this._onClosed(),
         });

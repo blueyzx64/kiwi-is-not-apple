@@ -65,7 +65,7 @@ Kiwi's glass has no blur, so what is behind a surface shows through by `1 − al
 |---|---|---|
 | `bar` | 0.67 → 0.90 | Menu bar, dock, Stage Manager floor: icons on it |
 | `content` | 0.94 → 0.98 | Menus, Control Center, the calendar card, the clipboard popover (they open over windows too, so a diff line no longer reads as a band) |
-| `overlay` | 0.975 → 0.99 | Above windows: every `ModalSurface` (Spotlight, Notification Center, Quick Paste, emoji, Force Quit, About), Launchpad, the switcher, HUDs, Hover Text, dialogs. A busy window (a diff, a terminal) stays under ~2/255 per channel instead of showing through as coloured bands |
+| `overlay` | 0.975 → 0.99 | Above windows: every `ModalSurface` (Spotlight, Quick Paste, emoji, Force Quit, About), Launchpad, the switcher, HUDs, Hover Text, dialogs. A busy window (a diff, a terminal) stays under ~2/255 per channel instead of showing through as coloured bands |
 
 Pass it as `Glass.attach(actor, { surface: 'overlays', role: 'overlay' })`. Every role keeps
 the 4.5:1 text floor; Reduce Transparency and Increase Contrast make all of them opaque.
@@ -76,7 +76,7 @@ the 4.5:1 text floor; Reduce Transparency and Increase Contrast make all of them
 |---|---|
 | Spotlight | capsule bar (`-capsule`, `-field`, `-glyph`, display type), toolbar buttons, section headers, rows, icon wells M/L/XL, secondary text; overlay glass, radius 28 |
 | Launchpad | search `.kiwi-search-field.kiwi-search-capsule-filled` (glass radius capsule); folder panel and delete alert radius 26, overlay glass; alert text and `.kiwi-push-button` |
-| Notification Center | `.kiwi-card`, `.kiwi-pill-button`, `.kiwi-push-button` (actions), type scale, `.kiwi-section-header` (group titles); radius 26, overlay glass |
+| Notification Center | `.kiwi-card`, `.kiwi-pill-button`, `.kiwi-push-button` (actions), type scale, `.kiwi-section-header` (group titles); radius 26, the menus' content glass (as Control Center and the calendar card beside it; `ModalSurface` `glass` option) |
 | Control Center | editor: `.kiwi-pill-button`, the capsule search field, gallery `.kiwi-section-header` and `.kiwi-row`; `.kiwi-light` marker. Its own module system stays (radius 26, padding 12 → modules 14, concentric) |
 | Calendar card | radius 18 (card), events and messages radius 10; `.kiwi-light` marker |
 | Panel menus (`MenuGlass`) | `.kiwi-menu` |
