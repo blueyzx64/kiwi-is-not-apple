@@ -5,7 +5,12 @@ on:
     types: [published]
   push:
     tags: ['v*']      # a pushed version tag creates the release with both assets
-  workflow_dispatch:  # allows manual triggering for testing
+  workflow_dispatch:  # manual run; with a tag it publishes that release from the chosen ref
+    inputs:
+      tag:
+        description: 'Release tag to create (for example v3.0.0); empty only builds the assets'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -71,16 +76,16 @@ jobs:
           RPM: ${{ steps.helper.outputs.rpm }}
         run: gh release upload "$TAG" "$ASSET" "$RPM" --clobber
 
-      - name: Create release from a pushed tag
-        if: github.event_name == 'push'
+      - name: Create release from a pushed tag or a dispatched tag
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.tag != '')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ github.event_name == 'push' && github.ref_name || inputs.tag }}
           ASSET: ${{ steps.pack.outputs.asset }}
           RPM: ${{ steps.helper.outputs.rpm }}
         run: |
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$ASSET" "$RPM" --clobber
           else
-            gh release create "$TAG" "$ASSET" "$RPM" --title "Kiwi $TAG" --notes-file .github/release-notes.md
+            gh release create "$TAG" "$ASSET" "$RPM" --target "$GITHUB_SHA" --title "Kiwi $TAG" --notes-file .github/release-notes.md
           fi
