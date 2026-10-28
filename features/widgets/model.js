@@ -39,19 +39,18 @@ export function windowInFront(focused) {
 }
 
 /**
- * Should a monitor's widgets keep their data live? Not in the overview (the layer is not
- * shown there) and not while a maximized or full-screen window covers that monitor on the
- * current workspace, unless the user is editing them.
+ * Should a monitor's widgets keep their data live? Yes in the overview (Mission Control shows
+ * the desktop, widgets included, through core/desktopLayers.js mirrors), and not while a
+ * maximized or full-screen window covers that monitor on the current workspace, unless the
+ * user is editing them.
  *
  * @param {{overview: boolean, editing: boolean, monitor: number, workspace: number,
  *   windows: Array<{monitor: number, workspace: number, minimized: boolean, maximized: boolean,
  *   fullscreen: boolean, type: string}>}} s
  */
 export function widgetsLive({ overview, editing, monitor, workspace, windows }) {
-    if (editing)
+    if (editing || overview)
         return true;
-    if (overview)
-        return false;
     return !windows.some(w => w.monitor === monitor && !w.minimized && w.type === 'normal' &&
         (w.workspace === workspace || w.workspace === -1) && (w.maximized || w.fullscreen));
 }

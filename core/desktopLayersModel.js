@@ -46,3 +46,32 @@ export class ReserveStore {
         return out;
     }
 }
+
+/**
+ * Whether a layer (a stage rectangle) shows on a monitor.
+ *
+ * @param {{x: number, y: number, width: number, height: number}} r
+ * @param {{x: number, y: number, width: number, height: number}} m
+ */
+export function overlapsMonitor(r, m) {
+    return r.x < m.x + m.width && r.x + r.width > m.x && r.y < m.y + m.height && r.y + r.height > m.y;
+}
+
+/**
+ * Where a layer goes in a mirror of its monitor scaled by (sx, sy): its place on the monitor,
+ * scaled (core/desktopLayers.js MirrorLayout; Mission Control's workspace cards).
+ *
+ * @param {{x: number, y: number, width: number, height: number}} layer stage px
+ * @param {{x: number, y: number}} monitor stage px
+ * @param {number} sx
+ * @param {number} sy
+ * @returns {{x: number, y: number, width: number, height: number}}
+ */
+export function mirrorRect(layer, monitor, sx, sy) {
+    return {
+        x: (layer.x - monitor.x) * sx,
+        y: (layer.y - monitor.y) * sy,
+        width: layer.width * sx,
+        height: layer.height * sy,
+    };
+}
