@@ -242,7 +242,7 @@ export class AppMenuBar {
         });
         PanelLayout.claim(cleanup, {
             id: APPS_CLAIM, actor: this._strip, box: 'left',
-            anchor: { after: ['activities', 'kiwi-menubar-logo', 'window-controls'], fallback: 'first' },
+            anchor: { after: ['activities', 'kiwi-menubar-logo'], fallback: 'first' },
         });
 
         ctx.events.on('window-focused', () => this.sync(), cleanup);

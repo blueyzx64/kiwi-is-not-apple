@@ -76,7 +76,6 @@ const N_ = s => s;
 export const KIWI_TOGGLES = [
     { key: 'notch', icon: 'preferences-system-notifications-symbolic', label: N_('Notch') },
     { key: 'stage-manager', icon: 'view-paged-symbolic', label: N_('Stage Manager') },
-    { key: 'show-window-controls', icon: 'kiwi-buttons-symbolic', label: N_('Window Buttons') },
     { key: 'clipboard-history', icon: 'edit-paste-symbolic', label: N_('Clipboard') },
     { key: 'spotlight', icon: 'system-search-symbolic', label: N_('Spotlight') },
     { key: 'liquid-glass', icon: 'weather-fog-symbolic', label: N_('Liquid Glass') },

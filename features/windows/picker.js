@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The layout picker of the drag (macOS 15: drag a window to the top centre): a glass popover
-// under the notch with the same glyphs as the green-button menu (halves, quarters,
-// arrangements). A view: drag.js tells it when to open and which glyph the pointer is over.
+// under the notch with glyphs for halves, quarters and arrangements.
+// A view: drag.js tells it when to open and which glyph the pointer is over.
 //
 // While a window is dragged, the Shell sends no hover to other actors (the move grab owns the
 // pointer), so the glyphs are found from the pointer position (model.js pickerHit) and shown

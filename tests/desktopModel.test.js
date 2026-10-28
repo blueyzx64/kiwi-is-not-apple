@@ -1,5 +1,5 @@
 // Run: gjs -m tests/desktopModel.test.js
-import { DesktopModel, WINDOW_FIELDS, isHelperWindowInfo, isUserFacing, appIdCandidates } from '../core/desktopModel.js';
+import { DesktopModel, WINDOW_FIELDS, isUserFacing, appIdCandidates } from '../core/desktopModel.js';
 import { EventHub } from '../core/events.js';
 
 let failed = 0;
@@ -18,13 +18,6 @@ function recorder() {
     return { hub, log };
 }
 
-test('helper windows', () => {
-    eq(isHelperWindowInfo({ title: 'com.foo.Bar', appName: null }), true);
-    eq(isHelperWindowInfo({ title: '   ', appName: null }), true);
-    eq(isHelperWindowInfo({ title: 'Doc', appName: 'gjs' }), true);
-    eq(isHelperWindowInfo({ title: 'Notes', appName: 'Text Editor' }), false);
-    eq(isHelperWindowInfo({ title: null, appName: null }), false);
-});
 test('upsert: new window emits added with defaults; a real change emits changed with its fields', () => {
     const { hub, log } = recorder();
     const m = new DesktopModel(hub);
@@ -381,14 +374,6 @@ test('a model without an event hub works silently', () => {
     eq(m.focusedApp, null);
 });
 
-test('helper windows: edge cases', () => {
-    eq(isHelperWindowInfo({ title: 'GJS Console', appName: null }), true, 'case-insensitive');
-    eq(isHelperWindowInfo({ title: 'x @!0,0 y', appName: null }), true);
-    eq(isHelperWindowInfo({ title: '  com.example.Helper  ', appName: null }), true, 'trimmed');
-    eq(isHelperWindowInfo({ title: 'Real Window', appName: 'com.example.App' }), true, 'app name wins');
-    eq(isHelperWindowInfo({ title: undefined, appName: undefined }), false);
-    eq(isHelperWindowInfo({ title: 'Docs on company.com', appName: 'Firefox' }), false, 'com. only as prefix');
-});
 test('web-app ids: Chrome ids are lower-cased, the profile keeps its case', () => {
     const id = 'ABCDEFGHIJKLMNOPABCDEFGHIJKLMNOP';
     const lower = id.toLowerCase();

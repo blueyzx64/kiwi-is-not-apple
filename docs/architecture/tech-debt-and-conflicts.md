@@ -74,17 +74,17 @@ Severity: **High** means it will break or block a planned feature, or risks user
 
 | Collides with | Nature | Sev |
 |---|---|---|
-| `windowControls.js:357-360` `_updateVisibility()` | Visibility is hard-gated to `maximized \|\| isFullscreen`, or fullscreen only. "Every focused window" means a new mode key. The `show-window-controls-fullscreen-only` boolean should become an enum (`never/fullscreen/maximized/always`). ✔ | High |
-| `windowControls.js:42-55, 177-208` and WM `button-layout` | Side and order come from `org.gnome.desktop.wm.preferences button-layout`. If titlebar removal is done by writing `button-layout=':'` (or `appmenu:`), the parser falls back to the default right side with `minimize,maximize,close` (`:196-198`), losing the user's side and order. It would also fight windowControls' own `changed::button-layout` handler, which moves the indicator between boxes (`_replaceIndicatorOnPanel` `:536-552`). ✔ | High |
+| `appButtons.js:357-360` `_updateVisibility()` | Visibility is hard-gated to `maximized \|\| isFullscreen`, or fullscreen only. "Every focused window" means a new mode key. The `show-window-controls-fullscreen-only` boolean should become an enum (`never/fullscreen/maximized/always`). ✔ | High |
+| `appButtons.js:42-55, 177-208` and WM `button-layout` | Side and order come from `org.gnome.desktop.wm.preferences button-layout`. If titlebar removal is done by writing `button-layout=':'` (or `appmenu:`), the parser falls back to the default right side with `minimize,maximize,close` (`:196-198`), losing the user's side and order. It would also fight appButtons' own `changed::button-layout` handler, which moves the indicator between boxes (`_replaceIndicatorOnPanel` `:536-552`). ✔ | High |
 | `gtkThemeManager.js:66-72` + `css/hide-titlebar{3,4}.css`, `hide-titlebar-fullscreen*.css` | The CSS only hides buttons under `.maximized`/`.fullscreen`. Always-on removal needs new unconditional variants added to `_stylesheetsFor`. The current trick moves boxes 200px off-screen at `opacity:0` (`hide-titlebar3.css:15-30`). Whether hidden buttons still take clicks or keyboard focus is ⚠. Non-GTK clients (Qt, Electron with CSD, SSD-only apps) are not covered (README "Known Issues"). | High |
 | `mozillaThemeManager.js:109-112`, `css/*WindowControlsHidden.css` | Firefox and Thunderbird hide buttons only on `:root[sizemode="maximized"]`, and ignore `show-window-controls-fullscreen-only`. An "always" mode needs new Mozilla CSS. Because of `extension.js:227,233`, this manager already runs whenever `show-window-controls` is on. ✔ | Med |
-| `extension.js:121-127, 142-146`; `windowControls.js:559-568` | Position depends on enable order: rightmost after calendar's moved `dateMenu`, or left at `len-1` on the assumption that windowTitle is last. A notch or Control Center adding right-box items will break "rightmost" again. ✔ | Med |
-| `windowControls.js:333-355` vs `windowTitle.js:222-237` | Duplicated "ignore `com.*`/`gjs*`/`@!0,0` titles" heuristics. With always-visible controls, a wrong hide is much more visible. Move this into one `isUserWindow(win)` helper. ✔ | Med |
-| `windowControls.js:273-316, 437-501` | Every hover, press or state change creates a new `St.Icon` and probes up to 6 files with sync `query_exists`. Acceptable for maximized-only use, wasteful when the controls are visible all the time. Cache the `Gio.FileIcon`s per state. ✔ | Med |
-| `windowControls.js:375-387, 407-424` | 3s close-button delay and minimize disabled in fullscreen. Keep this behaviour fullscreen-only in the new mode. ✔ | Low |
+| `extension.js:121-127, 142-146`; `appButtons.js:559-568` | Position depends on enable order: rightmost after calendar's moved `dateMenu`, or left at `len-1` on the assumption that windowTitle is last. A notch or Control Center adding right-box items will break "rightmost" again. ✔ | Med |
+| `appButtons.js:333-355` vs `windowTitle.js:222-237` | Duplicated "ignore `com.*`/`gjs*`/`@!0,0` titles" heuristics. With always-visible controls, a wrong hide is much more visible. Move this into one `isUserWindow(win)` helper. ✔ | Med |
+| `appButtons.js:273-316, 437-501` | Every hover, press or state change creates a new `St.Icon` and probes up to 6 files with sync `query_exists`. Acceptable for maximized-only use, wasteful when the controls are visible all the time. Cache the `Gio.FileIcon`s per state. ✔ | Med |
+| `appButtons.js:375-387, 407-424` | 3s close-button delay and minimize disabled in fullscreen. Keep this behaviour fullscreen-only in the new mode. ✔ | Low |
 | `windowTitle.js` AppMenu | Title and controls both follow `notify::focus-window` with separate code. The window-title menu already offers Fullscreen/Restore, which overlaps the controls. | Low |
 
-**Recommended resolution:** introduce a `TitlebarPolicy` service that owns these keys: `panel-controls-mode` (enum), `hide-titlebar-buttons` (enum: never/maximized/always) and a stored `original-button-layout`. `gtkThemeManager`, `mozillaThemeManager` and `windowControls` should all read from it. Keep the CSS approach rather than rewriting `button-layout`. If `button-layout` must be changed, save the original in a Kiwi key, make windowControls parse the saved value, and restore it on disable. Give the indicator an explicit slot through a PanelLayout helper (§1.9) instead of indices.
+**Recommended resolution:** introduce a `TitlebarPolicy` service that owns these keys: `panel-controls-mode` (enum), `hide-titlebar-buttons` (enum: never/maximized/always) and a stored `original-button-layout`. `gtkThemeManager`, `mozillaThemeManager` and `appButtons` should all read from it. Keep the CSS approach rather than rewriting `button-layout`. If `button-layout` must be changed, save the original in a Kiwi key, make appButtons parse the saved value, and restore it on disable. Give the indicator an explicit slot through a PanelLayout helper (§1.9) instead of indices.
 
 ### 1.2 Liquid Glass (blur/translucency)
 
@@ -147,12 +147,12 @@ Severity: **High** means it will break or block a planned feature, or risks user
 | `moveFullscreenWindow.js:578-774, 851-874` | Moves fullscreen windows across workspaces, activates workspaces, changes the global `slow_down_factor` (`:107`) and pins `Main.wm._workspaceAnimation.movingWindow` (`:130`). Stage Manager's own window moves and animations will race with it. Define precedence: fullscreen isolation off while Stage Manager is on, or Stage Manager is per-workspace. ✔ | High |
 | `reduceWindowAnimations.js:27-71` | Hijacks the *next* `actor.ease()` after `_shouldAnimateActor` for map and destroy. Stage Manager ease calls on window actors made in that window could be rewritten (⚠ only if Stage Manager calls `_shouldAnimateActor` paths). ✔ (mechanism) | Med |
 | `windowTiling.js:115-193, 233-257` | `_kiwiRestore` stashes and `move_resize_frame`. The drag-restore `grab-op-begin` handler resizes on drag. Stage Manager geometry changes must clear or ignore the stash. ✔ | Med |
-| `windowControls.js:119-122` | The minimize button calls `window.minimize()`. Under Stage Manager it should probably "unstage". | Med |
+| `appButtons.js:119-122` | The minimize button calls `window.minimize()`. Under Stage Manager it should probably "unstage". | Med |
 | `focusLaunchedWindow.js:8-10`; `focusOnOverviewExit.js:46-57` | Auto-activating windows changes the current stage unexpectedly. ✔ | Med |
 | `panelTransparency.js:620-658`, `transparentMove.js` | Opaque-on-maximized and per-pid opacity both touch window actors and geometry. Low risk but worth testing. ✔ | Low |
 | `overviewSeamlessZoom.js:66-96, 129-141` | Patches `Workspace` and workspace boxes. A Stage Manager strip drawn in the overview or as overlay chrome must coexist with that geometry. ✔ | Low |
 
-**Resolution:** add a `WindowStateRegistry` (`staged`, `isolatedFullscreen`, `tiled`, `parkedInDock`) that every module consults. Stage Manager should hide windows with its own mechanism (actor visibility plus `Meta.Window` skip flags, or a workspace per stage) rather than `minimize()`. If it must minimize, it tags `win._kiwiStaged`, and minimizedToDock, hideMinimizedWindows and windowControls exclude tagged windows.
+**Resolution:** add a `WindowStateRegistry` (`staged`, `isolatedFullscreen`, `tiled`, `parkedInDock`) that every module consults. Stage Manager should hide windows with its own mechanism (actor visibility plus `Meta.Window` skip flags, or a workspace per stage) rather than `minimize()`. If it must minimize, it tags `win._kiwiStaged`, and minimizedToDock, hideMinimizedWindows and appButtons exclude tagged windows.
 
 ### 1.7 Redesigned Control Center (macOS-style Quick Settings grid)
 
@@ -211,7 +211,7 @@ Severity: **High** means it will break or block a planned feature, or risks user
 | Med | `extension.js:106-119`; `prefs.js:578-583` | `custom-dnd-button`, QS notifications and panel media are silently dependent on `move-calendar-right && !keep-notification-panel` | Users toggle switches that do nothing | Make the dependency explicit in prefs (sensitive binding) or decouple | ✔ |
 | Med | `extension.js:307-308`; schema:258-262 | `focus-new-windows` only applies at enable ("reload required") | Inconsistent with every other key | Move it into the dispatcher | ✔ |
 | Low | `extension.js:22-54`, module APIs | Mixed signatures (`enable()`, `enable(ext)`, `enable(settings)`, `enable(gettext,settings)`, async `enable`), plus `enableMenus` and `enableDragRestore` | Hard to add a registry | Normalise to `enable(ctx)` | ✔ |
-| Low | many modules | Each calls `ext.getSettings()` again (windowControls:32, windowTitle:80, calendar:187, gtkThemeManager:149, mozilla:31, launchpad:143) | Multiple `Gio.Settings` objects and handlers for the same schema | Pass one settings object | ✔ |
+| Low | many modules | Each calls `ext.getSettings()` again (appButtons:32, windowTitle:80, calendar:187, gtkThemeManager:149, mozilla:31, launchpad:143) | Multiple `Gio.Settings` objects and handlers for the same schema | Pass one settings object | ✔ |
 | Low | `lockIcon.js:21`, `quickSettingsNotifications.js:40` | `Main.extensionManager.lookup('kiwi@kemma')` hard-codes the uuid instead of passing the extension | Breaks forks or renamed uuids; EGO discourages it | Pass `ext.dir` | ✔ |
 
 ### 2.2 Private Shell API monkey-patches
@@ -237,7 +237,7 @@ Severity: **High** means it will break or block a planned feature, or risks user
 |---|---|---|---|---|
 | Info | `panelTransparency.js:88-92`, `dockBlur.js:108-112`, `overviewWallpaper.js:81-85` | `Shell.BlurEffect({radius})` | **Correct** for 46+ (`sigma` was the pre-46 name). No `sigma` anywhere. The brief's "radius→sigma" is reversed | ✔ (repo), ✔ (upstream: `sigma` in shell-blur-effect.c 45.0, `radius` from 46.0) |
 | Info | whole repo | `add_actor`/`remove_actor`, `Clutter.Container`, `get_maximized()`, `St.BoxLayout{vertical}` | **None present** (grep) | ✔ |
-| Med | `windowTiling.js:62`, `windowControls.js:265-266`, `panelTransparency.js:645-646,704-707` | Maximized state via `maximized_horizontally/vertically` properties and their `notify::` signals | Works: mutter 49.0, 50.0 and 51.0 `src/core/window.c` still install `maximized-horizontally`/`maximized-vertically` (so `notify::` fires) alongside `is_maximized()`. Still wrap in one helper that prefers `is_maximized()` | ✔ |
+| Med | `windowTiling.js:62`, `appButtons.js:265-266`, `panelTransparency.js:645-646,704-707` | Maximized state via `maximized_horizontally/vertically` properties and their `notify::` signals | Works: mutter 49.0, 50.0 and 51.0 `src/core/window.c` still install `maximized-horizontally`/`maximized-vertically` (so `notify::` fires) alongside `is_maximized()`. Still wrap in one helper that prefers `is_maximized()` | ✔ |
 | Low | `windowTiling.js:51-52` | `MAXIMIZE_ARGS` (48 needs `Meta.MaximizeFlags.BOTH`) | Needed while 48 is supported | ✔ |
 | Low | `windowTitle.js:26-27` | `MENU_CLOSE_ARGS` for 51 | Needed | ✔ |
 | Low | `quickSettingsDnDRemoval.js:8` | `SHELL_HAS_SYSTEM_DND` (≥49). On 48 the toggle removal is a no-op | Needed for 48 | ✔ |
@@ -257,7 +257,7 @@ Severity: **High** means it will break or block a planned feature, or risks user
 | Med | `advanced/titlebuttons_hover.c:184` | 800ms scan of every toplevel in every GTK3 process, forever | Hook `realize` emission (the dead `on_widget_realize`, `:151-160`) | ✔ |
 | Low | `mediaPlayback.js:324,466` | 240ms soundwave and 1s progress, only while mapped and playing | OK | ✔ |
 | Low | `dockBlur.js:175,294`; `dockUtils.js:115`; `launchpadApp.js:101` | Bounded retries (25×200ms, 10×1s, 40×250ms) | OK; unify them | ✔ |
-| Low | `lockIcon.js:45`, `calendar.js:75`, `quickSettingsNotifications.js:274`, `windowControls.js:163` | Fixed startup delays (500/500/100/100ms) as readiness heuristics | Use real readiness signals | ✔ |
+| Low | `lockIcon.js:45`, `calendar.js:75`, `quickSettingsNotifications.js:274`, `appButtons.js:163` | Fixed startup delays (500/500/100/100ms) as readiness heuristics | Use real readiness signals | ✔ |
 
 ### 2.5 Missing cleanup, leaks and races
 
@@ -299,13 +299,13 @@ Severity: **High** means it will break or block a planned feature, or risks user
 | Med | Blur stack ×3 and repaint signals ×2 | `panelTransparency.js:71-233`, `dockBlur.js:21-223`, `overviewWallpaper.js:67-109` | BlurService | ✔ |
 | Med | Dock discovery reimplemented, with a looser name check (`actor.name === 'dashtodockContainer'` instead of `isDock`) | `dockBlur.js:283-303` vs `dockUtils.js:68-123` | Use `watchDocks` | ✔ |
 | Med | Luminance and backdrop sampling ×2 | `panelTransparency.js:250-279,430-437` vs `dockColors.js:173-227` | BackdropSampler | ✔ |
-| Low | Window title exclusion ×2 | `windowControls.js:333-355`, `windowTitle.js:222-237` | `isUserWindow()` | ✔ |
+| Low | Window title exclusion ×2 | `appButtons.js:333-355`, `windowTitle.js:222-237` | `isUserWindow()` | ✔ |
 | Low | `windowForActor` ×2 | `windowTitle.js:65-71`, `focusOnOverviewExit.js:19-25` | Shared util | ✔ |
 | Low | `D2D_UUIDS` ×2; disconnect helpers ×3 | `prefs.js:27`/`dockUtils.js:18`; `dockUtils.disconnectAll`, `overviewWallpaper._disconnect`, ad hoc loops | `apps/util.js` | ✔ |
 | Low | Near-identical CSS sets | `titlebuttons3/alt3`, `titlebuttons4/alt4`, `firefoxWindowControls{,.alt}`, `thunderbird…` | Generate from a template | ✔ |
 | Med | Giant files | `mediaPlayback.js` 1135, `prefs.js` 1107 (one ~1000-line method `:111-1106`), `moveFullscreenWindow.js` 1093, `downloadsStack.js` 1092, `panelTransparency.js` 995, `minimizedToDock.js` 856 | Split by concern: prefs pages into files, Player/Source/MediaItem, blur/contrast/style | ✔ |
 | Low | Naming | `_on_settings_changed` (ext:57) and snake_case methods in `transparentMove.js`; `_kiwi_` vs `_kiwi` expandos; `enabled` vs `_enabled`; "AddUsernameToQuickMenu" actually targets the panel indicators | Pick one convention | ✔ |
-| Low | Magic numbers | `panelHover.js:84,106,407` (+50/+4/+20px), `windowControls.js:415` (3000ms), `calendar.js:35,75,167`, `quickSettingsNotifications.js:274,279` (0.9), `prefs.js:376` (`!== 50` vs schema default 29), blur radius 30 ×2 / 60, `batteryPercentage.js:10` threshold with mismatched comments | Name constants; derive prefs defaults with `settings.get_default_value()` | ✔ |
+| Low | Magic numbers | `panelHover.js:84,106,407` (+50/+4/+20px), `appButtons.js:415` (3000ms), `calendar.js:35,75,167`, `quickSettingsNotifications.js:274,279` (0.9), `prefs.js:376` (`!== 50` vs schema default 29), blur radius 30 ×2 / 60, `batteryPercentage.js:10` threshold with mismatched comments | Name constants; derive prefs defaults with `settings.get_default_value()` | ✔ |
 
 ### 2.8 Error swallowing
 
@@ -320,7 +320,7 @@ Severity: **High** means it will break or block a planned feature, or risks user
 | Sev | Where | Issue | Fix | ✔ |
 |---|---|---|---|---|
 | Med | `stylesheet.css:14-16, 360-363, 656-692` | **Ungated** rules on stock classes (`.app-menu-icon`, `.maximized .window-content`, `.message-title`, `.message-group-title`, `.message .message-*-button`, `.message-list-clear-button`) apply to all shell notifications whatever the settings. Glass and notch styles will stack on top | Gate them behind `.kiwi-popup-styled` or Kiwi classes | ✔ |
-| Med | `stylesheet.css:213-219` | Selector relies on the auto-generated GType `Gjs_apps_windowControls_WindowControlsIndicator` (depends on the file path) | Add a style class | ✔ |
+| Med | `stylesheet.css:213-219` | Selector relies on the auto-generated GType `Gjs_apps_appButtons_WindowControlsIndicator` (depends on the file path) | Add a style class | ✔ |
 | Low | `stylesheet.css:49-53` | `.kiwi-panel-color-inherit` sets `background-color: black` while the key says "inherit" | Align name and behaviour | ✔ |
 | Low | `stylesheet.css` (~60 `!important`) | Specificity wars with D2D, the theme and BMS | Accept for D2D inline styles; reduce elsewhere | ✔ |
 | Low | `css/fixes3.css:31-73`, `css/fixes4.css:104-170` | Global app-specific overrides (Geary, Nautilus, every `button.image-button:hover` in GTK3) bundled under "Menu and App Styling" | Split into an explicit "App fixes" key | ✔ |
@@ -334,7 +334,7 @@ Items likely to be flagged next:
 | Sev | Item | Where | ✔ |
 |---|---|---|---|
 | High | Deleting user directories in Firefox/Thunderbird profiles; touching profiles without opt-in | §2.6 | ✔ |
-| Med | Remaining sync IO (same family as EGO030) | mozillaThemeManager, gtkThemeManager:129,133, windowControls:478-500, downloadsStack:196 (`Pixbuf.get_file_info`), panelTransparency:260, batteryPercentage:52 | ✔ |
+| Med | Remaining sync IO (same family as EGO030) | mozillaThemeManager, gtkThemeManager:129,133, appButtons:478-500, downloadsStack:196 (`Pixbuf.get_file_info`), panelTransparency:260, batteryPercentage:52 | ✔ |
 | Med | Resources retained after disable (snapshots) | minimizedToDock:794-800 | ✔ |
 | Med | Unbounded sources (EGO016 family) | quickSettingsNotifications:131 | ✔ |
 | Med | Global side effects: `St.Settings.slow_down_factor` | moveFullscreenWindow:107 | ✔ |

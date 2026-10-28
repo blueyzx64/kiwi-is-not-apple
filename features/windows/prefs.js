@@ -44,7 +44,7 @@ function shortcutExpander(settings, _, title, subtitle, list) {
 export function buildPrefs({ settings, _ }) {
     const tiling = new Adw.PreferencesGroup({
         title: _('Tiling'),
-        description: _('Drag windows to the edges, corners or top bar, use the green button menu, or the shortcuts. ' +
+        description: _('Drag windows to the edges, corners or top bar (the top centre opens a layout picker), or use the shortcuts. ' +
             'GNOME\'s own edge tiling is off while this is on and comes back when it is turned off.'),
     });
     tiling.add(switchRow(settings, _('Tile Windows'),

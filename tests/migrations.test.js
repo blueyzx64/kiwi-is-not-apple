@@ -88,12 +88,10 @@ test('glass: the old style and tint become the Clear <-> Tinted slider', () => {
     eq(userSet(untouched, 'glass-tint'), false);
 });
 
-test('window controls and control center keys migrate', () => {
+test('control center keys migrate', () => {
     const gs = fresh();
-    gs.set_boolean('show-window-controls-fullscreen-only', true);
     gs.set_boolean('add-username-to-quick-menu', false);
     runAllMigrations(gs);
-    eq(gs.get_string('window-controls-scope'), 'fullscreen');
     eq(gs.get_boolean('control-center-user-row'), false);
 });
 
@@ -101,7 +99,6 @@ test('round 2: the window controls side defaults to the right', () => {
     const gs = fresh();
     runAllMigrations(gs);
     eq(gs.get_string('window-controls-side'), 'right');
-    eq(gs.get_string('window-controls-scope'), 'maximized');
     eq(userSet(gs, 'window-controls-side'), false);
 });
 
@@ -141,6 +138,20 @@ test('round 2: the apps side counts when the top bar side was never chosen, and 
     eq(both.get_string('window-controls-side'), 'right');
 });
 
+test('round 3: enable-app-window-buttons becomes the app buttons style', () => {
+    const off = fresh();
+    off.set_boolean('enable-app-window-buttons', false);
+    runAllMigrations(off);
+    eq(off.get_string('app-buttons-style'), 'gnome');
+    const on = fresh();
+    on.set_boolean('enable-app-window-buttons', true);
+    runAllMigrations(on);
+    eq(on.get_string('app-buttons-style'), 'macos');
+    const untouched = fresh();
+    runAllMigrations(untouched);
+    eq(userSet(untouched, 'app-buttons-style'), false);
+});
+
 test('second run is a no-op even after the user resets a new key', () => {
     const gs = fresh();
     gs.set_boolean('add-username-to-quick-menu', false);
@@ -165,7 +176,6 @@ test('v3 defaults follow macOS (overhaul plan §12)', () => {
     eq(gs.get_string('app-buttons-style'), 'macos');
     eq(gs.get_boolean('move-window-to-new-workspace'), true);
     // the owner's explicit choices stay
-    eq(gs.get_boolean('show-window-controls'), true);
     eq(gs.get_boolean('spotlight-on-super'), true);
     eq(gs.get_boolean('overview-gestures-workspace-only'), true);
     eq(gs.get_boolean('disable-hot-corner'), true);

@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The apps' own titlebar buttons while the top-bar window controls are off (features.js runs
-// this entry only then). Kiwi sets the WM button-layout to all three buttons (or close only,
-// app-buttons-set) on the side from window-controls-side, through the same crash-safe owner as
-// the panel controls: the user's layout is saved in saved-button-layout and written back
-// exactly when the top-bar controls come back on or Kiwi is disabled.
-// The look (stock GNOME or Kiwi's macOS CSS) is the GTK CSS in gtkThemeManager.js, which reads
-// app-buttons-style while the controls are off (appButtonsMacos in model.js).
+// The apps' own titlebar buttons. Window buttons always stay on the app's titlebar; Kiwi never
+// draws them in the top bar. Kiwi sets the WM button-layout to all three buttons (or close only,
+// app-buttons-set) on the side from window-controls-side. The user's layout is kept by
+// core/originals (crash-safe) and written back exactly when Kiwi is disabled.
+// The look (stock GNOME or Kiwi's macOS CSS) is the GTK CSS of gtkTheme.js, which reads
+// app-buttons-style.
 
 import Gio from 'gi://Gio';
 

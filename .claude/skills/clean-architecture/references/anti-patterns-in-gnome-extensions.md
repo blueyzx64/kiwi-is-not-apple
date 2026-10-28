@@ -123,7 +123,7 @@ and any future Rust helper (`…Async` proxy methods only).
 
 ## 7. Logic inside widgets
 
-`apps/windowControls.js` — `WindowControlsIndicator` (a `PanelMenu.Button`) owns
+`apps/appButtons.js` — `WindowControlsIndicator` (a `PanelMenu.Button`) owns
 settings subscriptions (`:32-39`), WM-settings parsing (`:42-55`, `:177-208`), window
 actions (`:119-140`), lock-screen handling (`:153-171`) and icon state. Pure logic like
 `_parseButtonLayout` cannot be tested without constructing an St actor inside a Shell.
@@ -136,7 +136,7 @@ renders state and emits intents (`kiwi-layering.md` §4).
 
 ## 8. Private Shell API scattered
 
-`Main.panel._rightBox/_leftBox/_centerBox`: `apps/windowControls.js:545-566`,
+`Main.panel._rightBox/_leftBox/_centerBox`: `apps/appButtons.js:545-566`,
 `apps/calendar.js:34,55,81,198-200`. `quickSettings._indicators`: five modules (see
 `patterns-catalog.md` §2). `Main.messageTray._sources`: `apps/calendar.js:163`.
 `Main.overview._swipeTracker._touchpadGesture`: `apps/overviewSeamlessZoom.js:153`.
@@ -149,14 +149,14 @@ versions verified, so a GNOME bump is a one-file review.
 
 ## 9. Feature-to-feature imports
 
-`apps/windowControls.js:14` imports `isMaximized/maximizeWindow/unmaximizeWindow` from
+`apps/appButtons.js:14` imports `isMaximized/maximizeWindow/unmaximizeWindow` from
 `apps/windowTiling.js`; `apps/panelMedia.js:10` imports from `apps/mediaPlayback.js`.
 Shared *capabilities* belong in `lib/` (or `lib/pure/`); otherwise disabling or
 refactoring one feature silently changes another.
 
 ## 10. Hand-rolled signal bookkeeping
 
-`apps/windowControls.js:246-260` and `:511-533` track seven named handler IDs plus an
+`apps/appButtons.js:246-260` and `:511-533` track seven named handler IDs plus an
 array; `destroy()` must remember each. One omission = a handler on a disposed object
 ("already disposed" warnings in the journal). **Fix:** `SignalTracker` per owner, plus
 `disconnectFrom(window)` for per-focus-window handlers.

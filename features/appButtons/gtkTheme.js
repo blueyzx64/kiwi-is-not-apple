@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // GTK stylesheets for the apps' own titlebars: the macOS traffic lights of app-buttons-style
-// 'macos', hiding the titlebar buttons the top-bar controls replace, and the app fixes of
-// popup-menu-styling. Which sheets: model.js gtkSheets().
+// 'macos' and the app fixes of popup-menu-styling. Which sheets: model.js gtkSheets().
 //
 // Imports are written only to the user's ~/.config/gtk-{3,4}.0/gtk.css, between Kiwi's two
 // marker comments, so the extension never writes inside its own installation directory
@@ -29,8 +28,7 @@ const MANAGED_BLOCK_REGEX = /\/\* Kiwi \(is not Apple\) - managed imports: begin
 // Single-line imports into the extension that versions <= 1.9.1 wrote without markers.
 const LEGACY_IMPORT_REGEX = /^[^\n]*@import[^\n]*kiwi@kemma[^\n]*\n?/gm;
 
-const KEYS = ['enable-app-window-buttons', 'button-size', 'show-window-controls', 'window-controls-scope',
-    'remove-titlebar-buttons', 'popup-menu-styling', 'app-buttons-style', 'hide-maximized-titlebars'];
+const KEYS = ['button-size', 'popup-menu-styling', 'app-buttons-style'];
 
 /**
  * gtk.css text with Kiwi's block replaced by `block` ('' removes it), user rules untouched.
@@ -76,7 +74,7 @@ export class GtkTheme {
     constructor(ctx, cleanup) {
         this._ctx = ctx;
         this._cleanup = cleanup;
-        this._gtkDir = GLib.build_filenamev([ctx.extension.path, 'features', 'windowControls', 'gtk']);
+        this._gtkDir = GLib.build_filenamev([ctx.extension.path, 'features', 'appButtons', 'gtk']);
     }
 
     enable() {
@@ -94,14 +92,9 @@ export class GtkTheme {
 
     _block(ks, version) {
         const sheets = gtkSheets({
-            showOnPanel: ks.bool('show-window-controls'),
-            remove: ks.bool('remove-titlebar-buttons'),
-            scope: ks.string('window-controls-scope'),
-            enableAppButtons: ks.bool('enable-app-window-buttons'),
             style: ks.string('app-buttons-style'),
             size: ks.string('button-size'),
             appFixes: ks.bool('popup-menu-styling'),
-            hideTitlebars: ks.bool('hide-maximized-titlebars'),
         }, version);
         if (!sheets.length)
             return '';

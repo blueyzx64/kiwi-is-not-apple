@@ -2,8 +2,7 @@
 // Window tiling, macOS 15 Sequoia model (feature id 'window-tiling', key windows-tiling).
 //
 // One engine for every way in: dragging to the edges, corners and menu bar (drag.js), the
-// green-button menu of the top-bar controls and the menu bar's Window menu (the
-// 'window-tile-requested' event), and the Ctrl+Super shortcuts. The geometry is pure (model.js);
+// menu bar's Window menu (the 'window-tile-requested' event), and the Ctrl+Super shortcuts. The geometry is pure (model.js);
 // this adapter only reads frames and calls move_resize_frame.
 //
 // Mutter has no public tiling API (meta_window_tile is not introspected), so Kiwi's tiles are
@@ -98,7 +97,7 @@ export class WindowTiling {
         // Everything is in the cleanup registry, disposed right after this returns
     }
 
-    // ---- public API (green menu, drag, probes) ----------------------------------------------
+    // ---- public API (Window menu, drag, probes) ----------------------------------------------
 
     /** Shortcut keys left unbound because their accelerator is taken: [{key, accel, with}]. */
     get skippedShortcuts() {

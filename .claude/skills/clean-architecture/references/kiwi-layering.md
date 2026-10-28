@@ -38,7 +38,7 @@ coordinators/
   notificationRouter.js
   blurBudget.js              (later) caps simultaneous Shell.BlurEffect instances
 apps/
-  windowControls/{index,model,view,shellAdapter,settings}.js
+  appButtons/{index,model,view,shellAdapter,settings}.js
   clipboard/{index,model,view,shellAdapter,settings,helperClient}.js
   ...                         small legacy single-file modules may stay as-is
 tests/unit/                  *.test.js for model.js and lib/pure
@@ -81,7 +81,7 @@ export default class KiwiExtension extends Extension {
 }
 ```
 
-Today each module calls `_extension.getSettings()` itself (`apps/windowControls.js:32`,
+Today each module calls `_extension.getSettings()` itself (`apps/appButtons.js:32`,
 `apps/windowTitle.js:80`, `apps/gtkThemeManager.js:149`), creating separate
 `Gio.Settings` objects and needing a module-level `_extension` global.
 
@@ -94,7 +94,7 @@ export const FEATURES = [
         id: 'window-controls',
         enabledBy: 'show-window-controls',
         restartOn: ['button-type', 'enable-app-window-buttons'],
-        load: () => import('./apps/windowControls/index.js'),
+        load: () => import('./apps/appButtons/index.js'),
     },
     {
         id: 'downloads-stack',
@@ -122,8 +122,8 @@ be wrapped by a 5-line adapter in the host during migration.
 ## 4. Anatomy (worked: window controls)
 
 ```js
-// apps/windowControls/model.js — pure, testable
-export function parseButtonLayout(layout) {         // moved from windowControls.js:177-208
+// apps/appButtons/model.js — pure, testable
+export function parseButtonLayout(layout) {         // moved from appButtons.js:177-208
     const valid = ['close', 'minimize', 'maximize'];
     const [left = '', right = ''] = layout.split(':');
     const pick = s => [...new Set(s.split(',').map(b => b.trim()).filter(b => valid.includes(b)))];
@@ -140,7 +140,7 @@ export function visibleFor({ focus, overview, cfg }) {
 ```
 
 ```js
-// apps/windowControls/shellAdapter.js — the only file touching Shell/Meta
+// apps/appButtons/shellAdapter.js — the only file touching Shell/Meta
 export class WindowControlsShell {
     constructor(signals) { this._signals = signals; }
     focusSnapshot() {
@@ -164,7 +164,7 @@ export class WindowControlsShell {
 ```
 
 ```js
-// apps/windowControls/index.js — lifecycle and wiring
+// apps/appButtons/index.js — lifecycle and wiring
 export default class WindowControls {
     constructor(ctx) { this._ctx = ctx; }
     enable() {
@@ -213,7 +213,7 @@ export class SignalTracker {
 }
 ```
 
-The repo already does this ad hoc: `[obj, id]` arrays in `apps/windowControls.js:76-140`,
+The repo already does this ad hoc: `[obj, id]` arrays in `apps/appButtons.js:76-140`,
 `apps/dockColors.js:75-76`, `{obj, id}` in `apps/calendar.js:22,112-118`.
 `lib/timeouts.js` wraps `GLib.timeout_add`/`idle_add`/`global.compositor.get_laters()`
 (already wrapped once in `apps/dockUtils.js:48-52`). `lib/injections.js` wraps Shell's
@@ -227,7 +227,7 @@ The repo already does this ad hoc: `[obj, id]` arrays in `apps/windowControls.js
 | Inside a feature (index → view/model) | direct calls | simplest; same lifetime |
 | Feature A needs to *react* to B ("stage changed", "bar hidden") | `ctx.bus` event, namespaced | A survives B being disabled; no import |
 | Several features want the *same Shell resource* | coordinator request returning a disposable | arbitration needs one owner |
-| Feature needs B's *capability* (window tiling helpers) | move it to `lib/` (pure) or a shared adapter | features never import features (`apps/windowControls.js:14` imports `windowTiling.js` today) |
+| Feature needs B's *capability* (window tiling helpers) | move it to `lib/` (pure) or a shared adapter | features never import features (`apps/appButtons.js:14` imports `windowTiling.js` today) |
 
 Events are facts (`'notch:expanded'`), not commands. If you need a reply, it is not an
 event; use a coordinator or a lib function.
@@ -301,7 +301,7 @@ coordinator), the others subscribe.
    unchanged; delete branches from `_on_settings_changed` one by one.
 3. Introduce `panelLayout`; migrate window controls, window title, calendar badge.
 4. Build new features (clipboard, notch, …) in the folder layout from day one.
-5. Split large legacy modules (`windowControls.js`, `calendar.js`,
+5. Split large legacy modules (`appButtons.js`, `calendar.js`,
    `quickSettingsNotifications.js`) when touched for other reasons.
 6. Add unit tests + CI step once the first `model.js` exists. Note `.gitignore` already
    ignores `tests/` (and `.c[a-z]*/`), so either use `test/` or adjust `.gitignore`.
