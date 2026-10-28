@@ -468,6 +468,27 @@ test('a file drag over the notch opens the Tray and holds it; a drop keeps it a 
     eq(nextDeadline(state), 2 + DEFAULT_CONFIG.hoverLeaveMs);
 });
 
+test('dismiss-activity: the card goes and stays away until its state changes', () => {
+    const charging = (now, data) => ({ type: 'activity', key: 'battery', kind: 'charging', data, now });
+    let { state } = run([charging(0, { percent: 7 }), { type: 'dismiss-activity', key: 'battery', now: 1 }]);
+    eq(state.activities.length, 0);
+    ({ state } = step(state, charging(2, { percent: 8 })));
+    eq(state.activities.length, 0, 'a refresh does not bring it back');
+    ({ state } = run([charging(3, null), charging(4, { percent: 9 })], undefined, state));
+    eq(state.activities.map(a => a.key), ['battery'], 'unplugged and plugged in again');
+});
+test('dismiss-activity: a recording or a running timer is not dismissed', () => {
+    const { state } = run([
+        { type: 'activity', key: 'recording', kind: 'recording', data: { startedAt: 0 }, now: 0 },
+        { type: 'activity', key: 'timer:1', kind: 'timer', data: { state: 'running', endsAt: 9e9 }, now: 0 },
+        { type: 'dismiss-activity', key: 'recording', now: 1 },
+        { type: 'dismiss-activity', key: 'timer:1', now: 1 },
+        { type: 'dismiss-activity', key: 'missing', now: 1 },
+    ]);
+    eq(state.activities.map(a => a.key).sort(), ['recording', 'timer:1']);
+    eq(state.dismissed, {});
+});
+
 print(failed ? `${failed} FAILED` : 'all passed');
 if (failed)
     imports.system.exit(1);

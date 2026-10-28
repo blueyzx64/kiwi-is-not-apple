@@ -16,7 +16,7 @@
 // A newer notification of the same or higher urgency replaces the one on screen (which goes
 // back to the queue) unless the pointer is over it. The queue badge counts what is waiting.
 
-import { activityTiming, rankActivities, pillActivity, nextActivityExpiry, pillWidth, TABS } from './model.js';
+import { activityTiming, admitActivity, dismissActivity, rankActivities, pillActivity, nextActivityExpiry, pillWidth, TABS } from './model.js';
 
 export const URGENCY = Object.freeze({ LOW: 0, NORMAL: 1, HIGH: 2, CRITICAL: 3 });
 
@@ -53,6 +53,7 @@ export function initialState(now = 0) {
         current: null,      // {id, urgency, forFeedback, at, compact, until, hovered, remaining}
         pending: [],        // same shape without timing, newest first within an urgency
         activities: [],     // [{key, kind, priority, until, pill, data, at}] see model.js KINDS
+        dismissed: {},      // key -> identity of a card the user dismissed (model.js admitActivity)
         osd: null,          // {kind, level, maxLevel, icon, startedAt, until}
         dashboard: null,    // null | {until: number|null, openedAt, by: 'click'|'hover', tab}
     };
@@ -298,6 +299,12 @@ function onActivity(s, ev, cfg) {
     if (!cfg.activities)
         return;
     const rest = s.activities.filter(a => a.key !== ev.key);
+    const admit = admitActivity(s.dismissed ?? {}, ev);
+    s.dismissed = admit.dismissed;
+    if (!admit.show) {
+        s.activities = rest;
+        return;
+    }
     if (ev.data === null || ev.data === undefined) {
         s.activities = rest;
         return;
@@ -320,8 +327,10 @@ function applyConfig(s, cfg) {
         s.current = null;
         s.pending = [];
     }
-    if (!cfg.activities)
+    if (!cfg.activities) {
         s.activities = [];
+        s.dismissed = {};
+    }
     if (!cfg.osd)
         s.osd = null;
 }
@@ -342,7 +351,7 @@ function onSet(s, ev, cfg) {
 /**
  * @param {object} state from initialState()/step()
  * @param {object} ev {type, now, ...}: notify, notify-removed, activity, osd, hover, click,
- *   dismiss, collapse (a press outside the notch, or Escape), tick, set
+ *   dismiss, dismiss-activity ({key}), collapse (a press outside the notch, or Escape), tick, set
  * @param {object} [config] DEFAULT_CONFIG overrides
  * @returns {{state: object, effects: object[]}} effects: {type:'activate'|'dismiss', id}
  */
@@ -366,6 +375,17 @@ export function step(state, ev, config = {}) {
     case 'activity':
         onActivity(s, ev, cfg);
         break;
+    case 'dismiss-activity': {
+        // The × on a Now-tab card: gone until its state changes (model.js admitActivity)
+        const a = s.activities.find(x => x.key === ev.key);
+        const before = s.dismissed ?? {};
+        const dismissed = dismissActivity(before, a);
+        if (dismissed !== before) {
+            s.dismissed = dismissed;
+            s.activities = s.activities.filter(x => x.key !== ev.key);
+        }
+        break;
+    }
     case 'osd':
     case 'confirm': // "Copied" and the like: an osd without a level
         onOsd(s, ev, cfg);

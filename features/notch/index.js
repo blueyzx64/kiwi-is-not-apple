@@ -123,6 +123,12 @@ export class NotchFeature {
             onExpand: () => this._dispatch({ type: 'expand' }),
             onTab: tab => this._dispatch({ type: 'tab', tab }),
             onActivityAction: (activity, id) => this._activityAction(activity, id),
+            // On idle, never inside the ×'s click: the dismissal rebuilds the cards, and
+            // destroying the clicked button in its own handler aborts the Shell (Mutter 50)
+            onDismissActivity: activity => this._cleanup.idle(
+                () => this._dispatch({ type: 'dismiss-activity', key: activity.key }), { name: 'kiwi-notch-dismiss' }),
+            onDismissNotification: notification => this._cleanup.idle(
+                () => this._dismissNotification(notification), { name: 'kiwi-notch-dismiss' }),
             onShelf: (action, uri) => this._shelfAction(action, uri),
             isShelfHelperWindow: window => !!this._shelfHelper?.isHelperWindow(window),
             onShelfLayout: layout => (layout ? this._shelfHelper?.show(layout.box, layout.tiles) : this._shelfHelper?.hide()),
@@ -588,6 +594,16 @@ export class NotchFeature {
         } catch (e) {
             console.error('[Kiwi] notch could not open a notification:', e);
         }
+    }
+
+    // The × on a Now-tab notification: out of the message list, as its own close button does
+    _dismissNotification(notification) {
+        try {
+            notification?.destroy(MessageTray.NotificationDestroyedReason.DISMISSED);
+        } catch (e) {
+            console.error('[Kiwi] notch could not dismiss a notification:', e);
+        }
+        this._sync();
     }
 
     // The full list: in Quick Settings while the notch is on (calendarRight), else the

@@ -5,7 +5,7 @@ import {
     UPOWER, connectedHeadphones, newlyConnected, downloadSummary, formatBytes, nextEvent, minutesUntil,
     formatCountdown, formatElapsed, tabDirection, nowRows, pillWidth, SHELF_LIMIT, DROP_FILE_TYPES, inDropZone,
     dropZone, batteryIconNames, PRESENTATION, presentation, WELL, TRAILING_W, wellRadius, TINTS, SHAPES,
-    ACCESSORIES, modeChanged,
+    ACCESSORIES, modeChanged, DISMISSABLE, canDismiss, dismissIdentity, dismissActivity, admitActivity,
 } from '../features/notch/model.js';
 
 let failed = 0;
@@ -230,6 +230,48 @@ test('modes: only a change from a known state shows', () => {
     eq(modeChanged({ key: 'off' }, { key: 'on' }), true);
     eq(modeChanged({ key: 'on' }, { key: 'on' }), false);
     eq(modeChanged({ key: 'work' }, { key: null }), true);
+});
+
+test('dismiss: alerts and quiet state can go; what the user runs keeps its own control', () => {
+    for (const k of ['charging', 'charging-started', 'charged', 'unplugged', 'low-battery', 'headphones',
+        'headphones-connected', 'download', 'download-done', 'event', 'event-soon', 'code', 'timer-done',
+        'low-power', 'focus'])
+        eq(canDismiss(k), true, k);
+    for (const k of ['recording', 'timer', 'media', 'media-paused', 'nope'])
+        eq(canDismiss(k), false, k);
+    for (const k of DISMISSABLE)
+        ok(k in KINDS, `${k} is a kind`);
+});
+test('dismiss: a non-dismissable kind leaves the map unchanged', () => {
+    const d = {};
+    eq(dismissActivity(d, { key: 'recording', kind: 'recording', data: {} }) === d, true);
+    eq(dismissActivity(d, null) === d, true);
+    eq(dismissActivity(d, { key: 'battery', kind: 'charging', data: { percent: 7 } }), { battery: 'charging' });
+});
+test('dismiss: charging stays away while it charges, back after unplug and replug', () => {
+    let d = dismissActivity({}, { key: 'battery', kind: 'charging', data: { percent: 7 } });
+    let r = admitActivity(d, { key: 'battery', kind: 'charging', data: { percent: 8 } });
+    eq(r.show, false, 'a new percentage is the same state');
+    d = r.dismissed;
+    r = admitActivity(d, { key: 'battery', kind: 'charging', data: null });
+    eq(r.dismissed, {}, 'charging stopped: forgotten');
+    r = admitActivity(r.dismissed, { key: 'battery', kind: 'charging', data: { percent: 9 } });
+    eq(r.show, true);
+});
+test('dismiss: a fresh alert or another identity comes back; other keys are untouched', () => {
+    const d = { 'battery-alert': 'charging-started', 'event': dismissIdentity('event', { summary: 'A', start: 1 }) };
+    let r = admitActivity(d, { key: 'battery-alert', kind: 'charging-started', data: { percent: 7 }, fresh: true });
+    eq(r.show, true);
+    eq(Object.keys(r.dismissed), ['event']);
+    r = admitActivity(d, { key: 'event', kind: 'event', data: { summary: 'A', start: 1, ongoing: true } });
+    eq(r.show, false, 'the same event');
+    r = admitActivity(d, { key: 'event', kind: 'event-soon', data: { summary: 'A', start: 1 } });
+    eq(r.show, true, 'the event is about to start');
+    r = admitActivity(d, { key: 'event', kind: 'event', data: { summary: 'B', start: 2 } });
+    eq(r.show, true, 'the next event');
+    r = admitActivity(d, { key: 'download', kind: 'download', data: { count: 1 } });
+    eq(r.show, true);
+    eq(r.dismissed === d, true);
 });
 
 if (failed) { print(`${failed} failed`); imports.system.exit(1); }

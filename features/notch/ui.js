@@ -58,6 +58,36 @@ export function button({ styleClass, iconName = null, text = null, accessibleNam
     return b;
 }
 
+/**
+ * The × that dismisses a Now-tab card, macOS style: drawn while the pointer is on the card or
+ * the × has the key focus (it stays in the focus chain, so the keyboard reaches it too). It is
+ * an St.Button, so its press is its own: neither the card under it (a notification opens on a
+ * click) nor the notch (a click there closes the dashboard) sees it.
+ * @param {string} name accessible name
+ * @param {function(): void} onClick
+ * @param {St.Widget} host the card; it is made to track the hover
+ */
+export function dismissButton(name, onClick, host) {
+    const b = new St.Button({
+        style_class: 'kiwi-notch-dismiss',
+        child: new St.Icon({ icon_name: 'window-close-symbolic', icon_size: 10 }),
+        can_focus: true,
+        accessible_name: name,
+        y_align: Clutter.ActorAlign.CENTER,
+        opacity: 0,
+    });
+    host.reactive = true;
+    host.track_hover = true;
+    const update = () => {
+        b.opacity = host.hover || b.has_key_focus() ? 255 : 0;
+    };
+    host.connect('notify::hover', update);
+    b.connect('key-focus-in', update);
+    b.connect('key-focus-out', update);
+    b.connect('clicked', () => onClick());
+    return b;
+}
+
 // Cover art: local files and http(s) URLs. St loads a FileIcon asynchronously through GIO
 // (GVfs handles http/https), so nothing is downloaded on the main loop here.
 export function artIcon(url) {

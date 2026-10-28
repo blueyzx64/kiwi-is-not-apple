@@ -321,16 +321,40 @@
     spacing: 6px;
 }
 
+/* The island is pure black, where the design system's 6-8 % card fill reads as ~#111 and the
+   card edges vanish: a 12 % fill (~#1f1f1f, Apple's dark secondary grouped background) and a
+   10 % hairline. The hairline is an inset shadow, so the 40px height is unchanged, and
+   .kiwi-row:focus (the accent ring, also an inset shadow) still wins on focus. */
 .kiwi-notch-card-row {
     height: 40px;
     padding: 0 8px 0 6px;
     spacing: 10px;
-    background-color: rgba(255, 255, 255, 0.06);
+    background-color: rgba(255, 255, 255, 0.12);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
-.kiwi-notch-recent:hover,
+.kiwi-notch-card-row:hover,
 .kiwi-notch-recent:focus {
-    background-color: rgba(255, 255, 255, 0.12);
+    background-color: rgba(255, 255, 255, 0.18);
+}
+
+/* the × on a Now-tab card (ui.js dismissButton): shown on hover or key focus */
+.kiwi-notch-dismiss {
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    color: rgba(255, 255, 255, 0.7);
+    background-color: rgba(255, 255, 255, 0.14);
+}
+
+.kiwi-notch-dismiss:hover,
+.kiwi-notch-dismiss:focus {
+    background-color: rgba(255, 255, 255, 0.28);
+    color: #ffffff;
+}
+
+.kiwi-notch-dismiss:focus {
+    box-shadow: inset 0 0 0 2px -st-accent-color;
 }
 
 .kiwi-notch-recent-row {
@@ -388,6 +412,12 @@
 .kiwi-notch-clip {
     height: 32px;
     padding: 0 8px;
+    background-color: rgba(255, 255, 255, 0.12);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.kiwi-notch-clip:hover {
+    background-color: rgba(255, 255, 255, 0.18);
 }
 
 .kiwi-notch-clip-text {
@@ -538,11 +568,12 @@
 
 .kiwi-notch-shelf-tile:hover,
 .kiwi-notch-shelf-tile:focus {
-    background-color: rgba(255, 255, 255, 0.08);
+    background-color: rgba(255, 255, 255, 0.12);
 }
 
 .kiwi-notch-shelf-tile-selected {
-    background-color: rgba(255, 255, 255, 0.16);
+    background-color: rgba(255, 255, 255, 0.18);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
 .kiwi-notch-shelf-missing {
@@ -571,6 +602,14 @@
    into one strip, and the notch's own Controls card. Island is always dark: no light rules. */
 .kiwi-notch-widget-strip {
     spacing: 20px;
+}
+
+/* On the black island the design system's 8 % .kiwi-card reads as ~#141414: the same 12 %
+   fill and 10 % hairline as the Now cards, so the widgets stand out from the island */
+.kiwi-notch-widget-strip .kiwi-card,
+.kiwi-notch-widget-controls.kiwi-card {
+    background-color: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.1);
 }
 
 .kiwi-notch-widget-button {

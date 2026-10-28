@@ -64,7 +64,8 @@ export class NotchView {
      * @param {object} handlers {onClick, onDismiss, onHover(bool), onExpand, onAction(id, index),
      *   onMedia('previous'|'toggle'|'next'), onRaisePlayer (the art: the playing app to the front), onToggleDnd, onToggleMic, onCopy(entryId), onCollapse,
      *   onOpenNotification(notification), onOpenList, onSeek(fraction 0..1), onTab(tab),
-     *   onActivityAction(activity, id), onShelf(action, uri), onShelfLayout(layout|null), isShelfHelperWindow(window), onTimerPreset(minutes),
+     *   onActivityAction(activity, id), onDismissActivity(activity), onDismissNotification(notification),
+     *   onShelf(action, uri), onShelfLayout(layout|null), isShelfHelperWindow(window), onTimerPreset(minutes),
      *   widgetHost() (core/widgets host), onEditWidgets, onSetWidgets(list), onOpenWidget(view),
      *   getPosition(): Promise<number|null>}
      * @param {function(string): string} gettext

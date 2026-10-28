@@ -13,10 +13,10 @@ import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
 import St from 'gi://St';
 
-import { label, icon, themed, themedAny, button, setText } from './ui.js';
+import { label, icon, themed, themedAny, button, setText, dismissButton } from './ui.js';
 import {
     formatCountdown, formatElapsed, formatBytes, minutesUntil, batteryIconNames, presentation,
-    wellRadius, WELL, TRAILING_W,
+    wellRadius, WELL, TRAILING_W, canDismiss,
 } from './model.js';
 
 const monoNow = () => Math.floor(GLib.get_monotonic_time() / 1000);
@@ -230,9 +230,9 @@ export function trailingSlot() {
 }
 
 /**
- * One card of the Now tab's list.
+ * One card of the Now tab's list. A dismissable kind (model.js canDismiss) gets the × on hover.
  * @param {object} activity
- * @param {{_: Function, live: Function[], onAction: Function}} env
+ * @param {{_: Function, live: Function[], onAction: Function, onDismiss?: Function}} env
  */
 export function row(activity, env) {
     const desc = describe(activity, env._);
@@ -255,6 +255,8 @@ export function row(activity, env) {
             }));
         }
     }
+    if (env.onDismiss && canDismiss(activity.kind))
+        box.add_child(dismissButton(env._('Dismiss'), () => env.onDismiss(activity), box));
     return box;
 }
 

@@ -14,7 +14,7 @@ import St from 'gi://St';
 import * as Util from 'resource:///org/gnome/shell/misc/util.js';
 
 import * as A11y from '../../lib/a11y.js';
-import { label, icon, themed, button, artwork, artButton, track, column, setText } from './ui.js';
+import { label, icon, themed, button, artwork, artButton, track, column, setText, dismissButton } from './ui.js';
 import { trackProgress, seekTarget, formatClock, NOTCH_CONTROLS, WIDGET_STRIP } from './dashboardModel.js';
 import { buildChooser } from '../../core/widgets/chooser.js';
 import { fitStrip, fitsStrip } from '../../core/widgets/model.js';
@@ -213,6 +213,12 @@ function listColumn(env, ctx) {
             text.add_child(sub);
         }
         row.add_child(text);
+        // The × takes it out of the message list (as the stock list's close button does), so
+        // it does not come back on the next refresh
+        if (env.h.onDismissNotification) {
+            row.add_child(dismissButton(env._('Dismiss'),
+                () => env.h.onDismissNotification(item.notification), b));
+        }
         b.set_child(row);
         b.connect('clicked', () => env.h.onOpenNotification?.(item.notification));
         col.add_child(b);
@@ -272,7 +278,9 @@ export function nowTab(env, ctx) {
     const recent = ctx.recent ?? [];
     const rows = nowRows(acts.length, Math.max(recent.length, ctx.count ?? 0));
     for (const a of acts.slice(0, rows.activities))
-        col.add_child(activityRow(a, { _: env._, live: env.live, onAction: env.h.onActivityAction }));
+        col.add_child(activityRow(a, {
+            _: env._, live: env.live, onAction: env.h.onActivityAction, onDismiss: env.h.onDismissActivity,
+        }));
     const listed = recent.slice(0, rows.notifications);
     const more = Math.max(0, (ctx.count ?? recent.length) - listed.length);
     col.add_child(listColumn(env, { recent: listed, more: rows.activities + listed.length < 3 ? more : 0, empty: !acts.length }));

@@ -157,6 +157,77 @@ export function nextActivityExpiry(list, now) {
     return t;
 }
 
+// ---- dismissing an activity -------------------------------------------------------------
+//
+// A Now-tab card with a × (on hover or key focus) leaves the notch and stays away while the
+// thing it reports is unchanged: its source keeps sending the same activity (a new battery
+// percentage, a headphone battery level), and that must not bring it back. It comes back when
+// the state genuinely changes: the source clears it (charging stopped, the device went), sends
+// a new alert (`fresh`: the charger plugged in again, a new code), or reports something else
+// under the same key (another calendar event, the event now about to start).
+// Not dismissable: what the user is running and has its own control on the card (a screen
+// recording: Stop, privacy first; a running or paused timer: Cancel) and media (the player).
+
+export const DISMISSABLE = Object.freeze([
+    'timer-done', 'code', 'low-battery', 'charging-started', 'charged', 'unplugged', 'low-power',
+    'focus', 'download-done', 'headphones-connected', 'download', 'event-soon', 'event', 'charging',
+    'headphones',
+]);
+
+/** Can a card of this kind be dismissed with its ×? */
+export function canDismiss(kind) {
+    return DISMISSABLE.includes(kind);
+}
+
+/**
+ * What a dismissal is about: the same identity under the same key stays dismissed.
+ * @param {string} kind
+ * @param {object|null} data
+ * @returns {string}
+ */
+export function dismissIdentity(kind, data) {
+    const d = data ?? {};
+    switch (kind) {
+    case 'event':
+    case 'event-soon':
+        return `${kind}:${d.summary ?? ''}:${d.start ?? ''}`;
+    case 'code':
+        return `${kind}:${d.code ?? ''}`;
+    default:
+        return String(kind);
+    }
+}
+
+/**
+ * The dismissed map after the user dismissed `activity` ({key, kind, data}); unchanged for a
+ * kind that cannot be dismissed.
+ * @param {Object<string, string>} dismissed key -> identity
+ * @returns {Object<string, string>}
+ */
+export function dismissActivity(dismissed, activity) {
+    if (!activity || !canDismiss(activity.kind))
+        return dismissed;
+    return { ...dismissed, [activity.key]: dismissIdentity(activity.kind, activity.data) };
+}
+
+/**
+ * A source reported an activity ({key, kind, data, fresh}): is it shown, and what is still
+ * dismissed? It stays hidden only while it is the same thing the user dismissed.
+ * @param {Object<string, string>} dismissed key -> identity
+ * @returns {{show: boolean, dismissed: Object<string, string>}}
+ */
+export function admitActivity(dismissed, ev) {
+    if (!(ev.key in dismissed))
+        return { show: true, dismissed };
+    const same = !ev.fresh && ev.data !== null && ev.data !== undefined &&
+        dismissed[ev.key] === dismissIdentity(ev.kind, ev.data);
+    if (same)
+        return { show: false, dismissed };
+    const rest = { ...dismissed };
+    delete rest[ev.key];
+    return { show: true, dismissed: rest };
+}
+
 // ---- one-time codes ---------------------------------------------------------------------
 //
 // Local and conservative: a code is offered only when the text names it (code, OTP, PIN,
