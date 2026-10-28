@@ -284,3 +284,4 @@ No more installer work: no new pieces (Trash-drag uninstall, fly-to-dock, update
 - PR #10 merged into main (4b6559b).
 - Release v3.0.0 published (zip + kiwi-shelf-helper RPM) via a manual run of pack-release.yml with tag input; tag pushes are blocked from this session.
 - PR #13 merged (docs revamp).
+- R3A → merged: top-bar window controls, green menu and hide-titlebars removed; the app buttons keep side right and the traffic look; Split View on Ctrl+Super+Alt+Left/Right; 8 keys deprecated; migration restores the user's layout.
