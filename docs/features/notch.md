@@ -11,6 +11,8 @@ A black pill hanging from the top centre of the bar. It grows to show notificati
 - **Tray (file shelf):** links to files; finished downloads (`notch-shelf-downloads`) and screenshots (`notch-shelf-screenshots`) are added, or use Add from Clipboard. The files themselves are not copied. `notch-show-clipboard` (off) lists clipboard text in the Tray.
 - **Volume and brightness** show here while `osd-location` is `notch` ([system-ui.md](system-ui.md)).
 
+- **Screen corners** (`screen-corners`, on; registry id `screen-corners`, code `features/screenCorners/`): the other half of the MacBook display. The top corners of every screen are rounded in black (`screen-corners-which`: `top` or `all`; radius `screen-corners-radius`, 12, 4 to 24). They sit above everything, the top bar, menus and full-screen windows included, and take no clicks. Set on the Notch page. They show in screenshots of the whole screen.
+
 ## The file shelf helper
 Dragging files out of the shelf into other apps needs the optional `kiwi-shelf-helper` RPM (a Wayland client must start the drag). Without it the shelf keeps its Open and Copy actions.
 

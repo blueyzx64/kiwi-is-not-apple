@@ -403,6 +403,28 @@
         <description>Windows whose WM_CLASS or app id (for example "org.gnome.Terminal" or "firefox") is listed keep square corners. Not case-sensitive.</description>
       </key>
 
+      <!-- Screen corners (features/screenCorners) -->
+      <key name="screen-corners" type="b">
+        <default>true</default>
+        <summary>Rounded screen corners</summary>
+        <description>Draw the rounded corners of a MacBook display in black over the corners of every monitor, above everything (see screen-corners-which). They take no clicks.</description>
+      </key>
+      <key name="screen-corners-which" type="s">
+        <choices>
+          <choice value="top"/>
+          <choice value="all"/>
+        </choices>
+        <default>'top'</default>
+        <summary>Which screen corners are rounded</summary>
+        <description>"top": the two top corners, as on a MacBook. "all": all four.</description>
+      </key>
+      <key name="screen-corners-radius" type="i">
+        <default>12</default>
+        <range min="4" max="24"/>
+        <summary>Screen corner radius</summary>
+        <description>Radius of the rounded screen corners, in logical pixels.</description>
+      </key>
+
       <!-- Window tiling, Hide (features/windows) -->
       <key name="windows-traffic-style" type="s">
         <choices>

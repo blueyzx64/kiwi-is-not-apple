@@ -19,6 +19,7 @@ import * as controlCenter from './controlCenter.js';
 import * as stageManagerPrefs from '../../features/stageManager/prefs.js';
 import * as missionControlPrefs from '../../features/missionControl/prefs.js';
 import * as notchPrefs from '../../features/notch/prefs.js';
+import * as screenCornersPrefs from '../../features/screenCorners/prefs.js';
 import * as spotlightPrefs from '../../features/spotlight/prefs.js';
 import * as clipboardPrefs from '../../features/clipboard/prefs.js';
 import * as widgetsPrefs from '../../features/widgets/prefs.js';
@@ -51,7 +52,10 @@ export const SECTIONS = [
         featurePage('widgets', N_('Widgets'), 'preferences-desktop-apps-symbolic', widgetsPrefs)] },
     { title: N_('Features'), pages: [
         notifications,
-        featurePage('notch', N_('Notch'), 'preferences-system-notifications-symbolic', notchPrefs),
+        // The notch and the screen corners: the two halves of the MacBook display
+        featurePage('notch', N_('Notch'), 'preferences-system-notifications-symbolic', {
+            buildPrefs: args => [...notchPrefs.buildPrefs(args), ...screenCornersPrefs.buildPrefs(args)],
+        }),
         featurePage('spotlight', N_('Spotlight'), 'system-search-symbolic', spotlightPrefs),
         controlCenter,
         featurePage('clipboard', N_('Clipboard'), 'edit-paste-symbolic', clipboardPrefs),

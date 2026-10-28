@@ -162,6 +162,11 @@ export const FEATURES = [
         load: async () => (await import('./features/roundedCorners/index.js')).RoundedCorners,
     },
     {
+        // The MacBook display's rounded corners, drawn in black on the stage above everything
+        id: 'screen-corners', setting: 'screen-corners',
+        load: async () => (await import('./features/screenCorners/index.js')).ScreenCorners,
+    },
+    {
         // Low Power Mode per power source (power-profiles-daemon holds). Always runs; it holds
         // nothing until one of its two choices is on, and idles without the daemon.
         id: 'low-power',
