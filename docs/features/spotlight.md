@@ -1,38 +1,20 @@
 # Spotlight
 
-## 1. Summary
-A centred glass search bar. Results are grouped by type (Top Hit, Applications,
-Settings, Documents, Clipboard, Calculator, Web) and work fully from the keyboard.
+## What it does
+A centred glass search bar. Registry id `spotlight` (key `spotlight`, on). Code: `features/spotlight/`.
 
-## 2. Locked decisions
-- It is a must-have.
-- Shortcut (owner decision): **a tap of Super opens Spotlight** instead of the Activities
-  overview, by taking over the Shell's `overlay-key` handling. The overview stays reachable
-  through the hot corner, the touchpad gesture, Super+A (app grid) and the Activities
-  button. The original behaviour is restored on disable. Super+Space is untouched.
-- It shares its window component with Quick Paste (feature 3).
+## Use
+- **Open:** tap Super (`spotlight-on-super`, on; it takes the tap from the Activities overview). `spotlight-shortcut` adds an optional extra binding (empty by default).
+- **Results:** applications, GNOME Settings panels and Kiwi switches, files and documents (through GNOME's search providers, so nothing is indexed twice), clipboard history, a calculator (arithmetic and conversions such as `5 km in miles`), a web search row, and Actions (Show Desktop, Lock Screen, timers, Do Not Disturb, Dark Mode, Empty Trash, screenshots, apps' desktop actions).
+- **Keys:** arrows move, Enter opens, Tab scopes to the focused app's menu items, Space opens Quick Look (needs Sushi), Esc closes. `/` filters the search by type.
+- **Browse views:** Applications, Files, Actions and Clipboard buttons next to the empty field; Super+1 to Super+4 open them.
+- **Quick Keys:** a short alias that runs an action or opens an app; words after it are its value.
+- **History:** recent searches and opened results show in the empty field; Up recalls past searches.
 
-## 3. UI
-- 680px wide, 140px from the top, radius 22, 58px input with a 22px font.
-- Empty query: **Suggestions** (recent apps). **Recent clipboard** only when `spotlight-recent-clipboard` is on (off by default, privacy).
-- With a query: the first group is labelled "Top hit · …" and its first row is selected
-  and drawn larger.
-- Calculator: plain arithmetic plus `N km in miles`-style unit conversions. Currency
-  conversion is out of v1.
-- Keys: ↑/↓ move, Enter opens, Ctrl+Enter shows the file in Files, Ctrl+C copies the
-  result, Tab jumps to the next group, Esc closes.
+## Settings (default)
+`spotlight` on · `spotlight-on-super` on · `spotlight-files` on · `spotlight-settings` on · `spotlight-calculator` on · `spotlight-clipboard` on · `spotlight-recent-clipboard` off (shows copies in the empty field) · `spotlight-web` on · `spotlight-engine` `duckduckgo` (Google, Bing, Brave, Startpage, Ecosia, custom) · `spotlight-views` on · `spotlight-actions` on · `spotlight-quick-keys` empty · `spotlight-history` on · `spotlight-quick-look` on · `spotlight-menu-items` on.
 
-## 4. Settings (proposed)
-`spotlight` b=true · `spotlight-on-super` b=true (Super tap) · `spotlight-shortcut` as=`[]` (optional extra binding) · `spotlight-files` b ·
-`spotlight-calculator` b · `spotlight-clipboard` b · `spotlight-web` b · `spotlight-engine` s
-
-## 5. Interactions
-- Uses GNOME's own search providers (`org.gnome.Shell.SearchProvider2`) for files, so it
-  never re-indexes. Uses `Shell.AppSystem` for apps.
-- Choosing "Liquid Glass" or "Stage Manager" in Settings results toggles that feature
-  directly.
-- Opening an app while Stage Manager is on brings it to the stage.
-
-## 6. Acceptance
-- [ ] The first results appear within 50 ms for apps; provider results stream in after.
-- [ ] Closes cleanly with no modal left behind if the shell's lock screen comes up.
+## Limits
+- Nothing is sent to the web until you press Return on the web row.
+- Quick Look needs the Sushi previewer installed.
+- It does not use the overview search, so it works the same in any state of the Shell. It shares its window component with Quick Paste (one Kiwi modal at a time).

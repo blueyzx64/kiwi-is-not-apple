@@ -1775,8 +1775,7 @@ should either match or fix on purpose:
 - **Caveats (on macOS):** the setting moved to an unexpected pane, and "Never" causes the full-screen
   black bar.
 - **Port to GNOME 50:**
-  - The owner **removed Kiwi's auto-hide top bar**, because the bar houses the notch (see
-    `docs/features/autohide-top-bar.md`).
+  - The owner **removed Kiwi's auto-hide top bar**, because the bar houses the notch.
   - Only the **"In Full Screen Only"** behaviour stays relevant. The overhaul's conflict rules
     already say fullscreen windows hide the menu bar and dock, with the notch on hover (§4.2).
     Keep exactly that, with a reveal at the top edge.

@@ -1,36 +1,21 @@
-# Control Center
+# Control Center, menu bar items and Low Power Mode
 
-## 1. Summary
-GNOME Quick Settings re-laid out as a macOS-style Control Center: grouped glass tiles,
-big sliders, Now Playing, and drill-down pages. Canvas board: "Control Center".
+## What it does
+Re-lays out GNOME's Quick Settings menu like the macOS Control Center. Nothing GNOME builds is replaced: the stock items are reordered into blocks (connectivity, focus, display, sound, media, toggles, footer) and restyled, so every toggle keeps GNOME's own logic. Registry id `control-center` (key `control-center`, on). Code: `features/controlCenter/`.
 
-## 2. Locked decisions
-- It restyles and rearranges GNOME's own Quick Settings items rather than replacing their
-  logic. All toggles keep working through GNOME's own code.
-- Liquid Glass and Stage Manager get tiles here.
+## Use
+- **Blocks:** Wi-Fi, Bluetooth and other connectivity; Focus; Display and Sound sliders; Now Playing; small icon toggles (Dark Mode, Night Shift, Airplane Mode...); a Kiwi module with a tile per Kiwi feature; a user row (picture, name, battery time left) with Settings, Lock and Power.
+- **Edit Controls:** at the bottom of the menu. Pick, order and size controls from a gallery of GNOME's items, Kiwi feature switches, accessibility switches (Text Size, Increase Contrast, Reduce Motion, VoiceOver, Accessibility Keyboard, Sticky Keys, Flash Screen for Alerts) and Kiwi actions (Screenshot, Screen Recording, Timer, Keep Awake, Low Power Mode). The arrangement is `control-center-layout`; empty means the default. Reset is in preferences.
+- **Items from other extensions** stay, under a "More" heading.
+- **Pin to the menu bar:** a control can also get its own menu bar item (Always, When Active, Never); see [menu-bar.md](menu-bar.md).
+- **Timer:** Kiwi's own countdown timers (`core/timers.js`); they survive the lock screen and show in the notch.
 
-## 3. UI (352px wide, 12px padding, 10px gaps)
-1. **Connectivity block** (2×2): Wi-Fi, Bluetooth, VPN. The round button toggles; the label
-   opens a device or network list with a back button.
-2. **Do Not Disturb** (2×1) + **Stage Manager** and **Liquid Glass** (1×1 each).
-3. **Display** slider (brightness; Night Light status at the right).
-4. **Sound** slider (the arrow at the right picks the output).
-5. **Now Playing** (art, title, play/pause, next).
-6. **Small tiles** ×4: Dark Style, Night Light, Power Saver, Screenshot.
-7. **User row:** avatar, name, battery % and time left, then Settings, Lock and Power.
-8. "Edit Controls…" (v2: reorder or hide tiles).
+## Low Power Mode (`low-power`)
+`low-power-battery` and `low-power-adapter` (both off) hold power-profiles-daemon's power-saver profile while that power source is in use. Choosing a profile by hand in GNOME drops the hold until the source or the choice changes. Without the daemon it is unavailable and holds nothing. It also provides battery health (capacity, charge cycles) for the Battery menu bar item. Code: `features/lowPower/`.
 
-## 4. Settings (proposed)
-`control-center` b · `control-center-user-row` b (replaces `add-username-to-quick-menu`) ·
-`battery-percentage-always` b
+## Settings (default)
+`control-center` on · `control-center-user-row` on · `battery-percentage-always` off · `control-center-layout` empty · `menubar-pinned` empty · `menubar-battery-percentage` off.
 
-## 5. Interactions
-- Absorbs `addUsernameToQuickMenu.js`, `quickSettingsDnDRemoval.js` and the
-  `custom-dnd-button` behaviour. Those keys migrate.
-- Items from other extensions (unknown QuickToggles) go into an "More" section at the
-  bottom, never dropped.
-- The drill-down pages reuse GNOME's existing menus (the network and Bluetooth submenus).
-
-## 6. Acceptance
-- [ ] Every stock Quick Settings item is still reachable.
-- [ ] Turning it off restores the stock grid order and styling exactly.
+## Limits
+- Removed stock items are hidden, never destroyed. Turning the feature off restores the stock order, spans and column count from a snapshot.
+- While Focus runs, its tile takes Do Not Disturb's place ([notification-center-focus.md](notification-center-focus.md)).

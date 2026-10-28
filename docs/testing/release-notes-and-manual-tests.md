@@ -1,3 +1,5 @@
+> **Historical.** This is the 2.x release-notes and manual-test record. It names features Kiwi 3 removed (auto-hide top bar, Firefox and Thunderbird theming, the GTK3 module, Dash to Dock add-ons). For today's behaviour read the [README](../../README.md) and [docs/features](../features/README.md).
+
 # Release notes and manual test list (GNOME 50, Fedora 44)
 
 Brings 7 of the 8 planned macOS-style features (window controls, Liquid Glass, clipboard history, Spotlight, Control Center, Stage Manager, notification notch) to **GNOME 50 on Fedora 44 Workstation**, the only supported platform for this release (`metadata.json` shell-version `["50"]`; the 48/49/51 code paths in `lib/compat.js` are kept for later releases), on top of a new foundation (feature registry, shared `lib/` services, `coordinators/`) and a round of tech-debt fixes.

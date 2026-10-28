@@ -1,8 +1,7 @@
 # Setup Assistant (onboarding): where it runs and why
 
 Status: built in P7. Code: `features/onboarding/` (the Shell trigger and the declarative steps),
-`prefs/setupAssistant.js` (the UI), the `onboarding` key. Research:
-[installer research §4.4](../research/macos/installer-and-app-lifecycle.md#44-a-kiwi-first-run-onboarding-setup-assistant).
+`prefs/setupAssistant.js` (the UI), the `onboarding` key. Research: [macOS notes](../research/macos/README.md).
 
 ## Decision: a flow in the preferences window, not a glass modal in the Shell
 

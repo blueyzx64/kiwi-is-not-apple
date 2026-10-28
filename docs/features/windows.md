@@ -1,0 +1,29 @@
+# Windows: tiling, Hide, full screen, Split View, Show Desktop
+
+## Tiling (`window-tiling`, key `windows-tiling`, on)
+macOS Sequoia tiling. One engine for every way in.
+- **Drag a window by its title bar:** to the left or right edge for a half, a corner for a quarter (`windows-tile-drag-edges`), to the menu bar to fill the screen (`windows-tile-drag-menubar`). A glass outline shows the result; the edge waits a beat first. Hold Alt for the outline anywhere near a side (`windows-tile-drag-modifier`). Dragging a tiled window away gives it back its old size.
+- **Layout picker (`windows-tile-drag-picker`):** drag to the top centre of the screen for halves, quarters and arrangements; release elsewhere on the bar to fill.
+- **Green-button menu and the menu bar's Window menu:** same actions ([window-controls.md](window-controls.md)).
+- **Shortcuts (Ctrl+Super; macOS uses Fn-Ctrl):** arrows for left, right, top, bottom; `F` fill; `C` center; `R` return to previous size; add Shift for arrangements (Left & Right, Right & Left, Top & Bottom, Bottom & Top); add Alt+Shift for Left/Right/Top/Bottom & Quarters. An arrangement gives the focused window the first place and the windows used before it the others.
+- `windows-tile-margins` (off) adds a small gap around tiles.
+- GNOME's own edge tiling is off while this runs (`core/originals.js`). A shortcut GNOME or Stage Manager already uses is left unbound (Stage Manager's Ctrl+Super+Down wins while it runs).
+
+## Hide and Hide Others (`app-hide`, key `windows-app-hide`, on)
+Super+H hides the front app, Alt+Super+H hides the others. Wayland has no hidden apps, so the windows are minimized without an animation and flagged `hidden`; the dock leaves them out of its minimized area, and activating the app brings them all back. Kiwi borrows Super+H from GNOME's minimize binding while Hide is on and gives it back after. The app menu and the app switcher use the same action.
+
+## Full screen in its own Space (`move-window-to-new-workspace`, on)
+A full-screen window moves to a new workspace at the right and returns when it leaves full screen. Paused while Stage Manager runs.
+
+## Split View (`split-view`, on)
+Hover the green button of a full-screen window and choose Tile Window to Left/Right of Screen. The other half shows thumbnails of your other windows; click one to pair it. Esc or a click on the tiled half cancels. The pair ends when a window closes, minimizes, goes full screen or maximizes; the remaining window is full screen again.
+
+## Show Desktop (`show-desktop`)
+A top-bar button (`show-desktop-button`, on), Super+D (`show-desktop-shortcut`) or a click on empty wallpaper (`click-wallpaper-reveals-desktop`: `always` default, `stage-manager`, `never`) slides the windows of the workspace to the screen edges. Windows are never moved or minimized, only their actors are shifted. A second press, a click on a window, a workspace switch or the overview brings them back. With Stage Manager on, the stage moves into the strip instead. GNOME's own show-desktop shortcut, if you set one, plays the same animation.
+
+## Limits
+- Mutter has no public tiling API, so tiles are plain window frames that Kiwi tracks itself; they follow the work area (menu bar and dock excluded).
+- A window with a minimum size larger than its tile keeps that size.
+
+## Code
+`features/windows/` (`index.js`, `drag.js`, `picker.js`, `model.js`, `hide.js`, `hideModel.js`), `core/tileActions.js`, `features/fullscreenSpace/`, `features/splitView/`, `features/showDesktop/`.

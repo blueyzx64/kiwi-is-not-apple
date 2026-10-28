@@ -675,7 +675,7 @@ Conventions used below:
 - **What it is:** Erase Assistant from the System Preferences menu wipes the data volume by destroying
   its encryption keys and keeps the system, like iOS's reset; signs out of Apple ID and removes Touch ID.
 - **Caveats (on macOS):** Fails with multiple partitions or reduced Secure Boot.
-- **Port to GNOME 50:** Installer/OS concern; see `installer-and-app-lifecycle.md`. Kiwi's own reset
+- **Port to GNOME 50:** Installer/OS concern. Kiwi's own reset
   is "Reset everything" for its settings (§6), which is a different thing.
 - **Blockers / risks:** Destructive; root required; never from an extension.
 - **Linux equivalents today:** Reinstall; Fedora Atomic rebase/reset; GNOME OS factory reset (in development).

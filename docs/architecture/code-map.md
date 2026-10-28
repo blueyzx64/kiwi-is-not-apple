@@ -18,7 +18,7 @@
 > 5. `stylesheet.css` is generated (`make css`) from `styles/base.css` and every
 >    `features/*/style.css`, and committed. The preferences are `prefs.js` + `prefs/`.
 >
-> How to write a feature: `docs/architecture/conventions.md`. Plan: `overhaul-plan.md`.
+> How to write a feature: `docs/architecture/conventions.md`. Feature pages: `docs/features/README.md`. History: `overhaul-plan.md`.
 
 Target: GNOME Shell 50 (Fedora 44, Wayland). 48/49/51 differences live only in `lib/compat.js`.
 
@@ -149,20 +149,18 @@ pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view
 | `roundedCorners/` | `rounded-corners` | shader effect per window |
 | `liquidGlass/` | `liquid-glass` | attaches `lib/glass.js` to the panel, Control Center and calendar menus; the glass prefs |
 | `shellBehaviour/` | `shell-behaviour` | swipes stop at workspaces; no hot corner |
-| `fullscreenSpace/` | `move-window-to-new-workspace` | full screen in its own Space (kept as in 2.x) |
-| `dock/` | `dock` | Kiwi's own dock: favourites, running and recent apps, minimized windows, Downloads stack (`stack.js`), Trash (`trash.js`), menus (`appMenu.js`), Open at Login (`autostart.js`); an edge claim in core/layout; keeps Dash to Dock off (`dashToDock.js`); `iconRect(appId)` / `minimizeTarget(win)` for Genie |
+| `fullscreenSpace/` | `move-window-to-new-workspace` | full screen in its own Space (kept as in 2.x); a `splitView`-flagged window stays in its Space when it leaves full screen |
+| `dock/` | `dock` | Kiwi's own dock: favourites, running and recent apps, minimized windows, Downloads stack (`stack.js`), Trash (`trash.js`), menus (`appMenu.js`), Open at Login (`autostart.js`); an edge claim in core/layout; keeps Dash to Dock off (`dashToDock.js`); `iconRect(appId)` / `minimizeTarget(win)` for Genie; P2: magnification (`magnify.js`), launch/attention bounce, LauncherEntry badges, grey background-app dots, minimized-window thumbnail on the app icon, folder Stacks (`dock-folders`) |
 | `notificationCenter/` | `notification-center` | the right-side column the clock opens (`notification-center-requested`): date and small month, history grouped by app (stacks, expand, Clear/Clear All, actions), widgets slot `addWidget(owner, {id, order, create})`; on `lib/modalSurface.js` position `'right'` |
 | `focus/` | `focus` | Focus modes (DND, Sleep, Work, Personal, custom): allowed apps, schedules, app triggers, time-sensitive break-through (`model.js`); banner filter via the router; GNOME DND synced both ways; Control Center tile with the mode menu and menu-bar icon (`indicator.js`); `state()`, event `focus-changed` |
 | `missionControl/` | `mission-control` | overview restyled as Mission Control: Spaces bar (+, ×, reorder), App Exposé with minimized strip, F3 / Ctrl+Up / Ctrl+Down, start on the desktop, static Spaces (dynamic-workspaces via core/originals) |
 | `windows/` | `window-tiling`, `app-hide` | Sequoia tiling: drag zones with a glass outline (`drag.js`), shortcuts, arrangements, margins, tile book (`model.js`); owns mutter `edge-tiling`; answers `window-tile-requested`. Hide / Hide Others (`hide.js`, `hideModel.js`), WindowState `hidden`, answers `app-hide-requested`, takes Super+H from GNOME's minimize while on |
-| `fullscreenSpace/` | `move-window-to-new-workspace` | full screen in its own Space (kept as in 2.x); a `splitView`-flagged window stays in its Space when it leaves full screen |
 | `splitView/` | `split-view` | full screen Split View: green-button hover menu, tile a half, pick the partner from thumbnails; WindowState `splitView` |
-| `dock/` | `dock` | Kiwi's own dock: favourites, running and recent apps, minimized windows, Downloads stack (`stack.js`), Trash (`trash.js`), menus (`appMenu.js`), Open at Login (`autostart.js`); an edge claim in core/layout; keeps Dash to Dock off (`dashToDock.js`); `iconRect(appId)` / `minimizeTarget(win)` for Genie; P2: magnification (`magnify.js`), launch/attention bounce, LauncherEntry badges, grey background-app dots, minimized-window thumbnail on the app icon, folder Stacks (`dock-folders`) |
 | `minimizeEffect/` | `minimize-effect` | Genie (`genie.js`, a strip-drawing `Clutter.OffscreenEffect` on a container holding a clone of the window; a `DeformEffect` on the window actor is cut off at the window's box on GNOME 50) and Scale minimize/restore into the dock; blocks the stock Shell.WM minimize handlers only while it runs and hands GNOME the windows it does not animate; `setTargetProvider(owner, fn)` for Stage Manager |
 | `switcher/` | `app-switcher` | Cmd-Tab panel on Super+Tab (`popup.js`, a SwitcherPopup subclass) and Super+` window cycling; own handlers for `switch-applications`/`switch-group`, the Shell's given back on disable |
 | `gestures/` | `gestures` | touchpad router (`captured-event::touchpad` on the stage): 4-finger down App Exposé, pinch Launchpad, spread Show Desktop; GNOME's swipes held back only when turned off |
 | `hotCorners/` | `hot-corners` | four corners per monitor (PressureBarrier + Meta.Barrier), optional modifier; off while every corner is 'none' |
-| `onboarding/` | `onboarding` | the Setup Assistant: declarative `STEPS` and the offer rules (`model.js`), the Shell trigger that opens prefs once (`index.js`), the About row (`prefs.js`); the UI is `prefs/setupAssistant.js` ([onboarding.md](onboarding.md)) |
+| `onboarding/` | `onboarding` | the Setup Assistant: declarative `STEPS` and the offer rules (`model.js`), the Shell trigger that opens prefs once (`index.js`), the About row (`prefs.js`); the UI is `prefs/setupAssistant.js` ([onboarding.md](onboarding.md); user view: [../features/onboarding.md](../features/onboarding.md)) |
 | `appearance/` | `appearance`, `popup-menu-styling` | Auto Light/Dark (owns `color-scheme` through core/originals), accent (`accent-color`) and highlight colours (`scheme.js`, `model.js`); accent menus (`index.js`; the GTK app fixes are in `gtk-theme`) |
 | `osd/` | `osd` | the Tahoe volume / brightness / keyboard backlight pill under the Control Center button (glass, core/motion), a `ctx.osd` sink; output name and mute from the Shell's Gvc mixer |
 | `dialogs/` | `dialogs` | the Shell's modal dialogs (auth, end session, Run, others) as glass alerts: icon on top, natural-width buttons at the right, accent default; `ModalDialog.prototype.open` injection, undone on close and disable |

@@ -1,187 +1,22 @@
-# Notification notch
+# Notch
 
-## 1. Summary
-A black pill hanging from the centre of the top bar. It grows to show notifications,
-live activities and quick confirmations, and opens a dashboard on click. Canvas board:
-"Notification notch states".
+## What it does
+A black pill hanging from the top centre of the bar. It grows to show notifications, live activities and volume changes, and opens into three tabs: **Now** (media, activities, clock), **Tray** (a file shelf) and **Widgets**. Registry id `notch` (key `notch`, on). Code: `features/notch/`.
 
-## 2. Locked decisions
-- The pill sits in the centre of the top bar; the clock moves right (this reuses
-  `calendar.js`).
-- It replaces GNOME's notification banners (optional, on by default). The notification
-  history stays in the calendar menu.
+## Use
+- **Open:** rest the pointer on it (`notch-hover-expand`, on, delay `notch-hover-delay` 300 ms) or click; a click keeps it open. Click outside or press Esc to close.
+- **Notifications:** banners show in the notch instead of GNOME's (`notch-notifications`, on) for `notch-timeout` 5 seconds (hovering keeps them; urgent ones stay). Do Not Disturb silences them; Focus filters them ([notification-center-focus.md](notification-center-focus.md)). History stays in the Notification Center.
+- **Live activities** (`notch-live-activities`, on): the most important one takes the pill, the rest list in Now. Media (art, title, controls), charging and low battery (`notch-activity-battery`), Bluetooth headphones (`-bluetooth`), Kiwi timers (`-timers`), screen recording with a stop button (`-recording`), next calendar event from 15 minutes before (`-calendar`), downloads (`-downloads`). All on.
+- **One-time codes:** a Copy button for codes found in notifications (`notch-copy-codes`, on); read only on this computer.
+- **Tray (file shelf):** links to files; finished downloads (`notch-shelf-downloads`) and screenshots (`notch-shelf-screenshots`) are added, or use Add from Clipboard. The files themselves are not copied. `notch-show-clipboard` (off) lists clipboard text in the Tray.
+- **Volume and brightness** show here while `osd-location` is `notch` ([system-ui.md](system-ui.md)).
 
-## 3. UI: five states
-| State | Size (w×h) | Content |
-|---|---|---|
-| Idle | 190×32 | Empty |
-| Live activity | 250×32 | Media art + waveform, timer, recording, charging |
-| Confirmation | 250–290×32 | Copied, volume, brightness, a toggle changed. 1.5 s |
-| Notification | 430×116 (156 with actions), radius 32 | Icon, app · time, title, body, actions (≤2) |
-| Dashboard | 648×192 with media, 476×144–168 without, radius 32 | Player or clock · notifications · (clipboard) |
+## The file shelf helper
+Dragging files out of the shelf into other apps needs the optional `kiwi-shelf-helper` RPM (a Wayland client must start the drag). Without it the shelf keeps its Open and Copy actions.
 
-- Motion: grows with a spring (≈ 0.45 s, slight overshoot) and shrinks with ease-out.
-- Ears: two 10px concave fillets flare the notch into the screen's top edge at its top-left and
-  top-right, like a MacBook notch. They follow the island through every width (snap constraints)
-  and stay while it is expanded, so the card also flows out of the top edge.
-- Hover keeps a notification open. With several queued, show the newest and a "+2" badge.
-- On screens with a real hardware notch, align to it (future).
+## Limits
+- While the notch runs, the clock and calendar are at the right and the notification list is in Quick Settings.
+- It takes the centre of the top bar through `core/panelLayout.js`.
 
-## 4. Settings
-`notch` b=true · `notch-notifications` b=true · `notch-live-activities` b=true · `notch-osd` b=true ·
-`notch-timeout` i=5 (range 2 to 30 s): how long a notification stays in the notch. Hovering keeps it
-open and urgent ones stay until dismissed.
-
-**Calendar forcing.** While the notch is on, the clock moves right and the notification list lives in
-Quick Settings, whatever `move-calendar-right` says (`calendarRight` in `features.js`). Prefs shows a
-subtitle on the notch row and greys out the `move-calendar-right` row with "On while the notch is on".
-
-**Status:** merged, untested on Shell. Phase 1 has notification cards, the media live activity,
-the volume and brightness confirmations, the Clipboard dashboard panel and the "Copied" confirmation.
-
-**Deferred to phase 2 (decided):**
-- the "Up next" dashboard panel (MPRIS has no reliable queue API);
-- the timer, recording and charging live activities;
-- "toggle changed" confirmations.
-
-## 5. Interactions
-- **Auto-hide top bar:** removed (the bar houses the notch and is always on screen).
-- **Do Not Disturb:** no banners; live activities still show.
-- **Collisions:** `panelMedia.js`, `quickSettingsNotifications.js`, `calendar.js` and the
-  OSD all touch this area. See the tech-debt doc for how to resolve them.
-
-## 6. Acceptance
-- [ ] No notification is lost. Everything banner-suppressed still reaches the message list.
-- [ ] Turning the notch off restores the stock banners and OSD.
-
-## Research notes, UX round 2
-Sources: Apple HIG (Live Activities, Typography, Layout), the iPhone Dynamic Island as shipped,
-and the open macOS notch utilities (boring.notch / TheBoringNotch, DynamicNotchKit) plus the
-published screenshots of NotchNook and Alcove. Web pages gave little exact geometry, so the
-numbers below come from those apps' layouts and Apple's type scale, not from specs.
-
-- **Dynamic Island.** Three presentations. *Compact*: a leading and a trailing view either
-  side of the cutout (music: album art left, an animated waveform tinted from the art right;
-  no title). *Minimal*: one round view when two activities compete. *Expanded* (long press):
-  leading / trailing / centre / bottom regions; music shows art (~rounded square) at the top
-  left, title and artist beside it, the waveform at the top right, then a full-width scrubber
-  with elapsed and remaining time and a centred prev / play / next row. Black, no borders;
-  content keeps a uniform inset from the curved edge.
-- **Motion.** The shape morphs on a spring (slight overshoot growing, none shrinking); the
-  content fades in only once the shape is nearly there and fades out at once on collapse, so
-  text never squeezes. HIG caps live-activity animations at 2 s; reduced motion → no bounce.
-- **macOS notch apps.** boring.notch: a closed notch that widens for music (art at left,
-  visualizer at right), an open panel of ~640×190 with a header row level with the menu bar
-  (tabs Home / Shelf at left, settings at right), the player as the hero (large rounded art,
-  title / artist, scrubber, controls), calendar beside it. NotchNook: "Nook" and "Tray"
-  (file shelf) tabs in the header, media widget left, calendar / shortcuts right. Alcove:
-  Dynamic-Island-like compact states, HUD replacement, a clean expanded player. Shared traits:
-  pure black, ~16–20px outer padding, one header band, two balanced columns with tops
-  aligned, no captions such as "Now Playing", controls as bare white glyphs.
-- **Type and spacing (HIG).** macOS body 13 pt, headline 13 bold, title 3 15 semibold,
-  caption 10–11; for a glanceable overlay we use 15 semibold media title, 14 semibold primary,
-  12–13 secondary at 60 % white, never below 12. 4-pt spacing grid; 28-pt hit targets
-  (32 here); concentric radii.
-
-**Decisions.** Header band (32px, level with the top bar): the date at left when a player is
-shown, a 28px moon toggle for Do Not Disturb at right (accent fill when on). With media: hero
-column (68px art at 12px radius, 15/13 text, app icon top-right, 4px scrubber with times
-when MPRIS gives a length and position, 32px bare glyph controls), list beside it. Without
-media: a 40px clock and the date replace the player, no "Nothing is playing" block. List:
-44px rows, 20px icons, title 14 semibold with the time at right, body (or app) 12; at most 2
-rows and an "N more" text button that opens the message list. Grid, sizes and the spring
-live in `apps/notch/dashboardModel.js` (tested). Not done: the next calendar event (needs
-the calendar server; later), remote cover art keeps square corners (only local art is
-clipped to the radius, remote art loads as an icon through GIO).
-
-## Real-player test, round 3 (Rhythmbox + a GStreamer MPRIS player)
-- A paused player keeps its pill with the waveform at rest; a stopped one leaves. With several
-  players, playing beats paused beats stopped, and the one that started playing last wins
-  (`lib/mprisModel.js`, tested).
-- A player with nothing loaded (Rhythmbox at startup: empty Metadata, Stopped) is not a player
-  yet, so the dashboard keeps the clock instead of "Unknown title".
-- A click on the dashboard scrubber seeks there (MPRIS SetPosition).
-- Dashboard list bodies honour notification markup like the card (Rhythmbox sends `<i>`).
-
-## Notch v3 (P5)
-
-**Behaviour.** The pointer resting on the notch for `notch-hover-delay` (300 ms) opens it
-(`notch-hover-expand`, on); it closes 0.6 s after the pointer leaves. A click opens it too, or pins
-a hovered one: then the notch holds a grab, and a click outside or Escape closes it (2.5 s after
-leaving otherwise). A notification card under the pointer is never replaced by a hover.
-
-**Expanded view: one 648x192 shape for every tab** (no resize when switching; the body slides
-24 px from the side of the tab and crossfades through core/motion):
-- *Now*: the media hero (art, title, scrubber, controls) or a large clock, then up to three rows:
-  live activities first (with their buttons: pause/resume/cancel a timer, stop a recording, copy a
-  code), then recent notifications and "N more".
-- *Tray*: the file shelf (below), and the clipboard column when `notch-show-clipboard` is on.
-- *Widgets*: calendar day (today's next events from the calendar server), weather (the date menu's
-  own WeatherClient; no second client), and controls: Focus (Do Not Disturb), microphone mute
-  (the Shell's mixer) and 1/5/15-minute Kiwi timers.
-
-**Live activities.** Sources in `sources/`, each switchable (`notch-activity-*`, `notch-copy-codes`):
-
-| Source | From | Pill | Now tab |
-|---|---|---|---|
-| Battery | UPower DisplayDevice (signals) | "Charging 62%" 4 s on plug-in; "Low Battery" 8 s when crossing 20 % / 10 % | "Charging" while charging |
-| Headphones | BlueZ ObjectManager + Battery1 | "connected" 4 s with battery | a row per connected audio device |
-| Timers | `core/timers.js` (Kiwi's own; Spotlight can call `ctx.timers.startTimer`) | countdown; "Done" 10 s with the system "complete" sound | pause/resume, cancel |
-| Recording | core events `recording-started/stopped`, emitted from the Shell's `screenshotUI.screencast-in-progress` until a recording owner emits them | red dot, elapsed, stop | stop |
-| Next event | the Shell's `DBusEventSource` (own instance) | from 15 min before ("in 9 min", then "Now") | later events of the day |
-| Downloads | LauncherEntry `progress` + partial files in Downloads (`.part`, `.crdownload`, ...) | name or count, progress bar or bytes | same |
-| One-time codes | every notification in the tray, read locally (`model.detectCode`) | "Code 482913 [Copy]" 30 s | Copy |
-
-Priority (model.js `KINDS`): alerts first for their few seconds (timer done > code > low battery
-> charger / headphones connected), then recording > timer > playing media > download > event soon
-> paused media. Quiet state (charging, connected headphones, a later event) never takes the pill.
-Equal priority: newest wins.
-
-**File shelf: how files get in on Wayland (measured on GNOME Shell 50.6).** A drag that starts in
-a Wayland app is not delivered to Shell actors as Clutter DnD; the app sees no drop target and
-cancels. But Mutter shares the drag with the compositor: `global.backend.get_dnd()` (Meta.Dnd, as
-the Shell's xdndHandler uses) emits `dnd-enter`, `dnd-position-change(x, y)` for every move and
-`dnd-leave` at the end, and the dragged data is the **DND selection**: `Meta.Selection`
-`get_mimetypes(SELECTION_DND)` lists `text/uri-list` and `transfer_async()` returns the links. At the
-release the selection is dropped *before* `dnd-leave`, so `drop.js` reads the links as soon as the
-drag enters the notch's drop zone (at least 420x72 at the top centre), opens the Tray as a drop
-area, and adds them if the drag ends there. The source app still animates a cancelled drag (it
-got no drop), which is the one visible difference from macOS. Also in: "Add from Clipboard" (files
-copied in Files: `x-special/gnome-copied-files`, `text/uri-list`, or a copied path), finished
-downloads (`notch-shelf-downloads`) and screenshots (`notch-shelf-screenshots`). **Out:** a Shell
-actor cannot start a Wayland drag (Mutter exposes no compositor-side data source to GJS), so items
-offer Open, Show in Files (FileManager1), Copy (`text/uri-list`, pastes as the file in Files) and
-Remove. With the separate `kiwi-shelf-helper` package (`helpers/kiwi-shelf-helper`, `make
-helper-rpm`; not in the extension zip) a tile can also be dragged out for real: while the Tray is
-open and settled, `shelfHelper.js` runs the helper (Gio.Subprocess, JSON lines on stdin/stdout)
-and moves its one transparent window exactly over the tiles (`move_resize_frame`, kept above,
-actor opacity 0). The island stops taking input there (`reactive = false`), an input plate under it
-(`inputRing.js`) takes the rest of the dashboard, and the outside-click layer leaves a hole, so the
-press lands on the helper's window and its GtkDragSource starts a drag carrying `text/uri-list`.
-A plain click on a tile comes back as a `click` event (select / open). The helper window holds the
-dashboard open (hover) and the outside-click layer is off while the drag runs; the focus a press
-gives the helper's window goes straight back. The helper stops when the Tray closes (stdin
-closes, so it never outlives Kiwi). Not installed: nothing changes. The helper's window must not
-be fully transparent (GTK never maps one), so it keeps a 1 % tint that the actor hides. Only links are stored (`notch-shelf`); files are never copied, moved or deleted.
-
-**Click outside.** While the dashboard is open (hover or pinned), `outsideClick.js` puts a
-transparent reactive layer over the stage right under the island. A press on it collapses the
-notch; on the release the layer steps aside and replays the click through a virtual pointer, so
-it still reaches the window, wallpaper, top bar or dock. (A Wayland client window never gives the
-stage a press, and a press on the already focused window changes no focus, so stage events and
-`notify::focus-window` alone miss cases; a grab would swallow the click.)
-
-**Look and motion.** Pure black, no glass layer, the ears kept; Apple's dark system colours for
-tints (orange timers, red recording/low battery, green charging, blue downloads); 12 px minimum
-type, tabular figures for times and codes. Shape springs through `core/motion`
-(`{response 0.42, damping 0.8}` growing, critically damped shrinking); reduced motion and
-animations-off jump with a short crossfade. The waveform scales fixed-height bars (transforms,
-no relayout).
-
-**Measured (GNOME Shell 50.6 headless, software rendering, 1280x800).** Idle with nothing shown:
-no notch timers, timeouts or animations armed; the whole Shell used 30 ms of CPU in 10 s with the
-notch on and 20 ms with it off (noise level). A playing song (waveform): 330 ms per 5 s for the
-whole Shell, all of it repaint under software rendering. Expand with animations forced on: 28
-frames, 15.1 ms average and 29 ms worst stage frame (layout + paint of the whole stage), collapse 25
-frames at 13.0 ms; the spring sets only width and height (pages are fixed-size and clip, so no
-reflow). An event pill refreshes twice a minute, a countdown once a second, only while shown.
+## Code
+`stateMachine.js` and `model.js` are pure; `view.js`, `pills.js`, `tabs.js`, `ui.js` draw; `sources/` feeds activities; `shelf.js`, `drop.js`, `shelfHelper.js` run the shelf.
