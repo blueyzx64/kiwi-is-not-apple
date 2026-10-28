@@ -7,6 +7,7 @@
 import Shell from 'gi://Shell';
 
 import { DesktopAppInfo } from '../../../lib/compat.js';
+import { AppNames } from '../../../core/appNames.js';
 import { rank, usageBoost } from '../model.js';
 
 const MAX_RESULTS = 12;
@@ -43,12 +44,13 @@ export class AppsProvider {
                 id: `app:${id}`,
                 kind: 'app',
                 appId: id,
-                title: info.get_display_name() || info.get_name(),
+                title: AppNames.forId(id, info.get_display_name() || info.get_name()),
                 subtitle: desktop?.get_generic_name() ?? '',
-                keywords: [id.replace(/\.desktop$/, ''), ...(desktop?.get_keywords() ?? [])],
+                keywords: [id.replace(/\.desktop$/, ''), ...(desktop?.get_keywords() ?? []),
+                    ...AppNames.keywords(id, info.get_display_name() || info.get_name())],
                 gicon: info.get_icon(),
             });
-            const name = info.get_display_name() || info.get_name();
+            const name = AppNames.forId(id, info.get_display_name() || info.get_name());
             for (const action of desktop?.list_actions() ?? []) {
                 const label = desktop.get_action_name(action);
                 if (!label)

@@ -13,9 +13,15 @@
 // asking Stage Manager (the window is minimized, not staged), Show All restores exactly the
 // windows that fallback minimized, and Tile puts the window on half of Kiwi's work area.
 //
+// App profiles (core/appMenus/profiles.js) add: 'open-location' (a place opened by the app,
+// through its .desktop entry: Nautilus is D-Bus activatable, so this is
+// org.freedesktop.Application.Open), 'launch-search' (org.gnome.Shell.SearchProvider2
+// LaunchSearch of the app's search provider) and 'launchpad' (core/desktopActions).
+//
 // Shell API: Shell.AppSystem, Shell.App (request_quit, open_new_window, activate_window),
 // Meta.Window, global.workspace_manager, Main.activateWindow.
 
+import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import Shell from 'gi://Shell';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
@@ -23,6 +29,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { DesktopAppInfo, isMaximized, maximizeWindow, unmaximizeWindow } from '../../lib/compat.js';
 import { WindowState } from '../windowState.js';
 import { isUserFacing } from '../desktopModel.js';
+import { DesktopActions } from '../desktopActions.js';
 
 const now = () => global.get_current_time();
 
@@ -85,6 +92,13 @@ export class GenericCommands {
                 Main.activateWindow(w);
             return !!w;
         }
+        case 'open-location':
+            return this._openLocation(arg);
+        case 'launch-search':
+            return this._launchSearch(arg);
+        case 'launchpad':
+            return new DesktopActions({ events: this._events, desktop: this._desktop })
+                .run('launchpad', { source: 'menu' });
         case 'bring-all-to-front':
             if (!app)
                 return false;
@@ -140,6 +154,37 @@ export class GenericCommands {
                 console.warn(`[Kiwi] app menus: cannot open ${id} in Software: ${e.message}`);
             }
         });
+        return true;
+    }
+
+    // A place for the app to open: a URI, '~' (home) or 'xdg:<NAME>' (a GLib.UserDirectory)
+    _openLocation({ appId, location } = {}) {
+        const info = appId ? DesktopAppInfo.new(appId) : null;
+        const uri = resolveLocation(location);
+        if (!info || !uri)
+            return false;
+        try {
+            info.launch_uris([uri], global.create_app_launch_context(now(), -1));
+            return true;
+        } catch (e) {
+            console.warn(`[Kiwi] app menus: cannot open ${uri}: ${e.message}`);
+            return false;
+        }
+    }
+
+    // A search window of the app: its Shell search provider's LaunchSearch with no terms
+    _launchSearch({ busName, path } = {}) {
+        if (!busName || !path)
+            return false;
+        Gio.DBus.session.call(busName, path, 'org.gnome.Shell.SearchProvider2', 'LaunchSearch',
+            new GLib.Variant('(asu)', [[''], now()]), null, Gio.DBusCallFlags.NONE, 5000, null,
+            (conn, res) => {
+                try {
+                    conn.call_finish(res);
+                } catch (e) {
+                    console.warn(`[Kiwi] app menus: search of ${busName} failed: ${e.message}`);
+                }
+            });
         return true;
     }
 
@@ -201,4 +246,28 @@ export class GenericCommands {
         win.change_workspace_by_index(index, false);
         return true;
     }
+}
+
+const USER_DIRS = Object.freeze({
+    DESKTOP: GLib.UserDirectory.DIRECTORY_DESKTOP,
+    DOCUMENTS: GLib.UserDirectory.DIRECTORY_DOCUMENTS,
+    DOWNLOAD: GLib.UserDirectory.DIRECTORY_DOWNLOAD,
+    MUSIC: GLib.UserDirectory.DIRECTORY_MUSIC,
+    PICTURES: GLib.UserDirectory.DIRECTORY_PICTURES,
+    VIDEOS: GLib.UserDirectory.DIRECTORY_VIDEOS,
+});
+
+/** @returns {?string} the URI of a profile location (core/appMenus/profiles.js) */
+function resolveLocation(location) {
+    if (!location)
+        return null;
+    if (location === '~')
+        return Gio.File.new_for_path(GLib.get_home_dir()).get_uri();
+    if (location.startsWith('xdg:')) {
+        const dir = USER_DIRS[location.slice(4)];
+        const path = dir === undefined ? null : GLib.get_user_special_dir(dir);
+        // An unset XDG folder (or one set to home) falls back to home, as Nautilus does
+        return Gio.File.new_for_path(path || GLib.get_home_dir()).get_uri();
+    }
+    return location;
 }

@@ -20,6 +20,8 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Shell from 'gi://Shell';
 
+import { AppNames } from '../../core/appNames.js';
+
 import {
     addToFolder, buildItems, createFolder, folderMembers, folderNameFor, removeFromFolder,
     serializeLayout,
@@ -113,12 +115,13 @@ export class LaunchpadStore {
                 }
                 if (!info.should_show() || !this._appSystem.lookup_app(id))
                     continue;
+                const own = info.get_name() ?? id;
                 this._apps.push({
                     id,
-                    name: info.get_name() ?? id,
+                    name: AppNames.forId(id, own),
                     categories: splitList(info.get_categories?.()),
                     generic: info.get_generic_name?.() ?? '',
-                    keywords: info.get_keywords?.() ?? [],
+                    keywords: [...info.get_keywords?.() ?? [], ...AppNames.keywords(id, own)],
                 });
             }
         }

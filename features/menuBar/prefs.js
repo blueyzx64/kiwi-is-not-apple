@@ -28,6 +28,9 @@ export function buildPrefs({ settings, extension }) {
     bar.add(switchRow(settings, _('Apps’ Own Menus'),
         _('Show the menus apps export (GTK menu bars, and Qt, Electron or LibreOffice under Xwayland) in place of the generic File, Edit and View'),
         'menubar-native-menus'));
+    bar.add(switchRow(settings, _('Files as Finder'),
+        _('Call Files “Finder” in the menu bar, the dock, Launchpad and Spotlight, with Finder’s File, View, Go and Window menus'),
+        'menubar-finder-name'));
     bar.add(switchRow(settings, _('Transparent Menu Bar'),
         _('No background over the wallpaper, with text that follows its brightness'),
         'menubar-transparent'));

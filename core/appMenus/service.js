@@ -196,11 +196,12 @@ export class AppMenuService {
      *
      * @param {object} target
      * @param {?{actions, menus}} results
-     * @param {{generic: object, accels: object, _: Function}} opts
+     * @param {{generic: object, accels: object, _: Function, profile?: ?object}} opts profile:
+     *   the app's profile (core/appMenus/profiles.js appProfile), or null
      */
-    build(target, results, { generic, accels, _ }) {
+    build(target, results, { generic, accels, _, profile = null }) {
         const built = buildMenus({
-            appName: target.appName, actions: results?.actions ?? [], generic, accels, _,
+            appName: target.appName, actions: results?.actions ?? [], generic, accels, _, profile,
         });
         return applyMenubar(mergeNativeMenus(built, results?.menus ?? []), results?.menubar ?? []);
     }

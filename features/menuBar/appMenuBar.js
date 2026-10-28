@@ -29,6 +29,7 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import { skipsTaskbar } from '../../core/windowState.js';
 import { PanelLayout } from '../../core/panelLayout.js';
 import { menuEntries, searchMenus, WM_ACCEL_SLOTS } from '../../core/appMenus/model.js';
+import { appProfile } from '../../core/appMenus/profiles.js';
 import { GtkMenusProvider } from '../../core/appMenus/gtkMenus.js';
 import { DBusMenuProvider } from '../../core/appMenus/dbusMenu.js';
 import { AtspiProvider } from '../../core/appMenus/atspi.js';
@@ -304,11 +305,12 @@ export class AppMenuBar {
         if (!target)
             return null;
         const results = this._service.peek(target) ?? (target.gtk ? await this._service.results(target) : null);
+        const profile = this._profile(target);
         const menus = this._service.build(target, results, {
-            generic: this._generic(target), accels: this._accels(), _: this._ctx.gettext,
+            generic: this._generic(target), accels: this._accels(), _: this._ctx.gettext, profile,
         });
         return {
-            appName: target.appName,
+            appName: profile?.name ?? target.appName,
             entries: menuEntries(menus).map(({ path, item }) => ({
                 path, label: item.label, run: () => this._service.activate(target, item.command),
             })),
@@ -339,8 +341,14 @@ export class AppMenuBar {
     _build(target, results) {
         this._menus = this._service.build(target, results, {
             generic: this._generic(target), accels: this._accels(), _: this._ctx.gettext,
+            profile: this._profile(target),
         });
         return this._menus;
+    }
+
+    // Files as Finder (menubar-finder-name), core/appMenus/profiles.js
+    _profile(target) {
+        return appProfile(target.appId, key => this._ctx.settings.get_boolean(key));
     }
 
     _generic(target) {

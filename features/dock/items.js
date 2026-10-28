@@ -13,6 +13,7 @@ import St from 'gi://St';
 import * as DND from 'resource:///org/gnome/shell/ui/dnd.js';
 
 import { CleanupRegistry } from '../../lib/disposables.js';
+import { AppNames } from '../../core/appNames.js';
 import { IconStyle } from '../../lib/iconStyle.js';
 import { badgeProgress, badgeText } from './model.js';
 
@@ -137,7 +138,7 @@ export class AppItem extends DockItem {
      * @param {Shell.App} app
      */
     constructor(host, spec, app) {
-        super(host, spec, app.get_name() ?? spec.id);
+        super(host, spec, AppNames.of(app) || spec.id);
         this.app = app;
         const m = host.metrics;
         this._icon = app.create_icon_texture(m.icon);
@@ -303,7 +304,7 @@ export class WindowItem extends DockItem {
      * @param {?Shell.App} app for the badge
      */
     constructor(host, spec, metaWindow, app) {
-        super(host, spec, metaWindow.get_title() || app?.get_name() || '');
+        super(host, spec, metaWindow.get_title() || AppNames.of(app));
         this.metaWindow = metaWindow;
         const m = host.metrics;
         const source = metaWindow.get_compositor_private();

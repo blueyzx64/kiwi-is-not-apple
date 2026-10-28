@@ -13,6 +13,7 @@ import {
     externalScore, pickIds,
 } from '../providerInfo.js';
 import { DesktopAppInfo } from '../../../lib/gioCompat.js';
+import { AppNames } from '../../../core/appNames.js';
 import { normalize } from '../model.js';
 
 const PROVIDER_DIR = 'gnome-shell/search-providers';
@@ -189,7 +190,7 @@ export class DBusSearch {
     _wrap(info) {
         const appInfo = this._lookupApp(info.desktopId);
         const isFiles = info.desktopId === NAUTILUS_DESKTOP_ID;
-        const appName = appInfo?.get_name() ?? info.busName;
+        const appName = appInfo ? AppNames.forId(info.desktopId, appInfo.get_name()) : info.busName;
         const appIcon = appInfo?.get_icon() ?? null;
         return {
             id: `dbus:${info.busName}`,

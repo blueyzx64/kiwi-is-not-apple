@@ -107,6 +107,7 @@ export const FEATURES = [
         // Full-screen app grid with folders and jiggle delete; GNOME's folders and order are
         // its data. Takes Super+A from GNOME's app grid while on (core/originals).
         id: 'launchpad', setting: 'launchpad',
+        restartOn: ['menubar-finder-name'],   // app names it draws (core/appNames.js)
         load: async () => (await import('./features/launchpad/index.js')).Launchpad,
     },
     {
@@ -117,6 +118,7 @@ export const FEATURES = [
     {
         // Super tap / shortcut opens Spotlight; the clipboard rows come from clipboard-history
         id: 'spotlight', setting: 'spotlight',
+        restartOn: ['menubar-finder-name'],   // app names it draws (core/appNames.js)
         load: async () => (await import('./features/spotlight/index.js')).SpotlightFeature,
     },
     {
@@ -183,6 +185,7 @@ export const FEATURES = [
         // Kiwi's own dock on the bottom (or a side) edge, claimed through core/layout. It takes
         // Dash to Dock out of the enabled extensions while it runs and puts it back after.
         id: 'dock', setting: 'dock',
+        restartOn: ['menubar-finder-name'],   // app names it draws (core/appNames.js)
         load: async () => (await import('./features/dock/index.js')).Dock,
     },
     {
