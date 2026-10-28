@@ -520,6 +520,20 @@ export function validateName(raw, current, siblings) {
     return { ok: true, name, changed: true };
 }
 
+/**
+ * Where the rename field goes: over the icon's label, as wide as the cell (less 8 px), 2 px
+ * higher. Null while the label has no place yet: a tile made a moment ago (New Folder) is not
+ * allocated, and its transformed position is NaN.
+ *
+ * @param {{x: number, y: number, labelWidth: number, cellW: number}} p stage px
+ * @returns {?{x: number, y: number, width: number}}
+ */
+export function renameFieldBox({ x, y, labelWidth, cellW }) {
+    const width = cellW - 8;
+    const box = { x: x + (labelWidth - width) / 2, y: y - 2, width };
+    return Object.values(box).every(Number.isFinite) && width > 0 ? box : null;
+}
+
 /** "untitled folder", then "untitled folder 2", ... that no sibling uses. */
 export function uniqueName(base, siblings) {
     const taken = new Set(siblings);

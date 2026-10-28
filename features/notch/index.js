@@ -150,7 +150,7 @@ export class NotchFeature {
         ks.watch(['notch-hover-expand', 'notch-hover-delay'], syncHover);
         syncHover();
 
-        this._shelf = new Shelf(cleanup, ks, () => this._sync());
+        this._shelf = new Shelf(cleanup, ks, () => this._sync(), this._ctx.events);
         // Dragging a tile out of the shelf: the helper (if installed) puts a window over the tiles
         this._shelfHelper = new ShelfHelper(cleanup, {
             onClick: uri => this._shelfAction(uri === this._selected ? 'open' : 'select', uri),

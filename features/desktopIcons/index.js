@@ -39,8 +39,12 @@ import { DesktopSource } from './source.js';
 import {
     SORTS, Selection, TYPE_AHEAD_MS, blockedCells, desktopInFront, dingEnabled, flowOrder, gridFor, isSort,
     layoutCells, menuActions, metricsFor, moveCells, neighbour, parseArrangement, pruneArrangement,
-    serializeArrangement, typeAhead, uniqueName, validateName,
+    renameFieldBox, serializeArrangement, typeAhead, uniqueName, validateName,
 } from './model.js';
+
+// A new tile is laid out on the next frame: the rename field waits for it this often, this long
+const RENAME_WAIT_MS = 30;
+const RENAME_WAIT_TRIES = 20;
 
 const KEY_LAYOUT = 'desktop-icons-layout';
 const KEY_SORT = 'desktop-icons-sort';
@@ -373,17 +377,26 @@ export class DesktopIcons {
             this._pendingRename = null;
     }
 
-    rename(key = this.keyboardFocus) {
+    rename(key = this.keyboardFocus, tries = 0) {
         const tile = this.layer?.tiles.get(key);
         const entry = this._entry(key);
         if (!tile || !entry || entry.kind === 'drive' || this._rename)
             return;
-        this._closeMenu();
+        // A tile made a moment ago (New Folder) has no allocation yet, so no position: without
+        // this wait the field opened at NaN, which Clutter put at the top left of the screen
         const [x, y] = tile.label.get_transformed_position();
-        const w = this.grid.cellW - 8;
+        const box = renameFieldBox({ x, y, labelWidth: tile.label.width, cellW: this.grid?.cellW });
+        if (!box) {
+            if (tries < RENAME_WAIT_TRIES && this._run) {
+                this._run.timeout(RENAME_WAIT_MS, () => this.rename(key, tries + 1),
+                    { name: 'desktop-icons-rename-wait' });
+            }
+            return;
+        }
+        this._closeMenu();
         const editor = new RenameEditor({
             tile,
-            box: { x: x + (tile.label.width - w) / 2, y: y - 2, width: w },
+            box,
             accessibleName: this._('Name'),
             validate: text => this._nameProblem(entry, text),
             commit: text => this._commitRename(entry, text),
