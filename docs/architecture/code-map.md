@@ -190,4 +190,4 @@ fails if any code but `lib/migrations.js` and `lib/cleanup/` reads one. Internal
 `make check` = eslint (pure modules may not import `gi://`/`resource://`; prefs may not import
 Shell modules; Shell code may not import GTK) + strict schema compile + `make css-check` +
 `tests/run.sh` (every `tests/*.test.js` under `gjs -m`). `make pack-check` packs and checks the
-zip. Real Shell: `KIWI_SRC=$PWD /tmp/x2/run-f44.sh 20` (see `.swarm/shared/ux-round.md`).
+zip. Real Shell: `KIWI_SRC=$PWD tools/harness/run-f44.sh 20` (see `tools/harness/README.md`).

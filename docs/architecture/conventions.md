@@ -160,8 +160,8 @@ Rules:
 ## 10. Tests and the harness scenario
 
 1. `make check` (lint, schema, css-check, unit tests) and `make pack-check`.
-2. Real Shell: `KIWI_SRC=$PWD /tmp/x2/run-f44.sh 20` must end with `Kiwi errors: 0`.
-3. Add a scenario for the feature in a `KIWI_EXTRA` script (`.swarm/shared/ux-round.md`):
+2. Real Shell: `KIWI_SRC=$PWD tools/harness/run-f44.sh 20` must end with `Kiwi errors: 0`.
+3. Add a scenario for the feature in a `KIWI_EXTRA` script (`tools/harness/README.md`):
    reach the instance with `inst('<id>')`, drive it with `P`, assert with `T name js` returning
    "PASS ..." or "FAIL ...", and take `SHOT name` screenshots of every state you changed.
    Never commit screenshots.
