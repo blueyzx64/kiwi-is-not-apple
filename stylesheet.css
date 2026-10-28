@@ -179,46 +179,6 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
   box-shadow: inset 0 0 0 2px -st-accent-color;
 }
 
-/* Tiling layout glyphs (lib/tileGlyphs.js): the drag picker */
-.kiwi-tile-glyph-button {
-  padding: 3px;
-  border-radius: 6px;
-}
-
-.kiwi-tile-glyph-button:hover,
-.kiwi-tile-glyph-button:focus {
-  background-color: -st-accent-color;
-}
-
-.kiwi-tile-glyph {
-  border: 1px solid rgba(128, 128, 128, 0.9);
-  border-radius: 4px;
-}
-
-.kiwi-tile-pane {
-  border-radius: 2px;
-  background-color: rgba(128, 128, 128, 0.95);
-}
-
-.kiwi-tile-pane.ghost {
-  background-color: rgba(128, 128, 128, 0.4);
-}
-
-.kiwi-tile-glyph-button:hover .kiwi-tile-glyph,
-.kiwi-tile-glyph-button:focus .kiwi-tile-glyph {
-  border-color: -st-accent-fg-color;
-}
-
-.kiwi-tile-glyph-button:hover .kiwi-tile-pane,
-.kiwi-tile-glyph-button:focus .kiwi-tile-pane {
-  background-color: -st-accent-fg-color;
-}
-
-.kiwi-tile-glyph-button:hover .kiwi-tile-pane.ghost,
-.kiwi-tile-glyph-button:focus .kiwi-tile-pane.ghost {
-  background-color: rgba(255, 255, 255, 0.45);
-}
-
 /* ==== features/appearance/style.css ==== */
 
 /* feature: popup-menu-styling */
@@ -4765,20 +4725,31 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
   border: 1px solid rgba(255, 255, 255, 0.45);
 }
 
-/* The layout picker of the drag (picker.js): faux glass from lib/glass.js, glyphs from
- * styles/base.css. No box-shadow: St draws it as a rectangle on a rounded glass actor. */
-.kiwi-tile-picker {
-  padding: 10px 12px 12px;
+/* The snap bar of the drag (snapBar.js, Windows 11 Snap Layouts). lib/glass.js gives the bar its
+ * glass; the corner radius morphs inline between the handle's and this one. No box-shadow: St
+ * draws it as a rectangle on a rounded actor. */
+.kiwi-snap-bar {
   border-radius: 18px;
-  spacing: 6px;
 }
 
-.kiwi-tile-picker-title {
-  font-size: 11px;
-  font-weight: bold;
-  padding: 0 2px 2px;
+.kiwi-snap-grab {
+  border-radius: 2px;
+  background-color: rgba(128, 128, 128, 0.75);
 }
 
-.kiwi-tile-picker-row {
-  spacing: 6px;
+.kiwi-snap-thumb {
+  border: 1px solid rgba(128, 128, 128, 0.45);
+  border-radius: 7px;
+  background-color: rgba(128, 128, 128, 0.12);
+}
+
+.kiwi-snap-zone {
+  border-radius: 4px;
+  background-color: rgba(128, 128, 128, 0.38);
+}
+
+/* Faded in over the zone by a spring, not by :hover (no hover reaches it during a drag) */
+.kiwi-snap-zone-lit {
+  border-radius: 4px;
+  background-color: -st-accent-color;
 }

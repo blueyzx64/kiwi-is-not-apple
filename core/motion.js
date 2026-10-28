@@ -270,4 +270,33 @@ export class Motion {
         timeline.start();
         return handle;
     }
+
+    /**
+     * Spring several numeric properties of one actor at once (a rect: x, y, width, height).
+     * Cancel the returned handle before springing the same properties again.
+     *
+     * @param {Clutter.Actor} actor
+     * @param {Object<string, number>} targets property -> end value
+     * @param {{spring?: string|object, onDone?: (finished: boolean) => void}} [request]
+     *   onDone runs once, when the last one ends; finished is false if any was cancelled
+     * @param {{add: Function, release?: Function}} [owner]
+     * @returns {{cancel: Function, running: boolean}}
+     */
+    springs(actor, targets, request = {}, owner = null) {
+        let pending = Object.keys(targets).length;
+        let allFinished = true;
+        const done = finished => {
+            allFinished &&= finished;
+            if (--pending === 0)
+                request.onDone?.(allFinished);
+        };
+        const handles = Object.entries(targets).map(([prop, to]) =>
+            this.spring(actor, prop, to, { spring: request.spring, onDone: done }, owner));
+        return {
+            cancel: () => handles.forEach(h => h.cancel()),
+            get running() {
+                return handles.some(h => h.running);
+            },
+        };
+    }
 }
