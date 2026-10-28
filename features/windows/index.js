@@ -2,7 +2,8 @@
 // Window tiling, macOS 15 Sequoia model (feature id 'window-tiling', key windows-tiling).
 //
 // One engine for every way in: dragging to the edges, corners and menu bar (drag.js), the
-// menu bar's Window menu (the 'window-tile-requested' event), and the Ctrl+Super shortcuts. The geometry is pure (model.js);
+// menu bar's Window menu (the 'window-tile-requested' event), Move & Resize in the title bar menu
+// (titleMenu.js, show-tiling-title-menu), and the Ctrl+Super shortcuts. The geometry is pure (model.js);
 // this adapter only reads frames and calls move_resize_frame.
 //
 // Mutter has no public tiling API (meta_window_tile is not introspected), so Kiwi's tiles are
@@ -34,6 +35,7 @@ import {
     planArrangement, untileRect, zoneRect,
 } from './model.js';
 import { TileDrag } from './drag.js';
+import { enableTitleMenu } from './titleMenu.js';
 
 const MUTTER_SCHEMA = 'org.gnome.mutter';
 
@@ -75,6 +77,7 @@ export class WindowTiling {
         });
 
         new TileDrag(this._ctx, cleanup, ks, this._layout, this).enable();
+        enableTitleMenu(this._ctx, cleanup, ks, this);
 
         events.on('window-tile-requested', ({ window, mode }) => this.perform(window, mode), cleanup);
         events.on('work-area-changed', ({ monitor }) => this._reflow(monitor), cleanup);
@@ -121,7 +124,7 @@ export class WindowTiling {
      */
     perform(win, action) {
         const parsed = parseAction(action);
-        if (!parsed || !this._tileable(win))
+        if (!parsed || !this.tileable(win))
             return false;
         switch (parsed.kind) {
         case 'zone':
@@ -207,7 +210,8 @@ export class WindowTiling {
 
     // ---- actions ----------------------------------------------------------------------------
 
-    _tileable(win) {
+    /** True for a window the tiling actions apply to (a normal, unminimized window). */
+    tileable(win) {
         return !!win && win.get_window_type() === Meta.WindowType.NORMAL && !win.minimized;
     }
 

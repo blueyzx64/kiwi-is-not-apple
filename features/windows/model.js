@@ -184,6 +184,94 @@ export function hitZone(p, monitor, { topEdge, edges = true, menuBar = true, mod
 }
 
 /**
+ * The drop preview is laid out at its zone's rect and drawn from `from` (the window's frame,
+ * or where the preview is mid-flight) by a transform, which then springs to identity. Moving
+ * by transform keeps the actor's size fixed while it flies, so St renders its rounded fill,
+ * border and shadow once per zone instead of once per frame.
+ *
+ * @param {{x, y, width, height}} from where the preview is drawn now
+ * @param {{x, y, width, height}} to the zone rect (the actor's allocation, pivot at 0,0)
+ * @returns {{translation_x: number, translation_y: number, scale_x: number, scale_y: number}}
+ */
+export function previewTransform(from, to) {
+    const ratio = (a, b) => (a > 0 && b > 0 ? a / b : 1);
+    return {
+        translation_x: from.x - to.x,
+        translation_y: from.y - to.y,
+        scale_x: ratio(from.width, to.width),
+        scale_y: ratio(from.height, to.height),
+    };
+}
+
+/** Where a preview laid out at `rect` is drawn under a previewTransform `t`. */
+export function previewVisualRect(rect, t) {
+    return {
+        x: rect.x + t.translation_x,
+        y: rect.y + t.translation_y,
+        width: rect.width * t.scale_x,
+        height: rect.height * t.scale_y,
+    };
+}
+
+/**
+ * Style classes of the drop preview for the glass environment (lib/glass.js watch env):
+ * colour scheme, Increase Contrast (Kiwi's or GNOME's high contrast) and Reduce Transparency.
+ *
+ * @param {{dark?: boolean, contrast?: boolean, opaque?: boolean}} env
+ * @returns {string[]}
+ */
+export function previewClasses(env) {
+    const out = [env?.dark === false ? 'kiwi-tile-preview-light' : 'kiwi-tile-preview-dark'];
+    if (env?.contrast)
+        out.push('kiwi-tile-preview-contrast');
+    if (env?.opaque)
+        out.push('kiwi-tile-preview-opaque');
+    return out;
+}
+
+// Marks a string for translation; the view translates it
+const N_ = s => s;
+
+/** Move & Resize in the title bar menu: macOS 15's green-button menu, in its order. */
+const TITLE_MENU = Object.freeze([
+    Object.freeze({ label: N_('Left'), action: 'left' }),
+    Object.freeze({ label: N_('Right'), action: 'right' }),
+    Object.freeze({ label: N_('Top'), action: 'top' }),
+    Object.freeze({ label: N_('Bottom'), action: 'bottom' }),
+    Object.freeze({ separator: true }),
+    Object.freeze({ label: N_('Top Left'), action: 'top-left' }),
+    Object.freeze({ label: N_('Top Right'), action: 'top-right' }),
+    Object.freeze({ label: N_('Bottom Left'), action: 'bottom-left' }),
+    Object.freeze({ label: N_('Bottom Right'), action: 'bottom-right' }),
+    Object.freeze({ separator: true }),
+    Object.freeze({ label: N_('Fill'), action: 'fill' }),
+    Object.freeze({ label: N_('Center'), action: 'center' }),
+    Object.freeze({ separator: true, label: N_('Fill & Arrange') }),
+    Object.freeze({ label: N_('Left & Right'), action: 'arrange-left-right' }),
+    Object.freeze({ label: N_('Right & Left'), action: 'arrange-right-left' }),
+    Object.freeze({ label: N_('Top & Bottom'), action: 'arrange-top-bottom' }),
+    Object.freeze({ label: N_('Quarters'), action: 'arrange-quarters' }),
+]);
+const RESTORE_ITEMS = Object.freeze([
+    Object.freeze({ separator: true }),
+    Object.freeze({ label: N_('Return to Previous Size'), action: 'restore' }),
+]);
+
+/**
+ * The entries of Move & Resize for a window, or null when it cannot be tiled (a dialog, a
+ * minimized window). Entries: {label, action} (an action of parseAction) or
+ * {separator: true, label?}; labels are untranslated gettext keys.
+ *
+ * @param {{tileable: boolean, canRestore: boolean}} win
+ * @returns {?object[]}
+ */
+export function titleMenuItems({ tileable, canRestore }) {
+    if (!tileable)
+        return null;
+    return canRestore ? [...TITLE_MENU, ...RESTORE_ITEMS] : [...TITLE_MENU];
+}
+
+/**
  * Pair windows with the zones of an arrangement: the first id is the active window.
  *
  * @param {string} name a key of ARRANGEMENTS

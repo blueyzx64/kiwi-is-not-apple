@@ -415,7 +415,7 @@
       <key name="windows-tile-drag-modifier" type="b">
         <default>true</default>
         <summary>Hold Alt while dragging windows to tile</summary>
-        <description>While Alt (the macOS Option key) is held during a drag, the half outlines show at once, without reaching the edge.</description>
+        <description>While Alt (the macOS Option key) is held during a drag, the half previews show at once, without reaching the edge.</description>
       </key>
       <key name="windows-tile-margins" type="b">
         <default>false</default>
@@ -1650,8 +1650,8 @@
       </key>
       <key name="show-tiling-title-menu" type="b">
         <default>true</default>
-        <summary>(Deprecated, unused) Add Tiling Layouts to the Window Title Menu</summary>
-        <description>Add window tiling layouts to the menu opened from the window title in the panel. Available for any focused window, including windows that are not maximized.</description>
+        <summary>Move &amp; Resize in the title bar menu</summary>
+        <description>Add macOS 15's green-button tiles (halves, quarters, Fill, Center, Fill &amp; Arrange, Return to Previous Size) as a Move &amp; Resize submenu of the menu a window's title bar opens on right-click or Alt+Space. The green button itself is drawn by the app, so the Shell cannot open a menu when it is hovered. Needs Tile Windows.</description>
       </key>
       <key name="panel-hover-fullscreen" type="b">
         <default>true</default>
