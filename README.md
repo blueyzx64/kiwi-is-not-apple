@@ -20,9 +20,9 @@ Each area has a page in [docs/features](docs/features/README.md) with its settin
 - Privacy dots (microphone, camera, screen sharing), shortcut glyphs, Force Quit (Super+Alt+Esc), and the clock and calendar at the right.
 
 ### Windows
-- Traffic-light window controls in the top bar for maximized, full-screen and top-touching windows, on the right by default (left is a setting). The green button goes full screen, or zooms; hover it for the Fill & Arrange menu.
+- Window buttons stay on each app's own titlebar, on the right by default (left is a setting), with the macOS traffic-light look or the stock GNOME one. Kiwi draws none in the top bar.
 - Sequoia-style tiling: drag to edges, corners or the top bar; drag to the top centre for a layout picker; Ctrl+Super shortcuts for halves, Fill, Center, Return to Previous Size and arrangements of several windows.
-- Full screen in its own Space, Split View, and Hide and Hide Others (Super+H, Alt+Super+H).
+- Full screen in its own Space, Split View (Ctrl+Super+Alt+Left or Right on a full-screen window), and Hide and Hide Others (Super+H, Alt+Super+H).
 - Show Desktop (top-bar button, Super+D, click on empty wallpaper) and rounded window corners.
 
 ### Dock
@@ -106,7 +106,7 @@ dconf dump /org/gnome/shell/extensions/kiwi/ > ~/kiwi-settings-backup.ini
 The defaults follow macOS. Each can be changed in preferences.
 
 - The Setup Assistant opens once in preferences. Not Now keeps every default; you can run it again from About.
-- The menu bar is transparent and shows the logo menu and the focused app's menus. Window controls sit on the right of the top bar and appear there for maximized, full-screen and top-touching windows.
+- The menu bar is transparent and shows the logo menu and the focused app's menus. Window buttons stay on each app's own titlebar.
 - Kiwi's dock is at the bottom, with Genie minimize. Magnification and auto-hide are off.
 - Super (tap) opens Spotlight. F3 or Ctrl+Up opens Mission Control, Ctrl+Down App Exposé, Super+A or F4 Launchpad. Clicking the clock opens the Notification Center.
 - The notch is on and the clock sits at the right.

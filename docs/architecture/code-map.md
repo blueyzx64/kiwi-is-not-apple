@@ -100,7 +100,7 @@ Events (`EVENTS` in `core/events.js`): `window-added`, `window-changed`, `window
 `motion-changed`, `feature-changed`, `minimize-requested`, `notification-center-requested`, `focus-changed`
 (the clock), `app-hide-requested` and `window-tile-requested` (app-menu commands for the
 window manager; the menu bar runs a fallback when nobody listens), `launchpad-requested` (dock tile,
-pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view-changed` (Split View), `recording-started` /
+pinch, hot corner), `split-view-changed` (Split View), `recording-started` /
 `recording-stopped` (screenshots; for the notch's recording live activity), `timers-changed`,
 `timer-finished` (core/timers).
 
@@ -132,7 +132,7 @@ pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view
 
 | Folder | Registry ids (features.js) | Notes |
 |---|---|---|
-| `windowControls/` | `window-controls`, `app-buttons`, `gtk-theme` | traffic lights in the top bar (`index.js`), the apps' own buttons when off (`appButtons.js`), both owning `button-layout` through `buttonLayout.js` (a `SettingOwner`); GTK stylesheets in `gtk/` imported into the user's gtk.css by `gtkTheme.js` |
+| `appButtons/` | `app-buttons`, `gtk-theme` | the apps' own titlebar buttons (`index.js`): side and button set through the WM `button-layout`, owned by `buttonLayout.js` (a `SettingOwner`, the user's layout restored exactly); GTK stylesheets in `gtk/` (traffic lights, app fixes) imported into the user's gtk.css by `gtkTheme.js`. No window buttons in the top bar |
 | `menuBar/` | `menu-bar` | the macOS menu bar: logo menu, app name and menus (core/appMenus), transparent adaptive bar, full-screen reveal, privacy dots, About This PC, Force Quit, clock hook, Activities policy |
 | `calendar/` | `calendar`, `quick-settings-notifications`, `dnd-button` | date menu on the right as a card; notification list in Quick Settings; Kiwi's Do Not Disturb (beaten by `control-center`) |
 | `controlCenter/` | `control-center` | Quick Settings restyled; Edit Controls (`editor.js`, `customModel.js`: gallery, sizes, `control-center-layout`, empty = default plan), Kiwi's own controls (`controls.js`: feature and accessibility switches, Screenshot, Screen Recording, Timer, Keep Awake, Low Power Mode) |
@@ -155,7 +155,7 @@ pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view
 | `focus/` | `focus` | Focus modes (DND, Sleep, Work, Personal, custom): allowed apps, schedules, app triggers, time-sensitive break-through (`model.js`); banner filter via the router; GNOME DND synced both ways; Control Center tile with the mode menu and menu-bar icon (`indicator.js`); `state()`, event `focus-changed` |
 | `missionControl/` | `mission-control` | overview restyled as Mission Control: Spaces bar (+, ×, reorder), App Exposé with minimized strip, F3 / Ctrl+Up / Ctrl+Down, start on the desktop, static Spaces (dynamic-workspaces via core/originals) |
 | `windows/` | `window-tiling`, `app-hide` | Sequoia tiling: drag zones with a glass outline (`drag.js`), shortcuts, arrangements, margins, tile book (`model.js`); owns mutter `edge-tiling`; answers `window-tile-requested`. Hide / Hide Others (`hide.js`, `hideModel.js`), WindowState `hidden`, answers `app-hide-requested`, takes Super+H from GNOME's minimize while on |
-| `splitView/` | `split-view` | full screen Split View: green-button hover menu, tile a half, pick the partner from thumbnails; WindowState `splitView` |
+| `splitView/` | `split-view` | full screen Split View: shortcuts tile a full-screen window to a half, pick the partner from thumbnails; WindowState `splitView` |
 | `minimizeEffect/` | `minimize-effect` | Genie (`genie.js`, a strip-drawing `Clutter.OffscreenEffect` on a container holding a clone of the window; a `DeformEffect` on the window actor is cut off at the window's box on GNOME 50) and Scale minimize/restore into the dock; blocks the stock Shell.WM minimize handlers only while it runs and hands GNOME the windows it does not animate; `setTargetProvider(owner, fn)` for Stage Manager |
 | `switcher/` | `app-switcher` | Cmd-Tab panel on Super+Tab (`popup.js`, a SwitcherPopup subclass) and Super+` window cycling; own handlers for `switch-applications`/`switch-group`, the Shell's given back on disable |
 | `gestures/` | `gestures` | touchpad router (`captured-event::touchpad` on the stage): 4-finger down App Exposé, pinch Launchpad, spread Show Desktop; GNOME's swipes held back only when turned off |
@@ -166,8 +166,7 @@ pinch, hot corner), `green-button-hover`, `split-view-requested` and `split-view
 | `dialogs/` | `dialogs` | the Shell's modal dialogs (auth, end session, Run, others) as glass alerts: icon on top, natural-width buttons at the right, accent default; `ModalDialog.prototype.open` injection, undone on close and disable |
 | `colorFilters/` | `color-filters` | greyscale, protanopia / deuteranopia / tritanopia corrections and colour tint: one shader effect (a colour matrix as uniforms) on `global.stage` |
 
-Shared-resource rules (defined once in `features.js`): `window-controls`/`app-buttons` are
-mirrors over `button-layout`; `control-center` beats `dnd-button`; `stage-manager` beats
+Shared-resource rules (defined once in `features.js`): `app-buttons` alone owns `button-layout`; `control-center` beats `dnd-button`; `stage-manager` beats
 `move-window-to-new-workspace`; the notch forces the calendar to the right.
 
 ## 6. Preferences

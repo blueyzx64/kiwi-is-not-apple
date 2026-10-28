@@ -11,7 +11,7 @@ import {
 import {
     stripKiwiEnvironment, environmentLoadsModule, parseSavedDockColours, dockColourPlan, retryDelayMs,
 } from '../lib/cleanup/cleanupModel.js';
-import { processUserGtkFile, withManagedBlock } from '../features/windowControls/gtkTheme.js';
+import { processUserGtkFile, withManagedBlock } from '../features/appButtons/gtkTheme.js';
 import { cleanMozillaProfiles, cleanProfile } from '../lib/cleanup/mozilla.js';
 import * as fs from '../lib/cleanup/fileOps.js';
 import { CLEANUP_ID, cleanGtkModules, runCleanup } from '../lib/cleanup/index.js';

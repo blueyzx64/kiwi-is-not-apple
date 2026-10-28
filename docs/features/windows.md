@@ -4,7 +4,7 @@
 macOS Sequoia tiling. One engine for every way in.
 - **Drag a window by its title bar:** to the left or right edge for a half, a corner for a quarter (`windows-tile-drag-edges`), to the menu bar to fill the screen (`windows-tile-drag-menubar`). A glass outline shows the result; the edge waits a beat first. Hold Alt for the outline anywhere near a side (`windows-tile-drag-modifier`). Dragging a tiled window away gives it back its old size.
 - **Layout picker (`windows-tile-drag-picker`):** drag to the top centre of the screen for halves, quarters and arrangements; release elsewhere on the bar to fill.
-- **Green-button menu and the menu bar's Window menu:** same actions ([window-controls.md](window-controls.md)).
+- **The menu bar's Window menu:** same actions. (The green-button menu is gone with the top-bar window controls: window buttons stay on the app's own titlebar, [window-controls.md](window-controls.md).)
 - **Shortcuts (Ctrl+Super; macOS uses Fn-Ctrl):** arrows for left, right, top, bottom; `F` fill; `C` center; `R` return to previous size; add Shift for arrangements (Left & Right, Right & Left, Top & Bottom, Bottom & Top); add Alt+Shift for Left/Right/Top/Bottom & Quarters. An arrangement gives the focused window the first place and the windows used before it the others.
 - `windows-tile-margins` (off) adds a small gap around tiles.
 - GNOME's own edge tiling is off while this runs (`core/originals.js`). A shortcut GNOME or Stage Manager already uses is left unbound (Stage Manager's Ctrl+Super+Down wins while it runs).
@@ -16,7 +16,7 @@ Super+H hides the front app, Alt+Super+H hides the others. Wayland has no hidden
 A full-screen window moves to a new workspace at the right and returns when it leaves full screen. Paused while Stage Manager runs.
 
 ## Split View (`split-view`, on)
-Hover the green button of a full-screen window and choose Tile Window to Left/Right of Screen. The other half shows thumbnails of your other windows; click one to pair it. Esc or a click on the tiled half cancels. The pair ends when a window closes, minimizes, goes full screen or maximizes; the remaining window is full screen again.
+With a full-screen window focused, press Ctrl+Super+Alt+Left or Right (`split-view-left-shortcut`, `split-view-right-shortcut`; also in Settings, Windows) to tile it to that side of the screen. A full-screen window cannot be dragged, so the drag picker does not offer Split View. The other half shows thumbnails of your other windows; click one to pair it. Esc or a click on the tiled half cancels. The pair ends when a window closes, minimizes, goes full screen or maximizes; the remaining window is full screen again.
 
 ## Show Desktop (`show-desktop`)
 A top-bar button (`show-desktop-button`, on), Super+D (`show-desktop-shortcut`) or a click on empty wallpaper (`click-wallpaper-reveals-desktop`: `always` default, `stage-manager`, `never`) slides the windows of the workspace to the screen edges. Windows are never moved or minimized, only their actors are shifted. A second press, a click on a window, a workspace switch or the overview brings them back. With Stage Manager on, the stage moves into the strip instead. GNOME's own show-desktop shortcut, if you set one, plays the same animation.

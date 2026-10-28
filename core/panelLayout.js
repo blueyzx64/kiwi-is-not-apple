@@ -6,10 +6,10 @@
 // neighbours by status-area role or by another claim id:
 //
 //   const slot = PanelLayout.claim(cleanup, {
-//       id: 'window-controls',
+//       id: 'my-item',
 //       actor: indicator.container,                         // the child of the panel box
 //       box: 'left',
-//       anchor: {before: ['window-title'], fallback: 'last'},
+//       anchor: {before: ['quickSettings'], fallback: 'last'},
 //   });
 //   slot.update({box: 'right', anchor: {last: true}});      // move later
 //   slot.release();                                         // also runs on cleanup.dispose()
@@ -22,14 +22,13 @@
 // do not push claimed actors out of place. It never destroys actors; the owner does.
 //
 // Claims in use and the order they give (left to right; foreign = stock or other extensions):
-//   left box :  [kiwi-menubar-logo] [foreign...] [window-controls] [kiwi-menubar-apps]
+//   left box :  [kiwi-menubar-logo] [foreign...] [kiwi-menubar-apps]
 //   right box:  [foreign...] [show-desktop] [clipboard] [kiwi-menubar-privacy] [quickSettings]
 //               [foreign...]
-//   (window-controls on the right instead: last slot of the right box)
 //   center box: notch placeholder
 // clipboard {before: quickSettings}; show-desktop {before: clipboard, quickSettings};
-// kiwi-menubar-logo {first}; window-controls {before: kiwi-menubar-apps};
-// kiwi-menubar-apps {after: activities, kiwi-menubar-logo, window-controls};
+// kiwi-menubar-logo {first};
+// kiwi-menubar-apps {after: activities, kiwi-menubar-logo};
 // kiwi-menubar-privacy {before: quickSettings}.
 //
 // Stock items the menu bar does not show are hidden here too, so one module knows what the

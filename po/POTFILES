@@ -1,4 +1,5 @@
 core/appMenus/model.js
+core/tileActions.js
 core/widgets/data.js
 core/widgets/kinds/batteries.js
 core/widgets/kinds/calendar.js
@@ -6,6 +7,7 @@ core/widgets/kinds/clock.js
 core/widgets/kinds/nowPlaying.js
 core/widgets/kinds/system.js
 core/widgets/kinds/weather.js
+features/appButtons/prefs.js
 features/appearance/prefs.js
 features/calendar/dndButton.js
 features/calendar/notificationList.js
@@ -24,6 +26,10 @@ features/controlCenter/nowPlaying.js
 features/controlCenter/prefs.js
 features/controlCenter/tiles.js
 features/controlCenter/userRow.js
+features/desktopIcons/index.js
+features/desktopIcons/layer.js
+features/desktopIcons/ops.js
+features/desktopIcons/prefs.js
 features/dock/appMenu.js
 features/dock/index.js
 features/dock/launchpad.js
@@ -32,6 +38,7 @@ features/dock/prefs.js
 features/dock/stack.js
 features/dock/trash.js
 features/dock/view.js
+features/emoji/index.js
 features/emoji/prefs.js
 features/emoji/view.js
 features/focus/index.js
@@ -49,6 +56,7 @@ features/lowPower/prefs.js
 features/menuBar/aboutDialog.js
 features/menuBar/appMenuBar.js
 features/menuBar/forceQuit.js
+features/menuBar/fullscreenReveal.js
 features/menuBar/logoMenu.js
 features/menuBar/prefs.js
 features/menuBar/privacyDots.js
@@ -64,6 +72,7 @@ features/notch/prefs.js
 features/notch/sources/timers.js
 features/notch/tabs.js
 features/notch/view.js
+features/notificationCenter/index.js
 features/notificationCenter/prefs.js
 features/notificationCenter/view.js
 features/onboarding/model.js
@@ -80,6 +89,7 @@ features/showDesktop/index.js
 features/showDesktop/prefs.js
 features/splitView/index.js
 features/spotlight/actionsModel.js
+features/spotlight/index.js
 features/spotlight/prefs.js
 features/spotlight/providers/actions.js
 features/spotlight/providers/clipboard.js
@@ -89,14 +99,13 @@ features/spotlight/results.js
 features/spotlight/view.js
 features/stageManager/prefs.js
 features/stageManager/view.js
+features/switcher/index.js
 features/switcher/prefs.js
 features/widgets/gallery.js
 features/widgets/index.js
 features/widgets/layer.js
 features/widgets/prefs.js
-features/windowControls/greenMenu.js
-features/windowControls/index.js
-features/windowControls/prefs.js
+features/windows/picker.js
 features/windows/prefs.js
 lib/menuBarPins.js
 lib/mpris.js

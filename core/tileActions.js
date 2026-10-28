@@ -2,8 +2,7 @@
 // The vocabulary of window tiling, shared by everything that asks for a tile: the zones (as
 // fractions of a work area), the multi-window arrangements and the action strings of the
 // 'window-tile-requested' event (core/events.js). The tiling engine (features/windows) acts on them;
-// the green-button menu (features/windowControls) and the menu bar's Window menu draw and
-// request them. Pure JS, no gi imports.
+// the drag picker (features/windows) and the menu bar's Window menu draw and request them. Pure JS, no gi imports.
 
 // Marks a string for translation; the view translates it
 const N_ = s => s;
@@ -38,8 +37,7 @@ export const ARRANGEMENTS = Object.freeze({
 });
 
 /**
- * Parse a tiling action (the payload of the 'window-tile-requested' event, the green menu and the
- * shortcuts): a zone name, 'center', 'restore', or 'arrange-<arrangement>'.
+ * Parse a tiling action (the payload of the 'window-tile-requested' event and the shortcuts): a zone name, 'center', 'restore', or 'arrange-<arrangement>'.
  *
  * @param {string} action
  * @returns {?{kind: 'zone'|'center'|'restore'|'arrange', name?: string}}
@@ -57,16 +55,6 @@ export function parseAction(action) {
 }
 
 /**
- * Does a tile put the window's top edge at the top of the work area? (Left and right halves,
- * top halves and quarters, Fill: the windows whose controls belong in the top bar.)
- *
- * @param {?string} zone a key of ZONES, or anything else (center, null)
- */
-export function zoneTouchesTop(zone) {
-    return !!zone && zone in ZONES && ZONES[zone].y === 0;
-}
-
-/**
  * The zone to show for an action: a zone is its own; an arrangement puts the active window in
  * its first zone.
  *
@@ -81,7 +69,7 @@ export function leadZone(action) {
 }
 
 /**
- * The layouts of the picker (the green-button menu and the drag picker): the glyph rows with
+ * The layouts of the picker (the drag picker): the glyph rows with
  * their section titles. the names are gettext keys (marked with N_).
  */
 export const PICKER_SECTIONS = Object.freeze([

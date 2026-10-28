@@ -101,7 +101,7 @@ BATTERY_TRIGGER_PERCENTAGE && state === 2`) and the animation live in one method
 ## 6. SOLID
 
 - **S — Single responsibility.** "One reason to change." `view.js` changes for design,
-  `shellAdapter.js` for a GNOME release, `model.js` for behaviour. `apps/windowControls.js`
+  `shellAdapter.js` for a GNOME release, `model.js` for behaviour. `apps/appButtons.js`
   currently changes for all three.
 - **O — Open/closed.** Adding a feature should add a file to `features.js`, not edit a
   577-line conditional. `extension.js:57-277` violates this today.

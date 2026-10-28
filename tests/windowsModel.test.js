@@ -5,7 +5,6 @@ import {
     untileRect, rectChanged, TileBook, SHORTCUTS, pickBindable, TILE_MARGIN, EDGE_PX,
 } from '../features/windows/model.js';
 import { planHide, HiddenApps, HIDE_MODES } from '../features/windows/hideModel.js';
-import { planGreenClick } from '../features/windowControls/model.js';
 import { EVENTS } from '../core/events.js';
 
 let failed = 0;
@@ -334,18 +333,6 @@ test('HiddenApps survives a disable through toJSON/from', () => {
     eq(back.toJSON(), [['ed', [1]], ['files', [2]]]);
     eq(HiddenApps.from([['x', [9]]], () => false).apps(), []);
 });
-
-// --- green button
-test('green click: macOS default is full screen, Alt zooms', () => {
-    eq(planGreenClick({ mode: 'fullscreen', alt: false, fullscreen: false }), 'fullscreen');
-    eq(planGreenClick({ mode: 'fullscreen', alt: true, fullscreen: false }), 'zoom');
-});
-test('green click: zoom mode, Alt goes full screen', () => {
-    eq(planGreenClick({ mode: 'zoom', alt: false, fullscreen: false }), 'zoom');
-    eq(planGreenClick({ mode: 'zoom', alt: true, fullscreen: false }), 'fullscreen');
-});
-test('green click on a full-screen window leaves full screen', () =>
-    eq(planGreenClick({ mode: 'zoom', alt: true, fullscreen: true }), 'unfullscreen'));
 
 if (failed) {
     print(`${failed} failed`);

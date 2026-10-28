@@ -35,7 +35,7 @@ is packaged as a harness for third-party extensions, so for Kiwi the system leve
 
 Pure candidates already in the repo:
 
-- `apps/windowControls.js:177-208` `_parseButtonLayout` — string → `{side, buttons}`.
+- `apps/appButtons.js:177-208` `_parseButtonLayout` — string → `{side, buttons}`.
 - `apps/gtkThemeManager.js:38-…` `_stylesheetsFor(version)` — settings → list of CSS files
   (needs settings passed as a plain object instead of `this._settings.get_*`).
 - `apps/batteryPercentage.js:93-126` — "show/hide/animate?" from `(percentage, state, last)`.
@@ -51,7 +51,7 @@ Zero dependencies; GJS supports ESM with `-m`.
 ```js
 // test/run.js — gjs -m test/run.js
 import System from 'system';
-import * as wc from './windowControls.model.test.js';
+import * as wc from './appButtons.model.test.js';
 import * as ah from './autoHideBar.model.test.js';
 
 let failed = 0, passed = 0;
@@ -65,8 +65,8 @@ System.exit(failed ? 1 : 0);
 ```
 
 ```js
-// test/windowControls.model.test.js
-import { parseButtonLayout } from '../apps/windowControls/model.js';
+// test/appButtons.model.test.js
+import { parseButtonLayout } from '../apps/appButtons/model.js';
 
 function eq(a, b) { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${JSON.stringify(a)} != ${JSON.stringify(b)}`); }
 
@@ -95,10 +95,10 @@ coverage (`--experimental-test-coverage`). Node must see `.js` as ESM: either No
 pack` only includes listed sources).
 
 ```js
-// test/windowControls.model.test.js (node flavour)
+// test/appButtons.model.test.js (node flavour)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseButtonLayout } from '../apps/windowControls/model.js';
+import { parseButtonLayout } from '../apps/appButtons/model.js';
 
 test('dedupes buttons', () => {
     assert.deepEqual(parseButtonLayout(':close,close,minimize').buttons, ['close', 'minimize']);

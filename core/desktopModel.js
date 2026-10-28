@@ -26,26 +26,6 @@ const DEFAULTS = Object.freeze({
 });
 
 /**
- * Helper and internal windows (GJS scripts, reverse-DNS ids, '@!0,0' placeholders)
- * are not user windows. Pass the window's title and its app name, either may be null.
- * A blank title counts as a helper window.
- *
- * @param {{title: ?string, appName: ?string}} info
- * @returns {boolean}
- */
-export function isHelperWindowInfo({ title, appName }) {
-    if (title !== null && title !== undefined) {
-        const t = title.trim().toLowerCase();
-        if (!t)
-            return true;
-        if (t.startsWith('com.') || t.startsWith('gjs') || t.includes('@!0,0'))
-            return true;
-    }
-    const a = (appName ?? '').trim().toLowerCase();
-    return a.startsWith('com.') || a.startsWith('gjs');
-}
-
-/**
  * Desktop ids to try for a window the Shell's tracker could not match to an installed app
  * (it then makes a window-backed app). Web apps are the usual case:
  *   - Chrome/Chromium PWAs: WM_CLASS 'crx_<id>' (Xwayland) or app id 'chrome-<id>-<profile>'

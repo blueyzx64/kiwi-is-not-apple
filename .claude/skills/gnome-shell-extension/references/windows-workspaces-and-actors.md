@@ -167,7 +167,7 @@ container.add_child(clone);
 - Panel controls: a `PanelMenu.Button` with `dontCreateMenu = true` holding
   three `St.Button`s that act on `global.display.focus_window`. Show them only
   when that window `is_maximized()` (or the 48 equivalent). Kiwi already has
-  `apps/windowControls.js`, which parses `org.gnome.desktop.wm.preferences button-layout`.
+  `apps/appButtons.js`, which parses `org.gnome.desktop.wm.preferences button-layout`.
 - Titlebar buttons (server- and client-side): the button order and set come
   from `gsettings set org.gnome.desktop.wm.preferences button-layout 'appmenu:'`.
   An empty side means no buttons. GTK 3/4 and libadwaita honour it. Changing

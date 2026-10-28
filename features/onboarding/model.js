@@ -90,10 +90,13 @@ export const STEPS = Object.freeze([
     },
     {
         id: 'windows', icon: 'kiwi-window-controls-symbolic',
-        title: N_('Window Controls'),
-        body: N_('Close, minimize and zoom stay on each window and move to the menu bar, at the right, while the window is maximized or touches the menu bar.'),
+        title: N_('Window Buttons'),
+        body: N_('Close, minimize and zoom always stay in each window\'s own title bar. Choose the side they are on.'),
         controls: [
-            { type: 'switch', key: 'show-window-controls', title: N_('Window Controls in the Menu Bar') },
+            {
+                type: 'choice', key: 'window-controls-side', title: N_('Side'),
+                values: ['right', 'left'], labels: [N_('Right'), N_('Left')],
+            },
         ],
     },
     {

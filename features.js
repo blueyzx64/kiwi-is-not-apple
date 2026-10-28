@@ -8,7 +8,7 @@
 // with another feature. Put everything it sets up in the `cleanup` registry it is given.
 //
 // Shared-resource rules, defined once here:
-//   - button-layout: window-controls and app-buttons are mirrors; only one runs.
+//   - button-layout: app-buttons owns it (the user's value is restored on disable).
 //   - Do Not Disturb: the Control Center provides it while on (dnd-button steps aside).
 //   - Stage Manager owns window placement: fullscreen-to-its-own-Space pauses (its saved
 //     value is kept).
@@ -33,10 +33,9 @@ const notificationsInQuickSettings = ctx => calendarRight(ctx) && !bool(ctx, 'ke
 /** @type {object[]} */
 export const FEATURES = [
     {
-        // GTK stylesheets for the apps' own titlebars (macOS traffic lights, hidden buttons,
-        // app fixes). Always runs: it writes an empty block (none) when nothing is wanted.
+        // GTK stylesheets for the apps' own titlebars (macOS traffic lights, app fixes). Always runs: it writes an empty block (none) when nothing is wanted.
         id: 'gtk-theme',
-        load: async () => (await import('./features/windowControls/gtkTheme.js')).GtkTheme,
+        load: async () => (await import('./features/appButtons/gtkTheme.js')).GtkTheme,
     },
     {
         // The macOS menu bar: logo menu, app name and menus (core/appMenus), transparent
@@ -71,19 +70,14 @@ export const FEATURES = [
     },
 
     {
-        // Placed by PanelLayout, which re-sorts when the calendar re-adds the date menu.
-        id: 'window-controls', setting: 'show-window-controls',
-        load: async () => (await import('./features/windowControls/index.js')).WindowControlsFeature,
+        // The apps' own titlebar buttons: Kiwi sets the WM button-layout (side, button set) and
+        // never draws window buttons in the top bar. Always on; core/originals restores the
+        // user's layout.
+        id: 'app-buttons',
+        load: async () => (await import('./features/appButtons/index.js')).AppButtonsFeature,
     },
     {
-        // The mirror of window-controls: the apps' own buttons while the top-bar ones are off.
-        // Both own button-layout; the registry stops the one going off before starting the other.
-        id: 'app-buttons', when: ctx => !bool(ctx, 'show-window-controls'),
-        keys: ['show-window-controls'],
-        load: async () => (await import('./features/windowControls/appButtons.js')).AppButtonsFeature,
-    },
-    {
-        // Sequoia tiling: drag zones, the green-button menu's tiles, Ctrl+Super shortcuts.
+        // Sequoia tiling: drag zones, the drag-to-top layout picker, Ctrl+Super shortcuts.
         // Owns org.gnome.mutter edge-tiling (off while it runs). Asked through 'window-tile-requested'.
         id: 'window-tiling', setting: 'windows-tiling',
         load: async () => (await import('./features/windows/index.js')).WindowTiling,
@@ -116,7 +110,7 @@ export const FEATURES = [
         load: async () => (await import('./features/launchpad/index.js')).Launchpad,
     },
     {
-        // Full screen Split View on the green button; builds on full screen as its own Space
+        // Full screen Split View (shortcuts on a full-screen window); builds on full screen as its own Space
         id: 'split-view', setting: 'split-view',
         load: async () => (await import('./features/splitView/index.js')).SplitView,
     },

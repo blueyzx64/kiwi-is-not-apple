@@ -6,7 +6,7 @@ One page per area: what it does, how to use it, its settings with defaults, its 
 |---|---|---|
 | Menu bar, status items | [menu-bar.md](menu-bar.md) | `menu-bar`, `menu-bar-items`, `calendar`, `quick-settings-notifications`, `dnd-button` |
 | App menus | [app-menus.md](app-menus.md) | `menu-bar` (via `core/appMenus`) |
-| Window controls, green-button menu | [window-controls.md](window-controls.md) | `window-controls`, `app-buttons`, `gtk-theme` |
+| Window buttons (app titlebars) | [window-controls.md](window-controls.md) | `app-buttons`, `gtk-theme` |
 | Tiling, Hide, full screen, Split View, Show Desktop | [windows.md](windows.md) | `window-tiling`, `app-hide`, `move-window-to-new-workspace`, `split-view`, `show-desktop` |
 | Rounded corners | [rounded-corners.md](rounded-corners.md) | `rounded-corners` |
 | Dock, Genie and Scale minimize | [dock.md](dock.md) | `dock`, `minimize-effect` |

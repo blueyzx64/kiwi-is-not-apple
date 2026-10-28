@@ -2,41 +2,37 @@
 // Full screen Split View (macOS, on by default; overhaul plan §12 #1). Builds on full screen as
 // its own Space (features/fullscreenSpace): a full-screen window is alone in its Space.
 //
-//   1. Hovering the green button of a full-screen window (the 'green-button-hover' event of
-//      the top-bar controls) shows "Tile Window to Left/Right of Screen". The windows feature's
-//      green menu (features/windowControls) offers the same by emitting 'split-view-requested'.
+//   1. A shortcut on a full-screen window tiles it to the left or right of the screen
+//      (split-view-left-shortcut, split-view-right-shortcut; macOS offers this on the green
+//      button, which GTK apps' own buttons cannot show on GNOME).
 //   2. The window leaves full screen but stays in its Space (WindowState 'splitView', which
 //      fullscreenSpace honours) and takes that half of the work area.
 //   3. The other half shows thumbnails (live clones) of the other windows; a click moves that
 //      window into the Space, on the other half. Esc or a click on the tiled half cancels: the
 //      window goes back to full screen.
-//   4. The pair ends when one window closes, is minimized, goes full screen, maximizes, or the
-//      green menu's "Exit Full Screen" is chosen: that window goes back to the workspace the
-//      partner came from, and the other one is full screen again, alone in the Space.
+//   4. The pair ends when one window closes, is minimized, goes full screen or maximizes: that
+//      window goes back to the workspace the partner came from, and the other one is full
+//      screen again, alone in the Space.
 //
 // Disable (Kiwi disables on every screen lock) only clears the flags and the picker: windows
 // keep their place and size, so nothing jumps.
 //
 // Shell API: Meta.Window make_fullscreen / unmake_fullscreen / move_resize_frame /
-// change_workspace, Clutter.Clone of window actors (as the overview does), PopupMenu,
-// Main.pushModal; checked on GNOME 50.
+// change_workspace, Clutter.Clone of window actors (as the overview does), Main.pushModal; checked on GNOME 50.
 
 import Clutter from 'gi://Clutter';
 import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import * as A11y from '../../lib/a11y.js';
 import { WindowState, skipsTaskbar } from '../../core/windowState.js';
-import { MENU_CLOSE_ARGS, isMaximized, unmaximizeWindow } from '../../lib/compat.js';
+import { isMaximized, unmaximizeWindow } from '../../lib/compat.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
-import { Glass } from '../../lib/glass.js';
-import { isCandidate, menuEntries, preSplitRect, splitRects, survivorAfter, thumbnailRects } from './model.js';
+import { Keybindings } from '../../lib/keybindings.js';
+import { isCandidate, preSplitRect, splitRects, survivorAfter, thumbnailRects } from './model.js';
 
-// macOS shows the menu after the pointer rests on the green button a moment
-const HOVER_MS = 450;
 const FLAG = 'splitView';
 
 const isNormal = w => w.get_window_type() === Meta.WindowType.NORMAL;
@@ -49,17 +45,15 @@ export class SplitView {
         this._pairs = [];          // {a, b, ws, home, before, reg}
         this._picker = null;       // {win, side, ws, reg, overlay, grab}
         this._settling = null;     // CleanupRegistry while a window waits to leave full screen
-        this._menu = null;
-        this._hover = 0;
     }
 
     enable() {
-        const { events } = this._ctx;
         const cleanup = this._cleanup;
-        events.on('green-button-hover', ({ window, actor, hovered }) => this._hovered(window, actor, hovered), cleanup);
-        events.on('split-view-requested', ({ window, side }) => this.tile(window, side), cleanup);
+        for (const side of ['left', 'right']) {
+            Keybindings.add(cleanup, `split-view-${side}-shortcut`, this._ctx.settings,
+                () => this.tile(global.display.focus_window, side));
+        }
         cleanup.add(() => {
-            this._closeMenu();
             this._settling?.dispose();
             this._settling = null;
             this._cancelPicker({ refullscreen: false });
@@ -86,82 +80,6 @@ export class SplitView {
             inSplit: !!this.pairOf(w),
             isTiled: w === except,
         }) && w.get_monitor() === except.get_monitor());
-    }
-
-    // ---- the green button menu -------------------------------------------------------------
-
-    _hovered(win, actor, hovered) {
-        if (this._hover) {
-            this._cleanup.release(this._hover);
-            this._hover = 0;
-        }
-        if (!hovered || !win || this._menu)
-            return;
-        this._hover = this._cleanup.timeout(HOVER_MS, () => {
-            this._hover = 0;
-            if (actor.hover)
-                this.showMenu(win, actor);
-            return false;
-        }, { name: 'split-view-hover' });
-    }
-
-    /** Show the Split View entries for `win` under `actor` (the green button). */
-    showMenu(win, actor) {
-        const entries = menuEntries({
-            fullscreen: win.is_fullscreen(), inSplit: !!this.pairOf(win),
-            candidates: win.is_fullscreen() ? this._candidates(win).length : 0,
-        });
-        if (!entries.length)
-            return false;
-        this._closeMenu();
-        const _ = this._;
-        const reg = new CleanupRegistry();
-        const menu = new PopupMenu.PopupMenu(actor, 0.5, St.Side.TOP);
-        menu.actor.add_style_class_name('kiwi-split-menu');
-        Main.uiGroup.add_child(menu.actor);
-        menu.actor.hide();
-        const manager = new PopupMenu.PopupMenuManager(actor);
-        manager.addMenu(menu);
-        const glass = Glass.attachMenu(menu);
-        reg.add(() => {
-            glass.destroy();
-            menu.destroy();
-        });
-        const labels = {
-            'tile-left': _('Tile Window to Left of Screen'),
-            'tile-right': _('Tile Window to Right of Screen'),
-            swap: _('Swap Windows'),
-            exit: _('Exit Full Screen'),
-        };
-        for (const entry of entries) {
-            menu.addAction(labels[entry], () => {
-                if (entry === 'tile-left' || entry === 'tile-right')
-                    this.tile(win, entry === 'tile-left' ? 'left' : 'right');
-                else if (entry === 'swap')
-                    this.swap(win);
-                else
-                    this.exit(win);
-            });
-        }
-        reg.connect(menu, 'open-state-changed', (_m, open) => {
-            if (!open)
-                this._cleanup.idle(() => this._menu === reg && this._closeMenu(), { name: 'split-view-menu' });
-        });
-        this._menu = reg;
-        this._menuActor = menu;
-        menu.open();
-        return true;
-    }
-
-    _closeMenu() {
-        const reg = this._menu;
-        if (!reg)
-            return;
-        this._menu = null;
-        if (this._menuActor?.isOpen)
-            this._menuActor.close(MENU_CLOSE_ARGS);
-        this._menuActor = null;
-        reg.dispose();
     }
 
     // ---- tile and pick -----------------------------------------------------------------------
@@ -336,25 +254,5 @@ export class SplitView {
             gone.move_resize_frame(true, before.x, before.y, before.width, before.height);
         if (survivor?.get_compositor_private())
             survivor.make_fullscreen();
-    }
-
-    /** The green menu's "Exit Full Screen" on a window of a pair. */
-    exit(win) {
-        const pair = this.pairOf(win);
-        if (!pair)
-            return;
-        this._end(pair, win);
-        if (pair.home)
-            pair.home.activate_with_focus(win, global.get_current_time());
-    }
-
-    /** Swap the two halves. */
-    swap(win) {
-        const pair = this.pairOf(win);
-        if (!pair)
-            return;
-        const ra = pair.a.get_frame_rect(), rb = pair.b.get_frame_rect();
-        pair.a.move_resize_frame(true, rb.x, rb.y, rb.width, rb.height);
-        pair.b.move_resize_frame(true, ra.x, ra.y, ra.width, ra.height);
     }
 }
