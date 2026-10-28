@@ -20,6 +20,8 @@ export const label = (text, styleClass, opts = {}) => {
 };
 
 export const themed = name => new Gio.ThemedIcon({ name });
+/** The first of `names` the icon theme has. */
+export const themedAny = names => new Gio.ThemedIcon({ names });
 
 export const icon = (gicon, size, styleClass = 'kiwi-notch-icon', fallback = null) =>
     new St.Icon({

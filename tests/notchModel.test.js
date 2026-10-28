@@ -4,7 +4,7 @@ import {
     removeFromShelf, parseUriList, parseGnomeCopiedFiles, parsePlainFiles, displayName, batteryChange,
     UPOWER, connectedHeadphones, newlyConnected, downloadSummary, formatBytes, nextEvent, minutesUntil,
     formatCountdown, formatElapsed, tabDirection, nowRows, pillWidth, SHELF_LIMIT, DROP_FILE_TYPES, inDropZone,
-    dropZone,
+    dropZone, batteryIconNames,
 } from '../features/notch/model.js';
 
 let failed = 0;
@@ -147,4 +147,27 @@ test('drop: uri-list first, the zone grows around a small pill', () => {
     const open = dropZone({ x: 316, y: 0, w: 648, h: 192 }, { x: 0, y: 0, width: 1280 });
     eq(open, { x: 300, y: 0, w: 680, h: 208 });
 });
+test('batteryIconNames: no -100-charging (Adwaita has none): charged from 95 %', () => {
+    eq(batteryIconNames(97, true)[0], 'battery-level-100-charged-symbolic');
+    eq(batteryIconNames(100, true)[0], 'battery-level-100-charged-symbolic');
+    eq(batteryIconNames(94, true)[0], 'battery-level-90-charging-symbolic');
+    eq(batteryIconNames(42, true)[0], 'battery-level-40-charging-symbolic');
+    eq(batteryIconNames(3, false)[0], 'battery-level-0-symbolic');
+    eq(batteryIconNames(NaN, true)[0], 'battery-level-0-charging-symbolic');
+    for (const p of [0, 50, 100])
+        eq(batteryIconNames(p, true).at(-1), 'battery-symbolic');
+});
+test('batteryIconNames: the first choice exists in Adwaita (when the theme is installed)', () => {
+    const dir = '/usr/share/icons/Adwaita/symbolic/status';
+    if (!imports.gi.GLib.file_test(dir, imports.gi.GLib.FileTest.IS_DIR))
+        return;
+    for (let p = 0; p <= 100; p += 5) {
+        for (const charging of [true, false]) {
+            const name = batteryIconNames(p, charging)[0];
+            if (!imports.gi.GLib.file_test(`${dir}/${name}.svg`, imports.gi.GLib.FileTest.EXISTS))
+                throw new Error(`${p}% ${charging}: ${name} missing`);
+        }
+    }
+});
+
 if (failed) { print(`${failed} failed`); imports.system.exit(1); }
