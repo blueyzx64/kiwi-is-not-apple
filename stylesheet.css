@@ -2123,6 +2123,53 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
   opacity: 0.95;
 }
 
+/* ==== features/hoverText/style.css ==== */
+
+/* feature: hover-text */
+/* Hover Text / Hover Typing / Hover Color panel: large text on glass (lib/glass.js gives the
+   fill; a user background colour replaces it inline). Size and colours come inline from the
+   settings. */
+.kiwi-hover-panel {
+    padding: 14px 20px;
+    border-radius: 14px;
+    spacing: 10px;
+    color: #1d1d1f;
+    background-color: rgba(246, 246, 248, 0.92);
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+}
+.kiwi-hover-panel.kiwi-glass-dark {
+    color: #f5f5f7;
+    border-color: rgba(255, 255, 255, 0.16);
+}
+.kiwi-hover-panel-text {
+    font-weight: 500;
+}
+.kiwi-hover-color-row {
+    spacing: 12px;
+}
+.kiwi-hover-color-swatch {
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.25);
+}
+.kiwi-hover-color-hex {
+    font-size: 28px;
+    font-weight: 600;
+    font-feature-settings: "tnum";
+}
+
+/* Outlines: the element under the pointer, the field being typed in, the keyboard focus ring.
+   Width and colour come inline; the accent colour is the default. */
+.kiwi-hover-outline {
+    border: 3px solid -st-accent-color;
+    border-radius: 6px;
+}
+.kiwi-hover-outline.kiwi-hover-outline-focus {
+    border-radius: 8px;
+}
+
 /* ==== features/inputIndicator/style.css ==== */
 
 /* feature: input-indicator */

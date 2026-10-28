@@ -1595,6 +1595,105 @@
         <description>The hue of the colour tint filter, in degrees.</description>
       </key>
 
+      <!-- Hover Text, Hover Typing, Hover Color, Full Keyboard Access highlight (features/hoverText) -->
+      <key name="hover-text" type="b">
+        <default>false</default>
+        <summary>Hover Text</summary>
+        <description>Hold the activation modifier and point at text to see it large in a panel (macOS Accessibility > Hover Text). Reads the text through the accessibility bus; apps that do not expose it show nothing. Off by default.</description>
+      </key>
+      <key name="hover-modifier" type="s">
+        <choices>
+          <choice value="super"/>
+          <choice value="ctrl"/>
+          <choice value="alt"/>
+          <choice value="shift"/>
+        </choices>
+        <default>'super'</default>
+        <summary>Hover Text activation modifier</summary>
+        <description>The key to hold for Hover Text and Hover Color (Super is the macOS Command key). Press it three times quickly to keep them on without holding it (the activation lock); three more presses turn the lock off. With Super, a tap that is not part of a hover or a triple press still opens Spotlight or the overview.</description>
+      </key>
+      <key name="hover-text-size" type="i">
+        <default>36</default>
+        <range min="12" max="128"/>
+        <summary>Hover Text size</summary>
+        <description>The font size of the Hover Text panel, in pixels.</description>
+      </key>
+      <key name="hover-text-color" type="s">
+        <default>''</default>
+        <summary>Hover Text colour</summary>
+        <description>The text colour of the Hover Text and Hover Typing panels as #rrggbb. Empty: the theme's.</description>
+      </key>
+      <key name="hover-background-color" type="s">
+        <default>''</default>
+        <summary>Hover Text background colour</summary>
+        <description>A solid background for the Hover Text and Hover Typing panels as #rrggbb or #rrggbbaa. Empty: Kiwi glass.</description>
+      </key>
+      <key name="hover-highlight-color" type="s">
+        <default>''</default>
+        <summary>Hover Text element highlight colour</summary>
+        <description>The outline drawn around the element under the pointer (Hover Text) and the field being typed in (Hover Typing), as #rrggbb. Empty: the accent colour.</description>
+      </key>
+      <key name="hover-typing" type="b">
+        <default>false</default>
+        <summary>Hover Typing</summary>
+        <description>While you type in a text field, show a large copy of the line you are typing, near the text cursor or in a corner (macOS Accessibility > Hover Text > Hover Typing). Password fields are never shown. Off by default.</description>
+      </key>
+      <key name="hover-typing-size" type="i">
+        <default>36</default>
+        <range min="12" max="128"/>
+        <summary>Hover Typing size</summary>
+        <description>The font size of the Hover Typing panel, in pixels.</description>
+      </key>
+      <key name="hover-typing-position" type="s">
+        <choices>
+          <choice value="caret"/>
+          <choice value="top-left"/>
+          <choice value="top-right"/>
+          <choice value="bottom-left"/>
+          <choice value="bottom-right"/>
+        </choices>
+        <default>'caret'</default>
+        <summary>Hover Typing position</summary>
+        <description>Where the Hover Typing panel goes: by the text cursor, or a corner of the screen.</description>
+      </key>
+      <key name="hover-insertion-point-color" type="s">
+        <default>''</default>
+        <summary>Hover Typing insertion point colour</summary>
+        <description>The colour of the insertion point drawn in the Hover Typing panel, as #rrggbb. Empty: the accent colour.</description>
+      </key>
+      <key name="hover-color" type="b">
+        <default>false</default>
+        <summary>Hover Color</summary>
+        <description>Hold the activation modifier to see a large swatch and the hex value of the colour under the pointer (macOS Accessibility > Hover Text > Hover Color). Off by default.</description>
+      </key>
+      <key name="hover-focus-highlight" type="b">
+        <default>false</default>
+        <summary>Full Keyboard Access highlight</summary>
+        <description>Draw a ring around the item that has the keyboard focus in apps, as it moves (macOS Accessibility > Keyboard > Full Keyboard Access). Reads the focus through the accessibility bus. Off by default.</description>
+      </key>
+      <key name="hover-focus-color" type="s">
+        <default>''</default>
+        <summary>Keyboard focus highlight colour</summary>
+        <description>The colour of the keyboard focus ring as #rrggbb. Empty: the accent colour.</description>
+      </key>
+      <key name="hover-focus-width" type="i">
+        <default>3</default>
+        <range min="1" max="12"/>
+        <summary>Keyboard focus highlight width</summary>
+        <description>The width of the keyboard focus ring, in pixels (macOS: Increase size).</description>
+      </key>
+      <key name="hover-focus-contrast" type="b">
+        <default>false</default>
+        <summary>Keyboard focus highlight high contrast</summary>
+        <description>Draw a dark and a light edge around the focus ring so it shows on any background.</description>
+      </key>
+      <key name="hover-focus-autohide" type="i">
+        <default>0</default>
+        <range min="0" max="60"/>
+        <summary>Keyboard focus highlight auto-hide</summary>
+        <description>Hide the focus ring this many seconds after the focus last moved. 0 keeps it shown.</description>
+      </key>
+
       <!-- Deprecated in v3, unused: kept one release so dconf stays valid, then removed. Nothing reads them except the one-shot migrations in lib/migrations.js and lib/cleanup/ (tests/deprecatedKeys.test.js checks). -->
       <key name="panel-transparency" type="b">
         <default>false</default>

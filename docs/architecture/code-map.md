@@ -117,6 +117,7 @@ pinch, hot corner), `split-view-changed` (Split View), `recording-started` /
 | `wallpaperTint.js` (+`wallpaperModel.js`) | the wallpaper's average colour for the glass tint (async 32×32 decode, cached per URI) |
 | `modalSurface.js` (+`modalLook.js`, `modalModel.js`) | one Kiwi modal at a time (Spotlight, Quick Paste, clipboard popover) |
 | `outsideClick.js` + `inputRing.js` (+`inputRingModel.js`) | a press outside a non-modal popup (notch, widget gallery) closes it and the click is replayed to what lay under it; `replayClick()` for popups that hold a modal grab (the dock stacks) |
+| `atspiBus.js` | the accessibility bus without libatspi: `openA11yBus`, async `call` with a timeout, `getProperty`, `appForPid`, `pidOf` (core/appMenus/atspi.js, features/hoverText) |
 | `keybindings.js` (+`Model`) | registers Kiwi shortcuts, conflict list |
 | `mpris.js` (+`Model`) | MPRIS players |
 | `quickSettings.js` | `readyQuickSettings()`, `whenQuickSettingsReady(cleanup, fn, name)` (bounded wait), `stockKeys(qs)` (stock items by model key) |
@@ -167,6 +168,7 @@ pinch, hot corner), `split-view-changed` (Split View), `recording-started` /
 | `osd/` | `osd` | the Tahoe volume / brightness / keyboard backlight pill under the Control Center button (glass, core/motion), a `ctx.osd` sink; output name and mute from the Shell's Gvc mixer |
 | `dialogs/` | `dialogs` | the Shell's modal dialogs (auth, end session, Run, others) as glass alerts: icon on top, natural-width buttons at the right, accent default; `ModalDialog.prototype.open` injection, undone on close and disable |
 | `colorFilters/` | `color-filters` | greyscale, protanopia / deuteranopia / tritanopia corrections and colour tint: one shader effect (a colour matrix as uniforms) on `global.stage` |
+| `hoverText/` | `hover-text` | Hover Text, Hover Color (hold `hover-modifier`, triple press locks), Hover Typing, keyboard focus ring: pure `model.js` (lock, coordinate mapping, text windows, placement); `atspiSource.js` reads text, focus and caret over the a11y bus (`lib/atspiBus.js`); `view.js` glass panel and outlines in `uiGroup`; holds back the Super tap (`overlay-key`) after a hover while Super is the modifier |
 
 Shared-resource rules (defined once in `features.js`): `app-buttons` alone owns `button-layout`; `control-center` beats `dnd-button`; `stage-manager` beats
 `move-window-to-new-workspace`; the notch forces the calendar to the right.

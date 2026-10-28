@@ -110,7 +110,7 @@ Apple often adds a cue and walks it back two releases later. Follow the newest r
 - **Introduced / changed:** Big Sur-era redesign; Golden Gate guide lists the cursor options.
 - **What it is:** a strong highlight on the focused item; Space activates, arrows move inside groups. Its highlight has **Auto-hide, Increase size, High contrast, Color** (Accessibility → Keyboard → Full Keyboard Access → ⓘ). These options belong to this highlight, not to the text caret or the mouse pointer.
 - **Port to GNOME 50:** draw a ring over the AT-SPI focused object's extents (async a11y bus, as `core/appMenus/atspi.js` does); apps' own focus rings remain.
-- **Kiwi status:** none.
+- **Kiwi status:** **have** (the highlight: `hover-focus-highlight`, colour, width, high contrast, auto-hide; `features/hoverText/`). Focus movement stays with the apps.
 - **Recommendation:** Later (P3), **L**.
 
 ### 2.6 Read & Speak typing feedback
@@ -122,19 +122,20 @@ Apple often adds a cue and walks it back two releases later. Follow the newest r
 - **Introduced / changed:** Catalina; default activation ⌘, triple-press locks it on.
 - **What it is:** hold the modifier over text to see it large in a panel; element-highlight colour outlines the item.
 - **Port to GNOME 50:** AT-SPI text at the pointer; glass panel.
-- **Kiwi status:** none.
+- **Kiwi status:** **have** (`hover-text`, triple-press lock, element highlight; `features/hoverText/`).
 - **Recommendation:** Later (P3), **M–L**.
 
 ### 2.8 Hover Typing
 - **Introduced / changed:** after Hover Text (version not confirmed); refreshed in Tahoe.
 - **What it is:** a large, editable copy of what you type, near the caret or in a corner, with the field outlined; own font, size and colours, including the insertion-point colour.
 - **Port to GNOME 50:** AT-SPI `text-changed` + caret events; only apps that expose text.
-- **Kiwi status:** none.
+- **Kiwi status:** **have** (`hover-typing`; never for password fields; `features/hoverText/`).
 - **Recommendation:** Later (P3), **L**.
 
 ### 2.9 Hover Color
 - **Introduced / changed:** newest of the Hover family.
 - **What it is:** shows a large swatch of the colour under the pointer.
+- **Kiwi status:** **have** (`hover-color`: swatch and hex through `Shell.Screenshot.pick_color`; `features/hoverText/`).
 - **Recommendation:** Later (P3), **M** (needs a screen read of the pixel under the pointer).
 
 ### 2.10 Zoom follows keyboard focus

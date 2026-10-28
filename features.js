@@ -279,6 +279,13 @@ export const FEATURES = [
         load: async () => (await import('./features/colorFilters/index.js')).ColorFilters,
     },
     {
+        // Hover Text, Hover Typing, Hover Color and the keyboard focus ring (macOS Accessibility);
+        // runs while any part is on. Reads apps through AT-SPI (lib/atspiBus.js), never blocking
+        id: 'hover-text',
+        when: ctx => ['hover-text', 'hover-typing', 'hover-color', 'hover-focus-highlight'].some(k => bool(ctx, k)),
+        load: async () => (await import('./features/hoverText/index.js')).HoverText,
+    },
+    {
         // Desktop widgets above the wallpaper, below windows (core/widgets is the shared model)
         id: 'desktop-widgets', setting: 'widgets',
         load: async () => (await import('./features/widgets/index.js')).DesktopWidgets,
