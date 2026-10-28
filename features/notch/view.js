@@ -168,6 +168,11 @@ export class NotchView {
         // and destroyed the button before it could emit 'clicked'.
         cleanup.connect(this._island, 'button-press-event', (_a, event) => {
             this._pressOnSurface = !this._onControl(this._eventActor(event));
+            // The press decides: the hover delay must not open the dashboard between press and
+            // release, or the click would land on a shape already growing (and pin it, or close
+            // it, depending on a race)
+            if (this._pressOnSurface)
+                this._cancelHoverIntent();
             return this._pressOnSurface ? Clutter.EVENT_STOP : Clutter.EVENT_PROPAGATE;
         });
         cleanup.connect(this._island, 'button-release-event', (_a, event) =>
@@ -180,6 +185,7 @@ export class NotchView {
         this._plate = new InputRing(cleanup, 'kiwi-notch-plate', {
             press: () => {
                 this._pressOnSurface = true;
+                this._cancelHoverIntent();
                 return Clutter.EVENT_STOP;
             },
             release: event => this._surfaceRelease(event, this._pressOnSurface),
@@ -502,10 +508,18 @@ export class NotchView {
         const request = { spring: growing ? GROW_SPRING : SHRINK_SPRING };
         this._springs = [
             this._motion.spring(island, 'width', size.w,
-                { ...request, onDone: finished => finished && this._reportShelf() }, this._anim),
+                { ...request, onDone: finished => finished && this._settled() }, this._anim),
             this._motion.spring(island, 'height', size.h, request, this._anim),
             this._motion.spring(island, 'x', x, request, this._anim),
         ];
+    }
+
+    // The shape reached its target: what waited for a still frame runs now
+    _settled() {
+        this._reportShelf();
+        const dash = this._dash;
+        if (!this._destroyed && dash?.prebuildArgs)
+            this._prebuildTabs(...dash.prebuildArgs);
     }
 
     /** @param {boolean} show the island is on screen at all (bar visible, not hidden by fullscreen) */
@@ -697,7 +711,7 @@ export class NotchView {
             x_expand: true, y_expand: true, clip_to_allocation: true,
         });
         page.add_child(holder);
-        this._dash = { page, buttons, holder, bodies: new Map(), current: null, tab: null, live: [], prebuild: 0, sliding: false };
+        this._dash = { page, buttons, holder, bodies: new Map(), current: null, tab: null, live: [], prebuild: 0, prebuildArgs: null, sliding: false };
         this._fillDashboard(vm, ctx);
         return page;
     }
@@ -795,6 +809,14 @@ export class NotchView {
         const dash = this._dash;
         if (dash.prebuild || dash.bodies.size === TABS.length)
             return;
+        // Not while the shape springs open: building two tab bodies takes longer than a frame,
+        // and an idle callback runs in the first gap between frames, which stalled the grow
+        // mid-way. The shape's settling (_place) brings it back.
+        if (this._springs.some(sp => sp.running)) {
+            dash.prebuildArgs = [vm, ctx];
+            return;
+        }
+        dash.prebuildArgs = null;
         dash.prebuild = this._cleanup.idle(() => {
             dash.prebuild = 0;
             if (this._destroyed || this._dash !== dash)

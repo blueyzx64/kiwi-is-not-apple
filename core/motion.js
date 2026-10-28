@@ -37,6 +37,30 @@ export class Motion {
         this._events = events;
         this._env = { reducedMotion: false, animations: true };
         this._cleanup = null;
+        this._springsOn = new WeakMap();   // actor -> Map(prop -> running spring handle)
+    }
+
+    // The spring running on `prop` of `actor`, if any, is stopped where it is (onDone(false))
+    _cancelSpring(actor, prop) {
+        this._springsOn.get(actor)?.get(prop)?.cancel();
+    }
+
+    _trackSpring(actor, prop, handle) {
+        let byProp = this._springsOn.get(actor);
+        if (!byProp) {
+            byProp = new Map();
+            this._springsOn.set(actor, byProp);
+        }
+        byProp.set(prop, handle);
+    }
+
+    _untrackSpring(actor, prop, handle) {
+        const byProp = this._springsOn.get(actor);
+        if (byProp?.get(prop) !== handle)
+            return;
+        byProp.delete(prop);
+        if (!byProp.size)
+            this._springsOn.delete(actor);
     }
 
     /** Start following the system preferences (extension enable). */
@@ -95,6 +119,8 @@ export class Motion {
     ease(actor, props, request = {}, owner = null) {
         const plan = resolve(request, this._env);
         const { animate, jump } = splitProps(props, plan.transforms);
+        for (const prop of Object.keys(props))
+            this._cancelSpring(actor, prop);
         if (Object.keys(jump).length)
             actor.set(jump);
         const names = Object.keys(animate);
@@ -220,6 +246,7 @@ export class Motion {
             return this.ease(actor, { [prop]: to }, { duration: plan.duration, onDone: request.onDone }, owner);
 
         const { duration, keys, values } = springKeyframes(plan.spring);
+        this._cancelSpring(actor, prop);
         const from = actor[prop];
         const span = to - from;
         const last = keys.length - 1;
@@ -239,6 +266,7 @@ export class Motion {
             if (destroyId)
                 actor.disconnect(destroyId);
             timeline.stop();
+            this._untrackSpring(actor, prop, handle);
             if (token)
                 owner?.release?.(token);
             request.onDone?.(finished);
@@ -267,6 +295,7 @@ export class Motion {
             },
         };
         token = owner?.add(() => handle.cancel()) ?? 0;
+        this._trackSpring(actor, prop, handle);
         timeline.start();
         return handle;
     }
