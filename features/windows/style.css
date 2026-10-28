@@ -40,25 +40,47 @@
 
 /* The snap bar of the drag (snapBar.js, Windows 11 Snap Layouts). lib/glass.js gives the bar its
  * glass; the corner radius morphs inline between the handle's and this one. No box-shadow: St
- * draws it as a rectangle on a rounded actor. */
+ * draws it as a rectangle on a rounded actor. As on Windows 11 the panel is near-opaque, so the
+ * layouts read over any window, and every layout is an outlined frame of solid zones in the
+ * panel's opposite shade. Dark by default; .kiwi-light (snapBar.js, from the glass env) flips it. */
 .kiwi-snap-bar {
   border-radius: 18px;
+  background-color: rgba(36, 36, 40, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.kiwi-snap-bar.kiwi-light {
+  background-color: rgba(246, 246, 248, 0.92);
+  border-color: rgba(0, 0, 0, 0.12);
 }
 
 .kiwi-snap-grab {
   border-radius: 2px;
-  background-color: rgba(128, 128, 128, 0.75);
+  background-color: rgba(255, 255, 255, 0.7);
+}
+
+.kiwi-light .kiwi-snap-grab {
+  background-color: rgba(0, 0, 0, 0.45);
 }
 
 .kiwi-snap-thumb {
-  border: 1px solid rgba(128, 128, 128, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 7px;
-  background-color: rgba(128, 128, 128, 0.12);
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.kiwi-light .kiwi-snap-thumb {
+  border-color: rgba(0, 0, 0, 0.2);
+  background-color: rgba(0, 0, 0, 0.03);
 }
 
 .kiwi-snap-zone {
   border-radius: 4px;
-  background-color: rgba(128, 128, 128, 0.38);
+  background-color: rgba(255, 255, 255, 0.62);
+}
+
+.kiwi-light .kiwi-snap-zone {
+  background-color: rgba(0, 0, 0, 0.34);
 }
 
 /* Faded in over the zone by a spring, not by :hover (no hover reaches it during a drag) */

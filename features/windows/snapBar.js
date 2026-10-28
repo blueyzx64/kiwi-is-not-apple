@@ -199,6 +199,13 @@ export class SnapBar {
             this._cleanup.connect(bar, 'notify::width', () => this._syncRadius());
             const glass = Glass.attach(bar, { surface: 'menus', role: 'content' });
             this._cleanup.add(() => glass.destroy());
+            // Light or dark panel, as Windows 11's flyout: the zones take the opposite shade
+            Glass.watch(this._cleanup, ({ env }) => {
+                if (env.dark)
+                    bar.remove_style_class_name('kiwi-light');
+                else
+                    bar.add_style_class_name('kiwi-light');
+            });
             this._grab = new St.Widget({
                 style_class: 'kiwi-snap-grab', width: GRAB_W, height: GRAB_H,
                 x: Math.round((HANDLE_W - GRAB_W) / 2), y: Math.round((HANDLE_H - GRAB_H) / 2),
