@@ -23,6 +23,7 @@ One page per area: what it does, how to use it, its settings with defaults, its 
 | Text cursor badges, Emoji & Symbols | [input.md](input.md) | `input-indicator`, `emoji-picker` |
 | Pointer: shake to locate, hide while typing, size, colours | [pointer.md](pointer.md) | `pointer` |
 | Volume pill, glass dialogs, colour filters | [system-ui.md](system-ui.md) | `osd`, `dialogs`, `color-filters` |
+| Hover Text, Hover Typing, Hover Color, keyboard focus highlight | [hover-text.md](hover-text.md) | `hover-text` |
 | Appearance | [appearance.md](appearance.md) | `appearance`, `popup-menu-styling` |
 | Liquid Glass | [liquid-glass.md](liquid-glass.md) | `liquid-glass` |
 | Setup Assistant | [onboarding.md](onboarding.md) | `onboarding` |
@@ -30,6 +31,6 @@ One page per area: what it does, how to use it, its settings with defaults, its 
 Related: [code map](../architecture/code-map.md), [how to write a feature](../architecture/conventions.md).
 
 Owner decisions that apply to every feature:
-- Features are on by default unless the macOS default is off (Stage Manager, hot corners, magnification, colour filters).
+- Features are on by default unless the macOS default is off (Stage Manager, hot corners, magnification, colour filters, Hover Text).
 - This release supports GNOME 50 on Fedora 44 Workstation only. The 48/49/51 code paths in `lib/compat.js` stay for later.
 - Enable and disable are exact mirrors: everything a feature changes is put back.

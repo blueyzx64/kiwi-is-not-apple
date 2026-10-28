@@ -28,15 +28,13 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import Meta from 'gi://Meta';
 
+import { IFACE, appForPid, call, openA11yBus } from '../../lib/atspiBus.js';
 import {
     ROLE, STATE, ITEM_ROLES, atspiPopoverItems, atspiToMenus, findPrimaryMenuButton, findRole, hasState, labelTarget,
 } from './nativeModel.js';
 
-const ACCESSIBLE = 'org.a11y.atspi.Accessible';
-const ACTION = 'org.a11y.atspi.Action';
-const REGISTRY = 'org.a11y.atspi.Registry';
-const ROOT = '/org/a11y/atspi/accessible/root';
-const TIMEOUT_MS = 1500;
+const ACCESSIBLE = IFACE.ACCESSIBLE;
+const ACTION = IFACE.ACTION;
 const NODE_BUDGET = 1500;
 const MAX_DEPTH = 48; // GTK 4 nests a popover item about 30 levels deep
 const OPEN_POLLS = 10;
@@ -50,20 +48,6 @@ function sleep(ms) {
         resolve();
         return GLib.SOURCE_REMOVE;
     }));
-}
-
-function call(conn, dest, path, iface, method, params, replyType, cancellable, flags = Gio.DBusCallFlags.NO_AUTO_START) {
-    return new Promise((resolve, reject) => {
-        conn.call(dest, path, iface, method, params,
-            replyType ? new GLib.VariantType(replyType) : null,
-            flags, TIMEOUT_MS, cancellable, (c, res) => {
-                try {
-                    resolve(c.call_finish(res));
-                } catch (e) {
-                    reject(e);
-                }
-            });
-    });
 }
 
 export class AtspiProvider {
@@ -150,24 +134,8 @@ export class AtspiProvider {
 
     _connection() {
         if (!this._bus) {
-            this._bus = (async () => {
-                // The accessibility bus is D-Bus activated: GNOME has it running already, and
-                // asking for its address starts it elsewhere
-                const reply = await call(Gio.DBus.session, 'org.a11y.Bus', '/org/a11y/bus', 'org.a11y.Bus',
-                    'GetAddress', null, '(s)', this._cancellable, Gio.DBusCallFlags.NONE);
-                const [address] = reply.deepUnpack();
-                return new Promise((resolve, reject) => {
-                    Gio.DBusConnection.new_for_address(address,
-                        Gio.DBusConnectionFlags.AUTHENTICATION_CLIENT | Gio.DBusConnectionFlags.MESSAGE_BUS_CONNECTION,
-                        null, this._cancellable, (_o, res) => {
-                            try {
-                                resolve(Gio.DBusConnection.new_for_address_finish(res));
-                            } catch (e) {
-                                reject(e);
-                            }
-                        });
-                });
-            })();
+            // The bus is D-Bus activated (lib/atspiBus.js)
+            this._bus = openA11yBus(this._cancellable);
             this._bus.catch(() => {
                 this._bus = null; // try again next time (the bus may start later)
             });
@@ -176,16 +144,8 @@ export class AtspiProvider {
     }
 
     // The registered application whose bus name belongs to the window's process
-    async _appFor(conn, pid, cancellable) {
-        const reply = await call(conn, REGISTRY, ROOT, ACCESSIBLE, 'GetChildren', null, '(a(so))', cancellable,
-            Gio.DBusCallFlags.NONE);
-        const [apps] = reply.deepUnpack();
-        const pids = await Promise.all(apps.map(([name]) =>
-            call(conn, 'org.freedesktop.DBus', '/org/freedesktop/DBus', 'org.freedesktop.DBus',
-                'GetConnectionUnixProcessID', new GLib.Variant('(s)', [name]), '(u)', cancellable)
-                .then(r => r.deepUnpack()[0], () => 0)));
-        const i = pids.indexOf(pid);
-        return i >= 0 ? { name: apps[i][0], path: apps[i][1] } : null;
+    _appFor(conn, pid, cancellable) {
+        return appForPid(conn, pid, cancellable);
     }
 
     // The window's frame: the app's top-level whose name is the window title, else the active

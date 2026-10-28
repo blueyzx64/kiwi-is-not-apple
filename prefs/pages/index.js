@@ -24,6 +24,7 @@ import * as clipboardPrefs from '../../features/clipboard/prefs.js';
 import * as widgetsPrefs from '../../features/widgets/prefs.js';
 import * as desktopIconsPrefs from '../../features/desktopIcons/prefs.js';
 import * as screenshotsPrefs from '../../features/screenshots/prefs.js';
+import * as hoverTextPrefs from '../../features/hoverText/prefs.js';
 import { addFeatureGroups } from '../widgets.js';
 
 const N_ = s => s;
@@ -56,6 +57,7 @@ export const SECTIONS = [
         featurePage('clipboard', N_('Clipboard'), 'edit-paste-symbolic', clipboardPrefs),
         featurePage('screenshots', N_('Screenshots'), 'camera-photo-symbolic', screenshotsPrefs),
         keyboard,
+        featurePage('hover-text', N_('Hover Text'), 'preferences-desktop-accessibility-symbolic', hoverTextPrefs),
     ] },
     { title: N_('Look'), pages: [appearance] },
     { title: N_('Kiwi'), pages: [about] },

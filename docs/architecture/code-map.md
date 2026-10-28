@@ -119,6 +119,7 @@ pinch, hot corner), `split-view-changed` (Split View), `recording-started` /
 | `wallpaperTint.js` (+`wallpaperModel.js`) | the wallpaper's average colour for the glass tint (async 32×32 decode, cached per URI) |
 | `modalSurface.js` (+`modalLook.js`, `modalModel.js`) | one Kiwi modal at a time (Spotlight, Quick Paste, clipboard popover) |
 | `outsideClick.js` + `inputRing.js` (+`inputRingModel.js`) | a press outside a non-modal popup (notch, widget gallery) closes it and the click is replayed to what lay under it; `replayClick()` for popups that hold a modal grab (the dock stacks) |
+| `atspiBus.js` | the accessibility bus without libatspi: `openA11yBus`, async `call` with a timeout, `getProperty`, `appForPid`, `pidOf` (core/appMenus/atspi.js, features/hoverText) |
 | `keybindings.js` (+`Model`) | registers Kiwi shortcuts, conflict list |
 | `mpris.js` (+`Model`) | MPRIS players |
 | `quickSettings.js` | `readyQuickSettings()`, `whenQuickSettingsReady(cleanup, fn, name)` (bounded wait), `stockKeys(qs)` (stock items by model key) |
@@ -187,6 +188,7 @@ state machine), `replacementsModel.js` (match, expand, Backspace undo), `engines
 | `inputIndicator/` | `input-indicator`, `caps-lock-switch`, `input-per-window`, `input-key-action` | `index.js`: Sonoma badges at the caret (⇪ stays and follows the caret while Caps Lock is on; input source and opt-in Caps-off badges fade; never in Shell password fields); `capsSwitch.js`: a Caps Lock tap switches Latin ↔ non-Latin source, hold keeps Caps Lock (tap/hold from the core idle monitor); `perWindow.js`: owns `org.gnome.desktop.input-sources per-window` (core/originals); `inputKey.js`: one key changes the source or opens Emoji & Symbols; pure `model.js` |
 | `colorFilters/` | `color-filters` | greyscale, protanopia / deuteranopia / tritanopia corrections and colour tint: one shader effect (a colour matrix as uniforms) on `global.stage` |
 | `pointer/` | `pointer` | shake to locate (`ShakeDetector`, a big copy of the cursor sprite over `Meta.CursorTracker` `position-invalidated`), hide while typing (`TypingHider` on `lib/caret.js` `onMoved`, `inhibit_cursor_visibility`), cursor size and a recoloured Xcursor theme (`theme.js`, `~/.local/share/icons/Kiwi-Pointer-*`) through core/originals |
+| `hoverText/` | `hover-text` | Hover Text, Hover Color (hold `hover-modifier`, triple press locks), Hover Typing, keyboard focus ring: pure `model.js` (lock, coordinate mapping, text windows, placement); `atspiSource.js` reads text, focus and caret over the a11y bus (`lib/atspiBus.js`); `view.js` glass panel and outlines in `uiGroup`; holds back the Super tap (`overlay-key`) after a hover while Super is the modifier |
 
 Shared-resource rules (defined once in `features.js`): `app-buttons` alone owns `button-layout`; `control-center` beats `dnd-button`; `stage-manager` beats
 `move-window-to-new-workspace`; the notch forces the calendar to the right.
