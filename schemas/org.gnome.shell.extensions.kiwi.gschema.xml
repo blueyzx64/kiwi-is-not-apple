@@ -993,6 +993,11 @@
         <summary>Desktop widget layout</summary>
         <description>The placed widgets as JSON (kind, size, options, monitor and grid position). Empty means no widgets. Written by Kiwi when you add, move, resize or remove a widget.</description>
       </key>
+      <key name="widgets-notes" type="s">
+        <default>''</default>
+        <summary>Note widget text</summary>
+        <description>The text of the Note widgets as JSON ({"notes": {"id": "text"}}). Written by Kiwi while you type on a Note widget; empty means no notes.</description>
+      </key>
       <key name="widgets-style" type="s">
         <choices>
           <choice value="automatic"/>
