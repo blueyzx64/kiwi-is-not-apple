@@ -219,6 +219,12 @@ export const FEATURES = [
         load: async () => (await import('./features/emoji/index.js')).EmojiPicker,
     },
     {
+        // Sticky Keys display, Accessibility Shortcuts panel, Keyboard Viewer, Zoom follow
+        // (owns the magnifier's focus-tracking and caret-tracking through core/originals)
+        id: 'keyboard-access', setting: 'keyboard-access',
+        load: async () => (await import('./features/keyboardAccess/index.js')).KeyboardAccess,
+    },
+    {
         // Pill in the centre of the bar for banners, media and volume. Replaces the stock banners
         // and OSD (parts switch live on notch-notifications / notch-live-activities; volume and brightness
         // come from core/osd.js while osd-location is 'notch').

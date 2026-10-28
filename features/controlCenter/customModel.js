@@ -11,6 +11,7 @@
 // - planCustom() turns a layout into the grid plan the adapter applies (order, spans,
 //   icon-only squares, which stock items to hide).
 
+import { a11ySwitches } from '../../lib/a11ySettingsModel.js';
 import { COLUMNS, KIWI_TOGGLES, MORE_HEADER_ID, place } from './model.js';
 
 const N_ = s => s;
@@ -64,22 +65,10 @@ const STOCK_CONTROLS = [
     ['background-apps', 'system', N_('Background Apps'), 'application-x-executable-symbolic', MODULE],
 ];
 
-const SETTING_CONTROLS = [
-    ['text-size', N_('Text Size'), 'zoom-in-symbolic',
-        { schema: 'org.gnome.desktop.interface', key: 'text-scaling-factor', type: 'd', on: 1.25, off: 1.0 }],
-    ['high-contrast', N_('Increase Contrast'), 'view-reveal-symbolic',
-        { schema: 'org.gnome.desktop.a11y.interface', key: 'high-contrast', type: 'b' }],
-    ['reduce-motion', N_('Reduce Motion'), 'emblem-synchronizing-symbolic',
-        { schema: 'org.gnome.desktop.interface', key: 'enable-animations', type: 'b', invert: true }],
-    ['screen-reader', N_('VoiceOver'), 'audio-speakers-symbolic',
-        { schema: 'org.gnome.desktop.a11y.applications', key: 'screen-reader-enabled', type: 'b' }],
-    ['screen-keyboard', N_('Accessibility Keyboard'), 'input-keyboard-symbolic',
-        { schema: 'org.gnome.desktop.a11y.applications', key: 'screen-keyboard-enabled', type: 'b' }],
-    ['sticky-keys', N_('Sticky Keys'), 'preferences-desktop-keyboard-symbolic',
-        { schema: 'org.gnome.desktop.a11y.keyboard', key: 'stickykeys-enable', type: 'b' }],
-    ['visual-alerts', N_('Flash Screen for Alerts'), 'dialog-warning-symbolic',
-        { schema: 'org.gnome.desktop.wm.preferences', key: 'visual-bell', type: 'b' }],
-];
+// GNOME setting switches shared with the Accessibility Shortcuts panel (lib/a11ySettingsModel.js)
+const SETTING_CONTROLS = a11ySwitches([
+    'text-size', 'high-contrast', 'reduce-motion', 'screen-reader', 'screen-keyboard', 'sticky-keys', 'visual-alerts',
+]).map(s => [s.id, s.title, s.icon, s.binding]);
 
 const ACTION_CONTROLS = [
     ['screenshot', 'actions', N_('Screenshot'), 'camera-photo-symbolic', TOGGLE],

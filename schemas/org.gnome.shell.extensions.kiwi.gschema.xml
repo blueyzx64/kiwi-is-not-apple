@@ -690,6 +690,55 @@
         <description>Written by the emoji popover, newest first. Kept only in your settings.</description>
       </key>
 
+      <!-- Keyboard accessibility (features/keyboardAccess) -->
+      <key name="keyboard-access" type="b">
+        <default>true</default>
+        <summary>Keyboard accessibility</summary>
+        <description>macOS keyboard accessibility aids: the Sticky Keys display, the Accessibility Shortcuts panel, the Keyboard Viewer and how Zoom follows the keyboard. GNOME keeps running Sticky Keys, Slow Keys and Zoom.</description>
+      </key>
+      <key name="kbd-a11y-sticky-display" type="b">
+        <default>true</default>
+        <summary>Display pressed keys on screen</summary>
+        <description>While Sticky Keys is on, show the latched and locked modifier keys (⌃ ⌥ ⇧ ⌘) in a corner of the screen, like macOS.</description>
+      </key>
+      <key name="kbd-a11y-sticky-corner" type="s">
+        <choices>
+          <choice value="top-right"/>
+          <choice value="top-left"/>
+          <choice value="bottom-right"/>
+          <choice value="bottom-left"/>
+        </choices>
+        <default>'top-right'</default>
+        <summary>Screen area for the Sticky Keys display</summary>
+        <description>The corner where the modifier symbols appear (macOS: Screen area for display).</description>
+      </key>
+      <key name="kbd-a11y-slowkeys-indicator" type="b">
+        <default>false</default>
+        <summary>Show when Slow Keys is on</summary>
+        <description>Show a "Slow Keys" chip in the Sticky Keys display area while Slow Keys is on. Off by default, as on macOS.</description>
+      </key>
+      <key name="kbd-a11y-panel-shortcut" type="as">
+        <default><![CDATA[['<Super><Alt>F5']]]></default>
+        <summary>Accessibility Shortcuts panel shortcut</summary>
+        <description>Opens the panel of accessibility switches (macOS: Option-Command-F5). Empty means no shortcut.</description>
+      </key>
+      <key name="kbd-a11y-viewer-shortcut" type="as">
+        <default>[]</default>
+        <summary>Keyboard Viewer shortcut</summary>
+        <description>Shows or hides the Keyboard Viewer. It also opens from the input-source menu. Empty means no shortcut.</description>
+      </key>
+      <key name="kbd-a11y-zoom-follow" type="s">
+        <choices>
+          <choice value="system"/>
+          <choice value="always"/>
+          <choice value="typing"/>
+          <choice value="never"/>
+        </choices>
+        <default>'system'</default>
+        <summary>Zoom follows the keyboard focus</summary>
+        <description>macOS "Follow keyboard focus": 'always' moves the magnified image with the focus and the text cursor, 'typing' only with the text cursor, 'never' not at all. 'system' leaves GNOME's magnifier settings alone.</description>
+      </key>
+
       <!-- Control Center (features/controlCenter) -->
       <key name="control-center" type="b">
         <default>true</default>
