@@ -132,7 +132,10 @@ export default {
 
         return {
             update(d) {
-                const timers = (d?.timers ?? []).slice(-SHOWN[size]).reverse();
+                // Running ones first, then paused, then finished; the newest first within each
+                const rank = { running: 0, paused: 1, finished: 2 };
+                const timers = [...(d?.timers ?? [])].reverse()
+                    .sort((a, b) => (rank[a.state] ?? 3) - (rank[b.state] ?? 3)).slice(0, SHOWN[size]);
                 const now = d?.now ?? Date.now();
                 const any = timers.length > 0;
                 presets.reactive = !!d?.available;
