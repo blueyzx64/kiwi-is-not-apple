@@ -63,10 +63,11 @@ export function formatClock(hours, minutes, format) {
 }
 
 /**
- * The notification card fits its content: header, title and two lines of body, plus a row of
- * action buttons when there are any.
+ * The notification card fits its content: the header row centred in the 32px band level with the
+ * top bar (3 + 26 + 3), title and two lines of body, plus a row of action buttons when there are
+ * any; 16 below, on the 4px grid.
  * @returns {{w: number, h: number, r: number}}
  */
 export function cardSize({ actions }) {
-    return { w: 430, h: actions ? 156 : 116, r: DASH_SIZE.r };
+    return { w: 430, h: actions ? 148 : 108, r: DASH_SIZE.r };
 }

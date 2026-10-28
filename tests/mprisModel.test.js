@@ -1,5 +1,5 @@
 // Run: gjs -m tests/mprisModel.test.js
-import { hasTrack, pickPlayer, showsActivity, NO_TRACK_ID } from '../lib/mprisModel.js';
+import { hasTrack, pickPlayer, showsActivity, raiseAction, NO_TRACK_ID } from '../lib/mprisModel.js';
 
 let failed = 0;
 function test(name, fn) {
@@ -69,6 +69,21 @@ test('showsActivity: playing and paused only', () => {
     eq(showsActivity('Paused'), true);
     eq(showsActivity('Stopped'), false);
     eq(showsActivity(undefined), false);
+});
+
+test('raiseAction: a player that left the bus never raises or launches anything', () => {
+    for (const canRaise of [true, false]) {
+        for (const appRunning of [true, false])
+            eq(raiseAction({ present: false, canRaise, appRunning }), null);
+    }
+    eq(raiseAction(), null);
+});
+test('raiseAction: the player\'s own Raise first, then the running app, then by its process', () => {
+    eq(raiseAction({ present: true, canRaise: true, appRunning: false }), 'raise');
+    eq(raiseAction({ present: true, canRaise: true, appRunning: true }), 'raise');
+    eq(raiseAction({ present: true, canRaise: false, appRunning: true }), 'activate');
+    // Known desktop entry but not running (a daemon, a different Flatpak id): never activate it
+    eq(raiseAction({ present: true, canRaise: false, appRunning: false }), 'pid');
 });
 
 if (failed) {

@@ -13,7 +13,7 @@ import St from 'gi://St';
 import * as Util from 'resource:///org/gnome/shell/misc/util.js';
 
 import * as A11y from '../../lib/a11y.js';
-import { label, icon, themed, button, artwork, track, column, setText } from './ui.js';
+import { label, icon, themed, button, artwork, artButton, track, column, setText } from './ui.js';
 import { trackProgress, seekTarget, formatClock } from './dashboardModel.js';
 export { DASH_SIZE } from './dashboardModel.js';
 import { nowRows } from './model.js';
@@ -34,7 +34,7 @@ function mediaColumn(env, media, width, live) {
 
     // Art, title and artist, the app icon in the top-right corner
     const top = new St.BoxLayout({ style_class: 'kiwi-notch-media-top' });
-    top.add_child(artwork(media, 68, 'kiwi-notch-artwork-large'));
+    top.add_child(artButton(artwork(media, 68, 'kiwi-notch-artwork-large'), env._('Show the player'), env.h.onRaisePlayer));
     const text = new St.BoxLayout({
         style_class: 'kiwi-notch-media-text',
         orientation: Clutter.Orientation.VERTICAL,
@@ -448,6 +448,9 @@ export function widgetsTab(env, ctx) {
         env._('Mic Off'), ctx.mic.muted, () => env.h.onToggleMic(), ctx.mic.available);
     ctl.add_child(toggles);
     if (ctx.timersEnabled) {
+        // Toggles at the top and the timer presets at the bottom, the same 12px from the card's
+        // edges, instead of both stacked at the top over an empty band
+        toggles.y_expand = true;
         const presets = new St.BoxLayout({ style_class: 'kiwi-notch-presets' });
         presets.add_child(icon(themed('alarm-symbolic'), 14, 'kiwi-notch-glyph kiwi-notch-tint-orange'));
         for (const m of TIMER_PRESETS) {
