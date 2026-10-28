@@ -198,13 +198,34 @@ export function buildNotifications(groups, ctl) {
 }
 
 /**
- * The widgets area: the registered widgets, or placeholders while there are none.
+ * The widgets area: the registered widgets, or placeholders while there are none, and the
+ * "Edit Widgets…" pill; while editing, the chooser and Done.
  *
  * @param {{id: string, create: function(): Clutter.Actor}[]} widgets ordered
- * @param {?function(): void} onEdit "Edit Widgets…" (null: no button)
+ * @param {{editing?: boolean, editor?: function(): Clutter.Actor, onEdit?: ?function(): void}} [edit]
+ *   onEdit toggles editing (null: no button); editor builds the chooser
  */
-export function buildWidgets(_, widgets, onEdit = null) {
+export function buildWidgets(_, widgets, { editing = false, editor = null, onEdit = null } = {}) {
     const box = new St.BoxLayout({ style_class: 'kiwi-nc-section kiwi-nc-widgets', orientation: Clutter.Orientation.VERTICAL, x_expand: true });
+    const editButton = () => {
+        const edit = new St.Button({
+            style_class: 'kiwi-nc-edit-widgets kiwi-pill-button', label: editing ? _('Done') : _('Edit Widgets…'),
+            can_focus: true, x_align: Clutter.ActorAlign.CENTER,
+        });
+        edit.connect('clicked', onEdit);
+        return edit;
+    };
+    if (editing && editor) {
+        box.add_child(new St.Label({ text: _('Widgets'), style_class: 'kiwi-nc-group-title kiwi-section-header' }));
+        try {
+            box.add_child(editor());
+        } catch (e) {
+            console.error('[Kiwi] Notification Center widget chooser failed:', e);
+        }
+        if (onEdit)
+            box.add_child(editButton());
+        return box;
+    }
     let added = 0;
     for (const widget of widgets) {
         try {
@@ -218,14 +239,8 @@ export function buildWidgets(_, widgets, onEdit = null) {
         }
     }
     if (added) {
-        if (onEdit) {
-            const edit = new St.Button({
-                style_class: 'kiwi-nc-edit-widgets kiwi-pill-button', label: _('Edit Widgets…'), can_focus: true,
-                x_align: Clutter.ActorAlign.CENTER,
-            });
-            edit.connect('clicked', onEdit);
-            box.add_child(edit);
-        }
+        if (onEdit)
+            box.add_child(editButton());
         return box;
     }
     const row = new St.BoxLayout({ style_class: 'kiwi-nc-placeholder-row', x_expand: true });
@@ -236,5 +251,7 @@ export function buildWidgets(_, widgets, onEdit = null) {
         row.add_child(tile);
     }
     box.add_child(row);
+    if (onEdit)
+        box.add_child(editButton());
     return box;
 }

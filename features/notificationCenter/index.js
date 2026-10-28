@@ -15,8 +15,9 @@
 // Widgets (L11's widget model): ctx.features.instance('notification-center')
 //   .addWidget(owner, {id, order, create: () => Clutter.Actor}) -> {release()}
 // create() runs on every open; the actor is destroyed when the column closes. Placeholders
-// show while none is registered. The feature registers its own rows of core/widgets views
-// (WIDGET_ROWS); "Edit Widgets…" hands over to the desktop widgets' gallery.
+// show while none is registered. The feature registers its own widgets: core/widgets views
+// (any kind, small, medium or large) from notification-center-widget-list, two smalls or one
+// medium per row. "Edit Widgets…" turns the area into the chooser (core/widgets/chooser.js).
 //
 // Banners: while the column is open a router filter holds back every new banner (stock or
 // notch); it lands in the history list below instead. (The stock tray's bannerBlocked would
@@ -29,6 +30,8 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import { NotificationRouter } from '../../core/notificationRouter.js';
 import { Widgets } from '../../core/widgets/index.js';
+import { buildChooser } from '../../core/widgets/chooser.js';
+import { packRows, parseWidgetList, serializeWidgetList } from '../../core/widgets/model.js';
 import { MENU_CLOSE_ARGS } from '../../lib/compat.js';
 import { RADIUS } from '../../lib/designTokens.js';
 import { ModalSurface } from '../../lib/modalSurface.js';
@@ -38,11 +41,9 @@ import { buildDateWidget, buildNotifications, buildWidgets } from './view.js';
 
 // Wide enough for a Medium widget (364) between the column's 12 px paddings
 const WIDTH = 392;
-// The widgets area, row by row: two Small widgets or one Medium fill the column's width
-const WIDGET_ROWS = Object.freeze([
-    [['weather', 'small'], ['batteries', 'small']],
-    [['now-playing', 'medium']],
-]);
+const KEY_LIST = 'notification-center-widget-list';
+// Two Small widgets or one Medium fill the column's width
+const COLUMNS = 2;
 
 export class NotificationCenter {
     constructor(ctx, cleanup) {
@@ -54,6 +55,8 @@ export class NotificationCenter {
         this._widgets = [];
         this._refreshIdle = 0;
         this._section = null;
+        this._widgetsSection = null;
+        this._editing = false;
         this._content = null;
         this._host = null;
         this._bannerFilter = null;
@@ -74,9 +77,9 @@ export class NotificationCenter {
         this._ctx.events.on('notification-center-requested', () => this.open(), cleanup);
         NotificationRouter.watchHistory(cleanup, () => this._queueRefresh());
         this._ks.watch('notification-center-widgets', () => this._rebuild());
+        this._ks.watch(KEY_LIST, () => this._fillWidgets());
         this._host = Widgets.acquire(cleanup, this._ctx.gettext, this._ctx);
-        WIDGET_ROWS.forEach((row, order) =>
-            this.addWidget(cleanup, { id: `row-${order}`, order, create: () => this._widgetRow(row) }));
+        this.addWidget(cleanup, { id: 'kiwi-widgets', order: 0, create: () => this._ownWidgets() });
         cleanup.add(() => this._showBanners());
     }
 
@@ -170,12 +173,36 @@ export class NotificationCenter {
 
     // ---- widgets ---------------------------------------------------------------------------
 
+    /** The column's own widget list (notification-center-widget-list), parsed. */
+    widgetList() {
+        const registry = this._host.registry;
+        return parseWidgetList(this._ks.strv(KEY_LIST), {
+            sizesFor: kind => registry.sizesFor(kind, 'center'),
+            defaultSize: kind => registry.get(kind)?.defaultSize,
+        });
+    }
+
+    setWidgetList(list) {
+        this._ks.setStrv(KEY_LIST, serializeWidgetList(list));
+    }
+
+    // The list's widgets, row by row (null while it is empty: the placeholders show)
+    _ownWidgets() {
+        const rows = packRows(this.widgetList(), COLUMNS);
+        if (!rows.length)
+            return null;
+        const box = new St.BoxLayout({ style_class: 'kiwi-nc-widget-rows', orientation: Clutter.Orientation.VERTICAL, x_expand: true });
+        for (const row of rows)
+            box.add_child(this._widgetRow(row));
+        return box;
+    }
+
     // One row of live core/widgets views. They follow their data while the column is open
     // (the column's actors, and with them the views, are destroyed when it closes).
     _widgetRow(specs) {
         const row = new St.BoxLayout({ style_class: 'kiwi-nc-widget-row', x_align: Clutter.ActorAlign.CENTER });
-        for (const [kind, size] of specs) {
-            const view = this._host.createView(kind, { size, config: {} });
+        for (const { kind, size } of specs) {
+            const view = this._host.createView(kind, { size, config: {}, surface: 'center' });
             const click = new Clutter.ClickGesture();
             click.connect('recognize', () => {
                 this.close();
@@ -188,9 +215,21 @@ export class NotificationCenter {
         return row;
     }
 
-    _editWidgets() {
-        this.close();
-        this._ctx.features.instance('desktop-widgets')?.editWidgets();
+    // "Edit Widgets…": the area becomes the chooser until Done
+    _chooser() {
+        const registry = this._host.registry;
+        return buildChooser({
+            _: this._ctx.gettext,
+            entries: registry.kinds().map(k => ({ kind: k.id, title: k.title })),
+            list: this.widgetList(),
+            sizesFor: kind => registry.sizesFor(kind, 'center'),
+            onChange: list => this.setWidgetList(list),
+        });
+    }
+
+    _setEditing(on) {
+        this._editing = on;
+        this._fillWidgets();
     }
 
     // ---- history ---------------------------------------------------------------------------
@@ -282,10 +321,30 @@ export class NotificationCenter {
         const _ = this._ctx.gettext;
         content.add_child(buildDateWidget(_, Date.now(), Shell.util_get_week_start()));
         this._section = null;
+        this._widgetsSection = null;
         this._fillNotifications();
-        if (this._ks.bool('notification-center-widgets'))
-            content.add_child(buildWidgets(_, orderWidgets(this._widgets),
-                this._ctx.features.instance('desktop-widgets') ? () => this._editWidgets() : null));
+        this._fillWidgets();
+    }
+
+    _fillWidgets() {
+        const content = this._content;
+        if (!content)
+            return;
+        const old = this._widgetsSection;
+        this._widgetsSection = null;
+        if (this._ks.bool('notification-center-widgets')) {
+            const _ = this._ctx.gettext;
+            this._widgetsSection = buildWidgets(_, orderWidgets(this._widgets), {
+                editing: this._editing,
+                editor: () => this._chooser(),
+                onEdit: () => this._setEditing(!this._editing),
+            });
+        }
+        if (old && this._widgetsSection)
+            content.replace_child(old, this._widgetsSection);
+        else if (this._widgetsSection)
+            content.add_child(this._widgetsSection);
+        old?.destroy();
     }
 
     _fillNotifications() {
@@ -334,6 +393,8 @@ export class NotificationCenter {
         }
         this._content = null;
         this._section = null;
+        this._widgetsSection = null;
+        this._editing = false;
         this._showAll = false;
     }
 }

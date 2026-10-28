@@ -53,7 +53,7 @@ export default {
             }));
         };
         const title = label('', 'kiwi-widget-headline');
-        const artist = label('', 'kiwi-widget-body kiwi-widget-dim');
+        const artist = label('', 'kiwi-widget-body kiwi-secondary-text');
         const act = fn => () => {
             const p = view.provider;
             if (p)

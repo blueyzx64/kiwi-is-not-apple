@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // WidgetView: one live widget on any surface (desktop layer, Notification Center, notch).
 //
-// It is the card (a faux-glass St.BoxLayout of the size class's pixel size) plus the kind's
-// content. Data comes from the kind's shared provider, held only while the view is ACTIVE:
+// It is the card (a St.BoxLayout of the size class's pixel size) plus the kind's content. On
+// the desktop (surface 'desktop', the default) the card is faux glass with a 24 px corner; in a
+// panel (surface 'center' or 'notch') it is a design-system .kiwi-card, radius 18, so its
+// corners match the panel's other cards. Data comes from the kind's shared provider, held only while the view is ACTIVE:
 // a surface calls setActive(false) whenever the widget cannot be seen (overview, covered,
 // hidden panel), and the provider stops once no active view needs it.
 //
-//   const view = host.createView('weather', { size: 'small', config: {} }, cleanup);
+//   const view = host.createView('weather', { size: 'small', config: {}, surface: 'center' }, cleanup);
 //   parent.add_child(view.actor);
 //   view.setActive(true);
 //   view.activate();           // what a plain click does (opens the app)
@@ -24,11 +26,12 @@
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 
+import { RADIUS as DS_RADIUS } from '../../lib/designTokens.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { Glass } from '../../lib/glass.js';
 import { SIZE_PX } from './model.js';
 
-/** Card radius at scale 1: a macOS widget's corner is about 24 pt on a 170 pt card. */
+/** Card radius at scale 1 on the desktop: a macOS widget's corner is about 24 pt on a 170 pt card. */
 export const RADIUS = 24;
 /** Inner padding (macOS 16 pt); content corners are concentric (RADIUS - PADDING). */
 export const PADDING = 16;
@@ -45,12 +48,17 @@ export class WidgetView {
      * @param {object} def the kind
      * @param {{size: string, config?: object, scale?: number}} opts
      */
-    constructor(host, def, { size, config = {}, scale = 1 }) {
+    constructor(host, def, { size, config = {}, scale = 1, surface = 'desktop' }) {
         this._host = host;
         this.def = def;
         this.size = size;
         this.config = { ...config };
         this.scale = scale;
+        this.surface = surface;
+        // The card's corner, scaled: a floating glass card on the desktop, a .kiwi-card tile
+        // (design system radius) inside a panel (Notification Center, notch)
+        this.radius = (surface === 'desktop' ? RADIUS : DS_RADIUS.card) * scale;
+        const floating = surface === 'desktop';
         this._ = host.gettext;
         this.cleanup = new CleanupRegistry();
         this._handle = null;
@@ -59,7 +67,8 @@ export class WidgetView {
 
         const { width, height } = pixelSize(size, scale);
         this.actor = new St.BoxLayout({
-            style_class: `kiwi-widget kiwi-widget-${def.id} kiwi-widget-${size}`,
+            style_class: `kiwi-widget kiwi-widget-${def.id} kiwi-widget-${size} ${
+                floating ? 'kiwi-widget-floating' : 'kiwi-widget-embedded kiwi-card'}`,
             orientation: Clutter.Orientation.VERTICAL,
             width,
             height,
@@ -67,7 +76,7 @@ export class WidgetView {
             accessible_name: this._(def.title),
         });
         const pad = def.bleed ? 0 : PADDING * scale;
-        this.actor.set_style(`border-radius: ${RADIUS * scale}px; padding: ${pad}px;`);
+        this.actor.set_style(`border-radius: ${this.radius}px; padding: ${pad}px;`);
         this.content = new St.BoxLayout({
             style_class: 'kiwi-widget-content',
             orientation: Clutter.Orientation.VERTICAL,
@@ -75,10 +84,15 @@ export class WidgetView {
             y_expand: true,
         });
         if (def.bleed)
-            this.content.set_style(`border-radius: ${RADIUS * scale}px;`);
+            this.content.set_style(`border-radius: ${this.radius}px;`);
         this.actor.add_child(this.content);
-        const glass = Glass.attach(this.actor, { surface: 'overlays', role: 'content', radius: RADIUS * scale });
-        this.cleanup.add(() => glass.destroy());
+        // Glass only on the desktop: inside a glass panel a card is a fill (no glass on glass).
+        // Above the wallpaper the cards take the overlay legibility level, as every Kiwi
+        // surface that can sit over busy content (lib/glassParams.js).
+        if (floating) {
+            const glass = Glass.attach(this.actor, { surface: 'overlays', role: 'overlay', radius: this.radius });
+            this.cleanup.add(() => glass.destroy());
+        }
         this.cleanup.add(() => this._endRenderer());
         this._actorGone = false;
         this.cleanup.connect(this.actor, 'destroy', () => {

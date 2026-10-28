@@ -30,11 +30,11 @@ function eventRow(e, _, compact) {
     const text = box('kiwi-widget-column', true, { x_expand: true });
     text.add_child(label(e.summary || _('Untitled'), 'kiwi-widget-body kiwi-widget-strong'));
     if (!compact)
-        text.add_child(label(whenText(e, _), 'kiwi-widget-caption kiwi-widget-dim'));
+        text.add_child(label(whenText(e, _), 'kiwi-widget-caption kiwi-secondary-text'));
     row.add_child(text);
     if (compact) {
         const day = e.today ? '' : `${e.date.toLocaleDateString([], { weekday: 'short' })} `;
-        row.add_child(label(e.allDay ? `${day}${_('All day')}`.trim() : `${day}${fmtTime(e.date)}`, 'kiwi-widget-caption kiwi-widget-dim'));
+        row.add_child(label(e.allDay ? `${day}${_('All day')}`.trim() : `${day}${fmtTime(e.date)}`, 'kiwi-widget-caption kiwi-secondary-text'));
     }
     return row;
 }
@@ -55,7 +55,7 @@ export default {
         // The header: today's weekday in red and the day, as on every macOS calendar widget
         const header = box('kiwi-widget-row', false, { x_expand: true });
         const weekday = label('', 'kiwi-widget-caps kiwi-widget-accent');
-        const date = label('', 'kiwi-widget-caps kiwi-widget-dim');
+        const date = label('', 'kiwi-widget-caps kiwi-secondary-text');
         header.add_child(weekday);
         header.add_child(date);
         root.add_child(header);
@@ -72,11 +72,11 @@ export default {
                     const groups = agenda(d?.events ?? [], now, 8);
                     if (!groups.length) {
                         list.add_child(label(d?.hasCalendars === false ? _('No calendars') : _('No upcoming events'),
-                            'kiwi-widget-caption kiwi-widget-dim'));
+                            'kiwi-widget-caption kiwi-secondary-text'));
                         return;
                     }
                     for (const g of groups) {
-                        list.add_child(label(dayTitle(g, _).toUpperCase(), 'kiwi-widget-footnote kiwi-widget-strong kiwi-widget-dim kiwi-widget-day-title'));
+                        list.add_child(label(dayTitle(g, _).toUpperCase(), 'kiwi-widget-footnote kiwi-widget-strong kiwi-secondary-text kiwi-widget-day-title'));
                         for (const e of g.events)
                             list.add_child(eventRow(e, _, false));
                     }
@@ -94,7 +94,7 @@ export default {
         const title = label('', 'kiwi-widget-headline');
         title.clutter_text.line_wrap = true;
         title.clutter_text.ellipsize = 3; // END
-        const when = label('', 'kiwi-widget-caption kiwi-widget-dim');
+        const when = label('', 'kiwi-widget-caption kiwi-secondary-text');
         lead.add_child(soon);
         lead.add_child(title);
         lead.add_child(when);
@@ -114,9 +114,9 @@ export default {
                 soon.visible = when.visible = !!next;
                 if (!next) {
                     title.text = d?.hasCalendars === false ? _('No calendars') : _('No upcoming events');
-                    title.add_style_class_name('kiwi-widget-dim');
+                    title.add_style_class_name('kiwi-secondary-text');
                 } else {
-                    title.remove_style_class_name('kiwi-widget-dim');
+                    title.remove_style_class_name('kiwi-secondary-text');
                     title.text = next.summary || _('Untitled');
                     const inText = next.allDay ? '' : startsIn(next.date, now, _);
                     soon.text = inText || (next.today ? _('Today') : next.date.toLocaleDateString([], { weekday: 'long' }));
@@ -130,7 +130,7 @@ export default {
                 for (const e of after)
                     rest.add_child(eventRow(e, _, true));
                 if (!after.length && next)
-                    rest.add_child(label(_('Nothing else coming up'), 'kiwi-widget-caption kiwi-widget-dim'));
+                    rest.add_child(label(_('Nothing else coming up'), 'kiwi-widget-caption kiwi-secondary-text'));
             },
         };
     },

@@ -42,10 +42,10 @@ export default {
         const gauge = (title, key, color) => {
             const col = box('kiwi-widget-column kiwi-widget-gauge', true, { x_expand: true });
             const ring = canvas(ringSize, ringSize, (cr, w, h, fg) => drawRing(cr, w, h, state[key], color, fg, Math.max(3, 6 * s)));
-            const value = label('', 'kiwi-widget-title kiwi-widget-tabular');
+            const value = label('', 'kiwi-text-headline kiwi-widget-tabular');
             col.add_child(ring);
             col.add_child(value);
-            col.add_child(label(title, 'kiwi-widget-caption kiwi-widget-dim'));
+            col.add_child(label(title, 'kiwi-widget-caption kiwi-secondary-text'));
             return { col, ring, value };
         };
         const gauges = { cpu: gauge(_('CPU'), 'cpu', COLORS.blue), mem: gauge(_('Memory'), 'mem', COLORS.green) };
@@ -57,14 +57,14 @@ export default {
         for (const g of Object.values(gauges))
             row.add_child(g.col);
 
-        const memText = label('', 'kiwi-widget-caption kiwi-widget-dim');
+        const memText = label('', 'kiwi-widget-caption kiwi-secondary-text');
         const graphs = [];
         if (size === 'large') {
             root.add_child(row);
             const graph = (title, key, color, level) => {
                 const col = box('kiwi-widget-column', true, { x_expand: true, y_expand: true });
                 const head = box('kiwi-widget-row', false, { x_expand: true });
-                head.add_child(label(title, 'kiwi-widget-caption kiwi-widget-dim'));
+                head.add_child(label(title, 'kiwi-widget-caption kiwi-secondary-text'));
                 head.add_child(spacer());
                 const now = label('', 'kiwi-widget-caption kiwi-widget-tabular');
                 head.add_child(now);

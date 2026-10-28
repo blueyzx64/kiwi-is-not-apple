@@ -37,7 +37,7 @@ export default {
 
         const header = box('kiwi-widget-row', false, { x_expand: true });
         header.add_child(icon('document-open-recent-symbolic', Math.round(14 * s), 'kiwi-widget-icon kiwi-widget-accent-blue'));
-        header.add_child(label(_('Recents'), 'kiwi-widget-title kiwi-widget-accent-blue'));
+        header.add_child(label(_('Recents'), 'kiwi-text-headline kiwi-widget-accent-blue'));
         root.add_child(header);
 
         const columns = COLUMNS[size];
@@ -48,7 +48,7 @@ export default {
             y_expand: true,
         });
         root.add_child(grid);
-        const empty = label('', 'kiwi-widget-caption kiwi-widget-dim');
+        const empty = label('', 'kiwi-widget-caption kiwi-secondary-text');
         root.add_child(empty);
 
         return {
@@ -66,7 +66,7 @@ export default {
                     row.add_child(name);
                     if (size === 'large') {
                         const ago = timeAgo(f.time, now, _) || new Date(f.time).toLocaleDateString([], { day: 'numeric', month: 'short' });
-                        row.add_child(label(ago, 'kiwi-widget-footnote kiwi-widget-dim', { y_align: Clutter.ActorAlign.CENTER }));
+                        row.add_child(label(ago, 'kiwi-widget-footnote kiwi-secondary-text', { y_align: Clutter.ActorAlign.CENTER }));
                     }
                     const button = new St.Button({
                         style_class: 'kiwi-widget-file-button',

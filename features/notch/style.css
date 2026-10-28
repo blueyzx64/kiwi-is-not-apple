@@ -137,14 +137,11 @@
 }
 
 .kiwi-notch-card-app {
-    font-size: 12px;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.6);
+    padding: 0;
 }
 
 .kiwi-notch-card-time {
     font-size: 12px;
-    color: rgba(255, 255, 255, 0.6);
     font-feature-settings: "tnum";
 }
 
@@ -204,9 +201,7 @@
 }
 
 .kiwi-notch-dash-date {
-    font-size: 13px;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.6);
+    padding: 0;
     font-feature-settings: "tnum";
 }
 
@@ -232,7 +227,6 @@
 
 .kiwi-notch-media-artist {
     font-size: 13px;
-    color: rgba(255, 255, 255, 0.6);
 }
 
 .kiwi-notch-media-app {
@@ -247,7 +241,6 @@
 .kiwi-notch-scrub-time {
     font-size: 12px;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.6);
     font-feature-settings: "tnum";
     min-width: 36px;
 }
@@ -312,19 +305,18 @@
 .kiwi-notch-clock-suffix {
     font-size: 15px;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.6);
     padding-bottom: 7px;
 }
 
 .kiwi-notch-clock-date {
     font-size: 14px;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.6);
 }
 
 /* ---- the Now tab's cards: activities and notifications share one template (pills.js row()):
    40px tall, 6px apart (three fit the 136px body), a 28px icon well, title and subtitle one line
-   each ---- */
+   each. They are .kiwi-row (radius 10, the focus ring) on a resting card fill, so their hover
+   is stronger than a plain row's ---- */
 .kiwi-notch-list {
     spacing: 6px;
 }
@@ -333,7 +325,6 @@
     height: 40px;
     padding: 0 8px 0 6px;
     spacing: 10px;
-    border-radius: 12px;
     background-color: rgba(255, 255, 255, 0.06);
 }
 
@@ -359,7 +350,6 @@
 .kiwi-notch-recent-time,
 .kiwi-notch-recent-sub {
     font-size: 12px;
-    color: rgba(255, 255, 255, 0.6);
 }
 
 .kiwi-notch-recent-time {
@@ -383,7 +373,6 @@
 
 .kiwi-notch-empty-text {
     font-size: 14px;
-    color: rgba(255, 255, 255, 0.55);
 }
 
 /* level with the middle of the large clock and of the cover art */
@@ -393,21 +382,12 @@
 
 /* clipboard column */
 .kiwi-notch-caption {
-    font-size: 12px;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.6);
     padding: 0 8px;
 }
 
 .kiwi-notch-clip {
     height: 32px;
     padding: 0 8px;
-    border-radius: 10px;
-}
-
-.kiwi-notch-clip:hover,
-.kiwi-notch-clip:focus {
-    background-color: rgba(255, 255, 255, 0.1);
 }
 
 .kiwi-notch-clip-text {
@@ -501,18 +481,10 @@
     height: 18px;
 }
 
+/* a .kiwi-toolbar-button at the row's 26 px */
 .kiwi-notch-row-action {
     width: 26px;
     height: 26px;
-    border-radius: 999px;
-    color: rgba(255, 255, 255, 0.8);
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
-.kiwi-notch-row-action:hover,
-.kiwi-notch-row-action:focus {
-    color: #ffffff;
-    background-color: rgba(255, 255, 255, 0.22);
 }
 
 /* ---- Tray: the file shelf ---- */
@@ -595,77 +567,32 @@
     font-size: 13px;
 }
 
-/* ---- Widgets ---- */
+/* ---- Widgets: core/widgets cards (.kiwi-card, radius 18; features/widgets/style.css) scaled
+   into one strip, and the notch's own Controls card. Island is always dark: no light rules. */
+.kiwi-notch-widget-strip {
+    spacing: 20px;
+}
+
 .kiwi-notch-widget-button {
     border-radius: 18px;
 }
 
+.kiwi-notch-widget-button:focus {
+    box-shadow: inset 0 0 0 2px -st-accent-color;
+}
+
 .kiwi-notch-widget {
-    padding: 12px;
+    padding: 10px;
     spacing: 6px;
-    border-radius: 18px;
-    background-color: rgba(255, 255, 255, 0.07);
 }
 
-.kiwi-notch-widget-button:hover .kiwi-notch-widget,
-.kiwi-notch-widget-button:focus .kiwi-notch-widget {
-    background-color: rgba(255, 255, 255, 0.11);
+/* the Controls card is a small (136 px): three presets beside the alarm glyph */
+.kiwi-notch-widget-controls .kiwi-notch-presets {
+    spacing: 3px;
 }
 
-.kiwi-notch-cal-weekday {
-    font-size: 12px;
-    font-weight: 700;
-    color: #ff453a;
-}
-
-.kiwi-notch-cal-day {
-    font-size: 22px;
-    font-weight: 600;
-    color: #ffffff;
-    font-feature-settings: "tnum";
-}
-
-.kiwi-notch-cal-event {
-    spacing: 8px;
-}
-
-.kiwi-notch-cal-bar {
-    width: 3px;
-    border-radius: 2px;
-    background-color: -st-accent-color;
-}
-
-.kiwi-notch-cal-summary {
-    font-size: 13px;
-    font-weight: 600;
-    color: #ffffff;
-}
-
-.kiwi-notch-cal-time,
-.kiwi-notch-cal-none,
-.kiwi-notch-wx-summary {
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.6);
-}
-
-.kiwi-notch-wx-place {
-    font-size: 13px;
-    font-weight: 600;
-    color: #ffffff;
-}
-
-.kiwi-notch-wx-line {
-    spacing: 8px;
-}
-
-.kiwi-notch-wx-temp {
-    font-size: 26px;
-    font-weight: 500;
-    color: #ffffff;
-}
-
-.kiwi-notch-wx-off {
-    color: rgba(255, 255, 255, 0.4);
+.kiwi-notch-widget-controls .kiwi-notch-preset {
+    padding: 0 6px;
 }
 
 .kiwi-notch-toggles {
@@ -676,27 +603,12 @@
     spacing: 4px;
 }
 
-.kiwi-notch-toggle {
-    width: 38px;
-    height: 38px;
-    border-radius: 999px;
-    color: #ffffff;
-    background-color: rgba(255, 255, 255, 0.14);
+.kiwi-notch-dash-edit {
+    padding: 2px 10px;
 }
 
-.kiwi-notch-toggle:hover,
-.kiwi-notch-toggle:focus {
-    background-color: rgba(255, 255, 255, 0.24);
-}
-
-.kiwi-notch-toggle:checked {
-    color: -st-accent-fg-color;
-    background-color: -st-accent-color;
-}
-
-.kiwi-notch-toggle-caption {
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.7);
+.kiwi-notch-chooser {
+    padding-right: 4px;
 }
 
 .kiwi-notch-presets {

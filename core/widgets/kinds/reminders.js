@@ -43,7 +43,7 @@ export default {
 
         // Header: the list's name over the count, both in its colour (macOS puts the count big)
         const header = box('kiwi-widget-row', false, { x_expand: true });
-        const name = label(_('Reminders'), 'kiwi-widget-title kiwi-widget-reminders-name', { y_align: Clutter.ActorAlign.CENTER });
+        const name = label(_('Reminders'), 'kiwi-text-headline kiwi-widget-reminders-name', { y_align: Clutter.ActorAlign.CENTER });
         const count = label('', 'kiwi-widget-reminders-count', { x_align: Clutter.ActorAlign.END });
         header.add_child(name);
         header.add_child(spacer());
@@ -58,7 +58,7 @@ export default {
             y_expand: true,
         });
         root.add_child(grid);
-        const empty = label('', 'kiwi-widget-caption kiwi-widget-dim');
+        const empty = label('', 'kiwi-widget-caption kiwi-secondary-text');
         root.add_child(empty);
 
         const tick = (row, r) => {
@@ -91,7 +91,7 @@ export default {
                 text.add_child(title);
                 const when = columns === 1 && size !== 'small' ? due(r, now, _) : null;
                 if (when)
-                    text.add_child(label(when.text, `kiwi-widget-footnote ${when.overdue ? 'kiwi-widget-accent' : 'kiwi-widget-dim'}`));
+                    text.add_child(label(when.text, `kiwi-widget-footnote ${when.overdue ? 'kiwi-widget-accent' : 'kiwi-secondary-text'}`));
                 row.add_child(check);
                 row.add_child(text);
                 const per = Math.ceil(max / columns);

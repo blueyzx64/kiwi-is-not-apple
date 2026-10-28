@@ -1581,6 +1581,11 @@
         <summary>Notification time (seconds)</summary>
         <description>How long a notification stays in the notch. Hovering keeps it open and urgent ones stay until dismissed.</description>
       </key>
+      <key name="notch-widgets" type="as">
+        <default>['up-next:medium', 'weather:small', 'notch-controls:small']</default>
+        <summary>Notch widgets</summary>
+        <description>The widgets on the notch dashboard's Widgets tab, in order, as "kind:size" (small or medium; four small widgets fit). notch-controls is the notch's own Focus, microphone and timer controls. Edit them with the Edit button on the tab.</description>
+      </key>
       <key name="notch-show-clipboard" type="b">
         <default>false</default>
         <summary>Show clipboard in the notch dashboard</summary>
@@ -1663,6 +1668,11 @@
         <default>true</default>
         <summary>Widgets in the Notification Center</summary>
         <description>Show the widgets area below the notifications.</description>
+      </key>
+      <key name="notification-center-widget-list" type="as">
+        <default>['weather:small', 'batteries:small', 'now-playing:medium']</default>
+        <summary>Notification Center widgets</summary>
+        <description>The widgets in the Notification Center, in order, as "kind:size" (small, medium or large). Edit them with Edit Widgets… at the bottom of the column.</description>
       </key>
       <key name="focus-modes" type="b">
         <default>true</default>

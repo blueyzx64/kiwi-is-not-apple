@@ -145,8 +145,8 @@ export default {
                     drawFace(cr, w, h, fg, c.time, true);
             });
             f.x_align = Clutter.ActorAlign.CENTER;
-            const name = label('', 'kiwi-widget-title', { x_align: Clutter.ActorAlign.CENTER });
-            const sub = label('', 'kiwi-widget-footnote kiwi-widget-dim', { x_align: Clutter.ActorAlign.CENTER });
+            const name = label('', 'kiwi-text-headline', { x_align: Clutter.ActorAlign.CENTER });
+            const sub = label('', 'kiwi-widget-footnote kiwi-secondary-text', { x_align: Clutter.ActorAlign.CENTER });
             cell.add_child(f);
             cell.add_child(name);
             cell.add_child(sub);

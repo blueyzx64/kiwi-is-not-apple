@@ -17,7 +17,7 @@ function eventRow(e, _) {
     text.add_child(label(e.summary || _('Untitled'), 'kiwi-widget-body kiwi-widget-strong'));
     const when = e.allDay ? _('All day')
         : `${e.today ? '' : `${e.date.toLocaleDateString([], { weekday: 'short' })} `}${fmtTime(e.date)} – ${fmtTime(e.end)}`;
-    text.add_child(label(when, 'kiwi-widget-caption kiwi-widget-dim'));
+    text.add_child(label(when, 'kiwi-widget-caption kiwi-secondary-text'));
     row.add_child(text);
     return row;
 }
@@ -84,7 +84,7 @@ export default {
                 names.push(new Date(2024, 0, 1 + i).toLocaleDateString([], { weekday: 'narrow' }));
             names.forEach((n, i) => lm.attach(label(n, 'kiwi-widget-month-head', { x_align: Clutter.ActorAlign.CENTER }), i, 0, 1, 1));
             weeks.forEach((w, r) => w.forEach((d, c) => {
-                const cls = `kiwi-widget-month-day${d.inMonth ? '' : ' kiwi-widget-dim'}${d.today ? ' kiwi-widget-today' : ''}`;
+                const cls = `kiwi-widget-month-day${d.inMonth ? '' : ' kiwi-secondary-text'}${d.today ? ' kiwi-widget-today' : ''}`;
                 lm.attach(label(String(d.day), cls, { x_align: Clutter.ActorAlign.CENTER }), c, r + 1, 1, 1);
             }));
         };
@@ -100,7 +100,7 @@ export default {
                 const events = upcomingEvents(d?.events ?? [], now, limit);
                 if (!events.length) {
                     list.add_child(label(d?.hasCalendars === false && view.size !== 'small'
-                        ? _('No calendars') : _('No more events today'), 'kiwi-widget-caption kiwi-widget-dim',
+                        ? _('No calendars') : _('No more events today'), 'kiwi-widget-caption kiwi-secondary-text',
                     { x_expand: true }));
                     return;
                 }

@@ -15,6 +15,8 @@
 //                                       next event, downloads, one-time codes; each has its
 //                                       own registry and notch-activity-* key
 //   - Shelf                             the Tray tab's file links (notch-shelf)
+//   - core/widgets                      the Widgets tab's widgets (notch-widgets; any kind,
+//                                       small or medium, plus the notch's own Controls tile)
 // Every part undoes itself through the CleanupRegistry; stock banners and OSD come back.
 
 import GLib from 'gi://GLib';
@@ -22,19 +24,20 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
 
 import St from 'gi://St';
-import Shell from 'gi://Shell';
 
 import { CleanupRegistry } from '../../lib/disposables.js';
 import { KiwiSettings } from '../../lib/settings.js';
 import { setUnredirectAllowed, requeueBanner, kickTray } from '../../lib/compat.js';
 import { PanelLayout } from '../../core/panelLayout.js';
 import { NotificationRouter } from '../../core/notificationRouter.js';
+import { Widgets } from '../../core/widgets/index.js';
+import { parseWidgetList, serializeWidgetList } from '../../core/widgets/model.js';
 import { MprisWatcher } from '../../core/mprisWatcher.js';
 import { pickPlayer, showsActivity } from '../../lib/mprisModel.js';
 import {
     initialState, step, view, nextDeadline, wantsBar, recentNotifications, URGENCY,
 } from './stateMachine.js';
-import { seekTarget } from './dashboardModel.js';
+import { NOTCH_CONTROLS, seekTarget } from './dashboardModel.js';
 import { NotchView } from './view.js';
 import { Shelf } from './shelf.js';
 import { DragHelper } from '../../lib/dragHelper.js';
@@ -94,7 +97,8 @@ export class NotchFeature {
         this._parts = { sink: null, media: null };
         this._sources = new Map();   // source id -> CleanupRegistry
         this._selected = null;       // the shelf item selected in the Tray tab
-        this._events = null;         // today's calendar events for the Widgets tab
+        this._widgetsEditing = false; // the Widgets tab shows its chooser
+        this._widgetHost = null;     // core/widgets host while enabled
         this._watch = null;
     }
 
@@ -124,11 +128,16 @@ export class NotchFeature {
             onShelfLayout: layout => (layout ? this._shelfHelper?.show(layout.box, layout.tiles) : this._shelfHelper?.hide()),
             onTimerPreset: minutes => this._ctx.timers?.startTimer({ seconds: minutes * 60, label: this._ctx.gettext('Timer') }),
             onToggleMic: () => this._widgets?.toggleMic(),
-            onOpenWeather: () => {
-                this._dispatch({ type: 'collapse' });
-                this._widgets?.openWeather();
+            widgetHost: () => this._widgetHost,
+            onEditWidgets: () => {
+                this._widgetsEditing = !this._widgetsEditing;
+                this._sync();
             },
-            onOpenCalendar: () => this._openApp(['org.gnome.Calendar.desktop']),
+            onSetWidgets: list => this._ks.setStrv('notch-widgets', serializeWidgetList(list)),
+            onOpenWidget: view => {
+                this._dispatch({ type: 'collapse' });
+                view.activate();
+            },
             onDismiss: () => this._dispatch({ type: 'dismiss' }),
             onHover: value => this._dispatch({ type: 'hover', value }),
             onAction: (id, index) => this._action(id, index),
@@ -162,6 +171,8 @@ export class NotchFeature {
             onActive: on => this._view.setShelfDrag(on),
         });
         this._widgets = watchWidgets(cleanup, () => this._sync());
+        this._widgetHost = Widgets.acquire(cleanup, gettext, this._ctx);
+        ks.watch('notch-widgets', () => this._sync());
         // Files dragged from apps onto the notch land on the shelf (drop.js explains how)
         watchDrops(cleanup, {
             zone: () => {
@@ -180,6 +191,7 @@ export class NotchFeature {
         });
         cleanup.add(() => {
             this._widgets = null;
+            this._widgetHost = null;
             this._shelf = null;
             this._shelfHelper = null;
         });
@@ -369,6 +381,9 @@ export class NotchFeature {
         if (notification)
             this._shown.add(vm.notificationId);
         const dashboard = vm.content === 'dashboard';
+        // The chooser is only for this opening of the dashboard
+        if (!dashboard)
+            this._widgetsEditing = false;
         this._view.render(vm, {
             notification,
             media: media && showsActivity(media.status) ? { ...mediaInfo(media), appIcon: media.app?.get_icon() ?? null } : null,
@@ -379,8 +394,8 @@ export class NotchFeature {
             shelf: this._shelf,
             selected: this._selected,
             widgets: dashboard ? {
-                events: this._events,
-                weather: this._widgets?.weather() ?? null,
+                list: this._widgetList(),
+                editing: this._widgetsEditing,
                 mic: this._widgets?.mic() ?? { available: false, muted: false },
                 dnd: state.dnd,
                 focus: this._ctx.features.instance('focus')?.state() ?? null,
@@ -634,10 +649,6 @@ export class NotchFeature {
             activity: (key, kind, data, opts = {}) => this._dispatch({
                 type: 'activity', key, kind, data: data ?? null, fresh: !!opts.fresh,
             }),
-            events: list => {
-                this._events = list;
-                this._sync();
-            },
         };
         for (const [id, key] of SOURCES) {
             const want = all && (key === null || this._ks.bool(key)) && (id !== 'timers' || !!this._ctx.timers);
@@ -647,8 +658,6 @@ export class NotchFeature {
             if (running) {
                 this._sources.delete(id);
                 running.dispose();
-                if (id === 'calendar')
-                    this._events = null;
                 continue;
             }
             const reg = new CleanupRegistry();
@@ -731,11 +740,15 @@ export class NotchFeature {
         }
     }
 
-    _openApp(ids) {
-        this._dispatch({ type: 'collapse' });
-        const system = Shell.AppSystem.get_default();
-        const app = ids.map(id => system.lookup_app(id)).find(Boolean);
-        app?.activate();
+    /** The Widgets tab's list (notch-widgets): core/widgets kinds and the notch's Controls. */
+    _widgetList() {
+        const registry = this._widgetHost?.registry;
+        if (!registry)
+            return [];
+        return parseWidgetList(this._ks.strv('notch-widgets'), {
+            sizesFor: kind => (kind === NOTCH_CONTROLS ? ['small'] : registry.sizesFor(kind, 'notch')),
+            defaultSize: kind => registry.get(kind)?.defaultSize,
+        });
     }
 
     // ---- media -----------------------------------------------------------------------------

@@ -54,7 +54,7 @@ export default {
         text.line_wrap_mode = Pango.WrapMode.WORD_CHAR;
         text.max_length = NOTE_MAX;
                 root.add_child(entry);
-        const off = label(_('Notes are not available'), 'kiwi-widget-caption kiwi-widget-dim', { visible: false });
+        const off = label(_('Notes are not available'), 'kiwi-widget-caption kiwi-secondary-text', { visible: false });
         root.add_child(off);
 
         let saveId = 0;
