@@ -47,6 +47,18 @@ test('roles: bars for the menu bar and dock, content elsewhere, callers may say'
     eq(roleFor('menus', 'large'), 'content', 'legacy role names map to the surface default');
 });
 
+test('overlay role: legible glass above windows, denser than content, with the rim', () => {
+    eq(roleFor('overlays', 'overlay'), 'overlay');
+    const over = resolve(snap(), env(), 'overlays', 'overlay');
+    const content = resolve(snap(), env(), 'overlays', 'content');
+    ok(over.alpha >= 0.975 && over.alpha > content.alpha, 'overlay is the legible level');
+    ok(glassClasses(over, 'overlays').includes('kiwi-glass-overlay'), 'class');
+    ok(fillStyle(over).includes('inset 0 1px 0 0'), 'rim inline');
+    // A white glyph behind dark overlay glass moves the fill by under 7/255
+    const a = over.top[3];
+    ok(255 * (1 - a) < 7, 'busy content stays under the glass');
+});
+
 test('Clear <-> Tinted slider spans the role range', () => {
     eq(sliderAlpha(0, 'content'), ALPHA_RANGE.content[0]);
     eq(sliderAlpha(100, 'content'), ALPHA_RANGE.content[1]);

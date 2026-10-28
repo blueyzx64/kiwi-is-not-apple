@@ -133,6 +133,9 @@ Rules:
 
 - Start with `/* feature: <id> */`. Scope every rule by a `kiwi-` class the feature adds (to its
   own actors, or to a stock actor while it runs). Never style stock classes unscoped.
+- Lists, section headers, search fields, toolbar buttons, cards and text sizes use the shared
+  design-system classes (`design-system.md`, `styles/base.css`, `lib/designTokens.js`); a
+  feature's CSS keeps layout and never repeats their colours, radii or type sizes.
 - No GType selectors (they depend on file paths). Avoid `!important` except against inline
   styles of other extensions.
 - After editing, run `make css` and commit the regenerated `stylesheet.css` (CI runs

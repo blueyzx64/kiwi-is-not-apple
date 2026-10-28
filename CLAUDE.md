@@ -10,6 +10,7 @@ Supported: GNOME 50 (Fedora 44) for this release; 48/49/51 code paths kept for l
 | How to write a feature (folder, model/adapter, core services, CSS, prefs, tests, harness) | `docs/architecture/conventions.md` |
 | The v3 plan: phases, owner decisions, macOS defaults | `docs/architecture/overhaul-plan.md` |
 | Known conflicts and tech debt (with the v3 status) | `docs/architecture/tech-debt-and-conflicts.md` |
+| Shared look: rows, headers, search fields, type/spacing/radius scales, glass levels | `docs/architecture/design-system.md` |
 | Locked spec for one planned feature | `docs/features/README.md` → one feature file |
 | Real GNOME Shell test harness (probes, screenshots) | `tools/harness/README.md` |
 

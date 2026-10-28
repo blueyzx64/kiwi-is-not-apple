@@ -110,6 +110,292 @@ StWidget.kiwi-glass.kiwi-glass-contrast {
 .kiwi-highlight-graphite .kiwi-glass StEntry { selection-background-color: rgba(140, 140, 140, 0.45); }
 
 
+/* ======================================================================================
+   Kiwi design system (docs/architecture/design-system.md). Shared component classes every
+   surface adds next to its own kiwi-<feature>-* class, so a list, a header or a search field
+   looks the same in Spotlight, Launchpad, the Control Center and the Notification Center.
+   Sizes code needs are in lib/designTokens.js. A feature's own style.css keeps layout only
+   (widths, its own spacing) and never repeats a colour set here.
+
+   Scheme: the rules below are the dark look. A light surface is any descendant of
+   .kiwi-glass-light (light glass), .kiwi-modal-light (a modal with glass off) or .kiwi-light
+   (a surface that sets it itself). Increase Contrast: .kiwi-glass-contrast / .kiwi-modal-opaque.
+   Reduce Transparency: .kiwi-glass-solid.
+
+   Scales
+     spacing   4 8 12 16 20                  (SPACE xs s m l xl)
+     radius    control 8, row 10, menu 12, card 18, panel 26, capsule 999
+     type      display 16.5pt / title 12.75pt 600 / body 10.5pt / callout 9.75pt /
+               caption 8.25pt; pt so GNOME's text scaling applies
+     colour    label: the surface's text colour; secondary 60 % (dark) / 55 % (light);
+               tertiary 40 %; fills 6-8 % (hover), accent only for the selection
+   ====================================================================================== */
+
+/* ---- typography ---- */
+.kiwi-text-display { font-size: 16.5pt; font-weight: normal; }
+.kiwi-text-title { font-size: 12.75pt; font-weight: 600; }
+.kiwi-text-headline { font-size: 10.5pt; font-weight: bold; }
+.kiwi-text-body { font-size: 10.5pt; font-weight: normal; }
+.kiwi-text-callout { font-size: 9.75pt; font-weight: normal; }
+.kiwi-text-caption { font-size: 8.25pt; font-weight: normal; }
+
+.kiwi-secondary-text { color: rgba(255, 255, 255, 0.6); }
+.kiwi-tertiary-text { color: rgba(255, 255, 255, 0.4); }
+
+.kiwi-glass-light .kiwi-secondary-text,
+.kiwi-modal-light .kiwi-secondary-text,
+.kiwi-light .kiwi-secondary-text { color: rgba(0, 0, 0, 0.55); }
+
+.kiwi-glass-light .kiwi-tertiary-text,
+.kiwi-modal-light .kiwi-tertiary-text,
+.kiwi-light .kiwi-tertiary-text { color: rgba(0, 0, 0, 0.4); }
+
+.kiwi-glass-contrast .kiwi-secondary-text,
+.kiwi-modal-opaque .kiwi-secondary-text,
+.kiwi-glass-contrast .kiwi-tertiary-text,
+.kiwi-modal-opaque .kiwi-tertiary-text { color: rgba(255, 255, 255, 0.85); }
+
+.kiwi-glass-contrast.kiwi-glass-light .kiwi-secondary-text,
+.kiwi-modal-light.kiwi-modal-opaque .kiwi-secondary-text,
+.kiwi-glass-contrast.kiwi-glass-light .kiwi-tertiary-text,
+.kiwi-modal-light.kiwi-modal-opaque .kiwi-tertiary-text { color: rgba(0, 0, 0, 0.8); }
+
+/* ---- section header: caption, bold, secondary; its text lines up with the rows' icons ---- */
+.kiwi-section-header {
+  font-size: 8.25pt;
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.55);
+  padding: 8px 8px 4px 8px;
+}
+
+.kiwi-glass-light .kiwi-section-header,
+.kiwi-modal-light .kiwi-section-header,
+.kiwi-light .kiwi-section-header { color: rgba(0, 0, 0, 0.5); }
+
+.kiwi-glass-contrast .kiwi-section-header,
+.kiwi-modal-opaque .kiwi-section-header { color: rgba(255, 255, 255, 0.85); }
+
+.kiwi-glass-contrast.kiwi-glass-light .kiwi-section-header,
+.kiwi-modal-light.kiwi-modal-opaque .kiwi-section-header { color: rgba(0, 0, 0, 0.8); }
+
+/* ---- card: a grouped block inside a panel (no glass on glass: a fill) ---- */
+.kiwi-card {
+  border-radius: 18px;
+  padding: 12px;
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.kiwi-glass-light .kiwi-card,
+.kiwi-modal-light .kiwi-card,
+.kiwi-light .kiwi-card { background-color: rgba(0, 0, 0, 0.045); }
+
+.kiwi-glass-contrast .kiwi-card,
+.kiwi-modal-opaque .kiwi-card { border: 1px solid rgba(255, 255, 255, 0.45); }
+
+.kiwi-glass-contrast.kiwi-glass-light .kiwi-card,
+.kiwi-modal-light.kiwi-modal-opaque .kiwi-card { border: 1px solid rgba(0, 0, 0, 0.55); }
+
+/* ---- row: one selectable line of a list. Hover is a quiet fill; the selection (keyboard or
+   pointer) is the accent at a calmer level with label-coloured text, inset from the panel
+   edge by the same 8 px as the section headers. ---- */
+.kiwi-row {
+  border-radius: 10px;
+  padding: 6px 8px;
+  spacing: 10px;
+}
+
+.kiwi-row:hover { background-color: rgba(255, 255, 255, 0.08); }
+
+.kiwi-glass-light .kiwi-row:hover,
+.kiwi-modal-light .kiwi-row:hover,
+.kiwi-light .kiwi-row:hover { background-color: rgba(0, 0, 0, 0.06); }
+
+.kiwi-row:selected,
+.kiwi-row:selected:hover,
+.kiwi-row.kiwi-row-selected,
+.kiwi-row.kiwi-row-selected:hover {
+  background-color: st-transparentize(-st-accent-color, 0.25);
+  color: -st-accent-fg-color;
+}
+
+.kiwi-glass-light .kiwi-row:selected,
+.kiwi-glass-light .kiwi-row.kiwi-row-selected,
+.kiwi-modal-light .kiwi-row:selected,
+.kiwi-modal-light .kiwi-row.kiwi-row-selected,
+.kiwi-light .kiwi-row:selected,
+.kiwi-light .kiwi-row.kiwi-row-selected {
+  background-color: st-transparentize(-st-accent-color, 0.12);
+  color: -st-accent-fg-color;
+}
+
+/* Contrast and Reduce Transparency: the full accent */
+.kiwi-glass-contrast .kiwi-row:selected,
+.kiwi-glass-contrast .kiwi-row.kiwi-row-selected,
+.kiwi-glass-solid .kiwi-row:selected,
+.kiwi-glass-solid .kiwi-row.kiwi-row-selected,
+.kiwi-modal-opaque .kiwi-row:selected,
+.kiwi-modal-opaque .kiwi-row.kiwi-row-selected {
+  background-color: -st-accent-color;
+  color: -st-accent-fg-color;
+}
+
+.kiwi-row:selected .kiwi-secondary-text,
+.kiwi-row.kiwi-row-selected .kiwi-secondary-text,
+.kiwi-row:selected .kiwi-tertiary-text,
+.kiwi-row.kiwi-row-selected .kiwi-tertiary-text,
+.kiwi-row:selected .kiwi-section-header,
+.kiwi-light .kiwi-row:selected .kiwi-secondary-text,
+.kiwi-glass-light .kiwi-row:selected .kiwi-secondary-text,
+.kiwi-modal-light .kiwi-row:selected .kiwi-secondary-text,
+.kiwi-glass-light .kiwi-row:selected .kiwi-tertiary-text,
+.kiwi-modal-light .kiwi-row:selected .kiwi-tertiary-text {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+/* ---- icon well: a fixed box, so every icon in a list is drawn at one size whatever its
+   file's own padding (lib/designTokens.js ICON_WELL: the icon is box - 2 x inset).
+   No shape: app icons, drawn bare. -rounded / -circle: a symbolic glyph on a quiet fill. ---- */
+.kiwi-icon-well { padding: 0; }
+.kiwi-icon-well-s { width: 20px; height: 20px; }
+.kiwi-icon-well-m { width: 32px; height: 32px; }
+.kiwi-icon-well-l { width: 44px; height: 44px; }
+.kiwi-icon-well-xl { width: 64px; height: 64px; }
+
+.kiwi-icon-well-rounded,
+.kiwi-icon-well-circle { background-color: rgba(255, 255, 255, 0.1); }
+.kiwi-icon-well-rounded.kiwi-icon-well-s { border-radius: 5px; }
+.kiwi-icon-well-rounded.kiwi-icon-well-m { border-radius: 8px; }
+.kiwi-icon-well-rounded.kiwi-icon-well-l { border-radius: 10px; }
+.kiwi-icon-well-rounded.kiwi-icon-well-xl { border-radius: 14px; }
+.kiwi-icon-well-circle { border-radius: 999px; }
+
+.kiwi-glass-light .kiwi-icon-well-rounded,
+.kiwi-glass-light .kiwi-icon-well-circle,
+.kiwi-modal-light .kiwi-icon-well-rounded,
+.kiwi-modal-light .kiwi-icon-well-circle,
+.kiwi-light .kiwi-icon-well-rounded,
+.kiwi-light .kiwi-icon-well-circle { background-color: rgba(0, 0, 0, 0.07); }
+
+.kiwi-row:selected .kiwi-icon-well-rounded,
+.kiwi-row:selected .kiwi-icon-well-circle,
+.kiwi-row.kiwi-row-selected .kiwi-icon-well-rounded,
+.kiwi-row.kiwi-row-selected .kiwi-icon-well-circle { background-color: rgba(255, 255, 255, 0.2); }
+
+/* ---- search: a borderless entry on a glass capsule. The capsule is the surface itself
+   (Spotlight) or a quiet fill inside a panel (.kiwi-search-capsule-filled: Launchpad, the
+   editors). The theme gives every StEntry a box, a hover fill and an !important focus ring;
+   the field drops all three, so text, placeholder and glyph share one baseline. ---- */
+.kiwi-search-capsule {
+  border-radius: 999px;
+  spacing: 10px;
+  padding: 0 14px;
+}
+
+.kiwi-search-capsule-filled { background-color: rgba(255, 255, 255, 0.08); }
+
+.kiwi-glass-light .kiwi-search-capsule-filled,
+.kiwi-modal-light .kiwi-search-capsule-filled,
+.kiwi-light .kiwi-search-capsule-filled { background-color: rgba(0, 0, 0, 0.06); }
+
+.kiwi-glass-contrast .kiwi-search-capsule-filled,
+.kiwi-modal-opaque .kiwi-search-capsule-filled { border: 1px solid rgba(255, 255, 255, 0.45); }
+
+.kiwi-search-glyph { color: rgba(255, 255, 255, 0.6); }
+
+.kiwi-glass-light .kiwi-search-glyph,
+.kiwi-modal-light .kiwi-search-glyph,
+.kiwi-light .kiwi-search-glyph { color: rgba(0, 0, 0, 0.5); }
+
+StEntry.kiwi-search-field,
+StEntry.kiwi-search-field:hover,
+StEntry.kiwi-search-field:focus,
+StEntry.kiwi-search-field:insensitive {
+  padding: 0;
+  margin: 0;
+  border-width: 0;
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: none !important;
+  color: #ffffff;
+  caret-color: -st-accent-color;
+  selection-background-color: st-transparentize(-st-accent-color, 0.45);
+  selected-color: #ffffff;
+}
+
+StEntry.kiwi-search-field StLabel.hint-text {
+  margin: 0;
+  padding: 0;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.kiwi-glass-light StEntry.kiwi-search-field,
+.kiwi-glass-light StEntry.kiwi-search-field:hover,
+.kiwi-glass-light StEntry.kiwi-search-field:focus,
+.kiwi-modal-light StEntry.kiwi-search-field,
+.kiwi-modal-light StEntry.kiwi-search-field:hover,
+.kiwi-modal-light StEntry.kiwi-search-field:focus,
+.kiwi-light StEntry.kiwi-search-field,
+.kiwi-light StEntry.kiwi-search-field:hover,
+.kiwi-light StEntry.kiwi-search-field:focus {
+  color: #1d1d1f;
+  selected-color: #1d1d1f;
+}
+
+.kiwi-glass-light StEntry.kiwi-search-field StLabel.hint-text,
+.kiwi-modal-light StEntry.kiwi-search-field StLabel.hint-text,
+.kiwi-light StEntry.kiwi-search-field StLabel.hint-text { color: rgba(0, 0, 0, 0.4); }
+
+.kiwi-glass-contrast StEntry.kiwi-search-field StLabel.hint-text,
+.kiwi-modal-opaque StEntry.kiwi-search-field StLabel.hint-text { color: rgba(255, 255, 255, 0.75); }
+
+.kiwi-glass-contrast.kiwi-glass-light StEntry.kiwi-search-field StLabel.hint-text,
+.kiwi-modal-light.kiwi-modal-opaque StEntry.kiwi-search-field StLabel.hint-text { color: rgba(0, 0, 0, 0.7); }
+
+/* ---- toolbar button: circular, sized from the bar it sits in (TOOLBAR in designTokens.js);
+   the same hover fill as a row, the accent when checked ---- */
+.kiwi-toolbar-button {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.75);
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.kiwi-toolbar-button:hover { background-color: rgba(255, 255, 255, 0.14); color: #ffffff; }
+.kiwi-toolbar-button:active { background-color: rgba(255, 255, 255, 0.2); }
+
+.kiwi-glass-light .kiwi-toolbar-button,
+.kiwi-modal-light .kiwi-toolbar-button,
+.kiwi-light .kiwi-toolbar-button { color: rgba(0, 0, 0, 0.65); background-color: rgba(0, 0, 0, 0.05); }
+
+.kiwi-glass-light .kiwi-toolbar-button:hover,
+.kiwi-modal-light .kiwi-toolbar-button:hover,
+.kiwi-light .kiwi-toolbar-button:hover { color: #1d1d1f; background-color: rgba(0, 0, 0, 0.1); }
+
+.kiwi-toolbar-button:checked,
+.kiwi-toolbar-button:checked:hover,
+.kiwi-glass-light .kiwi-toolbar-button:checked,
+.kiwi-modal-light .kiwi-toolbar-button:checked,
+.kiwi-light .kiwi-toolbar-button:checked {
+  background-color: st-transparentize(-st-accent-color, 0.15);
+  color: -st-accent-fg-color;
+}
+
+.kiwi-glass-contrast .kiwi-toolbar-button,
+.kiwi-modal-opaque .kiwi-toolbar-button { border: 1px solid rgba(255, 255, 255, 0.45); }
+
+.kiwi-toolbar-button:focus,
+.kiwi-row:focus { box-shadow: inset 0 0 0 2px -st-accent-color; }
+
+/* ---- hairline separator between the field and the list, or between groups ---- */
+.kiwi-separator { height: 1px; background-color: rgba(255, 255, 255, 0.1); }
+
+.kiwi-glass-light .kiwi-separator,
+.kiwi-modal-light .kiwi-separator,
+.kiwi-light .kiwi-separator { background-color: rgba(0, 0, 0, 0.1); }
+
+
 /* lib/modalSurface.js: Spotlight and Quick Paste share these frames */
 
 /* Subtle dim behind any Kiwi modal */
