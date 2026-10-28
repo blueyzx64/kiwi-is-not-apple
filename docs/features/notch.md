@@ -14,6 +14,8 @@ A black pill hanging from the top centre of the bar. It grows to show notificati
 ## The file shelf helper
 Dragging files out of the shelf into other apps needs the optional `kiwi-shelf-helper` RPM (a Wayland client must start the drag). Without it the shelf keeps its Open and Copy actions.
 
+Drop targets under the notch: a maximized window, or one touching the top bar, reaches right under the dashboard (the card spans y 0-192). The helper window itself is fine for them (always-above, sticky, placed at the shelf's own y, well inside the work area, so mutter never moves it). The bug was Kiwi's own input plate, a reactive layer over the dashboard that stands in for the island while the helper window is under the shelf: it kept the pointer during a drag, so a drop anywhere inside the dashboard's footprint never reached the window below. Floating windows seemed fine only because users dropped them below the card. `view.js` now takes the plate away for the length of the drag (`_syncPlate`).
+
 ## Limits
 - While the notch runs, the clock and calendar are at the right and the notification list is in Quick Settings.
 - It takes the centre of the top bar through `core/panelLayout.js`.
