@@ -1,10 +1,11 @@
 # Mission Control, Launchpad, app switcher, gestures, hot corners
 
 ## Mission Control and App Exposé (`mission-control`, on)
-GNOME's overview restyled: a Spaces bar on top, the current Space's windows spread out, no search and no dash.
+GNOME's overview restyled: a Spaces bar on top, the current Space's windows spread out over the full-screen desktop, no search and no dash.
+- **The desktop:** the wallpaper stays full screen and in place, as on macOS. There is no card: GNOME's rounded workspace card and its shadow are hidden, and so is any other backdrop (such as a blurred one from another extension). The desktop's icons and widgets shrink and fade out as Mission Control opens and come back as it closes. The neighbouring Spaces show only while they scroll in.
 - **Open:** F3, Ctrl+Up (`mission-control-shortcut`; also the XF86LaunchA key), a three- or four-finger swipe up, the optional dock tile, a hot corner.
 - **App Exposé:** Ctrl+Down (`app-expose-shortcut`), the dock's Show All Windows, a four-finger swipe down. Shows one app's windows with its minimized ones in a strip at the bottom.
-- **Spaces bar:** add with +, remove with x, drag to reorder.
+- **Spaces bar:** opens collapsed, a row of names with the current Space's in a soft pill. Moving the pointer to the top of the screen, giving a name the keyboard focus, or dragging a window or a Space expands it into thumbnails (the wallpaper and the windows only, the current Space in a soft frame); it collapses 300 ms after the pointer leaves. Add with the small + at the right end (shown only expanded), remove with x, drag a name to reorder.
 - **Settings (default):** `mc-static-spaces` on (Spaces stay until you remove them; GNOME's dynamic workspaces are off meanwhile) · `mc-rearrange-spaces` off · `mc-group-by-app` off · `mc-switch-to-app-space` on · `mc-start-on-desktop` on (the desktop, not the overview, after login).
 - The dock and the Stage Manager strip hide while it is open. Code: `features/missionControl/`.
 

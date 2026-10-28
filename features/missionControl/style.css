@@ -1,18 +1,23 @@
 /* feature: mission-control */
 
-/* The Spaces bar: GNOME's thumbnails, larger with room for the labels under them */
+/* The Spaces bar: GNOME's thumbnails with room for the labels under them. Collapsed (the
+   default, as on macOS) only the names show; hovering the top of the screen expands it. */
 .kiwi-mission-control .kiwi-mc-spaces-box {
     padding: 12px 0 30px;
     spacing: 22px;
 }
 
+/* The wallpaper fills the thumbnail: no grey plate around it, none while it is collapsed */
 .kiwi-mission-control .kiwi-mc-spaces-box .workspace-thumbnail {
     border-radius: 8px;
+    background-color: transparent;
+    border-width: 0;
 }
 
+/* The current Space: a soft frame, not GNOME's thick accent border */
 .kiwi-mission-control .kiwi-mc-spaces-box .workspace-thumbnail-indicator {
-    border: 3px solid rgba(255, 255, 255, 0.92);
-    border-radius: 11px;
+    border: 2px solid rgba(255, 255, 255, 0.55);
+    border-radius: 10px;
     padding: 0;
 }
 
@@ -22,9 +27,27 @@
 }
 
 .kiwi-mc-space-label {
+    color: rgba(255, 255, 255, 0.86);
+    font-weight: 500;
+    padding: 2px 9px;
+    border-radius: 999px;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+/* The current Space's name */
+.kiwi-mc-space-label:checked {
     color: #ffffff;
     font-weight: 600;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+/* Collapsed, the current name sits in a soft pill (there is no frame to mark it) */
+.kiwi-mc-collapsed .kiwi-mc-space-label:checked {
+    background-color: rgba(255, 255, 255, 0.18);
+    text-shadow: none;
+}
+
+.kiwi-mc-space-label:focus {
+    background-color: rgba(255, 255, 255, 0.24);
 }
 
 /* A .kiwi-toolbar-button, small and solid: it sits on a thumbnail's corner over any wallpaper */
@@ -40,19 +63,21 @@
     background-color: rgba(88, 88, 92, 0.96);
 }
 
+/* The +: small and quiet at the right end of the bar, shown only while it is expanded */
 .kiwi-mc-space-add {
-    width: 44px;
-    height: 44px;
+    width: 28px;
+    height: 28px;
     padding: 0;
-    border-radius: 10px;
-    color: #ffffff;
-    background-color: rgba(255, 255, 255, 0.16);
-    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 999px;
+    color: rgba(255, 255, 255, 0.9);
+    background-color: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.16);
 }
 
 .kiwi-mc-space-add:hover,
 .kiwi-mc-space-add:focus {
-    background-color: rgba(255, 255, 255, 0.28);
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.24);
 }
 
 /* App Exposé: the minimized windows along the bottom */

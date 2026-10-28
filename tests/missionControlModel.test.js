@@ -1,7 +1,7 @@
 // Run: gjs -m tests/missionControlModel.test.js
 import {
-    MODE, canRemoveSpace, centringShift, exposeView, fullscreenAppOf, groupedOrder, mruOrder, reorderIndex,
-    skipStartupOverview, spaceLabels, stripCardSize, touchRecent, windowPlace,
+    MODE, barExpanded, canRemoveSpace, centringShift, desktopItemsOpacity, exposeView, fullscreenAppOf, groupedOrder, mruOrder, reorderIndex,
+    neighbourOpacity, plusPlace, skipStartupOverview, spaceLabels, stripCardSize, touchRecent, windowPlace,
 } from '../features/missionControl/model.js';
 
 let failed = 0;
@@ -131,6 +131,36 @@ test('centringShift: more Spaces than fit: the group is centred in the room ther
 
 test('centringShift: thumbnails at the maximum, no Space collapsing: none', () => {
     eq(centringShift({ ...SHIFT, maxWidth: 114, collapse: [0, 0] }) === 0, true);
+});
+
+test('desktopItemsOpacity: full on the desktop, gone once the windows are spread', () => {
+    eq(desktopItemsOpacity(0), 255);
+    eq(desktopItemsOpacity(0.5), 128);
+    eq(desktopItemsOpacity(1), 0);
+    // A spring overshoot never makes it negative or over full
+    eq(desktopItemsOpacity(1.1), 0);
+    eq(desktopItemsOpacity(-0.1), 255);
+});
+
+test('neighbourOpacity: only the current Space shows; a neighbour fades in as it scrolls in', () => {
+    eq(neighbourOpacity(0), 255);
+    eq(neighbourOpacity(-0.25), 191);
+    eq(neighbourOpacity(0.25), 191);
+    eq(neighbourOpacity(1), 0);
+    eq(neighbourOpacity(3), 0);
+});
+
+test('barExpanded: hover, keyboard focus or a drag', () => {
+    eq(barExpanded({ hover: false, focus: false, dragging: false }), false);
+    eq(barExpanded({ hover: true, focus: false, dragging: false }), true);
+    eq(barExpanded({ hover: false, focus: true, dragging: false }), true);
+    eq(barExpanded({ hover: false, focus: false, dragging: true }), true);
+});
+
+test('plusPlace: right end of the strip, centred on the thumbnails', () => {
+    eq(plusPlace({ stripWidth: 1280, plusWidth: 28, plusHeight: 28, centreY: 60, margin: 24 }), { x: 1228, y: 46 });
+    // Never above the strip
+    eq(plusPlace({ stripWidth: 1280, plusWidth: 28, plusHeight: 28, centreY: 4, margin: 24 }).y, 0);
 });
 
 if (failed) {

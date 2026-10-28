@@ -3,8 +3,9 @@
 // Mission Control, App Exposé, and the start on the desktop at login.
 //
 //   - Mission Control: the Spaces bar on top (spaces.js), the current Space's windows spread
-//     out (the stock window picker; titles on hover are the stock ones), no search entry, no
-//     dash and no find-as-you-type. The app grid is not part of it: Launchpad and Super+A.
+//     out over the full-screen desktop (backdrop.js: no card, no icons or widgets; the stock
+//     window picker, titles on hover are the stock ones), no search entry, no dash and no
+//     find-as-you-type. The app grid is not part of it: Launchpad and Super+A.
 //   - App Exposé: only one app's windows, spread, with its minimized windows in a strip at
 //     the bottom (expose.js). Ctrl+Down, the dock's "Show All Windows", and the event
 //     'app-expose-requested' (Super+` down, three/four-finger swipe down, hot corners).
@@ -37,6 +38,7 @@ import { KiwiSettings } from '../../lib/settings.js';
 import { Keybindings, MODAL_MODES } from '../../lib/keybindings.js';
 import { ModalSurface } from '../../lib/modalSurface.js';
 import { SettingOwner } from '../../core/originals.js';
+import { Backdrop } from './backdrop.js';
 import { SpacesBar } from './spaces.js';
 import { ExposeStrip, STRIP_HEIGHT } from './expose.js';
 import {
@@ -95,7 +97,8 @@ export class MissionControl {
 
         this._strip = new ExposeStrip(this._ctx.motion, this._);
         c.add(() => this._strip.hide());
-        this._spaces = new SpacesBar(this, controls._thumbnailsBox, c);
+        new Backdrop(c).enable();
+        this._spaces = new SpacesBar(this, controls._thumbnailsBox, c, this._ctx.motion);
         this._spaces.enable();
 
         c.connect(Main.overview, 'showing', () => this._onShowing());

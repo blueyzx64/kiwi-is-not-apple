@@ -2,14 +2,17 @@
 // The Spaces bar: GNOME's own workspace thumbnails (ThumbnailsBox) along the top of the
 // overview, dressed as macOS Mission Control's bar. Kiwi adds, as children of the thumbnails (so
 // they stack, slide and fade with them, under the windows the overview animates):
-//   - a label under each Space ("Desktop 1", or the app of a full-screen Space);
+//   - a label for each Space ("Desktop 1", or the app of a full-screen Space);
 //   - a × on the hovered Space that removes it (its windows go to the neighbour, Mutter's rule);
-//   - a + after the last Space that adds one;
 //   - dragging a label along the bar reorders the Spaces.
-// The thumbnails themselves (live windows, dropping a window on a Space, the active frame)
-// stay the stock ones, over the wallpaper and the desktop's icons and widgets (a mirror from
-// core/desktopLayers.js). The bar always shows, also with one Space (macOS), and hides in App
-// Exposé.
+// As on macOS the bar opens collapsed, a row of names with the current Space's in a soft
+// pill. It expands into thumbnails (wallpaper and windows, the current one softly framed)
+// while the pointer is at the top of the screen, a name has the keyboard focus or something is
+// dragged, and collapses again shortly after. The overview keeps its grab on the stage, so the
+// pointer is followed with the stage's captured events, only while Mission Control is open.
+// The + that adds a Space sits at the right end of the screen and shows only expanded.
+// The thumbnails themselves (live windows, dropping a window on a Space) stay the stock ones.
+// The bar always shows, also with one Space (macOS), and hides in App Exposé.
 //
 // Shell API (GNOME 50, js/ui/workspaceThumbnail.js): ThumbnailsBox._thumbnails, ._shouldShow,
 // ._updateShouldShow(), addThumbnails/removeThumbnails, ._maxThumbnailScale, ThumbnailState;
@@ -18,6 +21,7 @@
 // Meta.WorkspaceManager append_new_workspace / remove_workspace / reorder_workspace.
 
 import Clutter from 'gi://Clutter';
+import GLib from 'gi://GLib';
 import Pango from 'gi://Pango';
 import St from 'gi://St';
 import * as Background from 'resource:///org/gnome/shell/ui/background.js';
@@ -25,16 +29,16 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as DND from 'resource:///org/gnome/shell/ui/dnd.js';
 import { ThumbnailsBox, ThumbnailState } from 'resource:///org/gnome/shell/ui/workspaceThumbnail.js';
 
-import { DesktopLayers } from '../../core/desktopLayers.js';
 import { CleanupRegistry } from '../../lib/disposables.js';
-import { canRemoveSpace, centringShift, reorderIndex, spaceLabels } from './model.js';
+import { barExpanded, canRemoveSpace, centringShift, plusPlace, reorderIndex, spaceLabels } from './model.js';
 
-// macOS's bar is about twice GNOME's 5 % thumbnails
+// macOS's expanded bar is about twice GNOME's 5 % thumbnails
 const THUMBNAIL_SCALE = 0.15;
 const LABEL_GAP = 6;
 const LABEL_SPILL = 18;
 const CLOSE_INSET = 8;
-const PLUS_GAP = 16;
+const PLUS_MARGIN = 24;
+const COLLAPSE_DELAY_MS = 300;   // leaving the top of the screen, the bar waits this long
 
 /**
  * Whether an actor has been laid out at a real size. Not has_allocation(): read from inside a
@@ -49,16 +53,25 @@ export class SpacesBar {
      * @param {object} host the MissionControl adapter: spacesBarWanted(), spaces(), _
      * @param {ThumbnailsBox} box the overview's thumbnails box
      * @param {CleanupRegistry} cleanup
+     * @param {object} motion ctx.motion (core/motion.js)
      */
-    constructor(host, box, cleanup) {
+    constructor(host, box, cleanup, motion) {
         this._host = host;
         this._box = box;
         this._cleanup = cleanup;
+        this._motion = motion;
         this._decor = new Map(); // WorkspaceThumbnail -> {label, close, cleanup}
         this._plus = null;
-        this._plusWanted = false;
         this._hovered = null;
-        this._dragging = false;
+        this._dragging = false;      // a Space label along the bar
+        this._windowDrag = false;    // a window or an app (onto a Space)
+        this._focus = false;         // a Space label has the keyboard focus
+        this._pointerIn = false;     // the pointer is at the top of the screen
+        this._expanded = false;
+        this._zone = null;           // the stage area that expands the bar
+        this._watch = 0;             // the stage's captured-event, while Mission Control is open
+        this._collapseToken = 0;
+        this._leaving = false;       // Mission Control is closing: nothing expands it again
     }
 
     enable() {
@@ -78,9 +91,16 @@ export class SpacesBar {
         });
         box._maxThumbnailScale = THUMBNAIL_SCALE;
         box.add_style_class_name('kiwi-mc-spaces-box');
-        c.add(() => box.remove_style_class_name('kiwi-mc-spaces-box'));
+        box.add_style_class_name('kiwi-mc-collapsed');
+        c.add(() => {
+            box.remove_style_class_name('kiwi-mc-spaces-box');
+            box.remove_style_class_name('kiwi-mc-collapsed');
+        });
         c.add(() => {
             box.translation_x = 0;
+            box._indicator?.remove_all_transitions();
+            if (box._indicator)
+                box._indicator.opacity = 255;
         });
 
         // Always shown in Mission Control, hidden in App Exposé. Registered before the
@@ -131,12 +151,72 @@ export class SpacesBar {
         });
         c.connect(global.workspace_manager, 'workspaces-reordered', () => this._refresh());
         c.connect(global.workspace_manager, 'notify::n-workspaces', () => this._refresh());
-        c.connect(Main.overview, 'hidden', () => this._undecorateAll());
+        c.connect(global.workspace_manager, 'active-workspace-changed', () => this._syncActive());
+
+        // The + at the right end of the screen, above the overview (it shows only expanded)
+        this._plus = c.actor(new St.Button({
+            style_class: 'kiwi-mc-space-add',
+            accessible_name: this._host._('Add Desktop'),
+            child: new St.Icon({ icon_name: 'list-add-symbolic', icon_size: 14 }),
+            can_focus: true,
+            track_hover: true,
+            visible: false,
+            opacity: 0,
+        }));
+        c.connect(this._plus, 'clicked', () => this._addSpace());
+        c.connect(this._plus, 'notify::hover', () => this._syncExpanded());
+        c.connect(this._plus, 'key-focus-in', () => this._setFocus(true));
+        c.connect(this._plus, 'key-focus-out', () => this._setFocus(false));
+        Main.layoutManager.overviewGroup.add_child(this._plus);
+
+        // Every opening starts collapsed, as on macOS
+        c.connect(Main.overview, 'showing', () => {
+            this._leaving = false;
+            this._zone = null;
+            this._pointerIn = false;
+            this._windowDrag = false;
+            this._focus = false;
+            this._setExpanded(false, false);
+            this._watchPointer(this._host.spacesBarWanted());
+        });
+        // Leaving: the + and the thumbnails go with the rest of Mission Control
+        c.connect(Main.overview, 'hiding', () => {
+            this._leaving = true;
+            this._watchPointer(false);
+            this._cancelCollapse();
+            this._setExpanded(false, true);
+        });
+        c.connect(Main.overview, 'hidden', () => {
+            this._watchPointer(false);
+            this._cancelCollapse();
+            this._undecorateAll();
+        });
         // Once Mission Control is fully in: place everything again, whatever the order of
-        // the allocations on the way in (keyboard and swipe differ)
-        c.connect(Main.overview, 'shown', () => this._placeAll());
+        // the allocations on the way in (keyboard and swipe differ), and expand at once when
+        // the pointer is already at the top
+        c.connect(Main.overview, 'shown', () => {
+            this._placeAll();
+            this._zone = this._measureZone();
+            const [x, y] = global.get_pointer();
+            this._pointerIn = this._inZone(x, y);
+            this._syncExpanded();
+        });
+        for (const [signal, on] of [['window-drag-begin', true], ['window-drag-end', false],
+            ['window-drag-cancelled', false], ['item-drag-begin', true], ['item-drag-end', false],
+            ['item-drag-cancelled', false]]) {
+            c.connect(Main.overview, signal, () => {
+                this._windowDrag = on;
+                this._syncExpanded();
+            });
+        }
+        c.connect(box, 'notify::allocation', () => {
+            this._zone = null;
+        });
+        c.add(() => {
+            this._watchPointer(false);
+            this._cancelCollapse();
+        });
         c.add(() => this._undecorateAll());
-        c.add(() => this._plus?.destroy());
         this._refresh();
     }
 
@@ -169,14 +249,11 @@ export class SpacesBar {
             d.label.accessible_name = labels[i].label;
             d.close.accessible_name = this._host._('Remove %s').replace('%s', labels[i].label);
             d.removable = removable;
-            // Measured at its natural width: a width set earlier would be read back as that
-            // width, and a label narrowed while its Space slid would stay narrow
-            d.label.set_width(-1);
-            [, d.labelWidth] = d.label.get_preferred_width(-1);
-            this._place(t);
         });
+        // The current name is bold: measured once it has its pseudo class
+        this._syncActive();
         this._syncClose();
-        this._attachPlus();
+        this._placePlus();
         this._centre();
     }
 
@@ -206,70 +283,191 @@ export class SpacesBar {
         })) : 0;
     }
 
-    /** The + lives in the first Space and sits after the last one's visible edge. */
-    _attachPlus() {
-        const thumbs = this._thumbnails();
-        this._plusWanted = thumbs.length > 0;
-        if (!this._plusWanted) {
-            if (this._plus)
-                this._plus.visible = false;
-            return;
-        }
-        if (!this._plus) {
-            this._plus = new St.Button({
-                style_class: 'kiwi-mc-space-add',
-                accessible_name: this._host._('Add Desktop'),
-                child: new St.Icon({ icon_name: 'list-add-symbolic', icon_size: 16 }),
-                can_focus: true,
-                visible: false,
-            });
-            this._plus.connect('clicked', () => this._addSpace());
-            this._plus.connect('destroy', () => {
-                this._plus = null;
-            });
-        }
-        const host = thumbs.find(t => t.state === ThumbnailState.NORMAL) ?? thumbs[0];
-        if (this._plus.get_parent() !== host) {
-            this._plus.get_parent()?.remove_child(this._plus);
-            host.add_child(this._plus);
-        }
-        this._placePlus();
-    }
-
     /**
      * Position what depends on a thumbnail's size. Translations only (no relayout), set
      * while the box allocates the thumbnail, so the chrome is on the frame that paints it.
      */
     _place(t) {
         const d = this._decor.get(t);
-        if (d && laidOut(t)) {
-            // The allocation, not width and height: those read the preferred size while the
-            // thumbnail waits for a layout, which this very pass is
-            const [w, h] = [t.get_allocation_box().get_width(), t.get_allocation_box().get_height()];
-            const width = Math.min(d.labelWidth, w + LABEL_SPILL);
-            if (d.label.width !== width)
-                d.label.set_width(width);
-            d.label.translation_x = Math.round((w - width) / 2);
-            d.label.translation_y = Math.round(h + LABEL_GAP);
-        }
-        this._placePlus();
+        if (!d || !laidOut(t))
+            return;
+        // The allocation, not width and height: those read the preferred size while the
+        // thumbnail waits for a layout, which this very pass is
+        const w = t.get_allocation_box().get_width();
+        const width = Math.min(d.labelWidth, w + LABEL_SPILL);
+        if (d.label.width !== width)
+            d.label.set_width(width);
+        d.label.translation_x = Math.round((w - width) / 2);
+        // Not while the bar expands or collapses: that animation moves it
+        if (!d.label.get_transition('translation-y'))
+            d.label.translation_y = this._labelY(t);
     }
 
+    /** Collapsed: the names in a row at the top. Expanded: under the thumbnails. */
+    _labelY(t) {
+        return this._expanded ? Math.round(t.get_allocation_box().get_height() + LABEL_GAP) : 0;
+    }
+
+    /** The + at the right end of the screen, on the thumbnails' vertical centre. */
     _placePlus() {
         const plus = this._plus;
-        const host = plus?.get_parent();
-        const last = this._box._thumbnails?.at(-1);
-        // A Space added this frame has no allocation yet: the plus waits for it
-        if (!laidOut(host) || !laidOut(last) || !this._plusWanted)
+        const first = this._thumbnails()[0];
+        const m = Main.layoutManager.monitors[this._box._monitorIndex ?? Main.layoutManager.primaryIndex];
+        if (!plus || !m || !laidOut(first) || !Main.overview.visible)
             return;
-        // The last Space's edge as the box lays it out: a Space still collapsed (coming) or
-        // collapsing (going) takes only the part of its width that is left
-        const [lastBox, hostBox] = [last.get_allocation_box(), host.get_allocation_box()];
-        const edge = lastBox.x1 + lastBox.get_width() * (1 - last.collapseFraction);
+        const [, ty] = first.get_transformed_position();
+        const [, th] = first.get_transformed_size();
+        const [, pw] = plus.get_preferred_width(-1);
         const [, ph] = plus.get_preferred_height(-1);
-        plus.visible = true;
-        plus.translation_x = Math.round(edge - hostBox.x1 + PLUS_GAP);
-        plus.translation_y = Math.round((hostBox.get_height() - ph) / 2);
+        const p = plusPlace({ stripWidth: m.width, plusWidth: pw, plusHeight: ph, centreY: ty + th / 2 - m.y, margin: PLUS_MARGIN });
+        plus.set_position(m.x + p.x, m.y + p.y);
+        const og = Main.layoutManager.overviewGroup;
+        if (plus.get_parent() === og)
+            og.set_child_above_sibling(plus, null);
+    }
+
+    // ---- collapsed and expanded ----------------------------------------------------------
+
+    /** The top of the screen, down to the bar's bottom edge (labels included). */
+    _measureZone() {
+        const box = this._box;
+        const m = Main.layoutManager.monitors[box._monitorIndex ?? Main.layoutManager.primaryIndex];
+        if (!m || !laidOut(box) || !Main.overview.visible)
+            return null;
+        const [, by] = box.get_transformed_position();
+        const [, bh] = box.get_transformed_size();
+        return { x1: m.x, x2: m.x + m.width, y1: m.y, y2: by + bh };
+    }
+
+    _inZone(x, y) {
+        const z = this._zone ?? (this._zone = this._measureZone());
+        return !!z && x >= z.x1 && x < z.x2 && y >= z.y1 && y < z.y2;
+    }
+
+    _watchPointer(on) {
+        if (!on) {
+            if (this._watch)
+                this._cleanup.release(this._watch);
+            this._watch = 0;
+            return;
+        }
+        if (this._watch)
+            return;
+        this._watch = this._cleanup.connect(global.stage, 'captured-event', (_s, event) => {
+            const type = event.type();
+            if (type !== Clutter.EventType.MOTION && type !== Clutter.EventType.ENTER &&
+                type !== Clutter.EventType.LEAVE)
+                return Clutter.EVENT_PROPAGATE;
+            const [x, y] = event.get_coords();
+            const inside = this._inZone(x, y);
+            if (inside !== this._pointerIn) {
+                this._pointerIn = inside;
+                this._syncExpanded();
+            }
+            return Clutter.EVENT_PROPAGATE;
+        });
+    }
+
+    _setFocus(on) {
+        this._focus = on;
+        this._syncExpanded();
+    }
+
+    /** Expand at once; collapse a moment later, unless something wants it open again. */
+    _syncExpanded() {
+        const want = this._host.spacesBarWanted() && Main.overview.visible && !this._leaving && barExpanded({
+            hover: this._pointerIn || !!this._plus?.hover,
+            focus: this._focus,
+            dragging: this._dragging || this._windowDrag,
+        });
+        if (want) {
+            this._cancelCollapse();
+            this._setExpanded(true, true);
+            return;
+        }
+        if (!this._expanded || this._collapseToken)
+            return;
+        this._collapseToken = this._cleanup.timeout(COLLAPSE_DELAY_MS, () => {
+            this._collapseToken = 0;
+            this._setExpanded(false, true);
+            return GLib.SOURCE_REMOVE;
+        }, { name: 'kiwi-mc-spaces-collapse' });
+    }
+
+    _cancelCollapse() {
+        if (this._collapseToken)
+            this._cleanup.release(this._collapseToken);
+        this._collapseToken = 0;
+    }
+
+    _setExpanded(on, animate) {
+        if (on === this._expanded && animate)
+            return;
+        this._expanded = on;
+        const box = this._box;
+        if (on)
+            box.remove_style_class_name('kiwi-mc-collapsed');
+        else
+            box.add_style_class_name('kiwi-mc-collapsed');
+        for (const t of this._decor.keys())
+            this._dressThumbnail(t, animate);
+        this._to(box._indicator, { opacity: on ? 255 : 0 }, animate);
+
+        const plus = this._plus;
+        if (plus) {
+            if (on) {
+                this._placePlus();
+                plus.visible = true;
+            }
+            this._to(plus, { opacity: on ? 255 : 0 }, animate, () => {
+                if (!this._expanded)
+                    plus.visible = false;
+            });
+        }
+        this._syncClose();
+    }
+
+    /** A thumbnail's wallpaper and windows show only expanded; its name moves under it. */
+    _dressThumbnail(t, animate) {
+        const d = this._decor.get(t);
+        if (!d)
+            return;
+        this._to(t._viewport, { opacity: this._expanded ? 255 : 0 }, animate);
+        if (laidOut(t))
+            this._to(d.label, { translation_y: this._labelY(t) }, animate);
+    }
+
+    /** Ease (or set) properties; onDone runs when it gets there. */
+    _to(actor, props, animate, onDone = null) {
+        if (!actor)
+            return;
+        if (animate) {
+            this._motion.ease(actor, props, {
+                duration: 'short', curve: 'standard', onDone: finished => finished && onDone?.(),
+            }, this._cleanup);
+            return;
+        }
+        for (const [k, v] of Object.entries(props)) {
+            actor.remove_transition(k.replace(/_/g, '-'));
+            actor[k] = v;
+        }
+        onDone?.();
+    }
+
+    /** The current Space's name is bold, and has the pill while collapsed; each name is measured again. */
+    _syncActive() {
+        const active = global.workspace_manager.get_active_workspace();
+        for (const [t, d] of this._decor) {
+            if (t.metaWorkspace === active)
+                d.label.add_style_pseudo_class('checked');
+            else
+                d.label.remove_style_pseudo_class('checked');
+            // At its natural width: a width set earlier would be read back as that width, and
+            // a label narrowed while its Space slid would stay narrow
+            d.label.set_width(-1);
+            [, d.labelWidth] = d.label.get_preferred_width(-1);
+            this._place(t);
+        }
     }
 
     _decorate(t) {
@@ -293,27 +491,30 @@ export class SpacesBar {
         close.set_position(-CLOSE_INSET, -CLOSE_INSET);
         t.add_child(label);
         t.add_child(close);
-        // The wallpaper behind the windows, as in macOS (the stock thumbnail is a grey plate)
+        // The wallpaper behind the windows, as in macOS (the stock thumbnail is a grey plate).
+        // Only the wallpaper and the windows: no desktop icons or widgets in the bar.
         const wallpaper = new Background.BackgroundManager({
             container: t._contents, monitorIndex: t.monitorIndex, vignette: false,
         });
         wallpaper.backgroundActor.content.brightness = 1;
         cleanup.add(() => wallpaper.destroy());
-        // And the desktop's icons and widgets on it (core/desktopLayers.js), under the windows
-        const mirror = DesktopLayers.current?.mirror(t.monitorIndex);
-        const monitor = Main.layoutManager.monitors[t.monitorIndex];
-        if (mirror && monitor) {
-            mirror.set_position(monitor.x, monitor.y);
-            mirror.set_size(monitor.width, monitor.height);
-            t._contents.insert_child_above(cleanup.actor(mirror), wallpaper.backgroundActor);
-        }
+        cleanup.add(() => {
+            t._viewport.remove_transition('opacity');
+            t._viewport.opacity = 255;
+        });
         const d = { label, close, cleanup, removable: false, labelWidth: 0 };
         cleanup.connect(close, 'clicked', () => this._removeSpace(t.metaWorkspace));
         cleanup.connect(close, 'notify::hover', () => this._syncClose());
         cleanup.connect(label, 'notify::hover', () => this._setHovered(label.hover ? t : this._hovered));
         // Keyboard: a focused label stands for its Space (the pointer's hover), and Delete removes it
-        cleanup.connect(label, 'key-focus-in', () => this._setHovered(t));
-        cleanup.connect(label, 'key-focus-out', () => this._setHovered(null));
+        cleanup.connect(label, 'key-focus-in', () => {
+            this._setHovered(t);
+            this._setFocus(true);
+        });
+        cleanup.connect(label, 'key-focus-out', () => {
+            this._setHovered(null);
+            this._setFocus(false);
+        });
         cleanup.connect(label, 'key-press-event', (_a, event) => {
             const sym = event.get_key_symbol();
             if ((sym !== Clutter.KEY_Delete && sym !== Clutter.KEY_BackSpace) || !d.removable)
@@ -340,6 +541,8 @@ export class SpacesBar {
         cleanup.connect(draggable, 'drag-end', () => this._setDragging(false));
         cleanup.connect(draggable, 'drag-cancelled', () => this._setDragging(false));
         this._decor.set(t, d);
+        // A Space added while the bar is open (the +) comes in in the bar's current state
+        t._viewport.opacity = this._expanded ? 255 : 0;
         return d;
     }
 
@@ -376,12 +579,13 @@ export class SpacesBar {
 
     _syncClose() {
         for (const [t, d] of this._decor)
-            d.close.visible = d.removable && !this._dragging && (t === this._hovered || d.close.hover);
+            d.close.visible = this._expanded && d.removable && !this._dragging && (t === this._hovered || d.close.hover);
     }
 
     _setDragging(on) {
         this._dragging = on;
         this._syncClose();
+        this._syncExpanded();
     }
 
     _addSpace() {

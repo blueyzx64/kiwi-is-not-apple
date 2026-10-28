@@ -202,3 +202,53 @@ export function centringShift({ maxWidth, thumbnailWidth, spacing, collapse, ava
     });
     return (Math.min(box, available) - group) / 2 - (maxWidth - thumbnailWidth) * n / 2;
 }
+
+/* ---- the macOS look: full-screen desktop, collapsing Spaces bar ---- */
+
+const fadeOut = v => Math.round(255 * (1 - Math.min(1, Math.max(0, v))));
+
+/**
+ * The desktop's icons and widgets in the overview: shown as the overview starts, gone once the
+ * windows are spread (macOS hides them in Mission Control).
+ *
+ * @param {number} state the workspace's overview state, 0 (desktop) to 1 (window picker)
+ * @returns {number} opacity 0..255
+ */
+export const desktopItemsOpacity = state => fadeOut(state);
+
+/**
+ * The Spaces next to the current one: the stock overview lets them peek in at the sides. With
+ * no card around them they would be stray windows at the screen's edges, so they show only
+ * while they scroll in.
+ *
+ * @param {number} distance from the current Space, in Spaces (the scroll position)
+ * @returns {number} opacity 0..255
+ */
+export const neighbourOpacity = distance => fadeOut(Math.abs(distance));
+
+/**
+ * Whether the Spaces bar shows its thumbnails (expanded) or only the names (collapsed). It
+ * expands while the pointer is on it or on its strip at the top of the screen, while a Space
+ * name has the keyboard focus, and while something is dragged (a window onto a Space, a Space
+ * along the bar).
+ *
+ * @param {{hover: boolean, focus: boolean, dragging: boolean}} s
+ * @returns {boolean}
+ */
+export function barExpanded({ hover, focus, dragging }) {
+    return !!(hover || focus || dragging);
+}
+
+/**
+ * The + of the Spaces bar: at the right end of the strip, centred on the thumbnails.
+ *
+ * @param {{stripWidth: number, plusWidth: number, plusHeight: number, centreY: number,
+ *   margin: number}} p centreY: the thumbnails' vertical centre in the strip
+ * @returns {{x: number, y: number}}
+ */
+export function plusPlace({ stripWidth, plusWidth, plusHeight, centreY, margin }) {
+    return {
+        x: Math.round(stripWidth - margin - plusWidth),
+        y: Math.max(0, Math.round(centreY - plusHeight / 2)),
+    };
+}

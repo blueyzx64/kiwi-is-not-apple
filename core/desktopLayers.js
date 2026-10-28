@@ -13,7 +13,8 @@
 // an extension that draws its own (DING), and is put back there whenever Mutter restacks.
 // Ranks: icons 10, widgets 20 (a widget covers an icon, as on macOS).
 //
-// Mission Control shows the desktop. The overview hides global.window_group, layers included,
+// The overview shows the desktop (Kiwi's Mission Control fades the mirror out as it opens,
+// features/missionControl/backdrop.js). The overview hides global.window_group, layers included,
 // so while any layer is stacked every workspace background of the overview gets a mirror: a
 // non-reactive container of Clutter.Clones of the layers on its monitor, on top of the
 // wallpaper and below the window previews. The mirror scales with the wallpaper through the
